@@ -739,7 +739,8 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "chtml:{displayAlign:'left',displayIndent:'0'},"
         "options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']},"
         "startup:{typeset:true}};"
-        "window.ldvlMountTikz=function(){};"
+        "window.ldvlArmTikz=function(root){var box=root&&root.querySelectorAll?root:document;var nodes=box.querySelectorAll('.tikzfig[data-hid]');Array.prototype.forEach.call(nodes,function(fig){if(fig.getAttribute('data-arm')==='1')return;fig.setAttribute('data-arm','1');var hid=fig.getAttribute('data-hid')||'';var img=fig.querySelector('img');var n=0;function fail(msg){var w=fig.querySelector('.tikz-wait');if(w)w.textContent=msg||'Chưa vẽ được hình TikZ.';}function poll(){fetch('/tikz/'+hid+'.png',{cache:'no-store',credentials:'same-origin'}).then(function(r){if(r.status===202){if(n++<40)setTimeout(poll,2000);else fail('Vẽ hình quá lâu. Tải lại trang.');return null;}if(!r.ok)throw new Error('HTTP '+r.status);return r.blob();}).then(function(b){if(!b||!img)return;img.src=URL.createObjectURL(b);img.hidden=false;var w=fig.querySelector('.tikz-wait');if(w)w.remove();}).catch(function(){if(n++<8)setTimeout(poll,2500);else fail('Chưa vẽ được hình TikZ.');});}poll();});};"
+        "window.ldvlMountTikz=function(el){if(window.ldvlArmTikz)ldvlArmTikz(el||document);};"
         "window.ldvlPlayVideo=function(btn,id){var f=document.createElement('iframe');f.className='ytframe';"
         "f.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0';"
         "f.allow='accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen';"
@@ -773,7 +774,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "window.ldvlSyncHeaderH=function(){var t=document.querySelector('.top');if(!t)return;document.documentElement.style.setProperty('--header-h',Math.ceil(t.getBoundingClientRect().height)+'px')};"
         "window.ldvlPicHash=function(img){try{var c=document.createElement('canvas');c.width=9;c.height=8;var g=c.getContext('2d');g.drawImage(img,0,0,9,8);var d=g.getImageData(0,0,9,8).data,bits='';for(var y=0;y<8;y++){for(var i=0;i<8;i++){var a=(y*9+i)*4,b=(y*9+i+1)*4;var ga=d[a]+d[a+1]+d[a+2],gb=d[b]+d[b+1]+d[b+2];bits+=ga>gb?'1':'0';}}return bits;}catch(e){return '';}};"
         "window.ldvlFitFigs=function(root){var list=[];if(!root||root===document||root===document.body)list=document.querySelectorAll('.qcard,#q');else if(root.matches&&(root.matches('.qcard')||root.id==='q'))list=[root];else if(root.querySelectorAll)list=root.querySelectorAll('.qcard,#q');else list=[root];Array.prototype.forEach.call(list,function(card){if(!card||!card.querySelector)return;var grid=card.querySelector('.qsplit>.figgrid');var side=card.querySelector('.qside');if(!grid||!side)return;var opts=side.querySelector('.opts')||side.querySelector('.tfgrid');if(!opts)return;var rows=Array.prototype.slice.call(opts.querySelectorAll('.opt'));if(!rows.length)rows=Array.prototype.slice.call(opts.querySelectorAll('.tf'));rows=rows.slice(0,4);var h=0;if(rows.length){var a=rows[0].getBoundingClientRect();var b=rows[rows.length-1].getBoundingClientRect();h=Math.ceil(b.bottom-a.top);}else h=Math.ceil(opts.getBoundingClientRect().height);if(h<36)return;grid.style.setProperty('--fig-h',h+'px');grid.classList.add('fit');var n=grid.querySelectorAll('.figcell').length;grid.classList.toggle('one',n<2);grid.classList.toggle('rows2',n>2);});};window.ldvlSplitPics=function(root){var list=[];if(!root||root===document||root===document.body)list=document.querySelectorAll('.qcard,#q');else if(root.matches&&(root.matches('.qcard')||root.id==='q'))list=[root];else if(root.querySelectorAll)list=root.querySelectorAll('.qcard,#q');Array.prototype.forEach.call(list,function(card){if(card.getAttribute('data-picsplit')==='1'){if(window.ldvlFitFigs)ldvlFitFigs(card);return;}var stem=card.querySelector('.qstem');if(!stem)return;var imgs=Array.prototype.slice.call(stem.querySelectorAll('img.tex-img'));if(!imgs.length)return;var seen={},keep=[];imgs.forEach(function(img){var key=(img.getAttribute('src')||'').split('?')[0].toLowerCase();if(!key||seen[key]){img.remove();return;}seen[key]=1;keep.push(img);});if(!keep.length)return;card.setAttribute('data-picsplit','1');var grid=document.createElement('div');grid.className='figgrid'+(keep.length<2?' one':'');keep.forEach(function(img){var cell=document.createElement('div');cell.className='figcell';cell.appendChild(img);grid.appendChild(cell);});var side=document.createElement('div');side.className='qside';var split=document.createElement('div');split.className='qsplit';split.appendChild(grid);split.appendChild(side);var head=card.querySelector('.qheadline');if(head&&head.parentNode)head.parentNode.insertBefore(split,head.nextSibling);else stem.parentNode.insertBefore(split,stem);Array.prototype.slice.call(card.querySelectorAll('.opts,.qbody,.opt,.answerline')).forEach(function(el){if(el.closest('.solution,.qside,.rwbar,.qhead,.qheadline'))return;side.appendChild(el);});var hashes=[];function prune(){Array.prototype.slice.call(grid.querySelectorAll('.figcell')).forEach(function(cell){var img=cell.querySelector('img');if(!img||!img.complete||!img.naturalWidth||cell.getAttribute('data-h'))return;var h=ldvlPicHash(img);if(!h)return;cell.setAttribute('data-h',h);for(var i=0;i<hashes.length;i++){var n=0,a=hashes[i];for(var k=0;k<h.length;k++)if(h.charAt(k)!==a.charAt(k))n++;if(n<=10){cell.remove();return;}}hashes.push(h);});var left=grid.querySelectorAll('.figcell').length;grid.classList.toggle('one',left<2);}function fit(){if(window.ldvlFitFigs)ldvlFitFigs(card);}Array.prototype.forEach.call(grid.querySelectorAll('img'),function(img){if(img.complete){prune();fit();}else img.addEventListener('load',function(){prune();fit();});});prune();fit();setTimeout(fit,80);});};"
-        "document.addEventListener('DOMContentLoaded',function(){ldvlTickClock();setInterval(ldvlTickClock,1000);ldvlSyncHeaderH();if(window.ldvlSplitPics)ldvlSplitPics(document);window.addEventListener('resize',function(){clearTimeout(window._ldvlFitT);window._ldvlFitT=setTimeout(function(){if(window.ldvlFitFigs)ldvlFitFigs(document);},80);});"
+        "document.addEventListener('DOMContentLoaded',function(){ldvlTickClock();setInterval(ldvlTickClock,1000);ldvlSyncHeaderH();if(window.ldvlArmTikz)ldvlArmTikz(document);if(window.ldvlSplitPics)ldvlSplitPics(document);window.addEventListener('resize',function(){clearTimeout(window._ldvlFitT);window._ldvlFitT=setTimeout(function(){if(window.ldvlFitFigs)ldvlFitFigs(document);},80);});"
         "var topEl=document.querySelector('.top');"
         "if(topEl&&window.ResizeObserver){try{new ResizeObserver(function(){ldvlSyncHeaderH()}).observe(topEl)}catch(e){}}"
         "window.addEventListener('resize',ldvlSyncHeaderH);"
@@ -2770,34 +2771,41 @@ def id_of(block):
     return codes[-1] if codes else ''
 
 def tikz_to_html(block):
-    """Chỉ ghi mã TikZ + trả thẻ <img>. Ảnh được vẽ ở route /tikz/<hash>.png nên trang mở ngay."""
+    """Ghi mã TikZ. Ảnh vẽ nền ở /tikz/<hash>.png — trang không chờ biên dịch."""
     hid=tikz_remember(block)
     return (
-        f'<div class="tikzfig"><img class="tikz-img" loading="eager" decoding="async" '
-        f'alt="Hình TikZ" src="/tikz/{hid}.png" '
-        f'onerror="var d=document.createElement(\'div\');d.className=\'err\';d.textContent=\'Chưa vẽ được hình TikZ\';this.replaceWith(d)"></div>'
+        f'<div class="tikzfig" data-hid="{hid}">'
+        f'<div class="tikz-wait">Đang vẽ hình…</div>'
+        f'<img class="tikz-img" alt="Hình TikZ" hidden data-hid="{hid}"></div>'
     )
 
 
-def inline_tikz_preview(html_s):
-    """Xem trước: nhúng PNG ngay trong HTML. Lỗi hiện thành chữ, không để khung trắng."""
-    import base64
-    errs = []
+_TIKZ_RUN=set()
+_TIKZ_ERR={}
 
-    def repl(m):
-        hid = m.group(1)
-        path, err = tikz_build_png(hid)
-        if not path:
-            errs.append(err or "Chưa biên dịch được TikZ.")
-            return 'alt="Lỗi TikZ"'
-        raw = Path(path).read_bytes()
-        b64 = base64.b64encode(raw).decode("ascii")
-        return f'src="data:image/png;base64,{b64}"'
 
-    out = re.sub(r'src="/tikz/([a-f0-9]{40})\.png"', repl, html_s or "")
-    if errs:
-        out = '<div class="err">' + html.escape(" ".join(dict.fromkeys(errs))[:500]) + "</div>" + out
-    return out
+def _spawn_tikz(hid):
+    """Vẽ nền để proxy Render không cắt kết nối dài (HTTP 502)."""
+    png=tikz_png_path(hid)
+    with _TIKZ_LOCKS_GUARD:
+        if hid in _TIKZ_RUN or hid in _TIKZ_ERR:
+            return
+        if png.is_file() and png.stat().st_size>80:
+            return
+        _TIKZ_RUN.add(hid)
+
+    def work():
+        err=''
+        try:
+            path, err=tikz_build_png(hid)
+            if not path:
+                with _TIKZ_LOCKS_GUARD:
+                    _TIKZ_ERR[hid]=err or 'Chưa biên dịch được TikZ.'
+        finally:
+            with _TIKZ_LOCKS_GUARD:
+                _TIKZ_RUN.discard(hid)
+
+    threading.Thread(target=work, daemon=True).start()
 
 YT_URL_RE=re.compile(r'https?://(?:www\.|m\.)?(?:youtube\.com/(?:watch\?(?:[^\s"\'<>]*&(?:amp;)?)?v=|embed/|shorts/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})[^\s<>"\'}\]]*',re.I)
 VIDEO_CMD_RE=re.compile(r'\\(?:video|youtube|clip|link|url)\s*(?:\[(?P<title>[^\]]*)\])?\s*\{(?P<url>[^{}]*)\}',re.I)
@@ -4587,12 +4595,17 @@ def tikz_png(hid):
     hid=str(hid or '')
     if not re.fullmatch(r'[a-f0-9]{40}', hid):
         abort(404)
-    p, err=tikz_build_png(hid)
-    if p:
-        resp=send_file(p, mimetype='image/png', conditional=True)
+    png=tikz_png_path(hid)
+    if png.is_file() and png.stat().st_size>80:
+        resp=send_file(png, mimetype='image/png', conditional=True)
         resp.headers['Cache-Control']='public, max-age=31536000, immutable'
         return resp
-    return Response(tikz_error_svg(err), mimetype='image/svg+xml', headers={'Cache-Control':'no-store'})
+    with _TIKZ_LOCKS_GUARD:
+        err=_TIKZ_ERR.get(hid)
+    if err:
+        return Response(tikz_error_svg(err), mimetype='image/svg+xml', headers={'Cache-Control':'no-store'})
+    _spawn_tikz(hid)
+    return Response('', status=202, headers={'Cache-Control':'no-store', 'X-Tikz-Pending':'1'})
 
 
 @app.route('/admin/edit', methods=['GET', 'POST'])

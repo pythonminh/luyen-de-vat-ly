@@ -935,8 +935,7 @@ def api_tex_preview():
     data = request.get_json(silent=True) or {}
     tex = _clean_tex(data.get("tex") or data.get("latex") or "")
     src = str(data.get("src") or data.get("path") or "")
-    html = base.inline_tikz_preview(base.html_question(tex, src))
-    return jsonify(ok=True, html=html)
+    return jsonify(ok=True, html=base.html_question(tex, src))
 
 
 @base.app.post("/api/admin/rewrite-question")
@@ -2119,14 +2118,22 @@ async function previewBox(box){
   if(!look) return;
   look.innerHTML='⏳ Đang xem trước...';
   const parts=[];
-  for(const ta of tas){
-    const lab=ta.getAttribute('data-lab')||'';
-    const r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:ta.value||'',src:box._rwSrc||''})});
-    const d=await r.json();
-    parts.push('<div class="muted">'+esc(lab)+'</div><div>'+(d.html||'')+'</div>');
+  try{
+    for(const ta of tas){
+      const lab=ta.getAttribute('data-lab')||'';
+      const r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:ta.value||'',src:box._rwSrc||''})});
+      const raw=await r.text();
+      let d={};
+      try{d=JSON.parse(raw);}catch(err){throw new Error('Máy chủ không trả xem trước (HTTP '+r.status+').');}
+      parts.push('<div class="muted">'+esc(lab)+'</div><div>'+(d.html||'')+'</div>');
+    }
+  }catch(err){
+    look.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';
+    return;
   }
   look.innerHTML=parts.join('');
-  if(window.ldvlTypeset)ldvlTypeset(look);
+  if(window.ldvlArmTikz) ldvlArmTikz(look);
+  if(window.ldvlTypeset) ldvlTypeset(look);
 }
 function showEditor(box, d){
   d.stem=stripMeta(d.stem||'');
@@ -2202,7 +2209,7 @@ function showEditor(box, d){
       const txt=await s.text();
       let sd={};
       try{sd=JSON.parse(txt)}catch(err){
-        alert('Không ghi được (HTTP '+s.status+'): '+(txt||err).toString().slice(0,400));
+        alert('Máy chủ không trả kết quả (HTTP '+s.status+'). Thử lại.');
         btn.disabled=false;return;
       }
       if(!sd.ok){alert(sd.error||'Không ghi được');btn.disabled=false;return;}
@@ -2718,6 +2725,7 @@ async function showTikzPreview(tex){
     var d=await r.json();
     if(!d.ok&&d.error){box.innerHTML='<div class="err">'+esc(d.error)+'</div>';return;}
     box.innerHTML='<div class="ai-tikz-k">Xem trước hình TikZ — đối chiếu với ảnh gốc rồi mới duyệt</div>'+(d.html||'');
+    if(window.ldvlArmTikz) ldvlArmTikz(box);
     if(window.ldvlTypeset) ldvlTypeset(box);
   }catch(err){
     box.innerHTML='<div class="err">'+esc(err)+'</div>';
