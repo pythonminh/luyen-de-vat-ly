@@ -4238,10 +4238,10 @@
       "questions": 15,
       "count": 15,
       "dang": {
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": 15
+        "Tính độ biến thiên nội năng và nhiệt lượng": 15
       },
       "dang_kinds": {
-        "Tính độ biến thiên nội năng trong quá trình nhiệt động lực học": {
+        "Tính độ biến thiên nội năng và nhiệt lượng": {
           "TN": 5,
           "DS": 1,
           "TLN": 6,
