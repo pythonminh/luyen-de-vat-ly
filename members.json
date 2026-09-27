@@ -466,10 +466,14 @@
       "username": "Bảo Nhi",
       "name": "Nguyễn Ngọc Bảo Nhi",
       "phone": "0775584302",
-      "class": "",
-      "account_type": "FREE",
+      "class": "10",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "4eb6e5c32a0e8407f93b2748310ee12feb050a8db439c45ee18fda417151689e",
+      "password_enc": "v1:52yaFUnj9A==",
+      "package": {
         "kind": "mon1",
         "grades": [
           "10"
@@ -478,9 +482,17 @@
           "Toán"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "4eb6e5c32a0e8407f93b2748310ee12feb050a8db439c45ee18fda417151689e",
-      "password_enc": "v1:52yaFUnj9A=="
+      "grades": [
+        "10"
+      ],
+      "subjects": [
+        "Toán"
+      ],
+      "grade": "10",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-09-27 23:07:39",
+      "vip_expires_at": "2026-10-27 23:07:39",
+      "updated_at": "2026-09-27 23:07:39"
     },
     {
       "username": "huynhtandattt",
