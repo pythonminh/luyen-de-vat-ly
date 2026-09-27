@@ -177,34 +177,50 @@ Với $x=6\cos(4\pi t+\pi/3)$ cm, pha tại $t=1/6$ s là
 {$5\pi/3$ rad}
 \end{ex}
 \dangbt{Chu kỳ,tần số,tần số góc, pha dao động}
-\begin{ex}
-Đồ thị hình bên mô tả sự thay đổi động năng theo li độ của của quả cầu có khối lượng $0,4 \text{ kg}$ trong một con lắc lò xo treo thẳng đứng. Xác định:
-a. cơ năng của con lắc.
-b. tốc độ cực đại của quả cầu.
-c. thế năng của con lắc lò xo khi quả cầu ở vị trí có li độ $2 \text{ cm}$.
-
+\begin{ex}Đồ thị hình bên mô tả sự thay đổi của động năng theo li độ của một quả cầu có khối lượng $0,4 \text{ kg}$ trong con lắc lò xo treo thẳng đứng.
 \begin{tikzpicture}
-\draw[->] (-5,0) -- (5,0) node[right] {$x (\text{cm})$};
-\draw[->] (0,-0.5) -- (0,4.5) node[above] {$W_đ (\text{mJ})$};
-\node at (0,0) [below left] {O};
-\draw (0,4) node[above right] {$80$} parabola bend (-4,0) and (4,0);
-\node at (-4,0) [below] {$-4$};
-\node at (4,0) [below] {$4$};
+\begin{axis}[
+    width=9cm,
+    height=6cm,
+    axis lines=middle,
+    xmin=-5, xmax=5,
+    ymin=-5, ymax=85,
+    xlabel={$x\,(\mathrm{cm})$},
+    ylabel={$W_{\mathrm{đ}}\,(\mathrm{mJ})$},
+    xlabel style={below right},
+    ylabel style={above left},
+    xtick={-4,0,4},
+    xticklabels={$-4,O,4$},
+    ytick={0,80},
+    yticklabels={$0,80$},
+    axis line style={->},
+    tick style={black},
+    samples=100,
+    smooth
+]
+\addplot[
+    thick,
+    domain=-4:4
+]
+{80*(1-(x/4)^2)};
+\end{axis}
 \end{tikzpicture}
-
+Hãy xác định:
+a) Cơ năng của con lắc.
+b) Tốc độ cực đại của quả cầu.
+c) Thế năng của con lắc lò xo khi quả cầu có li độ $2 \text{ cm}$.
 \loigiai{
-a. Từ đồ thị, ta thấy động năng cực đại của con lắc là $W_{đmax} = 80 \text{ mJ}$.
-Cơ năng của con lắc bằng động năng cực đại: $W = W_{đmax} = 80 \text{ mJ}$.
-
-b. Tốc độ cực đại của quả cầu:
-Ta có $W_{đmax} = \frac{1}{2}mv_{max}^2 \Rightarrow v_{max} = \sqrt{\frac{2W_{đmax}}{m}}$.
-Với $W_{đmax} = 80 \text{ mJ} = 0,08 \text{ J}$ và $m = 0,4 \text{ kg}$.
+a) Từ đồ thị, động năng cực đại của con lắc là $W_{đmax} = 80 \text{ mJ}$.
+Cơ năng của con lắc bằng động năng cực đại:
+$W = W_{đmax} = 80 \text{ mJ}$.
+b) Tốc độ cực đại của quả cầu được tính theo công thức:
+$W_{đmax} = \frac{1}{2}mv_{max}^2 \Rightarrow v_{max} = \sqrt{\frac{2W_{đmax}}{m}}$
+Thay số với $W_{đmax} = 80 \text{ mJ} = 0,08 \text{ J}$ và $m = 0,4 \text{ kg}$:
 $v_{max} = \sqrt{\frac{2 \times 0,08}{0,4}} = \sqrt{\frac{0,16}{0,4}} = \sqrt{0,4} \approx 0,632 \text{ m/s}$.
-
-c. Thế năng của con lắc lò xo khi quả cầu ở vị trí có li độ $x = 2 \text{ cm}$.
-Từ đồ thị, biên độ dao động là $A = 4 \text{ cm}$.
-Cơ năng $W = \frac{1}{2}kA^2 \Rightarrow k = \frac{2W}{A^2} = \frac{2 \times 0,08}{(0,04)^2} = \frac{0,16}{0,0016} = 100 \text{ N/m}$.
-Thế năng khi $x = 2 \text{ cm} = 0,02 \text{ m}$:
-$W_t = \frac{1}{2}kx^2 = \frac{1}{2} \times 100 \times (0,02)^2 = 50 \times 0,0004 = 0,02 \text{ J} = 20 \text{ mJ}$.
+c) Từ đồ thị, biên độ dao động là $A = 4 \text{ cm}$.
+Độ cứng của lò xo:
+$W = \frac{1}{2}kA^2 \Rightarrow k = \frac{2W}{A^2} = \frac{2 \times 0,08}{(0,04)^2} = \frac{0,16}{0,0016} = 100 \text{ N/m}$.
+Khi quả cầu có li độ $x = 2 \text{ cm} = 0,02 \text{ m}$, thế năng của con lắc là:
+$W_t = \frac{1}{2}kx^2 = \frac{1}{2} \times 100 	imes (0,02)^2 = 50 \times 0,0004 = 0,02 \text{ J} = 20 \text{ mJ}$.
 }
 \end{ex}
