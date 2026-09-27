@@ -2504,6 +2504,59 @@ document.addEventListener('click',async function(e){
   }finally{go.disabled=false;}
 });
 document.addEventListener('click',async function(e){
+  const go=e.target.closest&&e.target.closest('#aiGom');
+  const save=e.target.closest&&e.target.closest('#aiGomSave');
+  if(!go&&!save) return;
+  e.preventDefault();
+  const form=document.getElementById('examMatrix');
+  const pathInp=form&&form.querySelector('input[name=path]');
+  const path=pathInp?pathInp.value:'';
+  const box=document.getElementById('aiGomOut');
+  if(!box||!path) return;
+  if(save){
+    const picked=[...box.querySelectorAll('input.aigom:checked')].map(function(x){
+      const tr=x.closest('tr');
+      return {from:tr.getAttribute('data-from')||'', to:tr.getAttribute('data-to')||''};
+    }).filter(function(m){return m.from&&m.to&&m.from!==m.to;});
+    if(!picked.length){alert('Chưa tick dạng nào để gom.');return;}
+    if(!confirm('Gom '+picked.length+' tên dạng vào TEX? Câu giữ nguyên, chỉ đổi tên dạng.'))return;
+    save.disabled=true;
+    box.insertAdjacentHTML('afterbegin','<div class="muted">⏳ Đang ghi gom dạng...</div>');
+    try{
+      const r=await fetch('/api/admin/merge-dang-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({path:path,merges:picked})});
+      let d={};
+      try{d=await r.json();}catch(err){throw new Error('Máy chủ không trả kết quả (HTTP '+r.status+').');}
+      if(!d.ok){box.insertAdjacentHTML('afterbegin','<div class="err">'+esc(d.error||'Không gom được')+'</div>');save.disabled=false;return;}
+      box.innerHTML='<div class="success">✅ Đã gom '+(d.changed||picked.length)+' câu. Đang tải lại...</div>';
+      location.reload();
+    }catch(err){box.insertAdjacentHTML('afterbegin','<div class="err">'+esc(err)+'</div>');save.disabled=false;}
+    return;
+  }
+  const ks=keys();
+  if(!ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi bấm lại.');return;}
+  go.disabled=true;
+  box.innerHTML='⏳ Đang gợi ý gom các dạng ít câu, cùng kỹ năng...';
+  try{
+    const r=await fetch('/api/admin/merge-dang',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({path:path,api_keys:ks})});
+    let d={};
+    try{d=await r.json();}catch(err){throw new Error('Máy chủ không trả kết quả (HTTP '+r.status+').');}
+    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Lỗi gom dạng')+'</div>';return;}
+    const rows=d.merges||[];
+    if(!rows.length){box.innerHTML='<div class="muted">'+esc(d.message||'Không thấy dạng cùng kỹ năng để gom.')+'</div>';return;}
+    const body=rows.map(function(m){
+      return '<tr data-from="'+esc(m.from)+'" data-to="'+esc(m.to)+'"><td><input class="aigom" type="checkbox" checked></td><td>'+esc(m.from)+'<div class="muted">'+esc(m.n||0)+' câu</div></td><td><b>'+esc(m.to)+'</b><div class="muted">sau gom khoảng '+esc(m.after||m.n||0)+' câu</div></td><td>'+esc(m.why||'')+'</td></tr>';
+    }).join('');
+    box.innerHTML='<div class="success">Đang <b>'+esc(d.n_before||'')+'</b> dạng → còn khoảng <b>'+esc(d.n_after||'')+'</b> dạng. Bỏ tick dòng muốn giữ riêng. Chưa ghi cho đến khi Đồng ý.</div>'
+      +'<div class="selectwrap"><table class="selectgrid"><tr><th></th><th>Dạng đang rải</th><th>Gom thành</th><th>Vì sao</th></tr>'+body+'</table></div>'
+      +'<p><button type="button" class="btn green" id="aiGomSave">✅ Đồng ý gom các dòng đã tick</button></p>';
+    if(box.scrollIntoView) box.scrollIntoView({block:'nearest'});
+  }catch(err){
+    box.innerHTML='<div class="err">'+esc(err)+'</div>';
+  }finally{go.disabled=false;}
+});
+document.addEventListener('click',async function(e){
   const btn=e.target.closest&&e.target.closest('#aiGap');
   if(!btn) return;
   e.preventDefault();

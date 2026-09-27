@@ -669,21 +669,23 @@ def _merge_prompt(meta, rows):
     for r in rows:
         lines.append(f"- dạng={r['dang']} | {r['n']} câu | ví dụ: {r.get('sample') or '—'}")
     return (
-        "Bạn là giáo viên Toán/Vật lý THPT. Hãy GOM các DẠNG BÀI gần giống thành một tên.\n"
+        "Bạn là giáo viên Toán/Vật lý THPT. Hãy GOM dạng bài đang rải rác: ít tên dạng hơn, mỗi dạng nhiều câu hơn.\n"
         f"Bài học: {meta}\n"
-        "Danh sách dạng hiện có:\n"
+        "Danh sách dạng hiện có (kèm số câu):\n"
         + "\n".join(lines)
         + "\n\nQuy tắc:\n"
-        "- Gom khi cùng chủ đề/kỹ năng, chỉ khác cách đặt tên "
-        "(phân loại / phân biệt / so sánh / nhận biết / đặc điểm / tính chất / khái niệm cùng một đối tượng).\n"
-        "- Gom khi cùng một kỹ năng, chỉ khác số liệu hoặc cặp thang "
-        "(C↔K, C↔F, C↔K↔F, «ba thang», «các thang thông dụng» là CÙNG dạng).\n"
-        "- Đặt tên gộp ngắn, rõ, tiếng Việt (không dài hơn 1 câu). Ưu tiên tên đã có nhiều câu nhất.\n"
-        "- KHÔNG gom lý thuyết với bài tập. KHÔNG gom thang tự chế/thang mới với chuyển đổi C/K/F thông dụng.\n"
-        "- Không bịa dạng lạ. from phải trùng tên trong danh sách. to là tên trong danh sách hoặc tên gộp ngắn.\n"
+        "- Dạng chỉ 1–8 câu mà cùng một kỹ năng thì phải gom. Ví dụ cùng đọc đồ thị "
+        "(li độ–thời gian, vận tốc–thời gian, gia tốc–thời gian) thành một dạng; "
+        "cùng «xác định đại lượng đặc trưng» dù tên đang tách theo phương trình li độ / vận tốc cực đại / số dao động thì gom.\n"
+        "- Gom khi cùng chủ đề, chỉ khác cách đặt tên "
+        "(phân loại / phân biệt / so sánh / nhận biết / đặc điểm / tính chất).\n"
+        "- to là tên đã có nhiều câu nhất trong nhóm, hoặc một tên ngắn bao cả nhóm (không quá 12 từ).\n"
+        "- KHÔNG gom hai kỹ năng khác hẳn (đồ thị khác tính quãng đường; liên hệ li độ–vận tốc bằng công thức khác khai thác đồ thị).\n"
+        "- KHÔNG gom lý thuyết với bài tập. KHÔNG gom thang tự chế với chuyển đổi C/K/F thông dụng.\n"
+        "- from phải trùng đúng tên trong danh sách. Một tên cũ chỉ xuất hiện một lần.\n"
         "Trả về DUY NHẤT JSON:\n"
         '[{"from":"tên cũ","to":"tên gộp","why":"lý do ngắn"}]\n'
-        "Chỉ trả [] khi các dạng thật sự khác kỹ năng, không cùng chủ đề."
+        "Chỉ trả [] khi mỗi dạng đã đủ câu và khác kỹ năng."
     )
 
 
@@ -1785,16 +1787,53 @@ def api_merge_dang():
         if m.get("from"):
             by_from[m["from"]] = m
     valid = set(names)
-    out = []
-    seen = set()
+    flat = {}
+    why = {}
     for src, m in by_from.items():
         dst = m["to"]
-        if src not in valid or src in seen or src == dst:
+        if src not in valid or src == dst:
             continue
-        seen.add(src)
-        out.append({"from": src, "to": dst, "n": counts.get(src, 0), "why": m.get("why") or ""})
-    msg = "" if out else "Không thấy cặp tên đủ gần. Tick vài dạng cùng chủ đề rồi thử lại."
-    return jsonify(ok=True, merges=out, used_ai=bool(ai_merges), message=msg)
+        flat[src] = dst
+        why[src] = m.get("why") or ""
+
+    def _end(name):
+        seen_hop = set()
+        cur = name
+        while cur in flat and cur not in seen_hop:
+            seen_hop.add(cur)
+            cur = flat[cur]
+        return cur
+
+    buckets = {}
+    for name in names:
+        buckets.setdefault(_end(name), []).append(name)
+    out = []
+    for src, dst0 in flat.items():
+        dst = _end(src)
+        if src == dst:
+            continue
+        after = sum(int(counts.get(x) or 0) for x in buckets.get(dst, []))
+        out.append(
+            {
+                "from": src,
+                "to": dst,
+                "n": counts.get(src, 0),
+                "after": after,
+                "why": why.get(src) or why.get(dst0) or "",
+            }
+        )
+    out.sort(key=lambda m: (-int(m.get("after") or 0), str(m.get("to") or ""), str(m.get("from") or "")))
+    n_before = len(names)
+    n_after = len({_end(n) for n in names})
+    msg = "" if out else "Không thấy dạng cùng kỹ năng để gom."
+    return jsonify(
+        ok=True,
+        merges=out,
+        used_ai=bool(ai_merges),
+        n_before=n_before,
+        n_after=n_after,
+        message=msg,
+    )
 
 
 @base.app.post("/api/admin/merge-dang-save")

@@ -1093,9 +1093,13 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
         f"<input type='hidden' name='path' value='{_esc(path)}'>"
         f"<input type='hidden' name='dang' value='{_esc(dang)}'>"
         "<div class='notice'>📝 <b>Ma trận đề</b> — mỗi dạng một dòng. Số xanh là số câu đang có, ô là số câu lấy. "
+        "Dạng ít câu thì bấm <b>AI gợi ý gom dạng</b> để gộp dạng cùng kỹ năng. "
         "<b>Tạo đề</b> lấy đúng số đó. <b>Trộn đề</b> và <b>In đề</b> xáo câu trong từng phần, đảo A–D và a)–d), "
         "mỗi bản một mã đề. In thì mỗi mã đề sang trang mới, cuối đề có phiếu tô đáp án.</div>"
         + top
+        + "<p style='margin:8px 0'><button type='button' class='btn' id='aiGom' "
+        "title='Gợi ý gộp các dạng ít câu, cùng kỹ năng, thành ít dạng hơn. Xem bảng rồi mới ghi.'>"
+        "📎 AI gợi ý gom dạng</button></p><div id='aiGomOut'></div>"
         + "<div class='selectwrap'><table class='selectgrid mxone'><tr><th>Dạng bài</th>"
         + "".join(
             "<th>"
