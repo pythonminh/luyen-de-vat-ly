@@ -2719,6 +2719,9 @@ document.addEventListener('click',async function(e){
           pd=JSON.parse(praw);
         }catch(err){continue;}
         if(pd&&pd.pending) continue;
+        if(pd&&pd.ok===false&&/phiên đang chạy/i.test(String(pd.error||''))){
+          throw new Error('Phiên vừa mất vì trang khởi động lại. Bấm AI phân tích lại — đừng tải lại trang giữa chừng.');
+        }
         d=pd;
         break;
       }

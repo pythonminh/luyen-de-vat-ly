@@ -879,6 +879,57 @@ def _extract_ex_blocks(text):
         blocks.append(m.group(0).strip())
     return blocks
 
+def _stem_snip(q, n=140):
+    t = re.sub(r'<[^>]+>', ' ', str((q or {}).get('text') or ''))
+    t = re.sub(r'\s+', ' ', t).strip()
+    if len(t) > n:
+        t = t[:n].rstrip() + '…'
+    return t
+
+
+def _existing_dang_brief(qs, names):
+    """Mỗi dạng: số câu và 2 đề đang có, để AI gán theo nội dung chứ không chỉ theo tên."""
+    lines = []
+    for name in names or []:
+        if not name or name == 'Chưa phân dạng':
+            continue
+        stems = []
+        count = 0
+        for q in qs or []:
+            if str(q.get('dang') or '').strip() != name:
+                continue
+            count += 1
+            if len(stems) < 2:
+                sn = _stem_snip(q)
+                if sn:
+                    stems.append('[' + str(q.get('kind') or '') + '] ' + sn)
+        bit = '- «' + name + '» (' + str(count) + ' câu)'
+        if stems:
+            bit += '. Đang có: ' + ' | '.join(stems)
+        lines.append(bit)
+    return '\n'.join(lines)
+
+
+def _snap_dang_name(name, names):
+    """Kéo tên AI đặt về đúng dạng đã có khi cùng nghĩa hoặc gần chữ."""
+    n = str(name or '').strip()
+    pool = [x for x in (names or []) if x and x != 'Chưa phân dạng']
+    if not n or n == 'Chưa phân dạng' or not pool:
+        return n or 'Chưa phân dạng'
+    folded = {x.casefold(): x for x in pool}
+    if n.casefold() in folded:
+        return folded[n.casefold()]
+    from admin_classify import _sim
+    best, score = '', 0.0
+    for x in pool:
+        s = _sim(n, x)
+        if s > score:
+            best, score = x, s
+    if best and score >= 0.62:
+        return best
+    return n
+
+
 def _chunks_from_import(text, fallback_dang=''):
     """Tách (tên dạng, khối ex) — AI có thể gắn \\dangbt trước từng câu."""
     text = str(text or '')
@@ -1947,6 +1998,7 @@ def _dang_fill_work(data):
         samples.append((str(q.get('kind') or ''), str(q.get('text') or '')[:280]))
     want = ', '.join(f"{lab} {add[k]}" for k, lab in KIND_CHIP_LABS if add.get(k)) or 'các câu trên trang'
     dang_list = '; '.join(names) if names else '(chưa có dạng — tự đặt tên ngắn, rõ)'
+    dang_brief = _existing_dang_brief(qs, names)
     nguon_line = '\\nguon{' + _tex_nguon_url(source_url) + '}' if source_url else ''
     kind_rules = (
         _kind_rules_all()
@@ -1975,8 +2027,10 @@ def _dang_fill_work(data):
             "Không bịa đề không có trong nguồn. Nếu nguồn là .tex: lọc \\begin{ex}, sửa cho khớp cấu trúc ngân hàng.\n"
             "Nếu có hình đính kèm: đọc hết chữ và công thức trên hình, kể cả đề viết tay, trang PDF scan hoặc ảnh trong file Word.\n"
             "Với MỖI câu, trước \\begin{ex} phải có đúng một dòng \\dangbt{Tên dạng}.\n"
-            "Ưu tiên gán vào các dạng ĐÃ CÓ của bài: " + dang_list + "\n"
-            "Chỉ tạo tên dạng mới khi câu không khớp dạng nào ở trên. Không markdown, không lời dẫn.\n"
+            "Tách nguồn thành từng câu, rồi gán vào dạng ĐÃ CÓ bằng cách so với các câu mẫu (cùng việc phải làm), không gán chỉ vì tên na ná.\n"
+            "Dạng đã có:\n" + (dang_brief or dang_list) + "\n"
+            "Tên trong \\dangbt phải chép đúng một tên ở trên. Chỉ đặt tên mới khi không câu mẫu nào cùng kỹ năng.\n"
+            "Không markdown, không lời dẫn.\n"
             + kind_rules
             + "Nguồn (HTML đã gỡ hoặc LaTeX gốc):\n" + page_text
         )
@@ -2038,6 +2092,9 @@ def _dang_fill_work(data):
     rows = _chunks_from_import(latex, dang)
     # File/link: đưa câu lên ô xem trước trước, ADMIN lọc trùng sau khi ghi.
     kept, skipped = _filter_import_rows(rows, qs, dang, relax=bool(page_text))
+    if kept and page_text and not dang:
+        pool = [n for n in names if n and n != 'Chưa phân dạng']
+        kept = [(_snap_dang_name(d, pool), b) for d, b in kept]
     if kept:
         latex = '\n\n'.join('\\dangbt{' + d + '}\n' + b for d, b in kept) + '\n'
     elif page_text:
