@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12551,
+  "total_questions": 12554,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4400,22 +4400,22 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
       "De": "L12C1 Bài 3. Nhiệt độ. Thang nhiệt độ – nhiệt kế",
-      "questions": 207,
-      "count": 207,
+      "questions": 210,
+      "count": 210,
       "dang": {
-        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": 63,
+        "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": 65,
         "Thiết lập và chuyển đổi thang nhiệt độ tự chế": 22,
         "Lý thuyết về nhiệt độ và cân bằng nhiệt": 49,
-        "Nguyên lý hoạt động và sử dụng nhiệt kế": 44,
+        "Nguyên lý hoạt động và sử dụng nhiệt kế": 45,
         "Khái niệm nhiệt độ": 5,
         "Thang nhiệt độ và nhiệt kế": 20,
         "Đơn vị và đại lượng nhiệt": 4
       },
       "dang_kinds": {
         "Chuyển đổi nhiệt độ giữa các thang đo thông dụng": {
-          "TN": 47,
+          "TN": 48,
           "DS": 8,
-          "TLN": 5,
+          "TLN": 6,
           "TL": 3
         },
         "Thiết lập và chuyển đổi thang nhiệt độ tự chế": {
@@ -4431,7 +4431,7 @@
           "TL": 4
         },
         "Nguyên lý hoạt động và sử dụng nhiệt kế": {
-          "TN": 29,
+          "TN": 30,
           "DS": 8,
           "TLN": 3,
           "TL": 4
