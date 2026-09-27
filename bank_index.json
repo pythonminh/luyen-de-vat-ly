@@ -4215,10 +4215,10 @@
       "questions": 9,
       "count": 9,
       "dang": {
-        "Nội năng và truyền nhiệt": 9
+        "Tính độ biến thiên nội năng và nhiệt lượng": 9
       },
       "dang_kinds": {
-        "Nội năng và truyền nhiệt": {
+        "Tính độ biến thiên nội năng và nhiệt lượng": {
           "TN": 1,
           "DS": 2,
           "TLN": 3,
