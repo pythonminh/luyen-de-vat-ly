@@ -487,210 +487,49 @@
       "questions": 284,
       "count": 284,
       "dang": {
-        "Kiểm tra cặp số là nghiệm của bất phương trình bậc nhất hai ẩn": 20,
-        "Nhận biết bất phương trình bậc nhất hai ẩn": 10,
-        "Xác định miền nghiệm của bất phương trình bậc nhất hai ẩn": 20,
-        "Xác định nghiệm của bất phương trình từ đồ thị": 10,
-        "Xác định bất phương trình từ miền nghiệm": 10,
-        "Lập bất phương trình bậc nhất hai ẩn từ bài toán thực tế": 10,
-        "Giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 10,
-        "Lập bất phương trình bậc nhất hai ẩn từ bài toán kinh tế": 10,
-        "Lập bất phương trình bậc nhất hai ẩn từ bài toán mua sắm": 20,
-        "Lập bất phương trình bậc nhất hai ẩn từ bài toán chi tiêu": 10,
-        "Giải bài toán thực tế về số cách tặng quà": 10,
-        "Kiểm tra cặp số là nghiệm của hệ bất phương trình bậc nhất hai ẩn": 20,
-        "Kiểm tra cặp số không là nghiệm của hệ bất phương trình bậc nhất hai ẩn": 10,
-        "Tìm giá trị lớn nhất/nhỏ nhất của biểu thức trên miền đa giác": 11,
-        "Tính diện tích miền nghiệm của hệ bất phương trình": 10,
-        "Lập hệ bất phương trình từ bài toán thực tế": 10,
-        "Kiểm tra tính đúng sai của các khẳng định về bất phương trình bậc nhất hai ẩn": 10,
-        "Kiểm tra tính đúng sai của các khẳng định về bài toán thực tế liên quan đến bất phương trình": 10,
-        "Kiểm tra tính đúng sai của các khẳng định về hệ bất phương trình bậc nhất hai ẩn": 10,
-        "Kiểm tra tính đúng sai của các khẳng định về bài toán tối ưu hóa trong nông nghiệp": 10,
-        "Kiểm tra tính đúng sai của các khẳng định về bài toán tối ưu hóa trong sản xuất thủ công": 10,
-        "Kiểm tra tính đúng sai của các khẳng định về bài toán tối ưu hóa trong sản xuất công nghiệp": 12,
-        "Tìm giá trị lớn nhất/nhỏ nhất của biểu thức trên miền nghiệm của hệ bất phương trình": 9,
-        "Bài toán tối ưu hóa trong sản xuất công nghiệp": 6,
-        "Bài toán tối ưu hóa trong nông nghiệp": 1,
-        "Bài toán tối ưu hóa trong sản xuất thủ công": 1,
-        "Bài toán tối ưu hóa trong kinh doanh": 1,
-        "Bài toán tối ưu hóa chi phí nguyên liệu": 1,
-        "Bài toán tối ưu hóa chi phí nhân sự": 2
+        "Kiểm tra cặp số là nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 50,
+        "Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế": 90,
+        "Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 30,
+        "Giải bài toán thực tế liên quan đến bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 20,
+        "Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm": 32,
+        "Kiểm tra tính đúng sai của các khẳng định về bất phương trình/hệ bất phương trình bậc nhất hai ẩn và bài toán thực tế": 62
       },
       "dang_kinds": {
-        "Kiểm tra cặp số là nghiệm của bất phương trình bậc nhất hai ẩn": {
+        "Kiểm tra cặp số là nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
+          "TN": 50,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế": {
+          "TN": 90,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
+          "TN": 30,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Giải bài toán thực tế liên quan đến bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
           "TN": 20,
           "DS": 0,
           "TLN": 0,
           "TL": 0
         },
-        "Nhận biết bất phương trình bậc nhất hai ẩn": {
+        "Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm": {
           "TN": 10,
           "DS": 0,
-          "TLN": 0,
+          "TLN": 22,
           "TL": 0
         },
-        "Xác định miền nghiệm của bất phương trình bậc nhất hai ẩn": {
-          "TN": 20,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định nghiệm của bất phương trình từ đồ thị": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định bất phương trình từ miền nghiệm": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Lập bất phương trình bậc nhất hai ẩn từ bài toán thực tế": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Lập bất phương trình bậc nhất hai ẩn từ bài toán kinh tế": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Lập bất phương trình bậc nhất hai ẩn từ bài toán mua sắm": {
-          "TN": 20,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Lập bất phương trình bậc nhất hai ẩn từ bài toán chi tiêu": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Giải bài toán thực tế về số cách tặng quà": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Kiểm tra cặp số là nghiệm của hệ bất phương trình bậc nhất hai ẩn": {
-          "TN": 20,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Kiểm tra cặp số không là nghiệm của hệ bất phương trình bậc nhất hai ẩn": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Tìm giá trị lớn nhất/nhỏ nhất của biểu thức trên miền đa giác": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Tính diện tích miền nghiệm của hệ bất phương trình": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Lập hệ bất phương trình từ bài toán thực tế": {
-          "TN": 10,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Kiểm tra tính đúng sai của các khẳng định về bất phương trình bậc nhất hai ẩn": {
+        "Kiểm tra tính đúng sai của các khẳng định về bất phương trình/hệ bất phương trình bậc nhất hai ẩn và bài toán thực tế": {
           "TN": 0,
           "DS": 0,
           "TLN": 0,
-          "TL": 10
-        },
-        "Kiểm tra tính đúng sai của các khẳng định về bài toán thực tế liên quan đến bất phương trình": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 10
-        },
-        "Kiểm tra tính đúng sai của các khẳng định về hệ bất phương trình bậc nhất hai ẩn": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 10
-        },
-        "Kiểm tra tính đúng sai của các khẳng định về bài toán tối ưu hóa trong nông nghiệp": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 10
-        },
-        "Kiểm tra tính đúng sai của các khẳng định về bài toán tối ưu hóa trong sản xuất thủ công": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 10
-        },
-        "Kiểm tra tính đúng sai của các khẳng định về bài toán tối ưu hóa trong sản xuất công nghiệp": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 12
-        },
-        "Tìm giá trị lớn nhất/nhỏ nhất của biểu thức trên miền nghiệm của hệ bất phương trình": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 9,
-          "TL": 0
-        },
-        "Bài toán tối ưu hóa trong sản xuất công nghiệp": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 6,
-          "TL": 0
-        },
-        "Bài toán tối ưu hóa trong nông nghiệp": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Bài toán tối ưu hóa trong sản xuất thủ công": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Bài toán tối ưu hóa trong kinh doanh": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Bài toán tối ưu hóa chi phí nguyên liệu": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 1,
-          "TL": 0
-        },
-        "Bài toán tối ưu hóa chi phí nhân sự": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 2,
-          "TL": 0
+          "TL": 62
         }
       }
     },
