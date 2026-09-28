@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 185,
-  "total_questions": 12533,
+  "total_questions": 12817,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -484,10 +484,19 @@
       "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
       "BaiHoc": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
       "De": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
-      "questions": 0,
-      "count": 0,
-      "dang": {},
-      "dang_kinds": {}
+      "questions": 284,
+      "count": 284,
+      "dang": {
+        "Chưa phân dạng": 284
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 200,
+          "DS": 0,
+          "TLN": 22,
+          "TL": 62
+        }
+      }
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương IV. Vectơ/Bài 7. Các khái niệm mở đầu/de.tex",
