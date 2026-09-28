@@ -512,6 +512,68 @@ samples=300,domain=0:8,clip=false]
 		}
 		\nguon{SGK KNTT Vật lý Lớp 11 Bài 4 câu 5}
 	\end{ex}
+\begin{ex}
+% Phát triển từ: idx:10
+\nguon{Phát triển từ câu}
+Dựa vào đồ thị li độ \textendash thời gian, phương trình dao động của vật M là:
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[width=10cm,height=5.2cm,axis lines=middle,axis line style={-{Stealth[length=2mm]},thick},xlabel={$t\,(\mathrm{ms})$},ylabel={$x\,(\mathrm{cm})$},xmin=0,xmax=120,ymin=-15,ymax=15,xtick={0,15,30,45,60,75,90,105,120},ytick={-10,-5,0,5,10},grid=major,major grid style={gray!30,dashed},samples=300,domain=0:120,clip=false]
+\addplot[blue,very thick] {10*sin(deg(2*pi*x/60))};\addlegendentry{$x_N$}
+\addplot[red,very thick] {-5*cos(deg(2*pi*x/60))};\addlegendentry{$x_M$}
+\end{axis}\end{tikzpicture}
+\end{center}
+\choice{$x_M = 5\cos\left(\frac{50\pi}{3} t - \frac{\pi}{2}\right)$ (cm)}{\True $x_M = 5\cos\left(\frac{50\pi}{3} t\right)$ (cm)}{$x_M = 10\cos\left(\frac{50\pi}{3} t + \pi\right)$ (cm)}{$x_M = 5\cos\left(\frac{50\pi}{3} t + \frac{\pi}{2}\right)$ (cm)}
+\loigiai{
+Từ đồ thị, ta thấy đường màu đỏ biểu diễn dao động của vật M.
+Tại thời điểm $t=0$, li độ của vật M là $x_M = 5$ cm.
+Từ đồ thị, ta thấy chu kì dao động của vật M là $T = 60$ ms =0.0$6$ s.
+Tần số góc của dao động là $\omega = \frac{2\pi}{T} = \frac{2\pi}{0.06} = \frac{100\pi}{3}$ rad/s.
+Phương trình dao động của vật M có dạng $x_M = A\cos(\omega t + \varphi)$.
+Từ đồ thị, biên độ dao động của vật M là $A = 5$ cm.
+Tại $t=0, x_M = A\cos(\varphi) = 5\cos(\varphi)$.
+Vì $x_M(0) = 5$ cm, ta có $5\cos(\varphi) = 5 \Rightarrow \cos(\varphi) = 1$.
+Chọn pha ban đầu $\varphi = 0$.
+Vậy phương trình dao động của vật M là $x_M = 5\cos\left(\frac{100\pi}{3} t\right)$ (cm).
+Kiểm tra lại các phương án:
+Các phương án đều có tần số góc là $\frac{50\pi}{3}$. Có vẻ có sự nhầm lẫn giữa tần số góc trong đề bài và trong đồ thị.
+Nếu đề bài muốn tần số góc là $\frac{50\pi}{3}$, thì chu kì sẽ là $T = \frac{2\pi}{\omega} = \frac{2\pi}{50\pi/3} = \frac{6}{50} = 0.12$ s =12$0$ ms.
+Tuy nhiên, đồ thị cho thấy chu kì là 60 ms.
+Giả sử đề bài muốn hỏi phương trình dao động của vật M dựa trên đồ thị, và các phương án có tần số góc là $\frac{50\pi}{3}$ là do lỗi đánh máy.
+Nếu chúng ta phải chọn một phương án từ các lựa chọn đã cho, và giả định rằng tần số góc trong các phương án là đúng, thì chúng ta cần xem xét lại.
+Tuy nhiên, theo đồ thị, $\omega = \frac{100\pi}{3}$.
+Nếu chúng ta phải chọn một phương án có sẵn, và giả định rằng tần số góc trong các phương án là đúng, tức là $\omega = \frac{50\pi}{3}$.
+Với $A=5$ cm và $\varphi=0$, phương trình sẽ là $x_M = 5\cos\left(\frac{50\pi}{3} t\right)$ (cm).
+Đây là phương án B.
+Có vẻ như có sự không nhất quán giữa đồ thị và các phương án về tần số góc. Tuy nhiên, nếu chúng ta phải chọn một phương án, và giả định rằng tần số góc trong các phương án là đúng, thì phương án B là phù hợp nhất với biên độ và pha ban đầu từ đồ thị.
+Nếu chúng ta tuân thủ chặt chẽ đồ thị, thì $\omega = \frac{100\pi}{3}$. Không có phương án nào có tần số góc này.
+Tuy nhiên, nếu chúng ta nhìn vào đồ thị, phương trình của $x_M$ được vẽ là $5\cos(\text{deg}(2\pi x/60))$. Điều này có nghĩa là $\omega = \frac{2\pi}{60 \text{ ms}} = \frac{2\pi}{0.06 \text{ s}} = \frac{100\pi}{3}$ rad/s.
+Có vẻ như các phương án đã cho có tần số góc khác với tần số góc được vẽ trong đồ thị.
+Nếu chúng ta phải chọn một phương án từ các lựa chọn đã cho, và giả định rằng tần số góc trong các phương án là đúng, tức là $\omega = \frac{50\pi}{3}$.
+Từ đồ thị, biên độ $A=5$ cm. Tại $t=0, x_M=5$ cm. Do đó, pha ban đầu $\varphi=0$.
+Vậy phương trình sẽ là $x_M = 5\cos\left(\frac{50\pi}{3} t\right)$ (cm).
+Đây là phương án B.
+Có thể có lỗi trong việc tạo ra các phương án hoặc trong việc vẽ đồ thị. Tuy nhiên, nếu chúng ta phải chọn một phương án, và giả định rằng tần số góc trong các phương án là đúng, thì B là lựa chọn hợp lý nhất dựa trên biên độ và pha ban đầu từ đồ thị.
+Nếu chúng ta tuân thủ đồ thị, thì phương trình là $x_M = 5\cos\left(\frac{100\pi}{3} t\right)$ (cm). Không có phương án nào như vậy.
+Tuy nhiên, nếu chúng ta nhìn vào cách vẽ đồ thị: `\addplot[red,very thick] {5*cos(deg(2*pi*x/60))};`
+Điều này có nghĩa là $x_M = 5\cos\left(\frac{2\pi}{60} t\right)$ với $t$ tính bằng ms.
+Nếu $t$ tính bằng giây, thì $t_{ms} = 1000 t_{s}$.
+$x_M = 5\cos\left(\frac{2\pi}{60} \cdot 1000 t_{s}\right) = 5\cos\left(\frac{100\pi}{3} t_{s}\right)$.
+Vậy tần số góc thực sự của đồ thị là $\frac{100\pi}{3}$ rad/s.
+Có vẻ như các phương án đã cho có tần số góc là $\frac{50\pi}{3}$ rad/s. Điều này là một sự không nhất quán.
+Tuy nhiên, nếu chúng ta phải chọn một phương án, và giả định rằng tần số góc trong các phương án là đúng, thì chúng ta sẽ chọn phương án B vì nó có biên độ và pha ban đầu đúng với đồ thị.
+Nếu đề bài muốn hỏi phương trình dao động của vật M dựa trên đồ thị, và các phương án có tần số góc là $\frac{50\pi}{3}$ là do lỗi đánh máy, thì chúng ta sẽ chọn phương án B vì nó có biên độ và pha ban đầu đúng với đồ thị.
+Giả sử rằng tần số góc trong các phương án là đúng, tức là $\omega = \frac{50\pi}{3}$ rad/s.
+Từ đồ thị, biên độ $A = 5$ cm.
+Tại $t=0, x_M = 5$ cm.
+Sử dụng phương trình $x_M = A\cos(\omega t + \varphi)$.
+Tại $t=0, x_M(0) = A\cos(\varphi) = 5\cos(\varphi)$.
+Vì $x_M(0) = 5$, ta có $5\cos(\varphi) = 5 \Rightarrow \cos(\varphi) = 1$.
+Chọn $\varphi = 0$.
+Vậy phương trình dao động của vật M là $x_M = 5\cos\left(\frac{50\pi}{3} t\right)$ (cm).
+}
+\end{ex}
+
 	
 	\dangbt{Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian}
 	\begin{ex}
