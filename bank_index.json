@@ -497,9 +497,9 @@
       "dang_kinds": {
         "Kiểm tra cặp số là nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
           "TN": 50,
-          "DS": 3,
+          "DS": 4,
           "TLN": 0,
-          "TL": 6
+          "TL": 5
         },
         "Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế": {
           "TN": 90,
