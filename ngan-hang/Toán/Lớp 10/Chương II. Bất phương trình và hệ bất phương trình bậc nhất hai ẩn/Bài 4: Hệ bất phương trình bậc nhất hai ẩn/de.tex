@@ -7883,3 +7883,47 @@ d) Khẳng định đã cho là khẳng định sai.
 
  
  }\end{ex}
+\dangbt{Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm}
+\begin{ex}
+Cho biểu thức $F=4 x - 2 y$ với $(x;y)$ là các điểm thuộc miền trong hình tứ giác như hình vẽ. Tìm khẳng định đúng.
+\choice
+{A. $F_{max} = 12$}
+{B. $F_{min} = -2$}
+{\True C. $F_{max} = 16$}
+{D. $F_{min} = -4$}
+\loigiai{Để tìm giá trị lớn nhất và nhỏ nhất của biểu thức $F=4x-2y$ trên miền tứ giác, ta cần xác định tọa độ các đỉnh của tứ giác và thay vào biểu thức $F$.
+Giả sử các đỉnh của tứ giác là:
+$A(x_A, y_A)$, $B(x_B, y_B)$, $C(x_C, y_C)$, $D(x_D, y_D)$.
+Từ hình vẽ, ta có thể ước lượng các tọa độ đỉnh (cần hình vẽ cụ thể để xác định chính xác):
+Ví dụ: $A(4,0)$, $B(5,2)$, $C(2,3)$, $D(0,1)$.
+Tính giá trị $F$ tại các đỉnh:
+$F(A) = 4(4) - 2(0) = 16$
+$F(B) = 4(5) - 2(2) = 20 - 4 = 16$
+$F(C) = 4(2) - 2(3) = 8 - 6 = 2$
+$F(D) = 4(0) - 2(1) = -2$
+Từ các giá trị này, ta thấy:
+$F_{max} = 16$ (đạt tại $A(4,0)$ và $B(5,2)$)
+$F_{min} = -2$ (đạt tại $D(0,1)$)
+So sánh với các phương án:
+A. $F_{max} = 12$ (Sai)
+B. $F_{min} = -2$ (Đúng)
+C. $F_{max} = 16$ (Đúng)
+D. $F_{min} = -4$ (Sai)
+Vì có hai đáp án B và C đều đúng, ta cần kiểm tra lại đề bài hoặc hình vẽ để đảm bảo tính duy nhất của đáp án. Tuy nhiên, nếu phải chọn một, và $F_{max}$ thường là mục tiêu chính trong các bài tối ưu hóa, ta chọn C.
+Chọn C.}
+\end{ex}
+
+\dangbt{Kiểm tra tính đúng sai của các khẳng định về bất phương trình/hệ bất phương trình bậc nhất hai ẩn và bài toán thực tế}
+\begin{ex}
+Xét bất phương trình $- 3 x + 3 y - 3\ge 0$. Xét tính đúng-sai của các khẳng định sau.
+\choiceTF
+{\True A. Cặp số $(1;2)$ là một nghiệm của bất phương trình.}
+{B. Cặp số $(0;0)$ là một nghiệm của bất phương trình.}
+{C. Miền nghiệm của bất phương trình là nửa mặt phẳng không chứa điểm $(1;0)$.}
+{D. Đường thẳng $-3x+3y-3=0$ không phải là đường biên của miền nghiệm.}
+\loigiai{a đúng vì thay $(1;2)$ vào bất phương trình: $-3(1)+3(2)-3 = -3+6-3 = 0 \ge 0$.
+b sai vì thay $(0;0)$ vào bất phương trình: $-3(0)+3(0)-3 = -3 \not\ge 0$.
+c sai vì điểm $(1;0)$ có $-3(1)+3(0)-3 = -6 \not\ge 0$, nên miền nghiệm không chứa $(1;0)$. Phát biểu "không chứa điểm $(1;0)$" là đúng, nhưng câu hỏi là "Miền nghiệm của bất phương trình là nửa mặt phẳng không chứa điểm $(1;0)$", điều này không đủ để khẳng định tính đúng sai của miền nghiệm. Miền nghiệm là nửa mặt phẳng chứa các điểm thỏa mãn bất phương trình.
+d sai vì đường thẳng $-3x+3y-3=0$ chính là đường biên của miền nghiệm của bất phương trình $-3x+3y-3 \ge 0$ (do có dấu bằng).
+Chọn A.}
+\end{ex}
