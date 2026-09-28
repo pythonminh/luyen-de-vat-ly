@@ -12,47 +12,40 @@
 \begin{phuongphap}
 Để kiểm tra một cặp số $(x_0; y_0)$ có phải là nghiệm của bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Kiểm tra một cặp số là nghiệm của một bất phương trình bậc nhất hai ẩn:}
-    \begin{enumerate}
-        \item Thay giá trị $x_0$ vào vị trí của $x$ và $y_0$ vào vị trí của $y$ trong bất phương trình đã cho.
-        \item Tính giá trị của biểu thức ở vế trái (hoặc vế phải) sau khi thay thế.
-        \item So sánh giá trị vừa tính được với vế còn lại của bất phương trình.
-        \item Kết luận:
-        \begin{itemize}
-            \item Nếu bất đẳng thức thu được là đúng, cặp số $(x_0; y_0)$ là nghiệm của bất phương trình.
-            \item Nếu bất đẳng thức thu được là sai, cặp số $(x_0; y_0)$ không phải là nghiệm của bất phương trình.
-        \end{itemize}
-    \end{enumerate}
-    \item \textbf{Kiểm tra một cặp số là nghiệm của một hệ bất phương trình bậc nhất hai ẩn:}
-    \begin{enumerate}
-        \item Lần lượt thay giá trị $x_0$ và $y_0$ vào TỪNG bất phương trình trong hệ.
-        \item Với mỗi bất phương trình, thực hiện các bước kiểm tra như đối với một bất phương trình riêng lẻ (từ bước 1a đến 1c).
-        \item Kết luận:
-        \begin{itemize}
-            \item Nếu TẤT CẢ các bất phương trình trong hệ đều đúng khi thay $(x_0; y_0)$ vào, thì cặp số $(x_0; y_0)$ là nghiệm của hệ bất phương trình.
-            \item Nếu CÓ ÍT NHẤT MỘT bất phương trình trong hệ bị sai khi thay $(x_0; y_0)$ vào, thì cặp số $(x_0; y_0)$ không phải là nghiệm của hệ bất phương trình.
-        \end{itemize}
-    \end{enumerate}
+    \item \textbf{Đối với một bất phương trình:}
+    \begin{itemize}
+        \item Thay trực tiếp giá trị $x_0$ và $y_0$ vào bất phương trình đã cho.
+        \item Thực hiện phép tính và kiểm tra xem bất đẳng thức thu được có đúng hay không.
+        \item Nếu bất đẳng thức đúng, cặp số $(x_0; y_0)$ là nghiệm của bất phương trình. Ngược lại, nếu bất đẳng thức sai, cặp số $(x_0; y_0)$ không phải là nghiệm.
+    \end{itemize}
+    \item \textbf{Đối với một hệ bất phương trình:}
+    \begin{itemize}
+        \item Thay trực tiếp giá trị $x_0$ và $y_0$ vào TỪNG bất phương trình trong hệ.
+        \item Thực hiện phép tính và kiểm tra xem TẤT CẢ các bất đẳng thức thu được có đúng hay không.
+        \item Nếu TẤT CẢ các bất đẳng thức đều đúng, cặp số $(x_0; y_0)$ là nghiệm của hệ bất phương trình. Ngược lại, nếu có ít nhất một bất đẳng thức sai, cặp số $(x_0; y_0)$ không phải là nghiệm của hệ.
+    \end{itemize}
 \end{enumerate}
+\textbf{Lưu ý:} Cần cẩn thận với dấu bất đẳng thức ($<, >, \le, \ge$).
 \end{phuongphap}
 \begin{vidumau}
 Cặp số nào sau đây là nghiệm của bất phương trình $x - 6 y - 4 > 0$?
 \choice
 { $(1; 0)$ }
 { $(0; 0)$ }
-{\True $(1; -1)$  }
+{\True  $(1; -1)$ }
 { $(4; 0)$ }
 \loigiai{
-Để kiểm tra cặp số nào là nghiệm của bất phương trình $x - 6 y - 4 > 0$, ta thay từng cặp số vào bất phương trình và kiểm tra tính đúng sai của bất đẳng thức:
+Thay từng cặp số vào bất phương trình $x - 6 y - 4 > 0$:
 \begin{itemize}
-    \item Với cặp số $(1; 0)$: Thay $x=1, y=0$ vào bất phương trình, ta được $1 - 6(0) - 4 = 1 - 0 - 4 = -3$. Bất đẳng thức trở thành $-3 > 0$, đây là một mệnh đề sai. Vậy $(1; 0)$ không là nghiệm.
-    \item Với cặp số $(0; 0)$: Thay $x=0, y=0$ vào bất phương trình, ta được $0 - 6(0) - 4 = 0 - 0 - 4 = -4$. Bất đẳng thức trở thành $-4 > 0$, đây là một mệnh đề sai. Vậy $(0; 0)$ không là nghiệm.
-    \item Với cặp số $(1; -1)$: Thay $x=1, y=-1$ vào bất phương trình, ta được $1 - 6(-1) - 4 = 1 + 6 - 4 = 3$. Bất đẳng thức trở thành $3 > 0$, đây là một mệnh đề đúng. Vậy $(1; -1)$ là nghiệm.
-    \item Với cặp số $(4; 0)$: Thay $x=4, y=0$ vào bất phương trình, ta được $4 - 6(0) - 4 = 4 - 0 - 4 = 0$. Bất đẳng thức trở thành $0 > 0$, đây là một mệnh đề sai. Vậy $(4; 0)$ không là nghiệm.
+    \item Với $(1; 0)$: $1 - 6(0) - 4 = 1 - 0 - 4 = -3$. Vì $-3 \ngtr 0$, nên $(1; 0)$ không là nghiệm.
+    \item Với $(0; 0)$: $0 - 6(0) - 4 = 0 - 0 - 4 = -4$. Vì $-4 \ngtr 0$, nên $(0; 0)$ không là nghiệm.
+    \item Với $(1; -1)$: $1 - 6(-1) - 4 = 1 + 6 - 4 = 3$. Vì $3 > 0$, nên $(1; -1)$ là nghiệm.
+    \item Với $(4; 0)$: $4 - 6(0) - 4 = 4 - 0 - 4 = 0$. Vì $0 \ngtr 0$, nên $(4; 0)$ không là nghiệm.
 \end{itemize}
-Dựa trên kết quả kiểm tra, cặp số $(1; -1)$ là nghiệm của bất phương trình đã cho.
+Vậy, cặp số $(1; -1)$ là nghiệm của bất phương trình.
 }
 \end{vidumau}
+
 \subsubsection{Dạng: Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế}
 \begin{phuongphap}
 Để lập bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế, ta thực hiện các bước sau:
@@ -80,7 +73,7 @@ Dựa trên kết quả kiểm tra, cặp số $(1; -1)$ là nghiệm của bấ
 \begin{vidumau}
 Một cửa hàng bán hai loại áo: áo phông và áo sơ mi. Giá một chiếc áo phông là 120 nghìn đồng, giá một chiếc áo sơ mi là 180 nghìn đồng. Cửa hàng cần bán ít nhất 50 chiếc áo mỗi ngày và tổng doanh thu phải đạt ít nhất 7 triệu đồng. Gọi $x$ là số áo phông và $y$ là số áo sơ mi bán được trong một ngày. Hệ bất phương trình nào sau đây mô tả các điều kiện trên?
 \choice
-{ \True  $\begin{cases} x + y \ge 50 \\ 120x + 180y \ge 7000 \\ x \ge 0, y \ge 0 \end{cases}$ }
+{\True $\begin{cases} x + y \ge 50 \\ 120x + 180y \ge 7000 \\ x \ge 0, y \ge 0 \end{cases}$  }
 { $\begin{cases} x + y \le 50 \\ 120x + 180y \ge 7000 \\ x \ge 0, y \ge 0 \end{cases}$ }
 { $\begin{cases} x + y \ge 50 \\ 120x + 180y \le 7000 \\ x \ge 0, y \ge 0 \end{cases}$ }
 { $\begin{cases} x + y \le 50 \\ 120x + 180y \le 7000 \\ x \ge 0, y \ge 0 \end{cases}$ }
@@ -141,7 +134,7 @@ Miền nghiệm của bất phương trình $- 2 x + y\le -5$ là nửa mặt ph
 { $(0; 0)$ }
 { $(1; 1)$ }
 { $(2; -1)$ }
-{\True $(3; 0)$  }
+{ $(3; 0)$ \True }
 \loigiai{
 Xét bất phương trình $-2x + y \le -5$.
 Đường thẳng biên là $-2x + y = -5$.
@@ -307,7 +300,7 @@ Cho biểu thức $F=4 x - 2 y$ với $(x;y)$ là các điểm thuộc miền tr
 \choice
 { Giá trị lớn nhất của $F$ là 14. }
 { Giá trị nhỏ nhất của $F$ là $-2$. }
-{ Giá trị lớn nhất của $F$ là 10. \True }
+{ \True Giá trị lớn nhất của $F$ là 10.  }
 { Giá trị nhỏ nhất của $F$ là 2. }
 \loigiai{
 Miền nghiệm là tứ giác $ABCD$ với các đỉnh:
