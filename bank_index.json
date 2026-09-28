@@ -1327,14 +1327,14 @@
       "Chuong": "Chương II. Động học",
       "BaiHoc": "L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được",
       "De": "L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được",
-      "questions": 102,
-      "count": 102,
+      "questions": 105,
+      "count": 105,
       "dang": {
         "Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng": 53,
         "Khái niệm và đặc điểm của chất điểm": 10,
         "Nhận biết chuyển động cơ học và vật mốc": 5,
         "Tính tương đối của chuyển động và hệ quy chiếu": 16,
-        "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": 6,
+        "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": 9,
         "Thành phần và cấu trúc của hệ quy chiếu": 3,
         "Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng": 9
       },
@@ -1364,7 +1364,7 @@
           "TL": 0
         },
         "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": {
-          "TN": 3,
+          "TN": 6,
           "DS": 3,
           "TLN": 0,
           "TL": 0
