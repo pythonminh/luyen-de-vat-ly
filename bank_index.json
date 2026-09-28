@@ -1392,17 +1392,17 @@
       "Chuong": "Chương II. Động học",
       "BaiHoc": "L10C2 Bài 5. Tốc độ và vận tốc",
       "De": "L10C2 Bài 5. Tốc độ và vận tốc",
-      "questions": 199,
-      "count": 199,
+      "questions": 201,
+      "count": 201,
       "dang": {
-        "Cộng vận tốc cho các chuyển động cùng phương": 38,
+        "Cộng vận tốc cho các chuyển động cùng phương": 39,
         "Tính vận tốc trung bình, độ dịch chuyển và tổng hợp độ dịch chuyển": 131,
         "Phân biệt tốc độ trung bình và vận tốc trung bình trong chuyển động đổi chiều": 12,
-        "Tính vận tốc tương đối giữa hai vật": 18
+        "Tính vận tốc tương đối giữa hai vật": 19
       },
       "dang_kinds": {
         "Cộng vận tốc cho các chuyển động cùng phương": {
-          "TN": 13,
+          "TN": 14,
           "DS": 17,
           "TLN": 3,
           "TL": 5
@@ -1420,7 +1420,7 @@
           "TL": 2
         },
         "Tính vận tốc tương đối giữa hai vật": {
-          "TN": 8,
+          "TN": 9,
           "DS": 6,
           "TLN": 4,
           "TL": 0
