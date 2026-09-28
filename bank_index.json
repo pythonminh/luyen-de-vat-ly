@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 184,
+  "total_files": 185,
   "total_questions": 12533,
   "lessons": [
     {
@@ -474,6 +474,20 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/de.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/de.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/de.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
+      "BaiHoc": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
+      "De": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
+      "questions": 0,
+      "count": 0,
+      "dang": {},
+      "dang_kinds": {}
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương IV. Vectơ/Bài 7. Các khái niệm mở đầu/de.tex",
