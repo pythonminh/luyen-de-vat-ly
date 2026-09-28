@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12596,
+  "total_questions": 12517,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4155,17 +4155,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Các cách làm biến đổi nội năng của một vật",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Các cách làm biến đổi nội năng của một vật",
-      "questions": 15,
-      "count": 15,
+      "questions": 1,
+      "count": 1,
       "dang": {
-        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 15
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 1
       },
       "dang_kinds": {
         "Lý thuyết về nội năng, các cách biến đổi và định luật I": {
-          "TN": 11,
-          "DS": 1,
-          "TLN": 1,
-          "TL": 2
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
         }
       }
     },
@@ -4178,17 +4178,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
-      "questions": 17,
-      "count": 17,
+      "questions": 1,
+      "count": 1,
       "dang": {
-        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 17
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 1
       },
       "dang_kinds": {
         "Lý thuyết về nội năng, các cách biến đổi và định luật I": {
-          "TN": 12,
-          "DS": 2,
-          "TLN": 1,
-          "TL": 2
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
         }
       }
     },
@@ -4201,17 +4201,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Lý thuyết về nội năng và các cách biến đổi nội năng",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Lý thuyết về nội năng và các cách biến đổi nội năng",
-      "questions": 14,
-      "count": 14,
+      "questions": 4,
+      "count": 4,
       "dang": {
-        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 14
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 4
       },
       "dang_kinds": {
         "Lý thuyết về nội năng, các cách biến đổi và định luật I": {
-          "TN": 7,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 2
+          "TN": 1,
+          "DS": 0,
+          "TLN": 2,
+          "TL": 1
         }
       }
     },
@@ -4270,19 +4270,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
-      "questions": 146,
-      "count": 146,
+      "questions": 107,
+      "count": 107,
       "dang": {
-        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 61,
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 22,
         "Tính độ biến thiên nội năng và nhiệt lượng": 64,
         "Tính toán hiệu suất và công suất động cơ nhiệt": 21
       },
       "dang_kinds": {
         "Lý thuyết về nội năng, các cách biến đổi và định luật I": {
-          "TN": 36,
-          "DS": 15,
-          "TLN": 7,
-          "TL": 3
+          "TN": 9,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 2
         },
         "Tính độ biến thiên nội năng và nhiệt lượng": {
           "TN": 16,
