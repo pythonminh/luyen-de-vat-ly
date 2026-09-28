@@ -1779,3 +1779,113 @@ Tổng quãng đường vật đi được sau $3{,}25\text{ h}$ là:
 $s = s_1 + s_2 = 80 + 110 = 190\text{ km}$.
 }
 \end{ex}
+\dangbt{Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật}
+\begin{ex}
+\begin{minipage}[t]{0.7\textwidth}
+Hình vẽ là đồ thị độ dịch chuyển – thời gian của ô tô chuyển động thẳng theo một hướng xác định gồm 4 giai đoạn. Khẳng định nào đúng?
+\choice
+{Giai đoạn 1 và 4 ô tô chuyển động thẳng đều.}
+{Giai đoạn 2 và 3 ô tô chuyển động nhanh dần đều.}
+{Vận tốc ô tô giai đoạn 3 lớn hơn giai đoạn 2.}
+{\True Tốc độ ô tô giai đoạn 3 bé hơn giai đoạn 2.}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.28\textwidth}
+\vspace{-10pt}
+\begin{tikzpicture}[>=stealth, scale=0.8]
+    \draw[->] (0,0) -- (4.5,0) node[above] {$t$};
+    \draw[->] (0,0) -- (0,3) node[right] {$d$};
+    
+    \draw[thick] (0,0.4) -- (0.8,0.4) node[midway, above] {\small 1};
+    \draw[thick] (0.8,0.4) -- (1.6,1.8) node[midway, left] {\small 2};
+    \draw[thick] (1.6,1.8) -- (2.6,2.5) node[midway, above left] {\small 3};
+    \draw[thick] (2.6,2.5) -- (4,2.5) node[midway, above] {\small 4};
+\end{tikzpicture}
+\end{minipage}
+\loigiai{Đồ thị độ dịch chuyển – thời gian là đường thẳng xiên chứng tỏ vật chuyển động thẳng đều. Độ dốc của đường thẳng biểu thị vận tốc.
+Giai đoạn 1 và 4: đồ thị là đường thẳng nằm ngang, độ dốc bằng 0, nghĩa là vận tốc bằng 0. Ô tô đứng yên. Phát biểu A sai.
+Giai đoạn 2 và 3: đồ thị là đường thẳng xiên, độ dốc dương, nghĩa là ô tô chuyển động thẳng đều theo chiều dương. Phát biểu B sai.
+Độ dốc của giai đoạn 2: $v_2 = \frac{1.8-0.4}{1.6-0.8} = \frac{1.4}{0.8} = 1.75$.
+Độ dốc của giai đoạn 3: $v_3 = \frac{2.5-1.8}{2.6-1.6} = \frac{0.7}{1} = 0.7$.
+Vì $v_2 > v_3$, nên tốc độ ô tô giai đoạn 3 bé hơn giai đoạn 2. Phát biểu C sai, D đúng.}
+\end{ex}
+
+\dangbt{Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật}
+\begin{ex}
+\begin{minipage}[t]{0.7\textwidth}
+Hình bên mô tả đồ thị độ dịch chuyển - thời gian của một xe buýt xuất phát từ bến xe và đi qua các trạm. Có bao nhiêu trạm trong trường hợp này?
+\choice
+{7.}
+{5.}
+{\True 3.}
+{6.}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.28\textwidth}
+\vspace{-10pt}
+\begin{tikzpicture}[>=stealth, scale=0.6]
+    \draw[->] (0,0) -- (6,0) node[right] {$t(\text{h})$};
+    \draw[->] (0,0) -- (0,3) node[above] {$d(\text{km})$};
+    \node[below left] at (0,0) {O};
+    
+    % Vẽ đường ziczac có 3 đoạn nằm ngang (trạm)
+    \draw[thick] (0,0) -- (0.8, 1) -- (1.5, 1) -- (2.5, 2.2) -- (3.2, 1.5) -- (4, 1.5) -- (4.8, 0.6) -- (5.3, 0.6) -- (5.8, 0);
+\end{tikzpicture}
+\end{minipage}
+\loigiai{Trên đồ thị độ dịch chuyển - thời gian, các đoạn nằm ngang (độ dốc bằng 0) biểu thị vật đứng yên. Trong trường hợp này, xe buýt dừng lại ở các trạm.
+Quan sát đồ thị, có 3 đoạn nằm ngang, tương ứng với 3 lần xe buýt dừng lại ở các trạm.}
+\end{ex}
+
+\dangbt{Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật}
+\begin{ex}
+\begin{minipage}[t]{0.65\textwidth}
+Xác định phương trình chuyển động và độ lớn vận tốc của hai chuyển động có đồ thị ở hình vẽ bên.
+\choice
+{$d_1 = 60 + 10t; v_1 = 10\text{km/h}, d_2 = -10t; v_2 = 10\text{km/h}$.}
+{\True $d_1 = 60 - 10t; v_1 = 10\text{km/h}, d_2 = 12t; v_2 = 12\text{km/h}$.}
+{$d_1 = 60 - 20t; v_1 = 20\text{km/h}, d_2 = 12t; v_2 = 12\text{km/h}$.}
+{$d_1 = -10t; v_1 = 10\text{km/h}, d_2 = 12t; v_2 = 12\text{km/h}$.}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.33\textwidth}
+\vspace{-15pt}
+\begin{tikzpicture}[>=stealth, scale=0.55]
+    % Lưới
+    \draw[help lines, step=1] (0,0) grid (7,4);
+    
+    % Trục
+    \draw[->] (0,0) -- (8,0) node[below] {$t(\text{h})$};
+    \draw[->] (0,0) -- (0,5) node[right] {$d(\text{km})$};
+    \node[below left] at (0,0) {O};
+    
+    % Số liệu trên trục
+    \foreach \x in {1,2,3,4,5,6} \node[below, font=\footnotesize] at (\x,0) {\x};
+    \node[left, font=\footnotesize] at (0,1) {20};
+    \node[left, font=\footnotesize] at (0,2) {40};
+    \node[left, font=\footnotesize] at (0,3) {60};
+    
+    % Đồ thị 1 và 2
+    \draw[thick] (0,3) -- (6,0);
+    \node[above right] at (6,0) {(1)};
+    
+    \draw[thick] (0,0) -- (6,3.6); 
+    \node[above] at (6,3.6) {(2)};
+\end{tikzpicture}
+\end{minipage}
+\loigiai{Phương trình chuyển động thẳng đều có dạng $d = d_0 + vt$.
+Đối với chuyển động (1):
+Tại $t=0$, $d_1 = 60$ km.
+Tại $t=6$ h, $d_1 = 0$ km.
+Vận tốc $v_1 = \frac{0 - 60}{6 - 0} = -10$ km/h.
+Phương trình chuyển động (1): $d_1 = 60 - 10t$.
+Độ lớn vận tốc của (1) là $|v_1| = |-10| = 10$ km/h.
+
+Đối với chuyển động (2):
+Tại $t=0$, $d_2 = 0$ km.
+Tại $t=6$ h, $d_2 = 3.6 \times 20 = 72$ km (vì 1 đơn vị trên trục d là 20km, điểm (6,3.6) tương ứng với d=72km).
+Vận tốc $v_2 = \frac{72 - 0}{6 - 0} = 12$ km/h.
+Phương trình chuyển động (2): $d_2 = 12t$.
+Độ lớn vận tốc của (2) là $|v_2| = |12| = 12$ km/h.
+
+So sánh với các phương án, phương án B là đúng.}
+\end{ex}
