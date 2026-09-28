@@ -1889,3 +1889,39 @@ Phương trình chuyển động (2): $d_2 = 12t$.
 
 So sánh với các phương án, phương án B là đúng.}
 \end{ex}
+\dangbt{Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng}
+\begin{ex}
+[ĐTH] Một người chạy bộ xuất phát từ điểm $A$, đi qua các điểm $B$ và $C$ để đến đích tại điểm $D$ như sơ đồ bên dưới. Biểu thức nào biểu diễn đúng vectơ độ dịch chuyển $\vec{d}$ và tổng quãng đường $S$ người đó đã chạy?
+
+\begin{center}
+\begin{tikzpicture}[>=stealth, scale=0.8]
+    % Định nghĩa các điểm
+    \coordinate (A) at (0,0);
+    \coordinate (B) at (0,2);
+    \coordinate (C) at (6,2);
+    \coordinate (D) at (6,0);
+    
+    % Vẽ đường đi
+    \draw[thick, ->] (A) -- (0,1) node[left] {Đường 1};
+    \draw[thick] (0,1) -- (B);
+    \draw[thick, ->] (B) -- (3,2) node[above] {Đường 2};
+    \draw[thick] (3,2) -- (C);
+    \draw[thick, ->] (C) -- (6,1) node[right] {Đường 3};
+    \draw[thick] (6,1) -- (D);
+    
+    % Vẽ các điểm
+    \fill (A) circle (2pt) node[below left] {A};
+    \fill (B) circle (2pt) node[above left] {B};
+    \fill (C) circle (2pt) node[above right] {C};
+    \fill (D) circle (2pt) node[below right] {D};
+\end{tikzpicture}
+\end{center}
+
+\choice
+{$\vec{d} = \vec{AD}; S = AB + BC + CD + AD$.}
+{$\vec{d} = \vec{AD}; S = AB$.}
+{$\vec{d} = \vec{AD}; S = AB + BC$.}
+{\True $\vec{d} = \vec{AD}; S = AB + BC + CD$.}
+\loigiai{Độ dịch chuyển là vectơ nối điểm đầu và điểm cuối của chuyển động. Trong trường hợp này, điểm đầu là A và điểm cuối là D, vậy độ dịch chuyển là $\vec{d} = \vec{AD}$.
+Quãng đường đi được là tổng chiều dài quỹ đạo mà vật đã đi. Người đó đi từ A đến B, rồi từ B đến C, rồi từ C đến D. Vậy tổng quãng đường là $S = AB + BC + CD$.}
+\end{ex}
