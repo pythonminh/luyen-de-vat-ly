@@ -12,62 +12,70 @@
 \begin{phuongphap}
 Để kiểm tra một cặp số $(x_0; y_0)$ có phải là nghiệm của bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Đối với một bất phương trình:}
-    \begin{itemize}
-        \item Thay trực tiếp giá trị $x_0$ và $y_0$ vào bất phương trình đã cho.
-        \item Thực hiện phép tính và kiểm tra xem bất đẳng thức thu được có đúng hay không.
-        \item Nếu bất đẳng thức đúng, cặp số $(x_0; y_0)$ là nghiệm của bất phương trình. Ngược lại, nếu bất đẳng thức sai, cặp số $(x_0; y_0)$ không phải là nghiệm.
-    \end{itemize}
-    \item \textbf{Đối với một hệ bất phương trình:}
-    \begin{itemize}
-        \item Thay trực tiếp giá trị $x_0$ và $y_0$ vào TỪNG bất phương trình trong hệ.
-        \item Thực hiện phép tính và kiểm tra xem TẤT CẢ các bất đẳng thức thu được có đúng hay không.
-        \item Nếu TẤT CẢ các bất đẳng thức đều đúng, cặp số $(x_0; y_0)$ là nghiệm của hệ bất phương trình. Ngược lại, nếu có ít nhất một bất đẳng thức sai, cặp số $(x_0; y_0)$ không phải là nghiệm của hệ.
-    \end{itemize}
+    \item \textbf{Kiểm tra một cặp số là nghiệm của một bất phương trình bậc nhất hai ẩn:}
+    \begin{enumerate}
+        \item Thay giá trị $x_0$ vào vị trí của $x$ và $y_0$ vào vị trí của $y$ trong bất phương trình đã cho.
+        \item Tính giá trị của biểu thức ở vế trái (hoặc vế phải) sau khi thay thế.
+        \item So sánh giá trị vừa tính được với vế còn lại của bất phương trình.
+        \item Kết luận:
+        \begin{itemize}
+            \item Nếu bất đẳng thức thu được là đúng, cặp số $(x_0; y_0)$ là nghiệm của bất phương trình.
+            \item Nếu bất đẳng thức thu được là sai, cặp số $(x_0; y_0)$ không phải là nghiệm của bất phương trình.
+        \end{itemize}
+    \end{enumerate}
+    \item \textbf{Kiểm tra một cặp số là nghiệm của một hệ bất phương trình bậc nhất hai ẩn:}
+    \begin{enumerate}
+        \item Lần lượt thay giá trị $x_0$ và $y_0$ vào TỪNG bất phương trình trong hệ.
+        \item Với mỗi bất phương trình, thực hiện các bước kiểm tra như đối với một bất phương trình riêng lẻ (từ bước 1a đến 1c).
+        \item Kết luận:
+        \begin{itemize}
+            \item Nếu TẤT CẢ các bất phương trình trong hệ đều đúng khi thay $(x_0; y_0)$ vào, thì cặp số $(x_0; y_0)$ là nghiệm của hệ bất phương trình.
+            \item Nếu CÓ ÍT NHẤT MỘT bất phương trình trong hệ bị sai khi thay $(x_0; y_0)$ vào, thì cặp số $(x_0; y_0)$ không phải là nghiệm của hệ bất phương trình.
+        \end{itemize}
+    \end{enumerate}
 \end{enumerate}
-\textbf{Lưu ý:} Cần cẩn thận với dấu bất đẳng thức ($<, >, \le, \ge$).
 \end{phuongphap}
 \begin{vidumau}
 Cặp số nào sau đây là nghiệm của bất phương trình $x - 6 y - 4 > 0$?
 \choice
 { $(1; 0)$ }
 { $(0; 0)$ }
-{ $(1; -1)$ \True }
+{\True $(1; -1)$  }
 { $(4; 0)$ }
 \loigiai{
-Thay từng cặp số vào bất phương trình $x - 6 y - 4 > 0$:
+Để kiểm tra cặp số nào là nghiệm của bất phương trình $x - 6 y - 4 > 0$, ta thay từng cặp số vào bất phương trình và kiểm tra tính đúng sai của bất đẳng thức:
 \begin{itemize}
-    \item Với $(1; 0)$: $1 - 6(0) - 4 = 1 - 0 - 4 = -3$. Vì $-3 \ngtr 0$, nên $(1; 0)$ không là nghiệm.
-    \item Với $(0; 0)$: $0 - 6(0) - 4 = 0 - 0 - 4 = -4$. Vì $-4 \ngtr 0$, nên $(0; 0)$ không là nghiệm.
-    \item Với $(1; -1)$: $1 - 6(-1) - 4 = 1 + 6 - 4 = 3$. Vì $3 > 0$, nên $(1; -1)$ là nghiệm.
-    \item Với $(4; 0)$: $4 - 6(0) - 4 = 4 - 0 - 4 = 0$. Vì $0 \ngtr 0$, nên $(4; 0)$ không là nghiệm.
+    \item Với cặp số $(1; 0)$: Thay $x=1, y=0$ vào bất phương trình, ta được $1 - 6(0) - 4 = 1 - 0 - 4 = -3$. Bất đẳng thức trở thành $-3 > 0$, đây là một mệnh đề sai. Vậy $(1; 0)$ không là nghiệm.
+    \item Với cặp số $(0; 0)$: Thay $x=0, y=0$ vào bất phương trình, ta được $0 - 6(0) - 4 = 0 - 0 - 4 = -4$. Bất đẳng thức trở thành $-4 > 0$, đây là một mệnh đề sai. Vậy $(0; 0)$ không là nghiệm.
+    \item Với cặp số $(1; -1)$: Thay $x=1, y=-1$ vào bất phương trình, ta được $1 - 6(-1) - 4 = 1 + 6 - 4 = 3$. Bất đẳng thức trở thành $3 > 0$, đây là một mệnh đề đúng. Vậy $(1; -1)$ là nghiệm.
+    \item Với cặp số $(4; 0)$: Thay $x=4, y=0$ vào bất phương trình, ta được $4 - 6(0) - 4 = 4 - 0 - 4 = 0$. Bất đẳng thức trở thành $0 > 0$, đây là một mệnh đề sai. Vậy $(4; 0)$ không là nghiệm.
 \end{itemize}
-Vậy, cặp số $(1; -1)$ là nghiệm của bất phương trình.
+Dựa trên kết quả kiểm tra, cặp số $(1; -1)$ là nghiệm của bất phương trình đã cho.
 }
 \end{vidumau}
-
 \subsubsection{Dạng: Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế}
 \begin{phuongphap}
 Để lập bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Bước 1: Đặt biến và xác định điều kiện của biến.}
+    \item \textbf{Xác định các đại lượng chưa biết và đặt biến:}
     \begin{itemize}
-        \item Đọc kỹ bài toán để xác định các đại lượng chưa biết cần tìm.
-        \item Đặt $x, y$ là các biến đại diện cho các đại lượng đó.
-        \item Nêu rõ đơn vị (nếu có) và điều kiện tự nhiên của các biến (ví dụ: $x, y$ là số nguyên không âm, $x > 0$, v.v.).
+        \item Đọc kỹ bài toán để xác định các đại lượng cần tìm hoặc các yếu tố thay đổi.
+        \item Đặt các biến (thường là $x, y$) cho các đại lượng đó. Ghi rõ đơn vị (nếu có) và điều kiện của biến (ví dụ: $x, y$ là số nguyên không âm, $x > 0$, v.v.).
     \end{itemize}
-    \item \textbf{Bước 2: Chuyển đổi các mối quan hệ thành bất phương trình.}
+    \item \textbf{Chuyển đổi các mối quan hệ thành bất đẳng thức:}
     \begin{itemize}
         \item Phân tích các điều kiện, ràng buộc, giới hạn được nêu trong bài toán.
-        \item Dịch các từ ngữ khóa như "không quá", "ít nhất", "nhiều nhất", "tối thiểu", "tối đa", "không vượt quá", "phải lớn hơn", "phải nhỏ hơn hoặc bằng" thành các dấu bất đẳng thức tương ứng ($<, >, \le, \ge$).
+        \item Dịch các từ ngữ như "không quá", "ít nhất", "nhiều nhất", "tối thiểu", "tối đa", "không vượt quá", "phải lớn hơn", "phải nhỏ hơn hoặc bằng" thành các dấu bất đẳng thức tương ứng ($<, >, \le, \ge$).
         \item Biểu diễn các mối quan hệ giữa các biến bằng các biểu thức bậc nhất.
         \item Đảm bảo các đơn vị của các đại lượng trong cùng một bất phương trình phải thống nhất.
     \end{itemize}
-    \item \textbf{Bước 3: Lập hệ bất phương trình.}
+    \item \textbf{Kết hợp thành hệ bất phương trình (nếu có nhiều điều kiện):}
     \begin{itemize}
-        \item Tập hợp tất cả các bất phương trình đã lập ở Bước 2 và các điều kiện của biến ở Bước 1 thành một hệ bất phương trình.
+        \item Nếu có nhiều điều kiện độc lập, mỗi điều kiện sẽ tạo thành một bất phương trình.
+        \item Tập hợp tất cả các bất phương trình đó lại thành một hệ bất phương trình.
     \end{itemize}
 \end{enumerate}
+\textbf{Bẫy thường gặp:} Sai sót trong việc chọn dấu bất đẳng thức hoặc quên các điều kiện tự nhiên của biến (ví dụ: số lượng sản phẩm phải là số nguyên không âm).
 \end{phuongphap}
 \begin{vidumau}
 Một cửa hàng bán hai loại áo: áo phông và áo sơ mi. Giá một chiếc áo phông là 120 nghìn đồng, giá một chiếc áo sơ mi là 180 nghìn đồng. Cửa hàng cần bán ít nhất 50 chiếc áo mỗi ngày và tổng doanh thu phải đạt ít nhất 7 triệu đồng. Gọi $x$ là số áo phông và $y$ là số áo sơ mi bán được trong một ngày. Hệ bất phương trình nào sau đây mô tả các điều kiện trên?
@@ -77,21 +85,17 @@ Một cửa hàng bán hai loại áo: áo phông và áo sơ mi. Giá một chi
 { $\begin{cases} x + y \ge 50 \\ 120x + 180y \le 7000 \\ x \ge 0, y \ge 0 \end{cases}$ }
 { $\begin{cases} x + y \le 50 \\ 120x + 180y \le 7000 \\ x \ge 0, y \ge 0 \end{cases}$ }
 \loigiai{
+Gọi $x$ là số áo phông bán được và $y$ là số áo sơ mi bán được.
 \begin{itemize}
-    \item \textbf{Bước 1: Đặt biến và xác định điều kiện của biến.}
-    Theo đề bài, $x$ là số áo phông bán được và $y$ là số áo sơ mi bán được.
-    Vì số lượng áo không thể âm, nên ta có điều kiện: $x \ge 0$ và $y \ge 0$. Ngoài ra, $x, y$ phải là số nguyên.
-    \item \textbf{Bước 2: Chuyển đổi các mối quan hệ thành bất phương trình.}
-    \begin{itemize}
-        \item Điều kiện về số lượng áo: "Cửa hàng cần bán ít nhất 50 chiếc áo mỗi ngày" nghĩa là tổng số áo phông và áo sơ mi phải lớn hơn hoặc bằng 50. Ta có bất phương trình: $x + y \ge 50$.
-        \item Điều kiện về doanh thu: "Tổng doanh thu phải đạt ít nhất 7 triệu đồng". Đổi 7 triệu đồng thành 7000 nghìn đồng để thống nhất đơn vị với giá áo. Doanh thu từ áo phông là $120x$ (nghìn đồng), doanh thu từ áo sơ mi là $180y$ (nghìn đồng). Tổng doanh thu là $120x + 180y$. Vậy ta có bất phương trình: $120x + 180y \ge 7000$.
-    \end{itemize}
-    \item \textbf{Bước 3: Lập hệ bất phương trình.}
-    Kết hợp các bất phương trình đã lập và các điều kiện của biến, ta được hệ bất phương trình:
-    $\begin{cases} x + y \ge 50 \\ 120x + 180y \ge 7000 \\ x \ge 0, y \ge 0 \end{cases}$
+    \item Điều kiện về số lượng áo: Cửa hàng cần bán ít nhất 50 chiếc áo mỗi ngày, nghĩa là tổng số áo phông và áo sơ mi phải lớn hơn hoặc bằng 50. Ta có bất phương trình: $x + y \ge 50$.
+    \item Điều kiện về doanh thu: Tổng doanh thu phải đạt ít nhất 7 triệu đồng (tức 7000 nghìn đồng). Doanh thu từ áo phông là $120x$, doanh thu từ áo sơ mi là $180y$. Tổng doanh thu là $120x + 180y$. Ta có bất phương trình: $120x + 180y \ge 7000$.
+    \item Điều kiện tự nhiên: Số lượng áo không thể âm, nên $x \ge 0$ và $y \ge 0$.
 \end{itemize}
+Kết hợp các bất phương trình trên, ta được hệ bất phương trình:
+$\begin{cases} x + y \ge 50 \\ 120x + 180y \ge 7000 \\ x \ge 0, y \ge 0 \end{cases}$
 }
 \end{vidumau}
+
 \subsubsection{Dạng: Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn}
 \begin{phuongphap}
 Để xác định miền nghiệm của bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
