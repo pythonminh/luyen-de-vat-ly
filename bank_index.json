@@ -484,15 +484,15 @@
       "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
       "BaiHoc": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
       "De": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
-      "questions": 292,
-      "count": 292,
+      "questions": 294,
+      "count": 294,
       "dang": {
         "Kiểm tra cặp số là nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 58,
         "Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế": 90,
         "Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 30,
         "Giải bài toán thực tế liên quan đến bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 20,
-        "Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm": 32,
-        "Kiểm tra tính đúng sai của các khẳng định về bất phương trình/hệ bất phương trình bậc nhất hai ẩn và bài toán thực tế": 62
+        "Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm": 33,
+        "Kiểm tra tính đúng sai của các khẳng định về bất phương trình/hệ bất phương trình bậc nhất hai ẩn và bài toán thực tế": 63
       },
       "dang_kinds": {
         "Kiểm tra cặp số là nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
@@ -520,14 +520,14 @@
           "TL": 0
         },
         "Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm": {
-          "TN": 10,
+          "TN": 11,
           "DS": 0,
           "TLN": 22,
           "TL": 0
         },
         "Kiểm tra tính đúng sai của các khẳng định về bất phương trình/hệ bất phương trình bậc nhất hai ẩn và bài toán thực tế": {
           "TN": 0,
-          "DS": 0,
+          "DS": 1,
           "TLN": 0,
           "TL": 62
         }
