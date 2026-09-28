@@ -50,25 +50,24 @@ Vậy, cặp số $(1; -1)$ là nghiệm của bất phương trình.
 \begin{phuongphap}
 Để lập bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Xác định các đại lượng chưa biết và đặt biến:}
+    \item \textbf{Bước 1: Đặt biến và xác định điều kiện của biến.}
     \begin{itemize}
-        \item Đọc kỹ bài toán để xác định các đại lượng cần tìm hoặc các yếu tố thay đổi.
-        \item Đặt các biến (thường là $x, y$) cho các đại lượng đó. Ghi rõ đơn vị (nếu có) và điều kiện của biến (ví dụ: $x, y$ là số nguyên không âm, $x > 0$, v.v.).
+        \item Đọc kỹ bài toán để xác định các đại lượng chưa biết cần tìm.
+        \item Đặt $x, y$ là các biến đại diện cho các đại lượng đó.
+        \item Nêu rõ đơn vị (nếu có) và điều kiện tự nhiên của các biến (ví dụ: $x, y$ là số nguyên không âm, $x > 0$, v.v.).
     \end{itemize}
-    \item \textbf{Chuyển đổi các mối quan hệ thành bất đẳng thức:}
+    \item \textbf{Bước 2: Chuyển đổi các mối quan hệ thành bất phương trình.}
     \begin{itemize}
         \item Phân tích các điều kiện, ràng buộc, giới hạn được nêu trong bài toán.
-        \item Dịch các từ ngữ như "không quá", "ít nhất", "nhiều nhất", "tối thiểu", "tối đa", "không vượt quá", "phải lớn hơn", "phải nhỏ hơn hoặc bằng" thành các dấu bất đẳng thức tương ứng ($<, >, \le, \ge$).
+        \item Dịch các từ ngữ khóa như "không quá", "ít nhất", "nhiều nhất", "tối thiểu", "tối đa", "không vượt quá", "phải lớn hơn", "phải nhỏ hơn hoặc bằng" thành các dấu bất đẳng thức tương ứng ($<, >, \le, \ge$).
         \item Biểu diễn các mối quan hệ giữa các biến bằng các biểu thức bậc nhất.
         \item Đảm bảo các đơn vị của các đại lượng trong cùng một bất phương trình phải thống nhất.
     \end{itemize}
-    \item \textbf{Kết hợp thành hệ bất phương trình (nếu có nhiều điều kiện):}
+    \item \textbf{Bước 3: Lập hệ bất phương trình.}
     \begin{itemize}
-        \item Nếu có nhiều điều kiện độc lập, mỗi điều kiện sẽ tạo thành một bất phương trình.
-        \item Tập hợp tất cả các bất phương trình đó lại thành một hệ bất phương trình.
+        \item Tập hợp tất cả các bất phương trình đã lập ở Bước 2 và các điều kiện của biến ở Bước 1 thành một hệ bất phương trình.
     \end{itemize}
 \end{enumerate}
-\textbf{Bẫy thường gặp:} Sai sót trong việc chọn dấu bất đẳng thức hoặc quên các điều kiện tự nhiên của biến (ví dụ: số lượng sản phẩm phải là số nguyên không âm).
 \end{phuongphap}
 \begin{vidumau}
 Một cửa hàng bán hai loại áo: áo phông và áo sơ mi. Giá một chiếc áo phông là 120 nghìn đồng, giá một chiếc áo sơ mi là 180 nghìn đồng. Cửa hàng cần bán ít nhất 50 chiếc áo mỗi ngày và tổng doanh thu phải đạt ít nhất 7 triệu đồng. Gọi $x$ là số áo phông và $y$ là số áo sơ mi bán được trong một ngày. Hệ bất phương trình nào sau đây mô tả các điều kiện trên?
@@ -78,17 +77,21 @@ Một cửa hàng bán hai loại áo: áo phông và áo sơ mi. Giá một chi
 { $\begin{cases} x + y \ge 50 \\ 120x + 180y \le 7000 \\ x \ge 0, y \ge 0 \end{cases}$ }
 { $\begin{cases} x + y \le 50 \\ 120x + 180y \le 7000 \\ x \ge 0, y \ge 0 \end{cases}$ }
 \loigiai{
-Gọi $x$ là số áo phông bán được và $y$ là số áo sơ mi bán được.
 \begin{itemize}
-    \item Điều kiện về số lượng áo: Cửa hàng cần bán ít nhất 50 chiếc áo mỗi ngày, nghĩa là tổng số áo phông và áo sơ mi phải lớn hơn hoặc bằng 50. Ta có bất phương trình: $x + y \ge 50$.
-    \item Điều kiện về doanh thu: Tổng doanh thu phải đạt ít nhất 7 triệu đồng (tức 7000 nghìn đồng). Doanh thu từ áo phông là $120x$, doanh thu từ áo sơ mi là $180y$. Tổng doanh thu là $120x + 180y$. Ta có bất phương trình: $120x + 180y \ge 7000$.
-    \item Điều kiện tự nhiên: Số lượng áo không thể âm, nên $x \ge 0$ và $y \ge 0$.
+    \item \textbf{Bước 1: Đặt biến và xác định điều kiện của biến.}
+    Theo đề bài, $x$ là số áo phông bán được và $y$ là số áo sơ mi bán được.
+    Vì số lượng áo không thể âm, nên ta có điều kiện: $x \ge 0$ và $y \ge 0$. Ngoài ra, $x, y$ phải là số nguyên.
+    \item \textbf{Bước 2: Chuyển đổi các mối quan hệ thành bất phương trình.}
+    \begin{itemize}
+        \item Điều kiện về số lượng áo: "Cửa hàng cần bán ít nhất 50 chiếc áo mỗi ngày" nghĩa là tổng số áo phông và áo sơ mi phải lớn hơn hoặc bằng 50. Ta có bất phương trình: $x + y \ge 50$.
+        \item Điều kiện về doanh thu: "Tổng doanh thu phải đạt ít nhất 7 triệu đồng". Đổi 7 triệu đồng thành 7000 nghìn đồng để thống nhất đơn vị với giá áo. Doanh thu từ áo phông là $120x$ (nghìn đồng), doanh thu từ áo sơ mi là $180y$ (nghìn đồng). Tổng doanh thu là $120x + 180y$. Vậy ta có bất phương trình: $120x + 180y \ge 7000$.
+    \end{itemize}
+    \item \textbf{Bước 3: Lập hệ bất phương trình.}
+    Kết hợp các bất phương trình đã lập và các điều kiện của biến, ta được hệ bất phương trình:
+    $\begin{cases} x + y \ge 50 \\ 120x + 180y \ge 7000 \\ x \ge 0, y \ge 0 \end{cases}$
 \end{itemize}
-Kết hợp các bất phương trình trên, ta được hệ bất phương trình:
-$\begin{cases} x + y \ge 50 \\ 120x + 180y \ge 7000 \\ x \ge 0, y \ge 0 \end{cases}$
 }
 \end{vidumau}
-
 \subsubsection{Dạng: Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn}
 \begin{phuongphap}
 Để xác định miền nghiệm của bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
