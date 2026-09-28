@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 185,
-  "total_questions": 12776,
+  "total_questions": 12779,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -484,12 +484,12 @@
       "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
       "BaiHoc": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
       "De": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
-      "questions": 227,
-      "count": 227,
+      "questions": 230,
+      "count": 230,
       "dang": {
         "Kiểm tra cặp số là nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 59,
         "Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế": 22,
-        "Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 30,
+        "Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 33,
         "Giải bài toán thực tế liên quan đến bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 20,
         "Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm": 33,
         "Kiểm tra tính đúng sai của các khẳng định về bất phương trình/hệ bất phương trình bậc nhất hai ẩn và bài toán thực tế": 63
@@ -510,8 +510,8 @@
         "Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
           "TN": 30,
           "DS": 0,
-          "TLN": 0,
-          "TL": 0
+          "TLN": 2,
+          "TL": 1
         },
         "Giải bài toán thực tế liên quan đến bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
           "TN": 20,
