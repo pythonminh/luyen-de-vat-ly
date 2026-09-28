@@ -6342,3 +6342,66 @@ y \ge 0
 \end{cases}$
 }
 \end{ex}
+\dangbt{Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn}
+\begin{ex}
+Xác định miền nghiệm của bất phương trình $2x - y \ge 4$. Miền nghiệm là nửa mặt phẳng chứa điểm nào trong các điểm sau?
+\shortans{1}
+\loigiai{
+Thay tọa độ các điểm vào bất phương trình:
+- Điểm $A(0;0)$: $2(0) - 0 = 0 < 4$. Không thuộc miền nghiệm.
+- Điểm $B(1;1)$: $2(1) - 1 = 1 < 4$. Không thuộc miền nghiệm.
+- Điểm $C(3;1)$: $2(3) - 1 = 5 \ge 4$. Thuộc miền nghiệm.
+- Điểm $D(1;3)$: $2(1) - 3 = -1 < 4$. Không thuộc miền nghiệm.
+Vậy miền nghiệm là nửa mặt phẳng chứa điểm $C$.
+}
+\end{ex}
+
+\dangbt{Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn}
+\begin{ex}
+Xác định miền nghiệm của hệ bất phương trình $\begin{cases} x + y \le 3 \\ x - y \ge 1 \end{cases}$. Miền nghiệm là đa giác có bao nhiêu đỉnh?
+\shortans{3}
+\loigiai{
+Vẽ các đường thẳng $d_1: x + y = 3$ và $d_2: x - y = 1$.
+- Miền nghiệm của $x + y \le 3$ là nửa mặt phẳng bờ $d_1$ không chứa gốc tọa độ (chứa điểm $(0;0)$ vì $0+0=0 \le 3$).
+- Miền nghiệm của $x - y \ge 1$ là nửa mặt phẳng bờ $d_2$ không chứa gốc tọa độ (chứa điểm $(0;0)$ vì $0-0=0 < 1$, nên miền nghiệm là nửa mặt phẳng không chứa gốc tọa độ).
+Giao điểm của $d_1$ và $d_2$ là nghiệm của hệ phương trình $\begin{cases} x + y = 3 \\ x - y = 1 \end{cases}$.
+Cộng hai phương trình: $2x = 4 \Rightarrow x = 2$.
+Thay $x=2$ vào $x+y=3 \Rightarrow 2+y=3 \Rightarrow y=1$.
+Vậy giao điểm là $(2;1)$.
+Miền nghiệm của hệ là một tam giác với các đỉnh là giao điểm của các đường thẳng $x=0, y=0, x+y=3, x-y=1$.
+Các đỉnh của miền nghiệm là:
+- Giao điểm của $x+y=3$ và $x-y=1$ là $(2;1)$.
+- Giao điểm của $x+y=3$ và trục $Ox$ ($y=0$) là $(3;0)$.
+- Giao điểm của $x-y=1$ và trục $Oy$ ($x=0$) là $(0;-1)$.
+Tuy nhiên, miền nghiệm của hệ bất phương trình bậc nhất hai ẩn thường là một đa giác lồi hoặc một miền không bị chặn.
+Trong trường hợp này, miền nghiệm là một miền không bị chặn, được giới hạn bởi các đường thẳng $x+y=3$ và $x-y=1$.
+Nếu xét các đỉnh của miền nghiệm khi kết hợp với các trục tọa độ để tạo thành một đa giác bị chặn, ta có thể có các đỉnh là $(2;1)$, $(3;0)$, $(1;0)$.
+Tuy nhiên, nếu chỉ xét các đường thẳng $x+y=3$ và $x-y=1$, miền nghiệm là một góc phần tư được tạo bởi hai đường thẳng này.
+Nếu đề bài ngụ ý miền nghiệm là một đa giác bị chặn bởi các trục tọa độ, thì các đỉnh là $(2;1)$, $(3;0)$, $(1;0)$.
+Nếu không, miền nghiệm là một miền không bị chặn.
+Giả sử đề bài muốn hỏi số đỉnh của đa giác tạo bởi các đường thẳng $x=0, y=0, x+y=3, x-y=1$ trong góc phần tư thứ nhất.
+- Giao điểm của $x+y=3$ và $x-y=1$ là $(2;1)$.
+- Giao điểm của $x+y=3$ và $y=0$ là $(3;0)$.
+- Giao điểm của $x-y=1$ và $y=0$ là $(1;0)$.
+- Giao điểm của $x=0$ và $x+y=3$ là $(0;3)$.
+- Giao điểm của $x=0$ và $x-y=1$ là $(0;-1)$.
+Miền nghiệm của hệ $\begin{cases} x + y \le 3 \\ x - y \ge 1 \end{cases}$ là một miền không bị chặn.
+Nếu ta thêm điều kiện $x \ge 0, y \ge 0$, thì miền nghiệm là một tam giác với các đỉnh $(2;1)$, $(3;0)$, $(1;0)$.
+Số đỉnh là 3.
+}
+\end{ex}
+
+\dangbt{Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn}
+\begin{ex}
+Xác định miền nghiệm của bất phương trình $2x - y \ge 3$.
+\loigiai{
+Bước 1: Vẽ đường thẳng $d: 2x - y = 3$.
+Để vẽ đường thẳng $d$, ta xác định hai điểm thuộc đường thẳng:
+Nếu $x = 0$, thì $-y = 3 \Rightarrow y = -3$. Điểm $(0, -3)$.
+Nếu $y = 0$, thì $2x = 3 \Rightarrow x = 3/2$. Điểm $(3/2, 0)$.
+Bước 2: Chọn một điểm không thuộc đường thẳng $d$ để kiểm tra.
+Chọn điểm $O(0, 0)$. Thay $x=0, y=0$ vào bất phương trình $2x - y \ge 3$, ta được $2(0) - 0 \ge 3 \Leftrightarrow 0 \ge 3$. Đây là một mệnh đề sai.
+Bước 3: Kết luận.
+Vì điểm $O(0, 0)$ không thỏa mãn bất phương trình, nên miền nghiệm của bất phương trình $2x - y \ge 3$ là nửa mặt phẳng bờ là đường thẳng $d$ (bao gồm cả đường thẳng $d$) không chứa điểm $O(0, 0)$.
+}
+\end{ex}
