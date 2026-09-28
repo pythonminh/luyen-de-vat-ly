@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12532,
+  "total_questions": 12533,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2962,14 +2962,14 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
       "De": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
-      "questions": 20,
-      "count": 20,
+      "questions": 21,
+      "count": 21,
       "dang": {
-        "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": 20
+        "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": 21
       },
       "dang_kinds": {
         "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": {
-          "TN": 9,
+          "TN": 10,
           "DS": 4,
           "TLN": 3,
           "TL": 4
