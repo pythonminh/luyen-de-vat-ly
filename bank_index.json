@@ -433,42 +433,42 @@
       "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
       "BaiHoc": "Bài 3. Bất phương trình bậc nhất hai ẩn",
       "De": "Bài 3. Bất phương trình bậc nhất hai ẩn",
-      "questions": 17,
-      "count": 17,
+      "questions": 33,
+      "count": 33,
       "dang": {
-        "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": 4,
-        "Kiểm tra một cặp số là nghiệm của bất phương trình": 8,
-        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 1,
-        "Xác định đường biên và miền nghiệm": 3,
-        "Xác định bất phương trình từ miền nghiệm": 1
+        "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": 5,
+        "Kiểm tra một cặp số là nghiệm của bất phương trình": 9,
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 7,
+        "Xác định đường biên và miền nghiệm": 7,
+        "Xác định bất phương trình từ miền nghiệm": 5
       },
       "dang_kinds": {
         "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": {
-          "TN": 1,
+          "TN": 2,
           "DS": 3,
           "TLN": 0,
           "TL": 0
         },
         "Kiểm tra một cặp số là nghiệm của bất phương trình": {
-          "TN": 6,
+          "TN": 7,
           "DS": 1,
           "TLN": 1,
           "TL": 0
         },
         "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
-          "TN": 1,
+          "TN": 7,
           "DS": 0,
           "TLN": 0,
           "TL": 0
         },
         "Xác định đường biên và miền nghiệm": {
-          "TN": 0,
+          "TN": 4,
           "DS": 1,
           "TLN": 2,
           "TL": 0
         },
         "Xác định bất phương trình từ miền nghiệm": {
-          "TN": 1,
+          "TN": 5,
           "DS": 0,
           "TLN": 0,
           "TL": 0
