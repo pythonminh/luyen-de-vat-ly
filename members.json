@@ -116,7 +116,8 @@
       "account_type": "VIP",
       "status": "ON",
       "phone": "988648537",
-      "password_sha256": "e4fbbff8510dbe02d4f1edfb987d858bfbfae5dd2b364369dc543d050c631435"
+      "password_sha256": "e4fbbff8510dbe02d4f1edfb987d858bfbfae5dd2b364369dc543d050c631435",
+      "password_enc": "v1:wkSHXkPj_IqZ"
     },
     {
       "username": "TLam1406",
