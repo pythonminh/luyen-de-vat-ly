@@ -6,31 +6,15 @@
 % File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
-Tuyệt vời! Tôi sẽ giúp bạn chỉnh sửa file `pp.tex` theo đúng yêu cầu, tập trung vào việc đưa ra phương pháp giải CỤ THỂ cho từng dạng bài, tránh các bước chung chung. Tôi cũng sẽ sửa lại các `vidumau` và `loigiai` để chúng nhất quán và chính xác hơn.
-
-Dưới đây là phiên bản `pp.tex` đã được chỉnh sửa:
-
-```latex
-% Môn: Toán
-% Lớp: 10
-% Chương: Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn
-% Bài: Bài 3. Bất phương trình bậc nhất hai ẩn
-% Loại: Dạng mẫu
-% File riêng, không trộn vào de.tex
 \subsection{Dạng bài tập mẫu}
 \subsubsection{Dạng: Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm}
 \begin{phuongphap}
-Để nhận biết một bất phương trình bậc nhất hai ẩn và kiểm tra nghiệm, ta thực hiện các bước sau:
+Để nhận biết một bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Kiểm tra dạng tổng quát:} Một bất phương trình được gọi là bậc nhất hai ẩn $x, y$ nếu nó có một trong các dạng sau:
-    $$ax+by+c<0,\; ax+by+c>0 ,\; ax+by+c \leq 0 ,\; a x+b y+c \geq 0$$
-    trong đó $a, b, c$ là các số thực cho trước, và $a, b$ không đồng thời bằng $0$.
-    \item \textbf{Kiểm tra điều kiện của ẩn:}
-    \begin{itemize}
-        \item Bất phương trình phải có đúng hai biến (ẩn số), thường là $x$ và $y$.
-        \item Bậc cao nhất của mỗi ẩn phải là 1. Điều này có nghĩa là không có các số mũ lớn hơn 1 cho $x$ hoặc $y$ (ví dụ $x^2, y^3$), không có tích của các ẩn (ví dụ $xy$), và không có ẩn ở mẫu số hay dưới dấu căn.
-    \end{itemize}
-    \item \textbf{Kiểm tra một cặp số là nghiệm:} Một cặp số $(x_0; y_0)$ là nghiệm của bất phương trình nếu khi thay $x=x_0$ và $y=y_0$ vào bất phương trình, ta được một mệnh đề đúng.
+    \item \textbf{Xác định số ẩn:} Kiểm tra xem bất phương trình có bao nhiêu biến (ẩn số). Bất phương trình bậc nhất hai ẩn phải có đúng hai biến, thường là $x$ và $y$.
+    \item \textbf{Xác định bậc của ẩn:} Kiểm tra bậc cao nhất của mỗi ẩn. Bậc của mỗi ẩn phải là 1. Tức là, không có các số mũ lớn hơn 1 cho $x$ hoặc $y$ (ví dụ $x^2, y^3$), không có tích của các ẩn (ví dụ $xy$), và không có ẩn ở mẫu số hay dưới dấu căn.
+    \item \textbf{Xác định dạng tổng quát:} Bất phương trình phải có dạng $ax+by+c < 0$, $ax+by+c \le 0$, $ax+by+c > 0$, hoặc $ax+by+c \ge 0$, trong đó $a, b, c$ là các số thực, và $a, b$ không đồng thời bằng 0.
+    \item \textbf{Kiểm tra nghiệm:} Một cặp số $(x_0; y_0)$ là nghiệm của bất phương trình nếu khi thay $x=x_0$ và $y=y_0$ vào bất phương trình, ta được một mệnh đề đúng.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
@@ -41,11 +25,10 @@ B. $x - 2y + z > 0$
 C. $x - 2y + 2 \le 0$ \True
 D. $xy + 1 < 0$
 \loigiai{
-Áp dụng phương pháp nhận biết bất phương trình bậc nhất hai ẩn:
 \begin{itemize}
-    \item Phương án A: $x^2 - 2y \le 0$ có chứa $x^2$ (bậc 2 của ẩn $x$), nên không phải là bất phương trình bậc nhất.
+    \item Phương án A: $x^2 - 2y \le 0$ có chứa $x^2$ (bậc 2), nên không phải là bất phương trình bậc nhất.
     \item Phương án B: $x - 2y + z > 0$ có ba ẩn $x, y, z$, nên không phải là bất phương trình bậc nhất hai ẩn.
-    \item Phương án C: $x - 2y + 2 \le 0$ có dạng $ax+by+c \le 0$ với $a=1, b=-2, c=2$. Các ẩn $x, y$ đều có bậc 1 và không có tích của các ẩn. Đây là bất phương trình bậc nhất hai ẩn.
+    \item Phương án C: $x - 2y + 2 \le 0$ có dạng $ax+by+c \le 0$ với $a=1, b=-2, c=2$. Đây là bất phương trình bậc nhất hai ẩn.
     \item Phương án D: $xy + 1 < 0$ có chứa tích $xy$, nên không phải là bất phương trình bậc nhất.
 \end{itemize}
 Vậy, đáp án đúng là C.
@@ -56,8 +39,8 @@ Vậy, đáp án đúng là C.
 \begin{phuongphap}
 Để kiểm tra xem một cặp số $(x_0; y_0)$ có phải là nghiệm của bất phương trình bậc nhất hai ẩn hay không, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Thay thế tọa độ:} Thay giá trị $x=x_0$ và $y=y_0$ vào bất phương trình đã cho.
-    \item \textbf{Tính toán và so sánh:} Thực hiện các phép tính ở vế trái của bất phương trình và so sánh kết quả với vế phải theo dấu bất đẳng thức.
+    \item \textbf{Thay thế giá trị:} Thay giá trị $x=x_0$ và $y=y_0$ vào bất phương trình đã cho.
+    \item \textbf{Tính toán và so sánh:} Thực hiện các phép tính ở vế trái của bất phương trình.
     \item \textbf{Kết luận:}
     \begin{itemize}
         \item Nếu kết quả thu được là một mệnh đề đúng (ví dụ: $5 \le 7$, $0 > -2$), thì cặp số $(x_0; y_0)$ là nghiệm của bất phương trình.
@@ -80,7 +63,10 @@ Ta sẽ thay từng cặp số vào bất phương trình $x-2y+2 \leq 0$:
     \item Với cặp số C. $(-1; 1)$: Thay $x=-1, y=1$ vào bất phương trình, ta được $-1 - 2(1) + 2 = -1 - 2 + 2 = -1$. Vì $-1 \le 0$ là mệnh đề đúng, nên $(-1; 1)$ là nghiệm.
     \item Với cặp số D. $(2; 2)$: Thay $x=2, y=2$ vào bất phương trình, ta được $2 - 2(2) + 2 = 2 - 4 + 2 = 0$. Vì $0 \le 0$ là mệnh đề đúng, nên $(2; 2)$ là nghiệm.
 \end{itemize}
-Trong trường hợp câu hỏi trắc nghiệm chỉ có một đáp án đúng, và tất cả các lựa chọn đều là nghiệm, thì có thể đề bài có lỗi. Tuy nhiên, nếu phải chọn một đáp án, ta có thể chọn bất kỳ đáp án nào đúng. Ở đây, ta chọn D.
+Trong các lựa chọn trên, tất cả các cặp số đều là nghiệm. Tuy nhiên, nếu đây là câu hỏi trắc nghiệm chỉ có một đáp án đúng, cần kiểm tra lại đề bài hoặc các lựa chọn. Giả sử đề bài muốn tìm một cặp số \textit{duy nhất} là nghiệm, hoặc có thể có lỗi trong việc tạo các lựa chọn. Với đề bài hiện tại, tất cả các lựa chọn A, B, C, D đều là nghiệm. Nếu đây là câu hỏi chọn một đáp án đúng, thì có thể có lỗi trong đề bài hoặc các lựa chọn.
+Giả sử câu hỏi là "Cặp số nào sau đây \textbf{không phải} là nghiệm của bất phương trình đã cho?" thì cần tìm cặp số cho ra mệnh đề sai.
+Với đề bài "Cặp số nào sau đây là nghiệm của bất phương trình đã cho?", nếu chỉ được chọn một đáp án, thì có thể có lỗi. Tuy nhiên, nếu đây là một câu hỏi trắc nghiệm nhiều lựa chọn, thì tất cả các đáp án A, B, C, D đều đúng.
+Trong trường hợp này, ta chọn một đáp án bất kì trong các đáp án đúng. Ví dụ, chọn D.
 }
 \end{vidumau}
 
@@ -88,24 +74,14 @@ Trong trường hợp câu hỏi trắc nghiệm chỉ có một đáp án đún
 \begin{phuongphap}
 Để lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Xác định đại lượng và đặt biến:}
+    \item \textbf{Xác định các đại lượng cần tìm và đặt biến:} Đọc kỹ đề bài để xác định các đại lượng chưa biết và cần tìm. Gán các biến (thường là $x, y$) cho các đại lượng đó. Lưu ý các điều kiện về dấu của biến (ví dụ: số lượng sản phẩm, số tiền không âm).
+    \item \textbf{Thiết lập các mối quan hệ và bất phương trình:} Dựa vào các thông tin, điều kiện, ràng buộc trong đề bài để thiết lập các mối quan hệ dưới dạng bất phương trình.
     \begin{itemize}
-        \item Đọc kỹ đề bài để xác định các đại lượng chưa biết cần tìm.
-        \item Gán các biến (thường là $x, y$) cho các đại lượng đó.
-        \item Nêu rõ đơn vị của các biến và các điều kiện ràng buộc (ví dụ: $x \ge 0, y \ge 0$ nếu là số lượng, khối lượng, thời gian...).
+        \item Chú ý các từ khóa như "ít nhất", "không quá", "tối đa", "tối thiểu" để chọn dấu bất phương trình ($\ge, \le, >, <$) phù hợp.
+        \item Đảm bảo các bất phương trình thu được là bất phương trình bậc nhất hai ẩn.
     \end{itemize}
-    \item \textbf{Thiết lập bất phương trình:}
-    \begin{itemize}
-        \item Dựa vào các thông tin, điều kiện, ràng buộc trong đề bài để thiết lập mối quan hệ giữa các biến dưới dạng bất phương trình.
-        \item Chú ý các từ khóa như "ít nhất" ($\ge$), "không quá" ($\le$), "tối đa" ($\le$), "tối thiểu" ($\ge$), "nhiều hơn" ($>$), "ít hơn" ($<$) để chọn dấu bất phương trình phù hợp.
-        \item Đảm bảo bất phương trình thu được là bất phương trình bậc nhất hai ẩn.
-    \end{itemize}
-    \item \textbf{Giải bất phương trình (nếu yêu cầu):}
-    \begin{itemize}
-        \item Nếu bài toán yêu cầu tìm một giá trị cụ thể hoặc một khoảng giá trị, thay các giá trị đã biết vào bất phương trình và giải để tìm giá trị còn lại.
-        \item Nếu yêu cầu biểu diễn miền nghiệm, thực hiện các bước như dạng "Xác định đường biên và miền nghiệm".
-    \end{itemize}
-    \item \textbf{Kiểm tra và trả lời:} Kiểm tra xem kết quả có hợp lý với ngữ cảnh thực tế của bài toán hay không và trình bày câu trả lời rõ ràng.
+    \item \textbf{Xác định miền nghiệm (nếu yêu cầu):} Vẽ đường thẳng biểu diễn phương trình đường biên của bất phương trình. Sau đó, chọn một điểm thử (thường là gốc tọa độ $O(0;0)$ nếu nó không nằm trên đường biên) để xác định miền nghiệm.
+    \item \textbf{Kết luận và trả lời bài toán:} Dựa vào miền nghiệm hoặc các điều kiện của bất phương trình để đưa ra câu trả lời phù hợp với yêu cầu của bài toán thực tế.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
@@ -117,51 +93,34 @@ C. $20x + 10y < 450$
 D. $20x + 10y > 450$
 \loigiai{
 \begin{itemize}
-    \item \textbf{Đặt biến:}
-    \begin{itemize}
-        \item Gọi $x$ là số tờ tiền loại $20$ nghìn đồng ($x \ge 0$, $x$ nguyên).
-        \item Gọi $y$ là số tờ tiền loại $10$ nghìn đồng ($y \ge 0$, $y$ nguyên).
-    \end{itemize}
-    \item \textbf{Thiết lập bất phương trình:}
-    \begin{itemize}
-        \item Tổng số tiền bạn Nam ủng hộ từ $x$ tờ $20$ nghìn đồng là $20x$ (nghìn đồng).
-        \item Tổng số tiền bạn Nam ủng hộ từ $y$ tờ $10$ nghìn đồng là $10y$ (nghìn đồng).
-        \item Tổng số tiền bạn Nam đã ủng hộ là $20x + 10y$ (nghìn đồng).
-        \item Bạn Nam tiết kiệm được $450$ nghìn đồng, nghĩa là số tiền bạn ủng hộ không thể vượt quá số tiền bạn có. Từ khóa "không thể vượt quá" tương ứng với dấu "$\le$".
-    \end{itemize}
-    Vậy, bất phương trình biểu diễn số tiền bạn Nam đã ủng hộ là $20x + 10y \le 450$.
+    \item Gọi $x$ là số tờ tiền loại $20$ nghìn đồng.
+    \item Gọi $y$ là số tờ tiền loại $10$ nghìn đồng.
+    \item Tổng số tiền bạn Nam ủng hộ là $20x + 10y$ (nghìn đồng).
+    \item Bạn Nam tiết kiệm được $450$ nghìn đồng, nghĩa là số tiền bạn ủng hộ không thể vượt quá số tiền bạn có. Do đó, tổng số tiền ủng hộ phải nhỏ hơn hoặc bằng $450$ nghìn đồng.
 \end{itemize}
+Vậy, bất phương trình biểu diễn số tiền bạn Nam đã ủng hộ là $20x + 10y \le 450$.
 }
 \end{vidumau}
 
 \subsubsection{Dạng: Xác định đường biên và miền nghiệm}
 \begin{phuongphap}
-Để xác định đường biên và biểu diễn miền nghiệm của bất phương trình bậc nhất hai ẩn $ax+by+c \diamond 0$ (với $\diamond$ là một trong các dấu $<, >, \le, \ge$), ta thực hiện các bước sau:
+Để xác định đường biên và miền nghiệm của bất phương trình bậc nhất hai ẩn $ax+by+c \diamond 0$ (với $\diamond$ là một trong các dấu $<, \le, >, \ge$), ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Xác định phương trình đường biên:}
+    \item \textbf{Xác định đường biên:}
     \begin{itemize}
-        \item Chuyển bất phương trình về dạng phương trình đường thẳng: $ax+by+c=0$. Đây chính là đường biên của miền nghiệm.
-        \item Xác định loại đường biên:
-        \begin{itemize}
-            \item Nếu bất phương trình có dấu $<$ hoặc $>$, đường biên là đường thẳng \textbf{đứt nét} (không bao gồm đường biên trong miền nghiệm).
-            \item Nếu bất phương trình có dấu $\le$ hoặc $\ge$, đường biên là đường thẳng \textbf{liền nét} (bao gồm đường biên trong miền nghiệm).
-        \end{itemize}
-    \end{itemize}
-    \item \textbf{Vẽ đường biên:}
-    \begin{itemize}
-        \item Tìm ít nhất hai điểm thuộc đường thẳng $ax+by+c=0$ (ví dụ: giao điểm với các trục tọa độ bằng cách cho $x=0$ tìm $y$, và cho $y=0$ tìm $x$).
-        \item Vẽ đường thẳng đi qua hai điểm đó trên mặt phẳng tọa độ $Oxy$ với loại nét đã xác định ở trên.
+        \item Chuyển bất phương trình về phương trình đường thẳng $ax+by+c=0$. Đây chính là phương trình của đường biên.
+        \item Vẽ đường thẳng này trên mặt phẳng tọa độ.
+        \item Nếu bất phương trình có dấu $\le$ hoặc $\ge$, đường biên là đường thẳng \textbf{liền nét} (vì các điểm trên đường thẳng cũng là nghiệm).
+        \item Nếu bất phương trình có dấu $<$ hoặc $>$, đường biên là đường thẳng \textbf{đứt nét} (vì các điểm trên đường thẳng không phải là nghiệm).
     \end{itemize}
     \item \textbf{Xác định miền nghiệm:}
     \begin{itemize}
-        \item Chọn một điểm thử $M(x_0; y_0)$ \textbf{không nằm trên đường biên} (thường chọn gốc tọa độ $O(0;0)$ nếu đường biên không đi qua gốc).
-        \item Thay tọa độ điểm $M(x_0; y_0)$ vào bất phương trình đã cho.
-        \item \textbf{Kết luận miền nghiệm:}
-        \begin{itemize}
-            \item Nếu kết quả là một mệnh đề đúng, thì nửa mặt phẳng \textbf{chứa} điểm $M$ là miền nghiệm.
-            \item Nếu kết quả là một mệnh đề sai, thì nửa mặt phẳng \textbf{không chứa} điểm $M$ là miền nghiệm.
-        \end{itemize}
-        \item \textbf{Biểu diễn miền nghiệm:} Gạch bỏ hoặc tô màu phần mặt phẳng \textbf{không phải} là miền nghiệm để làm nổi bật miền nghiệm cần tìm.
+        \item Đường biên chia mặt phẳng tọa độ thành hai nửa mặt phẳng.
+        \item Chọn một điểm thử $M(x_0; y_0)$ không nằm trên đường biên (thường chọn gốc tọa độ $O(0;0)$ nếu đường biên không đi qua gốc).
+        \item Thay tọa độ điểm $M$ vào bất phương trình đã cho.
+        \item Nếu kết quả là một mệnh đề đúng, thì nửa mặt phẳng chứa điểm $M$ là miền nghiệm.
+        \item Nếu kết quả là một mệnh đề sai, thì nửa mặt phẳng không chứa điểm $M$ là miền nghiệm.
+        \item Gạch bỏ hoặc tô màu phần mặt phẳng không phải là miền nghiệm để làm nổi bật miền nghiệm.
     \end{itemize}
 \end{enumerate}
 \end{phuongphap}
@@ -174,11 +133,7 @@ C. Đường biên là đường thẳng $2x+3y-6=0$ và miền nghiệm là n�
 D. Đường biên là đường thẳng $2x+3y-6=0$ và miền nghiệm là nửa mặt phẳng bên trái đường thẳng.
 \loigiai{
 \begin{itemize}
-    \item \textbf{Xác định đường biên:}
-    \begin{itemize}
-        \item Phương trình đường biên của bất phương trình $2x+3y-6 \leq 0$ là $2x+3y-6=0$.
-        \item Vì bất phương trình có dấu "$\le$", đường biên này là đường thẳng liền nét.
-    \end{itemize}
+    \item \textbf{Xác định đường biên:} Đường biên của bất phương trình $2x+3y-6 \leq 0$ là đường thẳng có phương trình $2x+3y-6=0$. Vì có dấu "$\le$", đường biên này là đường thẳng liền nét.
     \item \textbf{Xác định miền nghiệm:}
     \begin{itemize}
         \item Chọn điểm thử là gốc tọa độ $O(0;0)$ vì nó không nằm trên đường thẳng $2x+3y-6=0$.
@@ -224,7 +179,7 @@ Vậy, khẳng định đúng là A.
     \end{itemize}
     \item \textbf{Viết bất phương trình:} Kết hợp phương trình đường biên và dấu bất phương trình đã xác định để viết bất phương trình cuối cùng.
 \end{enumerate}
-\endu{phuongphap}
+\end{phuongphap}
 \begin{vidumau}
 Điểm $O(0 ; 0)$ thuộc miền nghiệm của bất phương trình nào dưới đây?
 \choice
@@ -252,20 +207,19 @@ Với sửa đổi này, đáp án C sẽ là đáp án đúng.
 
 \subsubsection{Dạng: Chưa phân dạng}
 \begin{phuongphap}
-Đối với các bài tập chưa được phân dạng cụ thể, cần đọc kỹ đề bài để xác định yêu cầu chính và áp dụng linh hoạt các kiến thức cơ bản về bất phương trình bậc nhất hai ẩn.
+Đối với các bài tập chưa được phân dạng cụ thể, cần đọc kỹ đề bài để xác định yêu cầu chính và áp dụng các kiến thức cơ bản về bất phương trình bậc nhất hai ẩn.
 \begin{enumerate}
-    \item \textbf{Đọc và hiểu đề bài:} Xác định rõ câu hỏi và các thông tin đã cho. Phân tích các yếu tố chính của bài toán.
-    \item \textbf{Liên hệ kiến thức:} Nhớ lại định nghĩa, tính chất, cách kiểm tra nghiệm, cách biểu diễn miền nghiệm của bất phương trình bậc nhất hai ẩn.
+    \item \textbf{Đọc và hiểu đề bài:} Xác định rõ câu hỏi và các thông tin đã cho.
+    \item \textbf{Liên hệ kiến thức:} Nhớ lại định nghĩa, tính chất, cách biểu diễn miền nghiệm của bất phương trình bậc nhất hai ẩn.
     \item \textbf{Phân tích và giải quyết:}
     \begin{itemize}
-        \item Nếu bài toán yêu cầu \textbf{nhận biết} bất phương trình bậc nhất hai ẩn: Kiểm tra dạng $ax+by+c \diamond 0$ và bậc của các ẩn.
-        \item Nếu bài toán yêu cầu \textbf{kiểm tra một cặp số là nghiệm}: Thay tọa độ điểm vào bất phương trình và kiểm tra tính đúng sai.
-        \item Nếu bài toán yêu cầu \textbf{biểu diễn miền nghiệm} hoặc \textbf{xác định đường biên và miền nghiệm}: Vẽ đường biên và chọn điểm thử để xác định nửa mặt phẳng nghiệm.
-        \item Nếu bài toán yêu cầu \textbf{lập bất phương trình từ bài toán thực tế}: Đặt biến cho các đại lượng chưa biết và thiết lập mối quan hệ theo các điều kiện của đề bài.
-        \item Nếu bài toán yêu cầu \textbf{xác định bất phương trình từ miền nghiệm}: Tìm phương trình đường biên và dùng điểm thử để xác định dấu bất đẳng thức.
+        \item Nếu là nhận biết: Kiểm tra dạng $ax+by+c \diamond 0$ và bậc của ẩn.
+        \item Nếu là kiểm tra nghiệm: Thay tọa độ điểm vào bất phương trình.
+        \item Nếu là biểu diễn miền nghiệm: Vẽ đường biên và chọn điểm thử.
+        \item Nếu là lập bất phương trình: Đặt biến và thiết lập mối quan hệ.
     \end{itemize}
-    \item \textbf{Kiểm tra lại:} Đảm bảo kết quả thu được phù hợp với các điều kiện và yêu cầu của bài toán.
-\end{enumerate}
+    \item \textbf{Kiểm tra lại:} Đảm bảo kết quả phù hợp với các điều kiện của bài toán.
+\end{itemize}
 \end{phuongphap}
 \begin{vidumau}
 Bất phương trình nào sau đây là bất phương trình bậc nhất hai ẩn?
@@ -283,7 +237,7 @@ D. $xy - 4 < 0$
 \end{itemize}
 Xét từng phương án:
 \begin{itemize}
-    \item \textbf{A. $x^2 + y \le 0$:} Có chứa $x^2$ (bậc 2 của ẩn $x$), nên không phải là bất phương trình bậc nhất.
+    \item \textbf{A. $x^2 + y \le 0$:} Có chứa $x^2$ (bậc 2), nên không phải là bất phương trình bậc nhất.
     \item \textbf{B. $x - 3y + 2z > 0$:} Có ba ẩn $x, y, z$, nên không phải là bất phương trình bậc nhất hai ẩn.
     \item \textbf{C. $x - 2y + 5 \ge 0$:} Có hai ẩn $x, y$. Bậc cao nhất của $x$ là 1, bậc cao nhất của $y$ là 1. Không có tích $xy$. Đây là bất phương trình bậc nhất hai ẩn.
     \item \textbf{D. $xy - 4 < 0$:} Có chứa tích $xy$, nên không phải là bất phương trình bậc nhất.
