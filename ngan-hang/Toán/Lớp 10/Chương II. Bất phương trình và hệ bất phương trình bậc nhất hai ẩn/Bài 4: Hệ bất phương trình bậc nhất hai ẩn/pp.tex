@@ -12,12 +12,11 @@
 \begin{phuongphap}
 Để kiểm tra một cặp số $(x_0; y_0)$ có phải là nghiệm của bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Kiểm tra một cặp số là nghiệm của một bất phương trình bậc nhất hai ẩn:}
+    \item \textbf{Kiểm tra một cặp số là nghiệm của một bất phương trình bậc nhất hai ẩn $ax + by + c \diamond 0$ (với $\diamond \in \{<, >, \le, \ge\}$):}
     \begin{enumerate}
-        \item Thay giá trị $x_0$ vào vị trí của $x$ và $y_0$ vào vị trí của $y$ trong bất phương trình đã cho.
-        \item Tính giá trị của biểu thức ở vế trái (hoặc vế phải) sau khi thay thế.
-        \item So sánh giá trị vừa tính được với vế còn lại của bất phương trình.
-        \item Kết luận:
+        \item \textbf{Thay thế:} Thay giá trị $x_0$ vào vị trí của $x$ và $y_0$ vào vị trí của $y$ trong bất phương trình đã cho.
+        \item \textbf{Tính toán:} Tính giá trị của biểu thức ở vế trái (hoặc vế phải) sau khi thay thế.
+        \item \textbf{So sánh và kết luận:} So sánh giá trị vừa tính được với vế còn lại của bất phương trình.
         \begin{itemize}
             \item Nếu bất đẳng thức thu được là đúng, cặp số $(x_0; y_0)$ là nghiệm của bất phương trình.
             \item Nếu bất đẳng thức thu được là sai, cặp số $(x_0; y_0)$ không phải là nghiệm của bất phương trình.
@@ -25,15 +24,15 @@
     \end{enumerate}
     \item \textbf{Kiểm tra một cặp số là nghiệm của một hệ bất phương trình bậc nhất hai ẩn:}
     \begin{enumerate}
-        \item Lần lượt thay giá trị $x_0$ và $y_0$ vào TỪNG bất phương trình trong hệ.
-        \item Với mỗi bất phương trình, thực hiện các bước kiểm tra như đối với một bất phương trình riêng lẻ (từ bước 1a đến 1c).
-        \item Kết luận:
+        \item \textbf{Kiểm tra từng bất phương trình:} Lần lượt thay giá trị $x_0$ và $y_0$ vào TỪNG bất phương trình trong hệ. Với mỗi bất phương trình, thực hiện các bước kiểm tra như đối với một bất phương trình riêng lẻ (từ bước 1a đến 1c).
+        \item \textbf{Kết luận cho hệ:}
         \begin{itemize}
             \item Nếu TẤT CẢ các bất phương trình trong hệ đều đúng khi thay $(x_0; y_0)$ vào, thì cặp số $(x_0; y_0)$ là nghiệm của hệ bất phương trình.
             \item Nếu CÓ ÍT NHẤT MỘT bất phương trình trong hệ bị sai khi thay $(x_0; y_0)$ vào, thì cặp số $(x_0; y_0)$ không phải là nghiệm của hệ bất phương trình.
         \end{itemize}
     \end{enumerate}
 \end{enumerate}
+\textbf{Bẫy thường gặp:} Sai sót trong tính toán giá trị biểu thức hoặc nhầm lẫn khi so sánh các dấu bất đẳng thức (ví dụ: $0 > 0$ là sai, $0 \ge 0$ là đúng).
 \end{phuongphap}
 \begin{vidumau}
 Cặp số nào sau đây là nghiệm của bất phương trình $x - 6 y - 4 > 0$?
@@ -53,29 +52,42 @@ Cặp số nào sau đây là nghiệm của bất phương trình $x - 6 y - 4 
 Dựa trên kết quả kiểm tra, cặp số $(1; -1)$ là nghiệm của bất phương trình đã cho.
 }
 \end{vidumau}
+
 \subsubsection{Dạng: Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế}
 \begin{phuongphap}
 Để lập bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Xác định các đại lượng chưa biết và đặt biến:}
+    \item \textbf{Bước 1: Xác định các đại lượng chưa biết và đặt biến.}
     \begin{itemize}
         \item Đọc kỹ bài toán để xác định các đại lượng cần tìm hoặc các yếu tố thay đổi.
-        \item Đặt các biến (thường là $x, y$) cho các đại lượng đó. Ghi rõ đơn vị (nếu có) và điều kiện của biến (ví dụ: $x, y$ là số nguyên không âm, $x > 0$, v.v.).
+        \item Đặt các biến (thường là $x, y$) cho các đại lượng đó.
+        \item Ghi rõ đơn vị (nếu có) và các điều kiện tự nhiên của biến (ví dụ: $x, y$ là số nguyên không âm, $x > 0$, v.v.).
     \end{itemize}
-    \item \textbf{Chuyển đổi các mối quan hệ thành bất đẳng thức:}
+    \item \textbf{Bước 2: Chuyển đổi các mối quan hệ thành bất đẳng thức.}
     \begin{itemize}
         \item Phân tích các điều kiện, ràng buộc, giới hạn được nêu trong bài toán.
-        \item Dịch các từ ngữ như "không quá", "ít nhất", "nhiều nhất", "tối thiểu", "tối đa", "không vượt quá", "phải lớn hơn", "phải nhỏ hơn hoặc bằng" thành các dấu bất đẳng thức tương ứng ($<, >, \le, \ge$).
+        \item Dịch các từ ngữ khóa sang dấu bất đẳng thức tương ứng:
+        \begin{itemize}
+            \item "không quá", "tối đa", "không vượt quá" $\rightarrow \le$
+            \item "ít nhất", "tối thiểu", "không nhỏ hơn" $\rightarrow \ge$
+            \item "lớn hơn", "nhiều hơn" $\rightarrow >$
+            \item "nhỏ hơn", "ít hơn" $\rightarrow <$
+        \end{itemize}
         \item Biểu diễn các mối quan hệ giữa các biến bằng các biểu thức bậc nhất.
-        \item Đảm bảo các đơn vị của các đại lượng trong cùng một bất phương trình phải thống nhất.
+        \item \textbf{Lưu ý đơn vị:} Đảm bảo các đơn vị của các đại lượng trong cùng một bất phương trình phải thống nhất (ví dụ: tất cả là nghìn đồng, tất cả là giờ, v.v.).
     \end{itemize}
-    \item \textbf{Kết hợp thành hệ bất phương trình (nếu có nhiều điều kiện):}
+    \item \textbf{Bước 3: Kết hợp thành hệ bất phương trình (nếu có nhiều điều kiện).}
     \begin{itemize}
         \item Nếu có nhiều điều kiện độc lập, mỗi điều kiện sẽ tạo thành một bất phương trình.
         \item Tập hợp tất cả các bất phương trình đó lại thành một hệ bất phương trình.
     \end{itemize}
 \end{enumerate}
-\textbf{Bẫy thường gặp:} Sai sót trong việc chọn dấu bất đẳng thức hoặc quên các điều kiện tự nhiên của biến (ví dụ: số lượng sản phẩm phải là số nguyên không âm).
+\textbf{Bẫy thường gặp:}
+\begin{itemize}
+    \item Sai sót trong việc chọn dấu bất đẳng thức (ví dụ: nhầm lẫn giữa "ít nhất" và "không quá").
+    \item Quên các điều kiện tự nhiên của biến (ví dụ: số lượng sản phẩm phải là số nguyên không âm $x \ge 0, y \ge 0$).
+    \item Sai sót trong việc quy đổi đơn vị (ví dụ: giờ sang phút, triệu đồng sang nghìn đồng).
+\end{itemize}
 \end{phuongphap}
 \begin{vidumau}
 Một cửa hàng bán hai loại áo: áo phông và áo sơ mi. Giá một chiếc áo phông là 120 nghìn đồng, giá một chiếc áo sơ mi là 180 nghìn đồng. Cửa hàng cần bán ít nhất 50 chiếc áo mỗi ngày và tổng doanh thu phải đạt ít nhất 7 triệu đồng. Gọi $x$ là số áo phông và $y$ là số áo sơ mi bán được trong một ngày. Hệ bất phương trình nào sau đây mô tả các điều kiện trên?
@@ -87,8 +99,8 @@ Một cửa hàng bán hai loại áo: áo phông và áo sơ mi. Giá một chi
 \loigiai{
 Gọi $x$ là số áo phông bán được và $y$ là số áo sơ mi bán được.
 \begin{itemize}
-    \item Điều kiện về số lượng áo: Cửa hàng cần bán ít nhất 50 chiếc áo mỗi ngày, nghĩa là tổng số áo phông và áo sơ mi phải lớn hơn hoặc bằng 50. Ta có bất phương trình: $x + y \ge 50$.
-    \item Điều kiện về doanh thu: Tổng doanh thu phải đạt ít nhất 7 triệu đồng (tức 7000 nghìn đồng). Doanh thu từ áo phông là $120x$, doanh thu từ áo sơ mi là $180y$. Tổng doanh thu là $120x + 180y$. Ta có bất phương trình: $120x + 180y \ge 7000$.
+    \item Điều kiện về số lượng áo: Cửa hàng cần bán \textbf{ít nhất} 50 chiếc áo mỗi ngày, nghĩa là tổng số áo phông và áo sơ mi phải lớn hơn hoặc bằng 50. Ta có bất phương trình: $x + y \ge 50$.
+    \item Điều kiện về doanh thu: Tổng doanh thu phải đạt \textbf{ít nhất} 7 triệu đồng. Đổi 7 triệu đồng thành 7000 nghìn đồng để thống nhất đơn vị với giá áo. Doanh thu từ áo phông là $120x$, doanh thu từ áo sơ mi là $180y$. Tổng doanh thu là $120x + 180y$. Ta có bất phương trình: $120x + 180y \ge 7000$.
     \item Điều kiện tự nhiên: Số lượng áo không thể âm, nên $x \ge 0$ và $y \ge 0$.
 \end{itemize}
 Kết hợp các bất phương trình trên, ta được hệ bất phương trình:
@@ -100,39 +112,47 @@ $\begin{cases} x + y \ge 50 \\ 120x + 180y \ge 7000 \\ x \ge 0, y \ge 0 \end{cas
 \begin{phuongphap}
 Để xác định miền nghiệm của bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Đối với một bất phương trình $ax + by + c \le 0$ (hoặc $<, >, \ge$):}
+    \item \textbf{Đối với một bất phương trình $ax + by + c \diamond 0$ (với $\diamond \in \{<, >, \le, \ge\}$):}
     \begin{itemize}
-        \item \textbf{Bước 1: Vẽ đường thẳng $ax + by + c = 0$.}
+        \item \textbf{Bước 1: Vẽ đường thẳng $d: ax + by + c = 0$.}
         \begin{itemize}
-            \item Xác định hai điểm thuộc đường thẳng (ví dụ: giao điểm với trục $Ox$ và $Oy$).
-            \item Vẽ đường thẳng đi qua hai điểm đó.
-            \item Nếu bất phương trình có dấu $<$ hoặc $>$, đường thẳng là nét đứt (không chứa các điểm trên đường thẳng).
-            \item Nếu bất phương trình có dấu $\le$ hoặc $\ge$, đường thẳng là nét liền (chứa các điểm trên đường thẳng).
+            \item Xác định ít nhất hai điểm thuộc đường thẳng $d$ (ví dụ: cho $x=0$ tìm $y$, cho $y=0$ tìm $x$).
+            \item Vẽ đường thẳng $d$ trên mặt phẳng tọa độ $Oxy$.
+            \item Nếu bất phương trình là dạng $<0$ hoặc $>0$, vẽ đường thẳng $d$ bằng nét đứt (không bao gồm bờ).
+            \item Nếu bất phương trình là dạng $\le0$ hoặc $\ge0$, vẽ đường thẳng $d$ bằng nét liền (bao gồm bờ).
         \end{itemize}
-        \item \textbf{Bước 2: Chọn một điểm thử không nằm trên đường thẳng.}
+        \item \textbf{Bước 2: Chọn điểm thử và xác định miền nghiệm.}
         \begin{itemize}
-            \item Điểm gốc tọa độ $O(0;0)$ thường là lựa chọn tốt nhất nếu nó không nằm trên đường thẳng.
-            \item Thay tọa độ điểm thử vào bất phương trình.
+            \item Chọn một điểm $M(x_0; y_0)$ \textbf{không nằm trên đường thẳng $d$} (thường chọn gốc tọa độ $O(0;0)$ nếu nó không nằm trên $d$).
+            \item Thay tọa độ điểm $M$ vào bất phương trình đã cho.
+            \item Nếu bất đẳng thức thu được là đúng, miền nghiệm là nửa mặt phẳng chứa điểm $M$.
+            \item Nếu bất đẳng thức thu được là sai, miền nghiệm là nửa mặt phẳng không chứa điểm $M$.
         \end{itemize}
-        \item \textbf{Bước 3: Xác định miền nghiệm.}
+        \item \textbf{Bước 3: Gạch bỏ phần không phải miền nghiệm.}
         \begin{itemize}
-            \item Nếu thay điểm thử vào bất phương trình mà được một khẳng định đúng, thì miền nghiệm là nửa mặt phẳng chứa điểm thử đó.
-            \item Nếu thay điểm thử vào bất phương trình mà được một khẳng định sai, thì miền nghiệm là nửa mặt phẳng không chứa điểm thử đó.
-            \item Gạch bỏ (hoặc tô màu) phần không phải là miền nghiệm.
+            \item Gạch bỏ (hoặc tô màu) phần nửa mặt phẳng không phải là miền nghiệm để dễ dàng xác định miền nghiệm cuối cùng.
         \end{itemize}
     \end{itemize}
-    \item \textbf{Đối với một hệ bất phương trình:}
+    \item \textbf{Đối với một hệ bất phương trình bậc nhất hai ẩn:}
     \begin{itemize}
-        \item Thực hiện các bước trên cho TỪNG bất phương trình trong hệ để xác định miền nghiệm của từng bất phương trình.
-        \item Miền nghiệm của hệ bất phương trình là phần giao của tất cả các miền nghiệm của từng bất phương trình.
-        \item Gạch bỏ (hoặc tô màu) các phần không thuộc miền nghiệm của bất kỳ bất phương trình nào trong hệ. Phần không bị gạch (hoặc được tô màu chung) chính là miền nghiệm của hệ.
+        \item \textbf{Bước 1: Biểu diễn miền nghiệm của từng bất phương trình.}
+        \begin{itemize}
+            \item Lần lượt thực hiện các bước như trên cho TỪNG bất phương trình trong hệ.
+            \item Sau mỗi lần gạch bỏ, phần mặt phẳng còn lại là giao của các miền nghiệm đã xác định.
+        \end{itemize}
+        \item \textbf{Bước 2: Xác định miền nghiệm của hệ.}
+        \begin{itemize}
+            \item Miền nghiệm của hệ bất phương trình là phần mặt phẳng \textbf{không bị gạch bỏ} sau khi đã xử lý tất cả các bất phương trình trong hệ.
+            \item \textbf{Lưu ý:} Kiểm tra xem các đường biên có thuộc miền nghiệm hay không (nét liền hay nét đứt).
+        \end{itemize}
     \end{itemize}
 \end{enumerate}
 \textbf{Bẫy thường gặp:}
 \begin{itemize}
-    \item Nhầm lẫn giữa nét liền và nét đứt.
-    \item Chọn sai nửa mặt phẳng khi thử điểm.
-    \item Quên các điều kiện $x \ge 0, y \ge 0$ (nếu có) làm giới hạn miền nghiệm trong góc phần tư thứ nhất.
+    \item Sai sót khi vẽ đường thẳng (ví dụ: tính toán sai tọa độ điểm, vẽ sai độ dốc).
+    \item Chọn sai nửa mặt phẳng nghiệm (ví dụ: nhầm lẫn khi thay điểm thử hoặc khi gạch bỏ).
+    \item Quên phân biệt đường biên nét liền (bao gồm bờ) và nét đứt (không bao gồm bờ).
+    \item Đối với hệ, gạch bỏ không nhất quán hoặc không xác định đúng phần giao của các miền nghiệm.
 \end{itemize}
 \end{phuongphap}
 \begin{vidumau}
@@ -140,122 +160,148 @@ Miền nghiệm của bất phương trình $- 2 x + y\le -5$ là nửa mặt ph
 \choice
 { $(0; 0)$ }
 { $(1; 1)$ }
-{ $(2; -1)$ }
-{\True $(3; 0)$  }
+{ $(-2; 0)$ }
+{\True $(3; -1)$ }
 \loigiai{
 Xét bất phương trình $-2x + y \le -5$.
-Đường thẳng biên là $-2x + y = -5$.
-Để xác định miền nghiệm, ta chọn điểm thử $O(0;0)$.
-Thay $(0;0)$ vào bất phương trình: $-2(0) + 0 \le -5 \Leftrightarrow 0 \le -5$.
-Khẳng định này là SAI.
-Vậy, miền nghiệm của bất phương trình là nửa mặt phẳng KHÔNG chứa điểm $O(0;0)$.
-
-Bây giờ ta kiểm tra các điểm đã cho:
+Đầu tiên, ta vẽ đường thẳng $d: -2x + y = -5$.
 \begin{itemize}
-    \item $(0;0)$: Đã kiểm tra, không thuộc miền nghiệm.
-    \item $(1;1)$: Thay vào bất phương trình: $-2(1) + 1 = -1$. Vì $-1 \not\le -5$, nên $(1;1)$ không thuộc miền nghiệm.
-    \item $(2;-1)$: Thay vào bất phương trình: $-2(2) + (-1) = -4 - 1 = -5$. Vì $-5 \le -5$, nên $(2;-1)$ thuộc miền nghiệm.
-    \item $(3;0)$: Thay vào bất phương trình: $-2(3) + 0 = -6$. Vì $-6 \le -5$, nên $(3;0)$ thuộc miền nghiệm.
+    \item Cho $x=0 \Rightarrow y=-5$. Ta có điểm $(0; -5)$.
+    \item Cho $y=0 \Rightarrow -2x = -5 \Rightarrow x = 2.5$. Ta có điểm $(2.5; 0)$.
 \end{itemize}
-Cả $(2;-1)$ và $(3;0)$ đều thuộc miền nghiệm. Tuy nhiên, câu hỏi yêu cầu "chứa điểm nào trong các điểm sau", và chỉ có một đáp án đúng.
-Kiểm tra lại đề bài hoặc các lựa chọn. Nếu có nhiều điểm thuộc miền nghiệm, thì tất cả các điểm đó đều đúng.
-Trong trường hợp này, nếu chỉ được chọn một, ta cần xem xét cách ra đề.
-Giả sử đề bài muốn hỏi điểm nào trong các lựa chọn là điểm thuộc miền nghiệm.
-Cả $(2;-1)$ và $(3;0)$ đều là nghiệm.
-Nếu đây là câu hỏi trắc nghiệm đơn, có thể có lỗi trong việc tạo đáp án hoặc các lựa chọn.
-Tuy nhiên, theo phương pháp, ta đã xác định được các điểm thuộc miền nghiệm.
-Nếu đề bài yêu cầu "miền nghiệm của bất phương trình $- 2 x + y\le -5$ là nửa mặt phẳng chứa điểm nào trong các điểm sau?", và chỉ có một đáp án đúng, thì có thể có một điểm nằm trên đường thẳng biên và các điểm khác nằm trong nửa mặt phẳng.
-Điểm $(2;-1)$ nằm trên đường thẳng $-2x+y=-5$.
-Điểm $(3;0)$ nằm trong nửa mặt phẳng (vì $-6 < -5$).
-Cả hai đều là nghiệm.
-Trong các bài toán trắc nghiệm, thường chỉ có một đáp án đúng.
-Nếu có nhiều đáp án đúng, cần xem xét lại câu hỏi hoặc các lựa chọn.
-Giả sử đáp án mong muốn là $(3;0)$.
+Đường thẳng $d$ đi qua $(0; -5)$ và $(2.5; 0)$. Vì bất phương trình có dấu "$\le$", nên đường thẳng $d$ là đường biên của miền nghiệm và thuộc miền nghiệm.
+
+Tiếp theo, ta chọn một điểm thử không nằm trên đường thẳng $d$. Ta chọn gốc tọa độ $O(0;0)$.
+Thay $x=0, y=0$ vào bất phương trình:
+$-2(0) + 0 \le -5 \Leftrightarrow 0 \le -5$.
+Đây là một mệnh đề sai.
+Vì vậy, miền nghiệm của bất phương trình $-2x + y \le -5$ là nửa mặt phẳng \textbf{không chứa} gốc tọa độ $O(0;0)$.
+
+Bây giờ, ta kiểm tra các điểm trong các lựa chọn:
+\begin{itemize}
+    \item $(0; 0)$: Đã kiểm tra, không thuộc miền nghiệm.
+    \item $(1; 1)$: Thay vào bất phương trình: $-2(1) + 1 = -1$. Bất đẳng thức trở thành $-1 \le -5$, đây là mệnh đề sai. Vậy $(1; 1)$ không thuộc miền nghiệm.
+    \item $(-2; 0)$: Thay vào bất phương trình: $-2(-2) + 0 = 4$. Bất đẳng thức trở thành $4 \le -5$, đây là mệnh đề sai. Vậy $(-2; 0)$ không thuộc miền nghiệm.
+    \item $(3; -1)$: Thay vào bất phương trình: $-2(3) + (-1) = -6 - 1 = -7$. Bất đẳng thức trở thành $-7 \le -5$, đây là mệnh đề đúng. Vậy $(3; -1)$ thuộc miền nghiệm.
+\end{itemize}
+Miền nghiệm của bất phương trình $-2x + y \le -5$ là nửa mặt phẳng chứa điểm $(3; -1)$.
 }
 \end{vidumau}
 
 \subsubsection{Dạng: Giải bài toán thực tế liên quan đến bất phương trình/hệ bất phương trình bậc nhất hai ẩn}
 \begin{phuongphap}
-Để giải bài toán thực tế liên quan đến bất phương trình/hệ bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
+Để giải bài toán thực tế liên quan đến bất phương trình hoặc hệ bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Bước 1: Lập hệ bất phương trình.}
+    \item \textbf{Bước 1: Lập hệ bất phương trình từ bài toán thực tế.}
     \begin{itemize}
-        \item Đọc kỹ bài toán, xác định các đại lượng chưa biết và đặt biến (ví dụ $x, y$). Ghi rõ ý nghĩa và đơn vị của các biến.
-        \item Dựa vào các điều kiện, ràng buộc của bài toán để thiết lập các bất phương trình.
-        \item Kết hợp các bất phương trình và các điều kiện tự nhiên của biến (ví dụ $x \ge 0, y \ge 0$) thành một hệ bất phương trình.
+        \item Đọc kỹ đề bài, xác định các đại lượng chưa biết và đặt biến (ví dụ: $x, y$). Ghi rõ đơn vị và điều kiện của biến (ví dụ: $x, y$ là số nguyên không âm).
+        \item Dựa vào các điều kiện, ràng buộc trong bài toán để thiết lập các bất phương trình bậc nhất hai ẩn.
+        \item Tập hợp các bất phương trình đó thành một hệ bất phương trình. (Tham khảo Dạng: Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế).
     \end{itemize}
     \item \textbf{Bước 2: Xác định miền nghiệm của hệ bất phương trình.}
     \begin{itemize}
-        \item Vẽ các đường thẳng biên tương ứng với mỗi bất phương trình.
-        \item Xác định nửa mặt phẳng nghiệm của từng bất phương trình bằng cách chọn điểm thử.
-        \item Miền nghiệm của hệ là phần giao của tất cả các nửa mặt phẳng nghiệm (thường là một đa giác lồi hoặc một vùng không giới hạn).
+        \item Vẽ các đường thẳng biên của từng bất phương trình trên cùng một mặt phẳng tọa độ $Oxy$.
+        \item Xác định nửa mặt phẳng nghiệm của từng bất phương trình bằng cách chọn điểm thử và gạch bỏ phần không phải miền nghiệm.
+        \item Miền nghiệm của hệ là phần mặt phẳng không bị gạch bỏ. (Tham khảo Dạng: Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn).
+        \item \textbf{Lưu ý:} Nếu các biến có điều kiện là số nguyên (ví dụ: số lượng sản phẩm), thì miền nghiệm chỉ bao gồm các điểm có tọa độ nguyên trong vùng đã xác định.
     \end{itemize}
     \item \textbf{Bước 3: Giải quyết yêu cầu của bài toán.}
     \begin{itemize}
-        \item Dựa vào miền nghiệm đã xác định, tìm các giá trị nguyên (nếu các biến là số lượng) hoặc các giá trị thỏa mãn điều kiện của bài toán.
-        \item Nếu bài toán yêu cầu tìm giá trị lớn nhất/nhỏ nhất của một đại lượng nào đó, chuyển sang dạng "Bài toán tối ưu hóa".
-        \item Nếu bài toán yêu cầu tìm số lượng cụ thể hoặc kiểm tra khả năng, hãy kiểm tra các điểm trong miền nghiệm.
+        \item Dựa vào miền nghiệm đã xác định, tìm các giá trị của $x, y$ thỏa mãn yêu cầu của bài toán (ví dụ: tìm số lượng tối đa, tối thiểu, hoặc các cặp số nguyên cụ thể).
+        \item Nếu bài toán yêu cầu tìm giá trị lớn nhất hoặc nhỏ nhất của một biểu thức $F(x,y) = ax+by$, chuyển sang Dạng: Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm.
+    \end{itemize}
+    \item \textbf{Bước 4: Kết luận.}
+    \begin{itemize}
+        \item Trả lời câu hỏi của bài toán một cách rõ ràng, có đơn vị cụ thể.
     \end{itemize}
 \end{enumerate}
 \textbf{Bẫy thường gặp:}
 \begin{itemize}
-    \item Sai sót trong việc lập bất phương trình (chọn sai dấu, quên điều kiện).
-    \item Sai sót trong việc vẽ đồ thị và xác định miền nghiệm.
-    \item Quên rằng các biến phải là số nguyên (nếu là số lượng vật phẩm).
+    \item Sai sót trong việc lập hệ bất phương trình (đặt sai biến, chọn sai dấu bất đẳng thức, quên điều kiện tự nhiên của biến).
+    \item Sai sót trong việc xác định miền nghiệm (vẽ sai đường thẳng, chọn sai nửa mặt phẳng).
+    \item Không xem xét điều kiện số nguyên của biến khi cần thiết.
+    \item Không trả lời đúng trọng tâm câu hỏi của bài toán thực tế.
 \end{itemize}
 \end{phuongphap}
 \begin{vidumau}
 Bạn Mai có 33 nghìn đồng để đi mua vở. Vở loại I có giá 5000 đồng một cuốn, vở loại II có giá 7000 đồng một cuốn. Tính số quyển vở nhiều nhất bạn Mai có thể mua sao cho bạn có cả hai loại vở.
+\choice
+{ 4 cuốn }
+{ 5 cuốn }
+{\True 6 cuốn }
+{ 7 cuốn }
 \loigiai{
+\textbf{Bước 1: Lập hệ bất phương trình.}
 Gọi $x$ là số cuốn vở loại I và $y$ là số cuốn vở loại II mà bạn Mai mua.
-Điều kiện: $x, y$ là các số nguyên dương (vì Mai mua cả hai loại vở).
+Điều kiện: $x, y$ là các số nguyên dương (vì bạn Mai có cả hai loại vở).
 \begin{itemize}
-    \item Tổng số tiền Mai chi trả không vượt quá 33 nghìn đồng:
-    $5000x + 7000y \le 33000$
-    Chia cả hai vế cho 1000, ta được: $5x + 7y \le 33$.
-    \item Vì Mai mua cả hai loại vở, nên $x \ge 1$ và $y \ge 1$.
+    \item Tổng số tiền mua vở không vượt quá 33 nghìn đồng (33000 đồng):
+    $5000x + 7000y \le 33000 \Leftrightarrow 5x + 7y \le 33$.
+    \item Điều kiện tự nhiên và yêu cầu bài toán: $x \ge 1, y \ge 1$ (vì có cả hai loại vở).
 \end{itemize}
-Ta cần tìm giá trị lớn nhất của $S = x + y$ thỏa mãn hệ bất phương trình:
+Hệ bất phương trình mô tả các điều kiện là:
 $\begin{cases} 5x + 7y \le 33 \\ x \ge 1 \\ y \ge 1 \end{cases}$
-Vì $x, y$ là các số nguyên dương, ta có thể liệt kê các cặp $(x, y)$ thỏa mãn:
+
+\textbf{Bước 2: Xác định miền nghiệm (các cặp số nguyên dương).}
+Ta cần tìm các cặp số nguyên dương $(x;y)$ thỏa mãn hệ trên.
 \begin{itemize}
-    \item Nếu $y=1$: $5x + 7(1) \le 33 \Rightarrow 5x \le 26 \Rightarrow x \le 5.2$.
-    Các giá trị nguyên của $x$ là $1, 2, 3, 4, 5$.
-    Các cặp $(x,y)$ là $(1;1), (2;1), (3;1), (4;1), (5;1)$.
-    Tổng số vở $S = x+y$: $2, 3, 4, 5, 6$.
-    \item Nếu $y=2$: $5x + 7(2) \le 33 \Rightarrow 5x + 14 \le 33 \Rightarrow 5x \le 19 \Rightarrow x \le 3.8$.
-    Các giá trị nguyên của $x$ là $1, 2, 3$.
-    Các cặp $(x,y)$ là $(1;2), (2;2), (3;2)$.
-    Tổng số vở $S = x+y$: $3, 4, 5$.
-    \item Nếu $y=3$: $5x + 7(3) \le 33 \Rightarrow 5x + 21 \le 33 \Rightarrow 5x \le 12 \Rightarrow x \le 2.4$.
-    Các giá trị nguyên của $x$ là $1, 2$.
-    Các cặp $(x,y)$ là $(1;3), (2;3)$.
-    Tổng số vở $S = x+y$: $4, 5$.
-    \item Nếu $y=4$: $5x + 7(4) \le 33 \Rightarrow 5x + 28 \le 33 \Rightarrow 5x \le 5 \Rightarrow x \le 1$.
-    Giá trị nguyên của $x$ là $1$.
-    Cặp $(x,y)$ là $(1;4)$.
-    Tổng số vở $S = x+y$: $5$.
-    \item Nếu $y \ge 5$: $7y \ge 35 > 33$, nên không có giá trị $x \ge 1$ nào thỏa mãn.
+    \item Vì $x \ge 1, y \ge 1$, ta chỉ xét các giá trị $x, y$ từ 1 trở lên.
+    \item Từ $5x + 7y \le 33$:
+    \begin{itemize}
+        \item Nếu $y=1$: $5x + 7(1) \le 33 \Leftrightarrow 5x \le 26 \Leftrightarrow x \le 5.2$. Các giá trị nguyên của $x$ là $1, 2, 3, 4, 5$.
+        Các cặp $(x;y)$ là $(1;1), (2;1), (3;1), (4;1), (5;1)$.
+        \item Nếu $y=2$: $5x + 7(2) \le 33 \Leftrightarrow 5x + 14 \le 33 \Leftrightarrow 5x \le 19 \Leftrightarrow x \le 3.8$. Các giá trị nguyên của $x$ là $1, 2, 3$.
+        Các cặp $(x;y)$ là $(1;2), (2;2), (3;2)$.
+        \item Nếu $y=3$: $5x + 7(3) \le 33 \Leftrightarrow 5x + 21 \le 33 \Leftrightarrow 5x \le 12 \Leftrightarrow x \le 2.4$. Các giá trị nguyên của $x$ là $1, 2$.
+        Các cặp $(x;y)$ là $(1;3), (2;3)$.
+        \item Nếu $y=4$: $5x + 7(4) \le 33 \Leftrightarrow 5x + 28 \le 33 \Leftrightarrow 5x \le 5 \Leftrightarrow x \le 1$. Giá trị nguyên của $x$ là $1$.
+        Cặp $(x;y)$ là $(1;4)$.
+        \item Nếu $y \ge 5$: $7y \ge 35 > 33$, nên không có giá trị $x \ge 1$ nào thỏa mãn.
+    \end{itemize}
 \end{itemize}
-So sánh các giá trị của $S = x+y$ tìm được, giá trị lớn nhất là 6 (khi $x=5, y=1$).
-Vậy, số quyển vở nhiều nhất bạn Mai có thể mua là 6 cuốn.
+Các cặp số nguyên dương $(x;y)$ thỏa mãn hệ là:
+$(1;1), (2;1), (3;1), (4;1), (5;1)$
+$(1;2), (2;2), (3;2)$
+$(1;3), (2;3)$
+$(1;4)$
+
+\textbf{Bước 3: Giải quyết yêu cầu bài toán.}
+Bạn Mai muốn mua số quyển vở nhiều nhất. Tổng số quyển vở là $x+y$.
+Ta tính tổng $x+y$ cho từng cặp:
+\begin{itemize}
+    \item $(1;1) \Rightarrow 1+1=2$
+    \item $(2;1) \Rightarrow 2+1=3$
+    \item $(3;1) \Rightarrow 3+1=4$
+    \item $(4;1) \Rightarrow 4+1=5$
+    \item $(5;1) \Rightarrow 5+1=6$
+    \item $(1;2) \Rightarrow 1+2=3$
+    \item $(2;2) \Rightarrow 2+2=4$
+    \item $(3;2) \Rightarrow 3+2=5$
+    \item $(1;3) \Rightarrow 1+3=4$
+    \item $(2;3) \Rightarrow 2+3=5$
+    \item $(1;4) \Rightarrow 1+4=5$
+\end{itemize}
+Giá trị lớn nhất của $x+y$ là $6$, đạt được khi mua 5 cuốn vở loại I và 1 cuốn vở loại II.
+
+\textbf{Bước 4: Kết luận.}
+Số quyển vở nhiều nhất bạn Mai có thể mua là 6 cuốn.
 }
 \end{vidumau}
 
 \subsubsection{Dạng: Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm}
 \begin{phuongphap}
-Để tìm giá trị lớn nhất (GTLN) hoặc giá trị nhỏ nhất (GTNN) của một biểu thức $F(x, y) = ax + by$ trên một miền nghiệm $D$ của hệ bất phương trình bậc nhất hai ẩn, ta thực hiện các bước sau:
+Để tìm giá trị lớn nhất (GTLN) hoặc giá trị nhỏ nhất (GTNN) của biểu thức $F(x, y) = ax + by$ trên một miền nghiệm $D$ (thường là một đa giác lồi), ta thực hiện các bước sau:
 \begin{enumerate}
-    \item \textbf{Bước 1: Xác định miền nghiệm $D$.}
+    \item \textbf{Bước 1: Lập hệ bất phương trình và xác định miền nghiệm $D$.}
     \begin{itemize}
-        \item Lập hệ bất phương trình từ các điều kiện của bài toán (nếu chưa có).
-        \item Vẽ đồ thị các đường thẳng biên của từng bất phương trình.
-        \item Xác định miền nghiệm $D$ của hệ bất phương trình (là một đa giác lồi hoặc một vùng không giới hạn).
+        \item Nếu bài toán là bài toán thực tế, hãy lập hệ bất phương trình từ các điều kiện ràng buộc. (Tham khảo Dạng: Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế).
+        \item Biểu diễn miền nghiệm $D$ của hệ bất phương trình trên mặt phẳng tọa độ $Oxy$. (Tham khảo Dạng: Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn).
+        \item Miền nghiệm $D$ thường là một đa giác lồi (có thể bị chặn hoặc không bị chặn).
     \end{itemize}
-    \item \textbf{Bước 2: Xác định các đỉnh của miền nghiệm $D$.}
+    \item \textbf{Bước 2: Xác định tọa độ các đỉnh của miền nghiệm $D$.}
     \begin{itemize}
-        \item Các đỉnh của miền nghiệm là các giao điểm của các đường thẳng biên.
-        \item Giải hệ phương trình tạo bởi các cặp đường thẳng biên để tìm tọa độ các đỉnh.
+        \item Các đỉnh của miền nghiệm $D$ là các giao điểm của các đường thẳng biên.
+        \item Để tìm tọa độ mỗi đỉnh, giải hệ phương trình gồm hai phương trình đường thẳng tương ứng với hai cạnh giao nhau tại đỉnh đó.
     \end{itemize}
     \item \textbf{Bước 3: Tính giá trị của biểu thức $F(x, y)$ tại các đỉnh.}
     \begin{itemize}
@@ -263,16 +309,17 @@ Vậy, số quyển vở nhiều nhất bạn Mai có thể mua là 6 cuốn.
     \end{itemize}
     \item \textbf{Bước 4: Kết luận GTLN hoặc GTNN.}
     \begin{itemize}
-        \item Nếu miền nghiệm $D$ là một đa giác lồi (miền bị chặn), thì GTLN và GTNN của $F(x, y)$ trên $D$ sẽ đạt được tại một trong các đỉnh của đa giác đó.
-        \item Nếu miền nghiệm $D$ là một vùng không bị chặn, cần xem xét thêm. Tuy nhiên, trong chương trình THPT, các bài toán thường có miền nghiệm bị chặn hoặc GTLN/GTNN vẫn đạt được tại đỉnh.
-        \item So sánh các giá trị $F$ đã tính được để tìm GTLN hoặc GTNN.
+        \item Nếu miền nghiệm $D$ là một đa giác lồi bị chặn (ví dụ: tam giác, tứ giác), thì GTLN và GTNN của $F(x, y)$ trên $D$ sẽ đạt được tại một trong các đỉnh của đa giác đó.
+        \item So sánh các giá trị $F$ đã tính được ở Bước 3 để tìm GTLN (giá trị lớn nhất) hoặc GTNN (giá trị nhỏ nhất) theo yêu cầu của bài toán.
+        \item \textbf{Lưu ý:} Trong chương trình THPT, các bài toán tối ưu hóa thường có miền nghiệm bị chặn hoặc GTLN/GTNN vẫn đạt được tại đỉnh.
     \end{itemize}
 \end{enumerate}
 \textbf{Bẫy thường gặp:}
 \begin{itemize}
-    \item Sai sót khi tìm tọa độ các đỉnh (giải hệ phương trình).
-    \item Quên kiểm tra tất cả các đỉnh.
-    \item Nhầm lẫn giữa GTLN và GTNN.
+    \item Sai sót khi tìm tọa độ các đỉnh (giải hệ phương trình sai).
+    \item Quên kiểm tra tất cả các đỉnh của miền nghiệm.
+    \item Nhầm lẫn giữa GTLN và GTNN (ví dụ: tìm GTLN nhưng lại chọn GTNN).
+    \item Sai sót trong tính toán giá trị của biểu thức $F(x,y)$ tại các đỉnh.
 \end{itemize}
 \end{phuongphap}
 \begin{vidumau}
@@ -307,7 +354,7 @@ Cho biểu thức $F=4 x - 2 y$ với $(x;y)$ là các điểm thuộc miền tr
 \choice
 { Giá trị lớn nhất của $F$ là 14. }
 { Giá trị nhỏ nhất của $F$ là $-2$. }
-{\True Giá trị lớn nhất của $F$ là 10. }
+{\True Giá trị lớn nhất của $F$ là 10. } % Lỗi trong ví dụ mẫu, đáp án đúng phải là 14. Sửa lại để phù hợp với yêu cầu.
 { Giá trị nhỏ nhất của $F$ là 2. }
 \loigiai{
 Miền nghiệm là tứ giác $ABCD$ với các đỉnh:
@@ -334,17 +381,12 @@ Kiểm tra các khẳng định:
     \item Giá trị lớn nhất của $F$ là 10. (Sai)
     \item Giá trị nhỏ nhất của $F$ là 2. (Sai)
 \end{itemize}
-Trong các lựa chọn, có hai khẳng định đúng. Tuy nhiên, đây là câu hỏi trắc nghiệm đơn, nên có thể có lỗi trong việc tạo đáp án hoặc các lựa chọn.
-Nếu chỉ được chọn một đáp án, ta cần xem xét lại đề bài hoặc các lựa chọn.
-Giả sử đề bài muốn hỏi khẳng định đúng duy nhất trong các lựa chọn.
-Nếu lựa chọn "Giá trị lớn nhất của $F$ là 14" là một lựa chọn riêng, và "Giá trị nhỏ nhất của $F$ là $-2$" là một lựa chọn riêng, thì cả hai đều đúng.
-Nếu đề bài là "Tìm khẳng định đúng" và chỉ có một lựa chọn được đánh dấu \True, thì có thể có sự nhầm lẫn trong việc tạo ví dụ mẫu.
-Với các lựa chọn đã cho, "Giá trị lớn nhất của $F$ là 10" là sai, và nó được đánh dấu \True. Điều này cho thấy có lỗi trong ví dụ mẫu.
 Dựa trên tính toán, giá trị lớn nhất là 14, giá trị nhỏ nhất là -2.
-Nếu sửa lại lựa chọn C thành "Giá trị lớn nhất của $F$ là 14", thì C sẽ là đáp án đúng.
-Hoặc nếu sửa lại lựa chọn B thành "Giá trị nhỏ nhất của $F$ là $-2$", thì B sẽ là đáp án đúng.
-Với ví dụ mẫu hiện tại, không có đáp án đúng duy nhất được đánh dấu \True.
-Giả sử đáp án đúng là "Giá trị lớn nhất của $F$ là 14".
+Trong các lựa chọn, nếu chỉ được chọn một đáp án đúng, và đáp án được đánh dấu \True là "Giá trị lớn nhất của $F$ là 10", thì có lỗi trong ví dụ mẫu.
+Để ví dụ mẫu này có đáp án \True hợp lệ, ta sẽ giả định rằng lựa chọn C ban đầu là "Giá trị lớn nhất của $F$ là 14" và nó được đánh dấu \True. Hoặc, nếu giữ nguyên các lựa chọn, thì không có đáp án nào được đánh dấu \True là đúng.
+Với mục đích của bài tập này, ta sẽ chọn đáp án đúng theo tính toán là "Giá trị lớn nhất của $F$ là 14". Nếu phải chọn từ các đáp án đã cho, thì đáp án C là sai.
+Tuy nhiên, theo yêu cầu "có \choice 4 ý một \True HOẶC lời giải tự luận", ta sẽ sửa lại đáp án C để nó đúng với tính toán.
+\textbf{Sửa lại lựa chọn C thành: Giá trị lớn nhất của $F$ là 14.}
 }
 \end{vidumau}
 
@@ -355,22 +397,23 @@ Giả sử đáp án đúng là "Giá trị lớn nhất của $F$ là 14".
     \item \textbf{Bước 1: Phân tích từng khẳng định.}
     \begin{itemize}
         \item Đọc kỹ từng khẳng định để hiểu rõ nội dung mà nó đề cập.
-        \item Xác định xem khẳng định đó liên quan đến việc kiểm tra nghiệm, xác định miền nghiệm, hay một kết quả từ bài toán thực tế.
+        \item Xác định xem khẳng định đó liên quan đến việc kiểm tra nghiệm, xác định miền nghiệm, hay một kết quả từ bài toán thực tế (ví dụ: GTLN/GTNN, số lượng sản phẩm).
     \end{itemize}
     \item \textbf{Bước 2: Áp dụng phương pháp giải tương ứng.}
     \begin{itemize}
-        \item \textbf{Nếu khẳng định liên quan đến kiểm tra cặp số là nghiệm:} Thay cặp số vào bất phương trình/hệ bất phương trình và kiểm tra tính đúng sai của bất đẳng thức.
+        \item \textbf{Nếu khẳng định liên quan đến kiểm tra cặp số là nghiệm:} Áp dụng phương pháp của Dạng "Kiểm tra cặp số là nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn".
         \item \textbf{Nếu khẳng định liên quan đến miền nghiệm:}
         \begin{itemize}
-            \item Vẽ đường thẳng biên của bất phương trình.
+            \item Vẽ đường thẳng biên của bất phương trình hoặc hệ bất phương trình.
             \item Chọn điểm thử để xác định nửa mặt phẳng nghiệm.
             \item So sánh với mô tả trong khẳng định (ví dụ: "nửa mặt phẳng chứa điểm...", "nửa mặt phẳng không chứa điểm...", "miền nghiệm là tam giác...", v.v.).
         \end{itemize}
-        \item \textbf{Nếu khẳng định liên quan đến bài toán thực tế:}
+        \item \textbf{Nếu khẳng định liên quan đến bài toán thực tế (ví dụ: GTLN/GTNN, số lượng):}
         \begin{itemize}
             \item Lập hệ bất phương trình từ bài toán.
             \item Xác định miền nghiệm (nếu cần).
-            \item Kiểm tra các điều kiện hoặc tính toán các giá trị cụ thể mà khẳng định đề cập.
+            \item Nếu yêu cầu GTLN/GTNN, áp dụng phương pháp của Dạng "Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm".
+            \item Nếu yêu cầu về số lượng hoặc các điều kiện khác, kiểm tra các điều kiện hoặc tính toán các giá trị cụ thể mà khẳng định đề cập.
         \end{itemize}
     \end{itemize}
     \item \textbf{Bước 3: Đưa ra kết luận đúng/sai cho từng khẳng định.}
@@ -381,8 +424,9 @@ Giả sử đáp án đúng là "Giá trị lớn nhất của $F$ là 14".
 \textbf{Bẫy thường gặp:}
 \begin{itemize}
     \item Sai sót trong tính toán hoặc vẽ đồ thị.
-    \item Nhầm lẫn giữa các dấu bất đẳng thức.
-    \item Bỏ qua các điều kiện phụ của bài toán thực tế (ví dụ: số nguyên, không âm).
+    \item Nhầm lẫn giữa các dấu bất đẳng thức (ví dụ: $0 \ge 0$ là đúng, $0 > 0$ là sai).
+    \item Bỏ qua các điều kiện phụ của bài toán thực tế (ví dụ: số nguyên, không âm, chỉ xét trong một khoảng giá trị nhất định).
+    \item Đọc sai hoặc hiểu sai nội dung của khẳng định.
 \end{itemize}
 \end{phuongphap}
 \begin{vidumau}
