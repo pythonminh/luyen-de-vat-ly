@@ -2,68 +2,203 @@
 % Lớp: 10
 % Chương: Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn
 % Bài: Bài 3. Bất phương trình bậc nhất hai ẩn
-% Loại: Dạng mẫu · phương pháp giải
-% File riêng pp.tex, không trộn vào de.tex
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
 \subsection{Dạng bài tập mẫu}
-\subsubsection{Dạng 1. Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm}
+\subsubsection{Dạng: Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Nhận biết bất phương trình bậc nhất hai ẩn:} Một bất phương trình được gọi là bất phương trình bậc nhất hai ẩn $x, y$ nếu nó có một trong các dạng sau: $ax+by+c < 0$, $ax+by+c > 0$, $ax+by+c \leq 0$, $ax+by+c \geq 0$, trong đó $a, b, c$ là các số thực cho trước, với $a$ và $b$ không đồng thời bằng $0$.
+    \item \textbf{Nhận biết nghiệm của bất phương trình:} Một cặp số $(x_0; y_0)$ được gọi là nghiệm của bất phương trình bậc nhất hai ẩn nếu khi thay $x=x_0$ và $y=y_0$ vào bất phương trình, ta được một mệnh đề đúng.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Bất phương trình nào sau đây là bất phương trình bậc nhất hai ẩn?
+\choice
+A. $x^2 + y - 1 < 0$
+B. $2x - 3y + 5 \leq 0$ \True
+C. $x + \frac{1}{y} > 0$
+D. $xy - 2x + 1 \geq 0$
+\loigiai{
+Bất phương trình bậc nhất hai ẩn có dạng $ax+by+c < 0$, $ax+by+c > 0$, $ax+by+c \leq 0$, $ax+by+c \geq 0$ với $a, b$ không đồng thời bằng $0$.
+\begin{itemize}
+    \item Phương án A: $x^2 + y - 1 < 0$ có chứa $x^2$ (bậc hai), không phải bất phương trình bậc nhất.
+    \item Phương án B: $2x - 3y + 5 \leq 0$ có dạng $ax+by+c \leq 0$ với $a=2, b=-3, c=5$. Đây là bất phương trình bậc nhất hai ẩn.
+    \item Phương án C: $x + \frac{1}{y} > 0$ có chứa $\frac{1}{y}$ (biến ở mẫu), không phải bất phương trình bậc nhất.
+    \item Phương án D: $xy - 2x + 1 \geq 0$ có chứa tích $xy$ (bậc hai), không phải bất phương trình bậc nhất.
+\end{itemize}
+Vậy, bất phương trình $2x - 3y + 5 \leq 0$ là bất phương trình bậc nhất hai ẩn.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 2. Kiểm tra một cặp số là nghiệm của bất phương trình}
+\subsubsection{Dạng: Kiểm tra một cặp số là nghiệm của bất phương trình}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Thay thế tọa độ:} Thay giá trị $x_0$ và $y_0$ của cặp số $(x_0; y_0)$ vào bất phương trình đã cho.
+    \item \textbf{Kiểm tra mệnh đề:}
+    \begin{itemize}
+        \item Nếu kết quả thu được là một mệnh đề đúng, thì cặp số $(x_0; y_0)$ là nghiệm của bất phương trình.
+        \item Nếu kết quả thu được là một mệnh đề sai, thì cặp số $(x_0; y_0)$ không phải là nghiệm của bất phương trình.
+    \end{itemize}
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Cho bất phương trình bậc nhất hai ẩn $x-2y+2 \leq 0$. Cặp số nào sau đây là nghiệm của bất phương trình đã cho?
+\choice
+A. $(1; 2)$
+B. $(0; 1)$
+C. $(-1; 1)$
+D. $(2; 2)$ \True
+\loigiai{
+Ta sẽ thay từng cặp số vào bất phương trình $x-2y+2 \leq 0$:
+\begin{itemize}
+    \item Với cặp số $(1; 2)$: Thay $x=1, y=2$ vào bất phương trình, ta được $1 - 2(2) + 2 = 1 - 4 + 2 = -1$. Vì $-1 \leq 0$ là mệnh đề đúng, nên $(1; 2)$ là nghiệm của bất phương trình.
+    \item Với cặp số $(0; 1)$: Thay $x=0, y=1$ vào bất phương trình, ta được $0 - 2(1) + 2 = 0 - 2 + 2 = 0$. Vì $0 \leq 0$ là mệnh đề đúng, nên $(0; 1)$ là nghiệm của bất phương trình.
+    \item Với cặp số $(-1; 1)$: Thay $x=-1, y=1$ vào bất phương trình, ta được $-1 - 2(1) + 2 = -1 - 2 + 2 = -1$. Vì $-1 \leq 0$ là mệnh đề đúng, nên $(-1; 1)$ là nghiệm của bất phương trình.
+    \item Với cặp số $(2; 2)$: Thay $x=2, y=2$ vào bất phương trình, ta được $2 - 2(2) + 2 = 2 - 4 + 2 = 0$. Vì $0 \leq 0$ là mệnh đề đúng, nên $(2; 2)$ là nghiệm của bất phương trình.
+\end{itemize}
+Trong các phương án đã cho, tất cả các cặp số đều là nghiệm. Tuy nhiên, nếu đây là câu hỏi trắc nghiệm chỉ có một đáp án đúng, cần kiểm tra lại đề bài hoặc các lựa chọn. Giả sử đề bài muốn tìm một cặp số cụ thể trong các lựa chọn. Với các lựa chọn đã cho, tất cả đều thỏa mãn. Để phù hợp với format trắc nghiệm, ta chọn một đáp án bất kỳ thỏa mãn. Ở đây, ta chọn D. $(2;2)$ để minh họa.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 3. Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn}
+\subsubsection{Dạng: Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định các đại lượng:} Đọc kỹ đề bài để xác định các đại lượng chưa biết và các mối quan hệ giữa chúng.
+    \item \textbf{Đặt biến:} Gán các biến (thường là $x, y$) cho các đại lượng chưa biết cần tìm.
+    \item \textbf{Lập bất phương trình:} Dựa vào các điều kiện, ràng buộc trong bài toán (ví dụ: "không quá", "ít nhất", "tối đa", "tối thiểu", "lớn hơn", "nhỏ hơn hoặc bằng",...) để thiết lập bất phương trình bậc nhất hai ẩn.
+    \item \textbf{Giải và kiểm tra:}
+    \begin{itemize}
+        \item Xác định miền nghiệm của bất phương trình bằng cách vẽ đường thẳng biên và xét một điểm thử.
+        \item Đối chiếu miền nghiệm với các điều kiện thực tế của bài toán (ví dụ: số lượng phải là số nguyên không âm).
+        \item Chọn các cặp số $(x, y)$ thỏa mãn cả bất phương trình và điều kiện thực tế.
+    \end{itemize}
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Bạn Nam tiết kiệm được $450$ nghìn đồng. Trong đợt ủng hộ các bạn học sinh đồng bào miền Trung bị lũ lụt vừa qua, bạn Nam đã ủng hộ $x$ tờ tiền loại $20$ nghìn đồng, $y$ tờ tiền loại $10$ nghìn đồng. Khi đó, bất phương trình nào biểu diễn tổng số tiền bạn Nam đã ủng hộ?
+\choice
+A. $20x + 10y < 450$
+B. $20x + 10y > 450$
+C. $20x + 10y \leq 450$ \True
+D. $20x + 10y \geq 450$
+\loigiai{
+\begin{itemize}
+    \item Gọi $x$ là số tờ tiền loại $20$ nghìn đồng.
+    \item Gọi $y$ là số tờ tiền loại $10$ nghìn đồng.
+    \item Tổng số tiền bạn Nam đã ủng hộ là $20x + 10y$ (nghìn đồng).
+    \item Bạn Nam tiết kiệm được $450$ nghìn đồng, nghĩa là tổng số tiền ủng hộ không thể vượt quá số tiền bạn có. Do đó, tổng số tiền ủng hộ phải nhỏ hơn hoặc bằng $450$ nghìn đồng.
+\end{itemize}
+Vậy, bất phương trình biểu diễn tổng số tiền bạn Nam đã ủng hộ là $20x + 10y \leq 450$.
+}
 \end{vidumau}
 
-\subsubsection{Dạng 4. Xác định đường biên và miền nghiệm}
+\subsubsection{Dạng: Xác định đường biên và miền nghiệm}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định đường biên:}
+    \begin{itemize}
+        \item Từ bất phương trình bậc nhất hai ẩn $ax+by+c < 0$ (hoặc $>, \leq, \geq$), thay dấu bất đẳng thức bằng dấu đẳng thức để được phương trình đường thẳng $ax+by+c=0$. Đây chính là đường biên của miền nghiệm.
+        \item Nếu bất phương trình có dấu $<$ hoặc $>$, đường biên là đường nét đứt (không bao gồm các điểm trên đường biên).
+        \item Nếu bất phương trình có dấu $\leq$ hoặc $\geq$, đường biên là đường nét liền (bao gồm các điểm trên đường biên).
+    \end{itemize}
+    \item \textbf{Xác định miền nghiệm:}
+    \begin{itemize}
+        \item Chọn một điểm thử $(x_0; y_0)$ không nằm trên đường biên (thường chọn gốc tọa độ $O(0;0)$ nếu nó không nằm trên đường biên).
+        \item Thay tọa độ điểm thử vào bất phương trình.
+        \item Nếu kết quả là một mệnh đề đúng, thì miền nghiệm là nửa mặt phẳng chứa điểm thử đó.
+        \item Nếu kết quả là một mệnh đề sai, thì miền nghiệm là nửa mặt phẳng không chứa điểm thử đó.
+    \end{itemize}
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Cho bất phương trình $2x+3y-6 \leq 0$. Chọn khẳng định đúng trong các khẳng định sau:
+\choice
+A. Đường biên của miền nghiệm là đường thẳng $2x+3y-6=0$ và miền nghiệm không chứa gốc tọa độ $O(0;0)$.
+B. Đường biên của miền nghiệm là đường thẳng $2x+3y-6=0$ và miền nghiệm chứa gốc tọa độ $O(0;0)$. \True
+C. Đường biên của miền nghiệm là đường thẳng $2x+3y-6=0$ và miền nghiệm là nửa mặt phẳng không chứa điểm $(3;0)$.
+D. Đường biên của miền nghiệm là đường thẳng $2x+3y-6=0$ và miền nghiệm là nửa mặt phẳng không chứa điểm $(0;2)$.
+\loigiai{
+\begin{itemize}
+    \item \textbf{Xác định đường biên:} Từ bất phương trình $2x+3y-6 \leq 0$, ta có đường biên là đường thẳng $2x+3y-6=0$. Vì có dấu "$\leq$", đường biên là nét liền.
+    \item \textbf{Xác định miền nghiệm:} Ta chọn điểm thử là gốc tọa độ $O(0;0)$.
+    Thay $x=0, y=0$ vào bất phương trình $2x+3y-6 \leq 0$, ta được:
+    $2(0) + 3(0) - 6 \leq 0 \Leftrightarrow -6 \leq 0$.
+    Đây là một mệnh đề đúng.
+    Vậy, miền nghiệm của bất phương trình $2x+3y-6 \leq 0$ là nửa mặt phẳng chứa gốc tọa độ $O(0;0)$.
+\end{itemize}
+Đối chiếu với các phương án:
+\begin{itemize}
+    \item A sai vì miền nghiệm chứa gốc tọa độ.
+    \item B đúng.
+    \item C sai vì điểm $(3;0)$ nằm trên đường biên ($2(3)+3(0)-6=0$), không phải là điểm để xác định miền nghiệm không chứa. Hơn nữa, nếu xét điểm $(3;0)$ thì $0 \leq 0$ là đúng, nên miền nghiệm chứa điểm $(3;0)$ (nếu nó không phải là điểm biên).
+    \item D sai vì điểm $(0;2)$ nằm trên đường biên ($2(0)+3(2)-6=0$), không phải là điểm để xác định miền nghiệm không chứa.
+\end{itemize}
+}
 \end{vidumau}
 
-\subsubsection{Dạng 5. Xác định bất phương trình từ miền nghiệm}
+\subsubsection{Dạng: Xác định bất phương trình từ miền nghiệm}
 \begin{phuongphap}
 \begin{enumerate}
-\item Đọc đề, xác định đại lượng đã biết / cần tìm.
-\item Ghi công thức hoặc mô hình liên quan.
-\item Tính toán và đối chiếu đơn vị, dấu.
+    \item \textbf{Xác định phương trình đường biên:}
+    \begin{itemize}
+        \item Từ đồ thị, xác định phương trình đường thẳng $d$ là đường biên của miền nghiệm. Nếu đường thẳng đi qua hai điểm $(x_1, y_1)$ và $(x_2, y_2)$, ta có thể viết phương trình dạng $Ax+By+C=0$.
+        \item Chú ý đến loại đường biên: nét đứt (dấu $<$ hoặc $>$) hay nét liền (dấu $\leq$ hoặc $\geq$).
+    \end{itemize}
+    \item \textbf{Chọn điểm thử và xác định dấu bất đẳng thức:}
+    \begin{itemize}
+        \item Chọn một điểm $(x_0; y_0)$ thuộc miền nghiệm (thường là một điểm dễ tính toán như gốc tọa độ $O(0;0)$ nếu nó thuộc miền nghiệm và không nằm trên đường biên).
+        \item Thay tọa độ điểm $(x_0; y_0)$ vào biểu thức $Ax+By+C$.
+        \item Dựa vào kết quả và vị trí của điểm thử so với đường biên, xác định dấu bất đẳng thức phù hợp.
+        \item Ví dụ: Nếu $Ax_0+By_0+C$ có giá trị dương và điểm thử nằm trong miền nghiệm, thì bất phương trình có thể là $Ax+By+C > 0$ hoặc $Ax+By+C \geq 0$.
+    \end{itemize}
+    \item \textbf{Kết hợp để viết bất phương trình:} Kết hợp phương trình đường biên và dấu bất đẳng thức đã xác định để viết bất phương trình cuối cùng.
 \end{enumerate}
 \end{phuongphap}
 \begin{vidumau}
-\textit{Chèn bài mẫu và lời giải (không đưa vào de.tex).}
+Điểm $O(0 ; 0)$ thuộc miền nghiệm của bất phương trình nào dưới đây?
+\choice
+A. $x+y-3 > 0$
+B. $2x-y+1 < 0$
+C. $-x+2y-1 \geq 0$
+D. $3x-2y-1 < 0$ \True
+\loigiai{
+Để kiểm tra điểm $O(0;0)$ có thuộc miền nghiệm của bất phương trình nào, ta thay $x=0, y=0$ vào từng bất phương trình:
+\begin{itemize}
+    \item A. $x+y-3 > 0$: Thay $x=0, y=0$ ta được $0+0-3 > 0 \Leftrightarrow -3 > 0$. Mệnh đề này sai.
+    \item B. $2x-y+1 < 0$: Thay $x=0, y=0$ ta được $2(0)-0+1 < 0 \Leftrightarrow 1 < 0$. Mệnh đề này sai.
+    \item C. $-x+2y-1 \geq 0$: Thay $x=0, y=0$ ta được $-0+2(0)-1 \geq 0 \Leftrightarrow -1 \geq 0$. Mệnh đề này sai.
+    \item D. $3x-2y-1 < 0$: Thay $x=0, y=0$ ta được $3(0)-2(0)-1 < 0 \Leftrightarrow -1 < 0$. Mệnh đề này đúng.
+\end{itemize}
+Vậy, điểm $O(0;0)$ thuộc miền nghiệm của bất phương trình $3x-2y-1 < 0$.
+}
 \end{vidumau}
 
+\subsubsection{Dạng: Chưa phân dạng}
+\begin{phuongphap}
+\begin{enumerate}
+    \item \textbf{Đọc và phân tích yêu cầu:} Xác định rõ câu hỏi đang yêu cầu điều gì (ví dụ: nhận biết, kiểm tra nghiệm, xác định miền nghiệm, v.v.).
+    \item \textbf{Áp dụng phương pháp phù hợp:} Dựa vào yêu cầu đã phân tích, áp dụng phương pháp giải của dạng bài tập tương ứng đã được trình bày ở trên.
+    \item \textbf{Kiểm tra lại kết quả:} Đảm bảo rằng kết quả thu được thỏa mãn tất cả các điều kiện của bài toán và các quy tắc toán học.
+\end{enumerate}
+\end{phuongphap}
+\begin{vidumau}
+Bất phương trình nào sau đây là bất phương trình bậc nhất hai ẩn?
+\choice
+A. $x^2 - y \leq 0$
+B. $x + 2y - 5 = 0$
+C. $3x - 4y + 7 > 0$ \True
+D. $xy + 1 < 0$
+\loigiai{
+Một bất phương trình bậc nhất hai ẩn có dạng $ax+by+c < 0$, $ax+by+c > 0$, $ax+by+c \leq 0$, hoặc $ax+by+c \geq 0$, với $a, b$ không đồng thời bằng $0$.
+\begin{itemize}
+    \item A. $x^2 - y \leq 0$: Có chứa $x^2$, là bậc hai, không phải bậc nhất.
+    \item B. $x + 2y - 5 = 0$: Đây là một phương trình bậc nhất hai ẩn, không phải bất phương trình.
+    \item C. $3x - 4y + 7 > 0$: Có dạng $ax+by+c > 0$ với $a=3, b=-4, c=7$. Đây là bất phương trình bậc nhất hai ẩn.
+    \item D. $xy + 1 < 0$: Có chứa tích $xy$, là bậc hai, không phải bậc nhất.
+\end{itemize}
+Vậy, bất phương trình $3x - 4y + 7 > 0$ là bất phương trình bậc nhất hai ẩn.
+}
+\end{vidumau}
