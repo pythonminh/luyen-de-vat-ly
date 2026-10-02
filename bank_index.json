@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 185,
-  "total_questions": 12762,
+  "total_files": 186,
+  "total_questions": 12785,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -421,6 +421,29 @@
           "DS": 1,
           "TLN": 2,
           "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/cơ_bản.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/cơ_bản.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/cơ_bản.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
+      "BaiHoc": "Bài 3. Bất phương trình bậc nhất hai ẩn",
+      "De": "Bài 3. Bất phương trình bậc nhất hai ẩn",
+      "questions": 23,
+      "count": 23,
+      "dang": {
+        "Chưa phân dạng": 23
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 12,
+          "DS": 4,
+          "TLN": 4,
+          "TL": 3
         }
       }
     },
