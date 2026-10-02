@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 186,
-  "total_questions": 12785,
+  "total_files": 187,
+  "total_questions": 12816,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -456,45 +456,68 @@
       "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
       "BaiHoc": "Bài 3. Bất phương trình bậc nhất hai ẩn",
       "De": "Bài 3. Bất phương trình bậc nhất hai ẩn",
-      "questions": 33,
-      "count": 33,
+      "questions": 42,
+      "count": 42,
       "dang": {
-        "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": 5,
-        "Kiểm tra một cặp số là nghiệm của bất phương trình": 9,
-        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 7,
-        "Xác định đường biên và miền nghiệm": 7,
-        "Xác định bất phương trình từ miền nghiệm": 5
+        "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": 6,
+        "Kiểm tra một cặp số là nghiệm của bất phương trình": 11,
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 11,
+        "Xác định đường biên và miền nghiệm": 8,
+        "Xác định bất phương trình từ miền nghiệm": 6
       },
       "dang_kinds": {
         "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": {
-          "TN": 2,
+          "TN": 3,
           "DS": 3,
           "TLN": 0,
           "TL": 0
         },
         "Kiểm tra một cặp số là nghiệm của bất phương trình": {
-          "TN": 7,
-          "DS": 1,
+          "TN": 8,
+          "DS": 2,
           "TLN": 1,
           "TL": 0
         },
         "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
           "TN": 7,
           "DS": 0,
-          "TLN": 0,
-          "TL": 0
+          "TLN": 2,
+          "TL": 2
         },
         "Xác định đường biên và miền nghiệm": {
           "TN": 4,
           "DS": 1,
           "TLN": 2,
-          "TL": 0
+          "TL": 1
         },
         "Xác định bất phương trình từ miền nghiệm": {
           "TN": 5,
           "DS": 0,
-          "TLN": 0,
+          "TLN": 1,
           "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/cơ bản.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/cơ bản.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/cơ bản.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
+      "BaiHoc": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
+      "De": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
+      "questions": 22,
+      "count": 22,
+      "dang": {
+        "Chưa phân dạng": 22
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 12,
+          "DS": 2,
+          "TLN": 4,
+          "TL": 4
         }
       }
     },
