@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 188,
-  "total_questions": 12784,
+  "total_questions": 12787,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2954,14 +2954,17 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
       "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
-      "questions": 147,
-      "count": 147,
+      "questions": 150,
+      "count": 150,
       "dang": {
         "Liên hệ li độ, vận tốc, gia tốc": 69,
         "Xác định và tính toán các đại lượng tức thời": 39,
         "Xác định các đại lượng cực đại và tại vị trí đặc biệt": 19,
         "Khai thác các thông số từ đồ thị": 3,
-        "Tính quãng đường và tốc độ trung bình": 17
+        "Tính quãng đường và tốc độ trung bình": 17,
+        "Tính chu kì, tần số góc và biên độ từ đồ thị vận tốc": 1,
+        "Tính quãng đường dao động từ đồ thị vận tốc": 1,
+        "Tính tốc độ trung bình trong dao động điều hòa": 1
       },
       "dang_kinds": {
         "Liên hệ li độ, vận tốc, gia tốc": {
@@ -2993,6 +2996,24 @@
           "DS": 0,
           "TLN": 0,
           "TL": 5
+        },
+        "Tính chu kì, tần số góc và biên độ từ đồ thị vận tốc": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Tính quãng đường dao động từ đồ thị vận tốc": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Tính tốc độ trung bình trong dao động điều hòa": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
         }
       }
     },
