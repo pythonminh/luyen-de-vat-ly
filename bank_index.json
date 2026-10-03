@@ -2961,12 +2961,14 @@
         "Xác định và tính toán các đại lượng tức thời": 39,
         "Xác định các đại lượng cực đại và tại vị trí đặc biệt": 19,
         "Khai thác các thông số từ đồ thị": 3,
-        "Tính quãng đường và tốc độ trung bình": 17,
+        "Tính quãng đường và tốc độ trung bình": 14,
         "Khai thác phương trình dao động điều hòa": 1,
-        "Khai thác đồ thị vận tốc theo thời gian": 1,
-        "Tính chu kì, tần số góc và biên độ từ đồ thị vận tốc": 1,
-        "Tính quãng đường dao động từ đồ thị vận tốc": 1,
-        "Tính tốc độ trung bình trong dao động điều hòa": 1
+        "Khai thác đồ thị vận tốc theo thời gian": 2,
+        "Khai thác mối liên hệ giữa vận tốc và gia tốc": 1,
+        "Phân tích chiều chuyển động và sự biến đổi tốc độ": 1,
+        "Tính quãng đường và tốc độ trung bình từ đồ thị vận tốc": 1,
+        "Tính quãng đường trong các khoảng thời gian đặc biệt": 1,
+        "Khai thác vận tốc, gia tốc và quãng đường": 1
       },
       "dang_kinds": {
         "Liên hệ li độ, vận tốc, gia tốc": {
@@ -2997,7 +2999,7 @@
           "TN": 12,
           "DS": 0,
           "TLN": 0,
-          "TL": 5
+          "TL": 2
         },
         "Khai thác phương trình dao động điều hòa": {
           "TN": 0,
@@ -3009,21 +3011,33 @@
           "TN": 0,
           "DS": 0,
           "TLN": 0,
-          "TL": 1
+          "TL": 2
         },
-        "Tính chu kì, tần số góc và biên độ từ đồ thị vận tốc": {
+        "Khai thác mối liên hệ giữa vận tốc và gia tốc": {
           "TN": 0,
           "DS": 0,
           "TLN": 0,
           "TL": 1
         },
-        "Tính quãng đường dao động từ đồ thị vận tốc": {
+        "Phân tích chiều chuyển động và sự biến đổi tốc độ": {
           "TN": 0,
           "DS": 0,
           "TLN": 0,
           "TL": 1
         },
-        "Tính tốc độ trung bình trong dao động điều hòa": {
+        "Tính quãng đường và tốc độ trung bình từ đồ thị vận tốc": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Tính quãng đường trong các khoảng thời gian đặc biệt": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Khai thác vận tốc, gia tốc và quãng đường": {
           "TN": 0,
           "DS": 0,
           "TLN": 0,
