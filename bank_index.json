@@ -2911,10 +2911,10 @@
       "questions": 14,
       "count": 14,
       "dang": {
-        "Xác định các đại lượng cực đại và tại vị trí đặc biệt": 14
+        "Xác định và tính toán các đại lượng tức thời": 14
       },
       "dang_kinds": {
-        "Xác định các đại lượng cực đại và tại vị trí đặc biệt": {
+        "Xác định và tính toán các đại lượng tức thời": {
           "TN": 6,
           "DS": 5,
           "TLN": 3,
