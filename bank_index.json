@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 188,
-  "total_questions": 12820,
+  "total_questions": 12789,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2957,37 +2957,24 @@
       "questions": 183,
       "count": 183,
       "dang": {
-        "Liên hệ li độ, vận tốc, gia tốc": 69,
-        "Xác định và tính toán các đại lượng tức thời": 40,
-        "Xác định các đại lượng cực đại và tại vị trí đặc biệt": 21,
+        "Liên hệ li độ, vận tốc, gia tốc": 73,
+        "Xác định và tính toán các đại lượng tức thời": 64,
         "Khai thác các thông số từ đồ thị": 6,
-        "Tính quãng đường và tốc độ trung bình": 16,
-        "Khai thác phương trình dao động điều hòa": 22,
-        "Khai thác đồ thị vận tốc theo thời gian": 2,
-        "Khai thác mối liên hệ giữa vận tốc và gia tốc": 1,
-        "Phân tích chiều chuyển động và sự biến đổi tốc độ": 3,
-        "Tính quãng đường và tốc độ trung bình từ đồ thị vận tốc": 1,
-        "Tính quãng đường trong các khoảng thời gian đặc biệt": 1,
-        "Khai thác vận tốc, gia tốc và quãng đường": 1
+        "Tính quãng đường và tốc độ trung bình": 18,
+        "Khai thác phương trình dao động điều hòa": 22
       },
       "dang_kinds": {
         "Liên hệ li độ, vận tốc, gia tốc": {
           "TN": 42,
           "DS": 18,
           "TLN": 9,
-          "TL": 0
+          "TL": 4
         },
         "Xác định và tính toán các đại lượng tức thời": {
-          "TN": 31,
+          "TN": 48,
           "DS": 8,
           "TLN": 0,
-          "TL": 1
-        },
-        "Xác định các đại lượng cực đại và tại vị trí đặc biệt": {
-          "TN": 15,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 6
+          "TL": 8
         },
         "Khai thác các thông số từ đồ thị": {
           "TN": 6,
@@ -2999,49 +2986,13 @@
           "TN": 14,
           "DS": 0,
           "TLN": 0,
-          "TL": 2
+          "TL": 4
         },
         "Khai thác phương trình dao động điều hòa": {
           "TN": 18,
           "DS": 0,
           "TLN": 0,
           "TL": 4
-        },
-        "Khai thác đồ thị vận tốc theo thời gian": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 2
-        },
-        "Khai thác mối liên hệ giữa vận tốc và gia tốc": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 1
-        },
-        "Phân tích chiều chuyển động và sự biến đổi tốc độ": {
-          "TN": 2,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 1
-        },
-        "Tính quãng đường và tốc độ trung bình từ đồ thị vận tốc": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 1
-        },
-        "Tính quãng đường trong các khoảng thời gian đặc biệt": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 1
-        },
-        "Khai thác vận tốc, gia tốc và quãng đường": {
-          "TN": 0,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 1
         }
       }
     },
