@@ -3068,184 +3068,545 @@ $x=3\ \mathrm{cm}$ và đang chuyển động theo chiều âm.
 \end{enumerate}
 }
 \end{ex}
-```
-
-\dangbt{Tính quãng đường và tốc độ trung bình}
+```latex
+\dangbt{Khai thác mối liên hệ giữa vận tốc và gia tốc}
 \begin{ex}
-Một vật dao động điều hòa trên trục $Ox$. Khi vật qua vị trí cân bằng thì tốc độ của nó là $20\ \mathrm{cm/s}$. Khi vật có tốc độ là $10\ \mathrm{cm/s}$ thì gia tốc của nó có độ lớn là $40\sqrt{3}\ \mathrm{cm/s^2}$. Tính biên độ dao động của vật.
-\loigiai{Tại vị trí cân bằng, tốc độ cực đại: $v_{\max} = \omega A = 20\ \mathrm{cm/s}$, suy ra $A^2 = \dfrac{400}{\omega^2}$.
-Áp dụng hệ thức độc lập thời gian: $v^2 + \dfrac{a^2}{\omega^2} = \omega^2 A^2 = v_{\max}^2 = 400$
-Thay $v = 10\ \mathrm{cm/s}$ và $a = 40\sqrt{3}\ \mathrm{cm/s^2}$:
-\[10^2 + \dfrac{(40\sqrt{3})^2}{\omega^2} = 400\]
-\[100 + \dfrac{4800}{\omega^2} = 400\]
-\[\omega^2 = 16 \Rightarrow \omega = 4\ \mathrm{rad/s}\]
-Biên độ dao động:
-\[A = \dfrac{v_{\max}}{\omega} = \dfrac{20}{4} = 5\ \mathrm{cm}\]}
+Một vật dao động điều hòa trên trục $Ox$. Khi vật đi qua vị trí cân bằng,
+tốc độ của vật là $20\ \mathrm{cm/s}$. Khi vật có tốc độ
+$10\ \mathrm{cm/s}$ thì gia tốc có độ lớn
+$40\sqrt3\ \mathrm{cm/s^2}$.
+
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Xác định vận tốc cực đại của vật.
+
+    \item Thiết lập hệ thức liên hệ giữa vận tốc, gia tốc, tần số góc
+    và biên độ trong dao động điều hòa.
+
+    \item Xác định tần số góc của dao động.
+
+    \item Xác định biên độ dao động.
+
+    \item Tính gia tốc cực đại của vật.
+
+    \item Tính tốc độ của vật khi gia tốc có độ lớn
+    $20\sqrt3\ \mathrm{cm/s^2}$.
+\end{enumerate}
+
+\loigiai{
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Khi vật qua vị trí cân bằng, tốc độ đạt cực đại nên:
+    \[
+    v_{\max}=20\ \mathrm{cm/s}.
+    \]
+
+    \item Hệ thức độc lập thời gian:
+    \[
+    v^2+\dfrac{a^2}{\omega^2}
+    =\omega^2A^2
+    =v_{\max}^2.
+    \]
+
+    \item Khi $v=10\ \mathrm{cm/s}$ và
+    $|a|=40\sqrt3\ \mathrm{cm/s^2}$:
+    \[
+    10^2+\dfrac{(40\sqrt3)^2}{\omega^2}=20^2.
+    \]
+
+    Suy ra:
+    \[
+    100+\dfrac{4800}{\omega^2}=400,
+    \]
+    \[
+    \omega^2=16.
+    \]
+
+    Do đó:
+    \[
+    \omega=4\ \mathrm{rad/s}.
+    \]
+
+    \item Biên độ:
+    \[
+    A=\dfrac{v_{\max}}{\omega}
+    =\dfrac{20}{4}
+    =5\ \mathrm{cm}.
+    \]
+
+    \item Gia tốc cực đại:
+    \[
+    a_{\max}=\omega^2A
+    =16\cdot5
+    =80\ \mathrm{cm/s^2}.
+    \]
+
+    \item Với $|a|=20\sqrt3\ \mathrm{cm/s^2}$:
+    \[
+    v^2+\dfrac{(20\sqrt3)^2}{4^2}=20^2.
+    \]
+
+    Suy ra:
+    \[
+    v^2+75=400,
+    \]
+    \[
+    v=\sqrt{325}=5\sqrt{13}\ \mathrm{cm/s}.
+    \]
+\end{enumerate}
+}
 \end{ex}
 
-\dangbt{Tính quãng đường và tốc độ trung bình}
+
+\dangbt{Phân tích chiều chuyển động và sự biến đổi tốc độ}
 \begin{ex}
-Một vật dao động điều hòa quanh vị trí cân bằng $O$. Hai vị trí biên là $M$ (biên âm) và $N$ (biên dương). Trong quá trình vật chuyển động từ biên dương $N$ về vị trí cân bằng $O$ thì vận tốc và gia tốc của vật cùng chiều hay ngược chiều? Chuyển động của vật là nhanh dần hay chậm dần?
-\loigiai{Khi vật đi từ biên dương $N$ về vị trí cân bằng $O$, vật chuyển động ngược chiều dương nên vận tốc âm ($v < 0$), vectơ vận tốc hướng từ $N$ về $O$.
-Gia tốc luôn hướng về vị trí cân bằng $O$, nên vectơ gia tốc cũng hướng từ vị trí hiện tại về $O$.
-Cả hai vectơ vận tốc và gia tốc đều hướng về $O$ nên cùng chiều ($a \cdot v > 0$). Vật đang chuyển động từ biên về vị trí cân bằng nên tốc độ tăng dần, do đó chuyển động là nhanh dần.}
+Một vật dao động điều hòa quanh vị trí cân bằng $O$. Hai vị trí biên là
+$M$ (biên âm) và $N$ (biên dương).
+
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Khi vật chuyển động từ $N$ về $O$, xác định chiều của vận tốc
+    và gia tốc.
+
+    \item Trong quá trình vật đi từ $N$ về $O$, vật chuyển động nhanh dần
+    hay chậm dần?
+
+    \item Khi vật đi từ $O$ đến $M$, vận tốc và gia tốc cùng chiều hay
+    ngược chiều?
+
+    \item Khi vật đi từ $O$ đến $M$, tốc độ của vật thay đổi như thế nào?
+
+    \item Khi vật đi từ $M$ về $O$, vật chuyển động nhanh dần hay chậm dần?
+
+    \item Tại vị trí nào trong quá trình dao động thì tốc độ cực đại?
+    Tại vị trí nào thì gia tốc có độ lớn cực đại?
+\end{enumerate}
+
+\loigiai{
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Khi vật đi từ $N$ về $O$, vật chuyển động theo chiều âm nên:
+    \[
+    v<0.
+    \]
+    Gia tốc luôn hướng về vị trí cân bằng $O$, do đó gia tốc cũng hướng
+    từ $N$ về $O$.
+
+    Vì vậy $v$ và $a$ cùng chiều.
+
+    \item Vì vận tốc và gia tốc cùng chiều nên tốc độ tăng dần.
+    Vật chuyển động nhanh dần.
+
+    \item Khi vật đi từ $O$ đến $M$, vật chuyển động theo chiều âm:
+    \[
+    v<0.
+    \]
+    Gia tốc hướng về $O$, tức hướng ngược chiều chuyển động.
+    Vì vậy $v$ và $a$ ngược chiều.
+
+    \item Vận tốc và gia tốc ngược chiều nên tốc độ giảm dần.
+    Vật chuyển động chậm dần.
+
+    \item Khi vật đi từ $M$ về $O$, vận tốc và gia tốc cùng chiều.
+    Do đó tốc độ tăng dần, vật chuyển động nhanh dần.
+
+    \item Tốc độ cực đại khi vật đi qua vị trí cân bằng:
+    \[
+    x=0.
+    \]
+
+    Độ lớn gia tốc cực đại tại hai vị trí biên:
+    \[
+    x=\pm A.
+    \]
+\end{enumerate}
+}
 \end{ex}
 
-\dangbt{Tính quãng đường và tốc độ trung bình}
+
+\dangbt{Khai thác đồ thị vận tốc theo thời gian}
 \begin{ex}
-Một vật dao động điều hòa có đồ thị biểu diễn sự biến thiên của vận tốc theo thời gian như hình dưới đây. Hãy xác định chu kì, tần số góc và biên độ dao động của vật.
+Một vật dao động điều hòa có đồ thị vận tốc theo thời gian như hình dưới đây.
+
 \begin{center}
 \begin{tikzpicture}[>=stealth, xscale=8.2, yscale=4.5]
-\draw[help lines, color=gray!30, ystep=0.1, xstep=0.1] (0,-0.4) grid (0.7,0.4);
-\draw[->] (-0.05,0) -- (0.8,0) node[below] {$t\ \mathrm{(s)}$};
-\draw[->] (0,-0.45) -- (0,0.45) node[left] {$v\ \mathrm{(m/s)}$};
-\node[below left] at (0,0) {$0$};
+\draw[help lines,color=gray!30,ystep=0.1,xstep=0.1]
+(0,-0.4) grid (0.7,0.4);
+
+\draw[->] (-0.05,0)--(0.8,0)
+node[below] {$t\,(\mathrm{s})$};
+
+\draw[->] (0,-0.45)--(0,0.45)
+node[left] {$v\,(\mathrm{m/s})$};
+
+\node[below left] at (0,0) {$O$};
 \node[left] at (0,0.3) {$0{,}3$};
 \node[left] at (0,-0.3) {$-0{,}3$};
-\draw[domain=0:0.65, samples=150, smooth, thick, red] plot (\x, {0.3*cos(\x*360/0.4)});
-\foreach \x in {0.1, 0.2, 0.3, 0.4, 0.5, 0.6} {
-\node[below, scale=0.8] at (\x,0) [below=2pt] {$\x$};
-}
-\end{tikzpicture}
-\end{center}
-\loigiai{Tốc độ cực đại từ đỉnh của đồ thị: $v_{\max} = 0{,}3\ \mathrm{m/s} = 30\ \mathrm{cm/s}$.
-Chu kì từ trục thời gian. Đồ thị bắt đầu từ cực đại tại $t = 0$ và quay lại cực đại lần đầu ở $t = 0{,}4\ \mathrm{s}$:
-\[T = 0{,}4\ \mathrm{s}\]
-Tần số góc:
-\[\omega = \dfrac{2\pi}{T} = \dfrac{2\pi}{0{,}4} = 5\pi\ \mathrm{rad/s}\]
-Biên độ dao động:
-\[A = \dfrac{v_{\max}}{\omega} = \dfrac{30}{5\pi} = \dfrac{6}{\pi}\ \mathrm{cm} \approx 1{,}91\ \mathrm{cm}\]}
-\end{ex}
 
-
-\dangbt{Tính chu kì, tần số góc và biên độ từ đồ thị vận tốc}
-
-\begin{ex}
-Một vật dao động điều hòa có đồ thị vận tốc theo thời gian như hình dưới đây. Xác định chu kì, tần số góc và biên độ dao động của vật.
-
-\begin{center}
-\begin{tikzpicture}[>=stealth, xscale=7, yscale=4]
-\draw[help lines,color=gray!30,step=0.1] (0,-0.4) grid (0.7,0.4);
-\draw[->] (-0.05,0)--(0.75,0) node[below] {$t\,(\mathrm{s})$};
-\draw[->] (0,-0.45)--(0,0.45) node[left] {$v\,(\mathrm{m/s})$};
-\node[below left] at (0,0) {$0$};
-\node[left] at (0,0.3) {$0{,}4$};
-\node[left] at (0,-0.3) {$-0{,}4$};
-\draw[domain=0:0.6,samples=150,smooth,thick,red]
+\draw[domain=0:0.65,samples=150,smooth,thick,red]
 plot (\x,{0.3*cos(\x*360/0.4)});
+
 \foreach \x in {0.1,0.2,0.3,0.4,0.5,0.6}
-\node[below] at (\x,0) {$\x$};
+\node[below,scale=0.8] at (\x,0) {$\x$};
 \end{tikzpicture}
 \end{center}
 
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Xác định vận tốc cực đại của vật.
+
+    \item Xác định chu kì và tần số của dao động.
+
+    \item Tính tần số góc của dao động.
+
+    \item Xác định biên độ dao động.
+
+    \item Viết phương trình vận tốc của vật.
+
+    \item Viết phương trình li độ của vật.
+\end{enumerate}
+
 \loigiai{
-Từ đồ thị:
-\[
-v_{\max}=0{,}4\ \mathrm{m/s}.
-\]
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Từ đồ thị:
+    \[
+    v_{\max}=0{,}3\ \mathrm{m/s}
+    =30\ \mathrm{cm/s}.
+    \]
 
-Hai lần liên tiếp vật có vận tốc cực đại cách nhau:
-\[
-T=0{,}4\ \mathrm{s}.
-\]
+    \item Hai đỉnh liên tiếp cách nhau:
+    \[
+    T=0{,}4\ \mathrm{s}.
+    \]
 
-Do đó:
-\[
-\omega=\frac{2\pi}{T}=5\pi\ \mathrm{rad/s}.
-\]
+    Suy ra:
+    \[
+    f=\dfrac1T=2{,}5\ \mathrm{Hz}.
+    \]
 
-Biên độ:
-\[
-A=\frac{v_{\max}}{\omega}
-=\frac{0{,}4}{5\pi}
-=\frac{0{,}08}{\pi}\ \mathrm{m}
-\approx2{,}55\ \mathrm{cm}.
-\]
+    \item Tần số góc:
+    \[
+    \omega=\dfrac{2\pi}{T}
+    =5\pi\ \mathrm{rad/s}.
+    \]
+
+    \item Biên độ:
+    \[
+    A=\dfrac{v_{\max}}{\omega}
+    =\dfrac{30}{5\pi}
+    =\dfrac6\pi\ \mathrm{cm}.
+    \]
+
+    \item Vì tại $t=0$, vận tốc cực đại:
+    \[
+    v=30\cos(5\pi t)\ \mathrm{cm/s}.
+    \]
+
+    \item Vì:
+    \[
+    v=x',
+    \]
+    nên:
+    \[
+    x=\dfrac6\pi\sin(5\pi t)\ \mathrm{cm}.
+    \]
+\end{enumerate}
 }
 \end{ex}
 
-\dangbt{Tính quãng đường dao động từ đồ thị vận tốc}
 
-\begin{ex}
-Một vật dao động điều hòa có vận tốc cực đại $v_{\max}=20\ \mathrm{cm/s}$ và chu kì $T=0{,}4\ \mathrm{s}$. Tại thời điểm $t=0$, vật đang đi qua vị trí cân bằng theo chiều dương.
-
-Quãng đường vật đi được trong khoảng thời gian từ $t=0$ đến $t=0{,}3\ \mathrm{s}$ bằng bao nhiêu?
-
-\loigiai{
-Ta có:
-\[
-\omega=\frac{2\pi}{T}=5\pi\ \mathrm{rad/s}.
-\]
-
-Biên độ:
-\[
-A=\frac{v_{\max}}{\omega}
-=\frac{20}{5\pi}
-=\frac{4}{\pi}\ \mathrm{cm}.
-\]
-
-Khoảng thời gian xét:
-\[
-\Delta t=0{,}3\ \mathrm{s}=\frac{3T}{4}.
-\]
-
-Trong thời gian $\dfrac{3T}{4}$, vật đi từ vị trí cân bằng đến biên âm rồi trở về vị trí cân bằng và đi đến biên dương.
-
-Do đó:
-\[
-S=3A
-=\frac{12}{\pi}\ \mathrm{cm}
-\approx3{,}82\ \mathrm{cm}.
-\]
-}
-\end{ex}
-
-\dangbt{Tính tốc độ trung bình trong dao động điều hòa}
-
+\dangbt{Tính quãng đường và tốc độ trung bình từ đồ thị vận tốc}
 \begin{ex}
 Một vật dao động điều hòa có đồ thị vận tốc theo thời gian như hình dưới đây.
 
 \begin{center}
 \begin{tikzpicture}[>=stealth, xscale=7, yscale=4]
-\draw[help lines,color=gray!30,step=0.1] (0,-0.4) grid (0.7,0.4);
-\draw[->] (-0.05,0)--(0.75,0) node[below] {$t\,(\mathrm{s})$};
-\draw[->] (0,-0.45)--(0,0.45) node[left] {$v\,(\mathrm{m/s})$};
-\node[below left] at (0,0) {$0$};
+\draw[help lines,color=gray!30,step=0.1]
+(0,-0.4) grid (0.7,0.4);
+
+\draw[->] (-0.05,0)--(0.75,0)
+node[below] {$t\,(\mathrm{s})$};
+
+\draw[->] (0,-0.45)--(0,0.45)
+node[left] {$v\,(\mathrm{m/s})$};
+
+\node[below left] at (0,0) {$O$};
 \node[left] at (0,0.3) {$0{,}3$};
 \node[left] at (0,-0.3) {$-0{,}3$};
+
 \draw[domain=0:0.6,samples=150,smooth,thick,red]
 plot (\x,{0.3*cos(\x*360/0.4)});
+
 \foreach \x in {0.1,0.2,0.3,0.4,0.5,0.6}
 \node[below] at (\x,0) {$\x$};
 \end{tikzpicture}
 \end{center}
 
-Tính tốc độ trung bình của vật trong khoảng thời gian từ $t=0$ đến $t=0{,}4\ \mathrm{s}$.
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Xác định chu kì và tần số góc của dao động.
+
+    \item Xác định vận tốc cực đại và biên độ dao động.
+
+    \item Tính quãng đường vật đi được trong một chu kì.
+
+    \item Tính quãng đường vật đi được trong khoảng thời gian
+    $0{,}6\ \mathrm{s}$.
+
+    \item Tính tốc độ trung bình của vật trong khoảng thời gian
+    $0{,}6\ \mathrm{s}$.
+
+    \item Tính tốc độ trung bình của vật trong một chu kì.
+\end{enumerate}
 
 \loigiai{
-Từ đồ thị:
-\[
-v_{\max}=0{,}3\ \mathrm{m/s},\qquad T=0{,}4\ \mathrm{s}.
-\]
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Từ đồ thị:
+    \[
+    T=0{,}4\ \mathrm{s},
+    \qquad
+    \omega=\dfrac{2\pi}{T}=5\pi\ \mathrm{rad/s}.
+    \]
 
-Biên độ:
-\[
-A=\frac{v_{\max}}{\omega}
-=\frac{0{,}3}{5\pi}
-=\frac{0{,}06}{\pi}\ \mathrm{m}.
-\]
+    \item:
+    \[
+    v_{\max}=0{,}3\ \mathrm{m/s}
+    =30\ \mathrm{cm/s}.
+    \]
 
-Trong một chu kì, vật đi được quãng đường:
-\[
-S=4A=\frac{0{,}24}{\pi}\ \mathrm{m}.
-\]
+    Do đó:
+    \[
+    A=\dfrac{v_{\max}}{\omega}
+    =\dfrac6\pi\ \mathrm{cm}.
+    \]
 
-Vậy tốc độ trung bình:
-\[
-v_{\mathrm{tb}}=\frac{S}{T}
-=\frac{0{,}24/\pi}{0{,}4}
-=\frac{0{,}6}{\pi}
-\approx0{,}191\ \mathrm{m/s}.
-\]
+    \item Trong một chu kì:
+    \[
+    S_1=4A=\dfrac{24}{\pi}\ \mathrm{cm}.
+    \]
+
+    \item Ta có:
+    \[
+    0{,}6\ \mathrm{s}=\dfrac{3T}{2}.
+    \]
+
+    Do đó:
+    \[
+    S=6A=\dfrac{36}{\pi}\ \mathrm{cm}
+    \approx11{,}46\ \mathrm{cm}.
+    \]
+
+    \item Tốc độ trung bình:
+    \[
+    v_{\mathrm{tb}}
+    =\dfrac{S}{\Delta t}
+    =\dfrac{36/\pi}{0{,}6}
+    =\dfrac{60}{\pi}
+    \approx19{,}10\ \mathrm{cm/s}.
+    \]
+
+    \item Trong một chu kì:
+    \[
+    v_{\mathrm{tb}}
+    =\dfrac{4A}{T}
+    =\dfrac{4}{T}\cdot\dfrac{v_{\max}}{\omega}.
+    \]
+
+    Vì:
+    \[
+    \omega=\dfrac{2\pi}{T},
+    \]
+    nên:
+    \[
+    v_{\mathrm{tb}}
+    =\dfrac{2v_{\max}}{\pi}
+    =\dfrac{60}{\pi}
+    \approx19{,}10\ \mathrm{cm/s}.
+    \]
+\end{enumerate}
+}
+\end{ex}
+
+
+\dangbt{Tính quãng đường trong các khoảng thời gian đặc biệt}
+\begin{ex}
+Một vật dao động điều hòa có tốc độ cực đại
+$v_{\max}=20\ \mathrm{cm/s}$ và chu kì $T=0{,}4\ \mathrm{s}$.
+Tại thời điểm $t=0$, vật đi qua vị trí cân bằng theo chiều dương.
+
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Xác định tần số góc của dao động.
+
+    \item Tính biên độ dao động.
+
+    \item Tính quãng đường vật đi được trong thời gian
+    $\dfrac{T}{4}$.
+
+    \item Tính quãng đường vật đi được trong thời gian
+    $\dfrac{3T}{4}$.
+
+    \item Tính quãng đường vật đi được trong thời gian
+    $T$.
+
+    \item Tính tốc độ trung bình của vật trong thời gian
+    $0{,}3\ \mathrm{s}$.
+\end{enumerate}
+
+\loigiai{
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item:
+    \[
+    \omega=\dfrac{2\pi}{T}
+    =5\pi\ \mathrm{rad/s}.
+    \]
+
+    \item:
+    \[
+    A=\dfrac{v_{\max}}{\omega}
+    =\dfrac{20}{5\pi}
+    =\dfrac4\pi\ \mathrm{cm}.
+    \]
+
+    \item Trong thời gian $T/4$, vật đi từ vị trí cân bằng
+    đến một vị trí biên:
+    \[
+    S=A=\dfrac4\pi\ \mathrm{cm}.
+    \]
+
+    \item Trong thời gian $3T/4$, vật đi qua:
+    \[
+    O\rightarrow M\rightarrow O\rightarrow N.
+    \]
+
+    Do đó:
+    \[
+    S=3A=\dfrac{12}{\pi}\ \mathrm{cm}.
+    \]
+
+    \item Trong một chu kì:
+    \[
+    S=4A=\dfrac{16}{\pi}\ \mathrm{cm}.
+    \]
+
+    \item Ta có:
+    \[
+    0{,}3\ \mathrm{s}=\dfrac{3T}{4}.
+    \]
+
+    Vì vậy:
+    \[
+    S=\dfrac{12}{\pi}\ \mathrm{cm}.
+    \]
+
+    Tốc độ trung bình:
+    \[
+    v_{\mathrm{tb}}
+    =\dfrac{S}{0{,}3}
+    =\dfrac{40}{\pi}
+    \approx12{,}73\ \mathrm{cm/s}.
+    \]
+\end{enumerate}
+}
+\end{ex}
+
+
+\dangbt{Khai thác vận tốc, gia tốc và quãng đường}
+\begin{ex}
+Một vật dao động điều hòa có biên độ $A=5\ \mathrm{cm}$ và tần số góc
+$\omega=4\pi\ \mathrm{rad/s}$. Tại thời điểm $t=0$, vật có li độ
+$x=2{,}5\ \mathrm{cm}$ và đang chuyển động theo chiều dương.
+
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Xác định chu kì và tần số của dao động.
+
+    \item Xác định pha ban đầu của dao động.
+
+    \item Viết phương trình li độ, vận tốc và gia tốc.
+
+    \item Tính tốc độ cực đại và gia tốc cực đại.
+
+    \item Tính vận tốc của vật tại thời điểm $t=0$.
+
+    \item Tính quãng đường vật đi được trong thời gian $0{,}5\ \mathrm{s}$.
+\end{enumerate}
+
+\loigiai{
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Chu kì:
+    \[
+    T=\dfrac{2\pi}{4\pi}=0{,}5\ \mathrm{s}.
+    \]
+
+    Tần số:
+    \[
+    f=\dfrac1T=2\ \mathrm{Hz}.
+    \]
+
+    \item Phương trình:
+    \[
+    x=5\cos(4\pi t+\varphi).
+    \]
+
+    Tại $t=0$:
+    \[
+    2{,}5=5\cos\varphi
+    \]
+    nên:
+    \[
+    \cos\varphi=\dfrac12.
+    \]
+
+    Vì vật chuyển động theo chiều dương:
+    \[
+    v_0=-\omega A\sin\varphi>0.
+    \]
+
+    Suy ra:
+    \[
+    \sin\varphi<0.
+    \]
+
+    Do đó:
+    \[
+    \varphi=-\dfrac{\pi}{3}.
+    \]
+
+    \item Phương trình li độ:
+    \[
+    x=5\cos\left(4\pi t-\dfrac{\pi}{3}\right)\ \mathrm{cm}.
+    \]
+
+    Phương trình vận tốc:
+    \[
+    v=-20\pi\sin\left(4\pi t-\dfrac{\pi}{3}\right)
+    \ \mathrm{cm/s}.
+    \]
+
+    Phương trình gia tốc:
+    \[
+    a=-80\pi^2\cos\left(4\pi t-\dfrac{\pi}{3}\right)
+    \ \mathrm{cm/s^2}.
+    \]
+
+    \item Tốc độ cực đại:
+    \[
+    v_{\max}=\omega A=20\pi\ \mathrm{cm/s}.
+    \]
+
+    Gia tốc cực đại:
+    \[
+    a_{\max}=\omega^2A=80\pi^2\ \mathrm{cm/s^2}.
+    \]
+
+    \item Tại $t=0$:
+    \[
+    v_0
+    =-20\pi\sin\left(-\dfrac{\pi}{3}\right)
+    =10\pi\sqrt3\ \mathrm{cm/s}.
+    \]
+
+    \item Vì:
+    \[
+    0{,}5\ \mathrm{s}=T,
+    \]
+    nên trong một chu kì vật đi được:
+    \[
+    S=4A=20\ \mathrm{cm}.
+    \]
+\end{enumerate}
 }
 \end{ex}
