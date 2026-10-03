@@ -2888,10 +2888,10 @@
       "questions": 6,
       "count": 6,
       "dang": {
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 6
+        "Khai thác các thông số từ đồ thị": 6
       },
       "dang_kinds": {
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": {
+        "Khai thác các thông số từ đồ thị": {
           "TN": 1,
           "DS": 2,
           "TLN": 3,
