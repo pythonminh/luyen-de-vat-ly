@@ -2934,10 +2934,10 @@
       "questions": 25,
       "count": 25,
       "dang": {
-        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 25
+        "Xác định và tính toán các đại lượng tức thời": 25
       },
       "dang_kinds": {
-        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
+        "Xác định và tính toán các đại lượng tức thời": {
           "TN": 6,
           "DS": 13,
           "TLN": 6,
