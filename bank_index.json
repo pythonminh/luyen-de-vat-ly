@@ -2911,10 +2911,10 @@
       "questions": 14,
       "count": 14,
       "dang": {
-        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": 14
+        "Xác định các đại lượng cực đại và tại vị trí đặc biệt": 14
       },
       "dang_kinds": {
-        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": {
+        "Xác định các đại lượng cực đại và tại vị trí đặc biệt": {
           "TN": 6,
           "DS": 5,
           "TLN": 3,
