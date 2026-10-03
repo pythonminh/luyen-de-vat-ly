@@ -2865,10 +2865,10 @@
       "questions": 10,
       "count": 10,
       "dang": {
-        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": 10
+        "Khai thác các thông số từ đồ thị": 10
       },
       "dang_kinds": {
-        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": {
+        "Khai thác các thông số từ đồ thị": {
           "TN": 3,
           "DS": 4,
           "TLN": 3,
