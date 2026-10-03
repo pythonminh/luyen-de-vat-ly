@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 188,
-  "total_questions": 12771,
+  "total_questions": 12784,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2954,14 +2954,14 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
       "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
-      "questions": 134,
-      "count": 134,
+      "questions": 147,
+      "count": 147,
       "dang": {
         "Liên hệ li độ, vận tốc, gia tốc": 69,
         "Xác định và tính toán các đại lượng tức thời": 39,
         "Xác định các đại lượng cực đại và tại vị trí đặc biệt": 19,
         "Khai thác các thông số từ đồ thị": 3,
-        "Tính quãng đường và tốc độ trung bình": 4
+        "Tính quãng đường và tốc độ trung bình": 17
       },
       "dang_kinds": {
         "Liên hệ li độ, vận tốc, gia tốc": {
@@ -2989,10 +2989,10 @@
           "TL": 0
         },
         "Tính quãng đường và tốc độ trung bình": {
-          "TN": 4,
+          "TN": 12,
           "DS": 0,
           "TLN": 0,
-          "TL": 0
+          "TL": 5
         }
       }
     },
