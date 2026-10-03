@@ -2610,28 +2610,465 @@ Khi một vật dao động điều hòa, chuyển động của vật từ vị
 Khi một vật dao động điều hòa, chuyển động của vật từ vị trí biên về vị trí cân bằng là chuyển động nhanh dần.
 }
 \end{ex}
-
+```latex
 \dangbt{Tính quãng đường và tốc độ trung bình}
 \begin{ex}
-Một vật dao động điều hòa có phương trình li độ $x=5\cos\left(2\pi t+\dfrac{\pi}{3}\right)\ \mathrm{cm}$. Hãy viết phương trình vận tốc của vật và tính vận tốc tại thời điểm $t=0{,}5\ \mathrm{s}$.
-\loigiai{Đối chiếu với phương trình $x=A\cos(\omega t+\varphi)$, ta có $A=5\ \mathrm{cm}$, $\omega=2\pi\ \mathrm{rad/s}$ và $\varphi=\dfrac{\pi}{3}\ \mathrm{rad}$.
-Phương trình vận tốc:
-\[v=x'=-\omega A\sin(\omega t+\varphi)=-10\pi\sin\left(2\pi t+\dfrac{\pi}{3}\right)\ \mathrm{cm/s}\]
-Tại $t=0{,}5\ \mathrm{s}$:
-\[v=-10\pi\sin\left(\dfrac{4\pi}{3}\right)=5\pi\sqrt{3}\ \mathrm{cm/s}\]}
-\end{ex}
+Một vật dao động điều hòa có phương trình:
+\[
+x=5\cos\left(2\pi t+\dfrac{\pi}{3}\right)\ \mathrm{cm}.
+\]
 
-\dangbt{Tính quãng đường và tốc độ trung bình}
-\begin{ex}
-Một chất điểm dao động điều hòa với tần số $4\ \mathrm{Hz}$ và biên độ $10\ \mathrm{cm}$. Hãy tính tốc độ cực đại và độ lớn gia tốc cực đại của chất điểm này.
-\loigiai{Tính tần số góc: $\omega = 2\pi f = 2\pi \cdot 4 = 8\pi\ \mathrm{rad/s}$.
-Tốc độ cực đại:
-\[v_{\max} = \omega A = 8\pi \cdot 10 = 80\pi\ \mathrm{cm/s} \approx 2{,}51\ \mathrm{m/s}\]
-Độ lớn gia tốc cực đại:
-\[a_{\max} = \omega^2 A = (8\pi)^2 \cdot 10 = 640\pi^2\ \mathrm{cm/s^2} \approx 63{,}1\ \mathrm{m/s^2}\]
-(với $\pi^2 \approx 9{,}86$ hoặc xấp xỉ bằng $10$)
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Xác định biên độ, chu kì, tần số và pha ban đầu của dao động.
+
+    \item Viết phương trình vận tốc và phương trình gia tốc của vật.
+
+    \item Tính vận tốc và gia tốc của vật tại thời điểm $t=0{,}5\ \mathrm{s}$.
+
+    \item Tính quãng đường vật đi được trong khoảng thời gian từ
+    $t=0$ đến $t=0{,}75\ \mathrm{s}$.
+
+    \item Tính tốc độ trung bình của vật trong khoảng thời gian trên.
+\end{enumerate}
+
+\loigiai{
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Đối chiếu với phương trình:
+    \[
+    x=A\cos(\omega t+\varphi),
+    \]
+    ta có:
+    \[
+    A=5\ \mathrm{cm},\qquad
+    \omega=2\pi\ \mathrm{rad/s},\qquad
+    \varphi=\dfrac{\pi}{3}\ \mathrm{rad}.
+    \]
+
+    Chu kì:
+    \[
+    T=\dfrac{2\pi}{\omega}=1\ \mathrm{s}.
+    \]
+
+    Tần số:
+    \[
+    f=\dfrac{1}{T}=1\ \mathrm{Hz}.
+    \]
+
+    \item Phương trình vận tốc:
+    \[
+    v=x'
+    =-10\pi\sin\left(2\pi t+\dfrac{\pi}{3}\right)
+    \ \mathrm{cm/s}.
+    \]
+
+    Phương trình gia tốc:
+    \[
+    a=v'
+    =-20\pi^2\cos\left(2\pi t+\dfrac{\pi}{3}\right)
+    \ \mathrm{cm/s^2}.
+    \]
+
+    \item Tại $t=0{,}5\ \mathrm{s}$:
+    \[
+    v=-10\pi\sin\left(\dfrac{4\pi}{3}\right)
+    =5\pi\sqrt{3}\ \mathrm{cm/s}.
+    \]
+
+    \[
+    a=-20\pi^2\cos\left(\dfrac{4\pi}{3}\right)
+    =10\pi^2\ \mathrm{cm/s^2}.
+    \]
+
+    \item Ta có:
+    \[
+    0{,}75\ \mathrm{s}=\dfrac{3T}{4}.
+    \]
+
+    Tại $t=0$:
+    \[
+    x_0=5\cos\dfrac{\pi}{3}=2{,}5\ \mathrm{cm}.
+    \]
+
+    Tại $t=0{,}25\ \mathrm{s}$:
+    \[
+    x=5\cos\dfrac{5\pi}{6}
+    =-\dfrac{5\sqrt3}{2}\ \mathrm{cm}.
+    \]
+
+    Tại $t=0{,}5\ \mathrm{s}$:
+    \[
+    x=5\cos\dfrac{4\pi}{3}
+    =-2{,}5\ \mathrm{cm}.
+    \]
+
+    Tại $t=0{,}75\ \mathrm{s}$:
+    \[
+    x=5\cos\dfrac{11\pi}{6}
+    =\dfrac{5\sqrt3}{2}\ \mathrm{cm}.
+    \]
+
+    Do đó:
+    \[
+    S=
+    \left|-\dfrac{5\sqrt3}{2}-\dfrac52\right|
+    +\left|- \dfrac52+\dfrac{5\sqrt3}{2}\right|
+    +\left|\dfrac{5\sqrt3}{2}+\dfrac52\right|.
+    \]
+
+    Suy ra:
+    \[
+    S=5\sqrt3+5\ \mathrm{cm}.
+    \]
+
+    \item Tốc độ trung bình:
+    \[
+    v_{\mathrm{tb}}
+    =\dfrac{S}{\Delta t}
+    =\dfrac{5\sqrt3+5}{0{,}75}
+    \approx17{,}74\ \mathrm{cm/s}.
+    \]
+\end{enumerate}
 }
 \end{ex}
+
+
+\dangbt{Khai thác phương trình dao động điều hòa}
+\begin{ex}
+Một chất điểm dao động điều hòa với phương trình:
+\[
+x=8\cos\left(5\pi t-\dfrac{\pi}{6}\right)\ \mathrm{cm}.
+\]
+
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Xác định biên độ, tần số góc, chu kì và tần số của dao động.
+
+    \item Viết phương trình vận tốc và phương trình gia tốc.
+
+    \item Tính tốc độ cực đại và độ lớn gia tốc cực đại.
+
+    \item Tính li độ và vận tốc của vật tại thời điểm $t=0{,}1\ \mathrm{s}$.
+
+    \item Tính quãng đường vật đi được trong khoảng thời gian từ
+    $t=0$ đến $t=0{,}2\ \mathrm{s}$.
+\end{enumerate}
+
+\loigiai{
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Ta có:
+    \[
+    A=8\ \mathrm{cm},\qquad
+    \omega=5\pi\ \mathrm{rad/s}.
+    \]
+
+    Chu kì:
+    \[
+    T=\dfrac{2\pi}{5\pi}=0{,}4\ \mathrm{s}.
+    \]
+
+    Tần số:
+    \[
+    f=\dfrac1T=2{,}5\ \mathrm{Hz}.
+    \]
+
+    \item Phương trình vận tốc:
+    \[
+    v=-40\pi\sin\left(5\pi t-\dfrac{\pi}{6}\right)
+    \ \mathrm{cm/s}.
+    \]
+
+    Phương trình gia tốc:
+    \[
+    a=-200\pi^2\cos\left(5\pi t-\dfrac{\pi}{6}\right)
+    \ \mathrm{cm/s^2}.
+    \]
+
+    \item Tốc độ cực đại:
+    \[
+    v_{\max}=\omega A=40\pi\ \mathrm{cm/s}.
+    \]
+
+    Độ lớn gia tốc cực đại:
+    \[
+    a_{\max}=\omega^2A=200\pi^2\ \mathrm{cm/s^2}.
+    \]
+
+    \item Tại $t=0{,}1\ \mathrm{s}$:
+    \[
+    5\pi t-\dfrac{\pi}{6}
+    =\dfrac{\pi}{3}.
+    \]
+
+    Do đó:
+    \[
+    x=8\cos\dfrac{\pi}{3}=4\ \mathrm{cm},
+    \]
+    \[
+    v=-40\pi\sin\dfrac{\pi}{3}
+    =-20\pi\sqrt3\ \mathrm{cm/s}.
+    \]
+
+    \item Ta có:
+    \[
+    0{,}2\ \mathrm{s}=\dfrac{T}{2}.
+    \]
+
+    Tại $t=0$:
+    \[
+    x_0=8\cos\left(-\dfrac{\pi}{6}\right)
+    =4\sqrt3\ \mathrm{cm}.
+    \]
+
+    Vật chuyển động theo chiều dương vì:
+    \[
+    v_0=-40\pi\sin\left(-\dfrac{\pi}{6}\right)>0.
+    \]
+
+    Trong thời gian $T/2$, vật đi qua biên dương rồi đến vị trí
+    $x=-4\sqrt3\ \mathrm{cm}$.
+
+    Do đó:
+    \[
+    S=(8-4\sqrt3)+8+(8-4\sqrt3)
+    =24-8\sqrt3\ \mathrm{cm}.
+    \]
+\end{enumerate}
+}
+\end{ex}
+
+
+\dangbt{Khai thác đồ thị vận tốc theo thời gian}
+\begin{ex}
+Một vật dao động điều hòa có đồ thị vận tốc theo thời gian như hình dưới đây.
+
+\begin{center}
+\begin{tikzpicture}[>=stealth, xscale=7.5, yscale=4]
+\draw[help lines,color=gray!30,step=0.1]
+(0,-0.4) grid (0.7,0.4);
+
+\draw[->] (-0.05,0)--(0.75,0)
+node[below] {$t\,(\mathrm{s})$};
+
+\draw[->] (0,-0.45)--(0,0.45)
+node[left] {$v\,(\mathrm{m/s})$};
+
+\node[below left] at (0,0) {$O$};
+\node[left] at (0,0.3) {$0{,}3$};
+\node[left] at (0,-0.3) {$-0{,}3$};
+
+\draw[domain=0:0.65,samples=150,smooth,thick,red]
+plot (\x,{0.3*cos(\x*360/0.4)});
+
+\foreach \x in {0.1,0.2,0.3,0.4,0.5,0.6}
+\node[below] at (\x,0) {$\x$};
+\end{tikzpicture}
+\end{center}
+
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Xác định chu kì và tần số góc của dao động.
+
+    \item Xác định vận tốc cực đại và biên độ dao động.
+
+    \item Viết phương trình vận tốc của vật.
+
+    \item Viết phương trình li độ của vật.
+
+    \item Tính quãng đường vật đi được trong khoảng thời gian
+    $0{,}6\ \mathrm{s}$.
+
+    \item Tính tốc độ trung bình của vật trong khoảng thời gian trên.
+\end{enumerate}
+
+\loigiai{
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Từ đồ thị, hai lần liên tiếp vận tốc đạt cực đại cách nhau:
+    \[
+    T=0{,}4\ \mathrm{s}.
+    \]
+
+    Tần số góc:
+    \[
+    \omega=\dfrac{2\pi}{T}
+    =5\pi\ \mathrm{rad/s}.
+    \]
+
+    \item Từ đồ thị:
+    \[
+    v_{\max}=0{,}3\ \mathrm{m/s}
+    =30\ \mathrm{cm/s}.
+    \]
+
+    Biên độ:
+    \[
+    A=\dfrac{v_{\max}}{\omega}
+    =\dfrac{30}{5\pi}
+    =\dfrac6\pi\ \mathrm{cm}.
+    \]
+
+    \item Vì tại $t=0$, vận tốc đạt cực đại nên:
+    \[
+    v=30\cos(5\pi t)\ \mathrm{cm/s}.
+    \]
+
+    \item Vì:
+    \[
+    v=x'
+    \]
+    nên phương trình li độ có dạng:
+    \[
+    x=A\sin(5\pi t).
+    \]
+
+    Do:
+    \[
+    A=\dfrac6\pi\ \mathrm{cm},
+    \]
+    ta được:
+    \[
+    x=\dfrac6\pi\sin(5\pi t)\ \mathrm{cm}.
+    \]
+
+    \item Ta có:
+    \[
+    0{,}6\ \mathrm{s}
+    =\dfrac{3T}{2}.
+    \]
+
+    Trong thời gian $\dfrac{3T}{2}$, vật đi được:
+    \[
+    S=6A
+    =\dfrac{36}{\pi}\ \mathrm{cm}
+    \approx11{,}46\ \mathrm{cm}.
+    \]
+
+    \item Tốc độ trung bình:
+    \[
+    v_{\mathrm{tb}}
+    =\dfrac{S}{\Delta t}
+    =\dfrac{36/\pi}{0{,}6}
+    =\dfrac{60}{\pi}
+    \approx19{,}10\ \mathrm{cm/s}.
+    \]
+\end{enumerate}
+}
+\end{ex}
+
+
+\dangbt{Tính quãng đường và tốc độ trung bình}
+\begin{ex}
+Một vật dao động điều hòa với biên độ $A=6\ \mathrm{cm}$ và chu kì
+$T=0{,}5\ \mathrm{s}$. Tại thời điểm $t=0$, vật có li độ
+$x=3\ \mathrm{cm}$ và đang chuyển động theo chiều âm.
+
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Xác định tần số góc của dao động.
+
+    \item Viết phương trình dao động của vật.
+
+    \item Viết phương trình vận tốc và tính vận tốc cực đại.
+
+    \item Xác định thời điểm đầu tiên vật đi qua vị trí cân bằng.
+
+    \item Tính quãng đường vật đi được từ $t=0$ đến
+    $t=0{,}75\ \mathrm{s}$.
+
+    \item Tính tốc độ trung bình của vật trong khoảng thời gian trên.
+\end{enumerate}
+
+\loigiai{
+\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
+    \item Tần số góc:
+    \[
+    \omega=\dfrac{2\pi}{T}
+    =4\pi\ \mathrm{rad/s}.
+    \]
+
+    \item Phương trình dao động:
+    \[
+    x=6\cos(4\pi t+\varphi)\ \mathrm{cm}.
+    \]
+
+    Tại $t=0$:
+    \[
+    3=6\cos\varphi
+    \]
+    nên:
+    \[
+    \cos\varphi=\dfrac12.
+    \]
+
+    Vì vật chuyển động theo chiều âm:
+    \[
+    v_0=-\omega A\sin\varphi<0.
+    \]
+
+    Suy ra:
+    \[
+    \sin\varphi>0
+    \]
+    và:
+    \[
+    \varphi=\dfrac{\pi}{3}.
+    \]
+
+    Vậy:
+    \[
+    x=6\cos\left(4\pi t+\dfrac{\pi}{3}\right)\ \mathrm{cm}.
+    \]
+
+    \item Phương trình vận tốc:
+    \[
+    v=-24\pi\sin\left(4\pi t+\dfrac{\pi}{3}\right)
+    \ \mathrm{cm/s}.
+    \]
+
+    Vận tốc cực đại:
+    \[
+    v_{\max}=\omega A=24\pi\ \mathrm{cm/s}.
+    \]
+
+    \item Vật đi qua vị trí cân bằng khi:
+    \[
+    x=0.
+    \]
+
+    Do đó:
+    \[
+    4\pi t+\dfrac{\pi}{3}
+    =\dfrac{\pi}{2}+k\pi.
+    \]
+
+    Thời điểm đầu tiên ứng với $k=0$:
+    \[
+    4\pi t=\dfrac{\pi}{6}.
+    \]
+
+    Suy ra:
+    \[
+    t=\dfrac1{24}\ \mathrm{s}.
+    \]
+
+    \item Ta có:
+    \[
+    0{,}75\ \mathrm{s}
+    =\dfrac{3T}{2}.
+    \]
+
+    Trong thời gian $\dfrac{3T}{2}$, vật đi được:
+    \[
+    S=6A=36\ \mathrm{cm}.
+    \]
+
+    \item Tốc độ trung bình:
+    \[
+    v_{\mathrm{tb}}
+    =\dfrac{S}{\Delta t}
+    =\dfrac{36}{0{,}75}
+    =48\ \mathrm{cm/s}.
+    \]
+\end{enumerate}
+}
+\end{ex}
+```
 
 \dangbt{Tính quãng đường và tốc độ trung bình}
 \begin{ex}
