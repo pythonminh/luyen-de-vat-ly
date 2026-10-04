@@ -210,6 +210,7 @@ def _auth_page(msg: str = "", mode: str = "login", values=None):
       <div class='field'><label>Mật khẩu</label><div class='passrow'><input id='loginPassword' name='password' type='password' autocomplete='current-password' required><button type='button' class='eye' onclick=\"togglePass('loginPassword',this)\">👁</button></div></div>
       <label class='check'><input id='remember' name='remember' type='checkbox'> Ghi nhớ đăng nhập trên thiết bị này</label>
       <button class='btn primary authsubmit' type='submit'>Đăng nhập</button>
+      <button class='btn' type='button' id='clearSavedLogin'>Xóa tài khoản đã nhớ trên máy này</button>
       {err if mode == 'login' else ''}
     </form>
 
@@ -245,6 +246,20 @@ function togglePass(id,btn){{const x=document.getElementById(id);if(!x)return;x.
     const x=document.getElementById('loginUsername');
     if(x&&!x.value&&u)x.value=u;
   }}catch(e){{}}
+  const wipe=document.getElementById('clearSavedLogin');
+  if(wipe) wipe.onclick=function(){{
+    try{{
+      localStorage.removeItem('member_username');
+      Object.keys(localStorage).forEach(function(k){{
+        if(k.indexOf('ldvlDisplayName:')===0||k.indexOf('ldvlDisplayTeam:')===0||k==='ldvlVoterId') localStorage.removeItem(k);
+      }});
+    }}catch(e){{}}
+    ['loginUsername','loginPassword','regName','regUsername','regPassword','regPassword2'].forEach(function(id){{
+      const el=document.getElementById(id); if(el) el.value='';
+    }});
+    const ru=document.getElementById('remember'); if(ru) ru.checked=false;
+    const rr=document.getElementById('rememberReg'); if(rr) rr.checked=false;
+  }};
 }})();
 </script>
 """

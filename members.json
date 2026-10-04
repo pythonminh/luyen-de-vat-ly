@@ -116,8 +116,7 @@
       "account_type": "VIP",
       "status": "ON",
       "phone": "988648537",
-      "password_sha256": "e4fbbff8510dbe02d4f1edfb987d858bfbfae5dd2b364369dc543d050c631435",
-      "password_enc": "v1:wkSHXkPj_IqZ"
+      "password_sha256": "e4fbbff8510dbe02d4f1edfb987d858bfbfae5dd2b364369dc543d050c631435"
     },
     {
       "username": "TLam1406",
@@ -394,15 +393,10 @@
       "username": "chan",
       "name": "Hoàng Thùy Trang",
       "phone": "0703600545",
-      "class": "10",
-      "account_type": "VIP",
+      "class": "",
+      "account_type": "FREE",
       "status": "ON",
-      "requested_package": null,
-      "package_status": "approved",
-      "password_sha256": "865d96f59ea4b1d92a159bea045ea6052cc5b5e860e985a57358776ecbfb7695",
-      "password_enc": "v1:uzeHT0nh_ILR",
-      "updated_at": "2026-09-27 23:07:27",
-      "package": {
+      "requested_package": {
         "kind": "mon1",
         "grades": [
           "10"
@@ -411,30 +405,19 @@
           "Toán"
         ]
       },
-      "grades": [
-        "10"
-      ],
-      "subjects": [
-        "Toán"
-      ],
-      "grade": "10",
-      "vip_plan": "1m",
-      "vip_started_at": "2026-09-27 23:07:27",
-      "vip_expires_at": "2026-10-27 23:07:27"
+      "package_status": "pending",
+      "password_sha256": "865d96f59ea4b1d92a159bea045ea6052cc5b5e860e985a57358776ecbfb7695",
+      "password_enc": "v1:uzeHT0nh_ILR",
+      "updated_at": "2026-09-22 05:27:28"
     },
     {
       "username": "quantranmanh301008gmail",
       "name": "THÙY Quyên",
       "phone": "0327267431",
-      "class": "11",
-      "account_type": "VIP",
+      "class": "",
+      "account_type": "FREE",
       "status": "ON",
-      "requested_package": null,
-      "package_status": "approved",
-      "password_sha256": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
-      "password_enc": "v1:uDbAE0Tl-4s=",
-      "updated_at": "2026-09-27 23:07:54",
-      "package": {
+      "requested_package": {
         "kind": "mon1",
         "grades": [
           "11"
@@ -443,29 +426,19 @@
           "Vật lý"
         ]
       },
-      "grades": [
-        "11"
-      ],
-      "subjects": [
-        "Vật lý"
-      ],
-      "grade": "11",
-      "vip_plan": "1m",
-      "vip_started_at": "2026-09-27 23:07:54",
-      "vip_expires_at": "2026-10-27 23:07:54"
+      "package_status": "pending",
+      "password_sha256": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+      "password_enc": "v1:uDbAE0Tl-4s=",
+      "updated_at": "2026-09-22 05:39:56"
     },
     {
       "username": "Thu Trúc",
       "name": "Trần Thị Thu Trúc",
       "phone": "0705335540",
-      "class": "10",
-      "account_type": "VIP",
+      "class": "",
+      "account_type": "FREE",
       "status": "ON",
-      "requested_package": null,
-      "package_status": "approved",
-      "password_sha256": "e086504c4a4b8c6df889fec9946e13b6cfd3bd190e2dcb7acdfa65a5f031aa57",
-      "password_enc": "v1:_XaGREDg_IbTbiIQ",
-      "package": {
+      "requested_package": {
         "kind": "mon1",
         "grades": [
           "10"
@@ -474,30 +447,18 @@
           "Vật lý"
         ]
       },
-      "grades": [
-        "10"
-      ],
-      "subjects": [
-        "Vật lý"
-      ],
-      "grade": "10",
-      "vip_plan": "1m",
-      "vip_started_at": "2026-09-27 23:07:47",
-      "vip_expires_at": "2026-10-27 23:07:47",
-      "updated_at": "2026-09-27 23:07:47"
+      "package_status": "pending",
+      "password_sha256": "e086504c4a4b8c6df889fec9946e13b6cfd3bd190e2dcb7acdfa65a5f031aa57",
+      "password_enc": "v1:_XaGREDg_IbTbiIQ"
     },
     {
       "username": "Bảo Nhi",
       "name": "Nguyễn Ngọc Bảo Nhi",
       "phone": "0775584302",
-      "class": "10",
-      "account_type": "VIP",
+      "class": "",
+      "account_type": "FREE",
       "status": "ON",
-      "requested_package": null,
-      "package_status": "approved",
-      "password_sha256": "4eb6e5c32a0e8407f93b2748310ee12feb050a8db439c45ee18fda417151689e",
-      "password_enc": "v1:52yaFUnj9A==",
-      "package": {
+      "requested_package": {
         "kind": "mon1",
         "grades": [
           "10"
@@ -506,17 +467,9 @@
           "Toán"
         ]
       },
-      "grades": [
-        "10"
-      ],
-      "subjects": [
-        "Toán"
-      ],
-      "grade": "10",
-      "vip_plan": "1m",
-      "vip_started_at": "2026-09-27 23:07:39",
-      "vip_expires_at": "2026-10-27 23:07:39",
-      "updated_at": "2026-09-27 23:07:39"
+      "package_status": "pending",
+      "password_sha256": "4eb6e5c32a0e8407f93b2748310ee12feb050a8db439c45ee18fda417151689e",
+      "password_enc": "v1:52yaFUnj9A=="
     },
     {
       "username": "huynhtandattt",

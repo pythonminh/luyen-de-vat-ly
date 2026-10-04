@@ -409,7 +409,8 @@ body.cinema .cinema-namegate p{margin:0 0 12px;font-size:13px;color:#475569;line
 body.cinema .cinema-namegate .namegate-row{display:grid;grid-template-columns:minmax(0,1fr) 5.6em;gap:8px}
 body.cinema .cinema-namegate input{width:100%;box-sizing:border-box;padding:12px;font-size:16px;border:1px solid #cbd8e6;border-radius:8px;margin-bottom:10px}
 body.cinema .cinema-namegate .btn{width:100%;min-height:44px;font-weight:900}
-body.cinema .cinema-namegate .namegate-err{margin-top:8px;color:#b91c1c;font-weight:700;font-size:13px}
+body.cinema.cinema-watch .cinema-namegate,body.cinema.cinema-watch .cinema-namebadge,body.cinema.cinema-watch .cinema-violate,body.cinema.cinema-watch .qviolate,body.cinema.cinema-watch .cinema-away{display:none!important}
+body.cinema .cinema-namegate .btn#nameGateWatch{margin-top:8px;background:#fff;color:#145bb0}
 body.cinema .cinema-namebadge{margin:6px 12px 0;padding:6px 10px;border-radius:8px;background:#ecfdf3;border:1px solid #86efac;color:#166534;font-size:12px;font-weight:800}
 body.cinema .cinema-violate{margin:6px 12px 0;padding:10px 12px;border-radius:10px;border:2px solid #f59e0b;background:#fffbeb;color:#9a3412;font-size:13px;line-height:1.45;font-weight:700}
 body.cinema .cinema-violate.has-bad{border-color:#dc2626;background:#fef2f2;color:#991b1b}

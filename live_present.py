@@ -1735,6 +1735,7 @@ def present_watch(code=""):
         "<button type='button' class='cinema-tool spk-m'>Nam</button>"
         "<button type='button' class='cinema-tool spk-play'>▶ Đọc</button>"
         "<button type='button' class='cinema-tool spk-pause'>⏸</button>"
+        "<button type='button' class='cinema-tool' id='cinemaReset' title='Xóa tên / tài khoản đã nhớ trên máy này, màn chiếu nhìn mới'>Làm mới</button>"
         "<button type='button' class='cinema-tool cinema-leave' id='cinemaLeave' title='Thoát chiếu, về màn trước'>✕</button>"
         "<span class='spkmsg' id='spkMsg'></span>"
         "</div>"
@@ -1760,6 +1761,7 @@ def present_watch(code=""):
         "placeholder='Tổ 2' aria-label='Tổ'>"
         "</div>"
         "<button class='btn primary' type='submit'>Vào chiếu</button>"
+        "<button class='btn' type='button' id='nameGateWatch'>Máy chiếu · chỉ xem, xóa tên cũ</button>"
         "<div class='namegate-err' id='nameGateErr' hidden></div>"
         "</form></div>"
         "<div id='cinemaNameBadge' class='cinema-namebadge' hidden></div>"
@@ -2223,6 +2225,47 @@ function voterId(){
 }
 function displayNameKey(){ return 'ldvlDisplayName:'+String(CODE||'').toUpperCase(); }
 function displayTeamKey(){ return 'ldvlDisplayTeam:'+String(CODE||'').toUpperCase(); }
+function cinemaWatchKey(){ return 'ldvlCinemaWatch:'+String(CODE||'').toUpperCase(); }
+function isWatchOnly(){
+  try{
+    if(/[?&](?:man|watch|proj)=1(?:&|$)/i.test(location.search||'')) return true;
+    return localStorage.getItem(cinemaWatchKey())==='1';
+  }catch(e){ return false; }
+}
+function setWatchOnly(on){
+  try{ if(on) localStorage.setItem(cinemaWatchKey(),'1'); else localStorage.removeItem(cinemaWatchKey()); }catch(e){}
+  document.body.classList.toggle('cinema-watch', !!on);
+}
+function clearCinemaLogin(){
+  try{
+    localStorage.removeItem(displayNameKey());
+    localStorage.removeItem(displayTeamKey());
+    localStorage.removeItem('ldvlVoterId');
+    localStorage.removeItem(leaveLogKey());
+    localStorage.removeItem(qWatchKey());
+    localStorage.removeItem(awayPendingKey());
+    localStorage.removeItem('member_username');
+    Object.keys(localStorage).forEach(function(k){
+      if(k.indexOf('ldvlMyVote:')===0 || k.indexOf('ldvlLeaveLog:')===0 || k.indexOf('ldvlDisplayName:')===0 || k.indexOf('ldvlDisplayTeam:')===0) localStorage.removeItem(k);
+    });
+  }catch(e){}
+  studentJoined=false;
+  myVote=null;
+  myVoteFp='';
+}
+function resetCinemaMachine(){
+  clearCinemaLogin();
+  setWatchOnly(true);
+  showNameGate(false);
+  paintNameBadge();
+  paintViolatePanels();
+  const inp=document.getElementById('nameGateInput');
+  const tinp=document.getElementById('teamGateInput');
+  if(inp) inp.value='';
+  if(tinp) tinp.value='';
+  lastVer=-1;
+  tick();
+}
 function readDisplayName(){
   try{ return String(localStorage.getItem(displayNameKey())||'').trim(); }catch(e){ return ''; }
 }
@@ -2265,7 +2308,7 @@ function currentIdentity(){
 }
 function paintNameBadge(){
   const el=document.getElementById('cinemaNameBadge');
-  if(!el || hostTok()){ if(el){ el.hidden=true; el.textContent=''; } paintViolatePanels(); return; }
+  if(!el || hostTok() || isWatchOnly()){ if(el){ el.hidden=true; el.textContent=''; } paintViolatePanels(); return; }
   const idn=currentIdentity();
   if(!idn.name){ el.hidden=true; el.textContent=''; paintViolatePanels(); return; }
   el.hidden=false;
@@ -2501,8 +2544,8 @@ function paintViolatePanels(){
   const locked=isViolateLocked();
   const html=violateHtml(st);
   const top=document.getElementById('cinemaViolate');
-  if(top){
-    if(hostTok() || !named){ top.hidden=true; top.innerHTML=''; top.classList.remove('has-bad','is-ok','is-seal'); }
+    if(top){
+    if(hostTok() || isWatchOnly() || !named){ top.hidden=true; top.innerHTML=''; top.classList.remove('has-bad','is-ok','is-seal'); }
     else {
       top.hidden=false;
       top.classList.toggle('has-bad', bad||locked);
@@ -2511,7 +2554,7 @@ function paintViolatePanels(){
       top.innerHTML=html;
     }
   }
-  document.body.classList.toggle('violate-lock', !hostTok() && locked);
+  document.body.classList.toggle('violate-lock', !hostTok() && !isWatchOnly() && locked);
   const old=document.getElementById('qViolate');
   if(old) old.remove();
   paintViolateSeal(locked, viewPos);
@@ -2520,6 +2563,7 @@ function showNameGate(on, errMsg){
   const gate=document.getElementById('cinemaNameGate');
   if(!gate) return;
   if(hostTok()){ gate.hidden=true; gate.classList.remove('is-on'); return; }
+  if(isWatchOnly()){ gate.hidden=true; gate.classList.remove('is-on'); return; }
   if(on){
     gate.hidden=false;
     gate.classList.add('is-on');
@@ -2543,7 +2587,7 @@ function showNameGate(on, errMsg){
 }
 let studentJoined=false;
 async function ensureStudentName(){
-  if(hostTok()){ showNameGate(false); paintNameBadge(); return true; }
+  if(hostTok() || isWatchOnly()){ showNameGate(false); paintNameBadge(); return true; }
   const nm=normDisplayName(readDisplayName());
   if(!nm){ showNameGate(true); paintNameBadge(); studentJoined=false; return false; }
   writeDisplayName(nm);
@@ -2570,7 +2614,7 @@ function bindNameGate(){
   form.__bound=1;
   form.addEventListener('submit', async function(e){
     e.preventDefault();
-    if(hostTok()){ showNameGate(false); return; }
+    if(hostTok() || isWatchOnly()){ showNameGate(false); return; }
     const inp=document.getElementById('nameGateInput');
     const tinp=document.getElementById('teamGateInput');
     const peeled=peelTeam(inp&&inp.value);
@@ -2597,6 +2641,11 @@ function bindNameGate(){
       if(btn) btn.disabled=false;
     }
   });
+  const watch=document.getElementById('nameGateWatch');
+  if(watch && !watch.__bound){
+    watch.__bound=1;
+    watch.onclick=function(){ resetCinemaMachine(); };
+  }
 }
 let leaveRecorded=false;
 let lastAwayAt=0;
@@ -2994,9 +3043,9 @@ function votesLocked(){
   return !!(lastLive&&lastLive.checked) || !!lastShowSol || isViolateLocked();
 }
 function bindStudentVote(){
-  const canVote=!hostTok() && !votesLocked() && isQuizQ(lastQ) && ['TN','DS'].indexOf(String((lastQ&&lastQ.kind)||'').toUpperCase())>=0;
+  const canVote=!hostTok() && !isWatchOnly() && !votesLocked() && isQuizQ(lastQ) && ['TN','DS'].indexOf(String((lastQ&&lastQ.kind)||'').toUpperCase())>=0;
   document.body.classList.toggle('voter-on', canVote);
-  document.body.classList.toggle('violate-lock', !hostTok() && isViolateLocked());
+  document.body.classList.toggle('violate-lock', !hostTok() && !isWatchOnly() && isViolateLocked());
   if(!canVote){
     document.querySelectorAll('#q .opt, #q .tf-box').forEach(function(el){ el.onclick=null; });
     return;
@@ -3901,11 +3950,14 @@ setInterval(tick,900);
   }
   const x=document.getElementById('cinemaExit');
   const leave=document.getElementById('cinemaLeave');
+  const resetBtn=document.getElementById('cinemaReset');
   if(x) x.onclick=leaveCinema;
   if(leave) leave.onclick=leaveCinema;
+  if(resetBtn) resetBtn.onclick=function(){ resetCinemaMachine(); };
+  setWatchOnly(isWatchOnly());
   // Ghi nhận: thoát / đóng trang / thu nhỏ / đổi tab / rớt mạng — kèm câu đang chiếu
   function markAwayAndShow(reason){
-    if(hostTok()) return;
+    if(hostTok() || isWatchOnly()) return;
     if(!leaveAnchorQ) freezeLeaveAnchor();
     const log=reportAway(reason, {exit:false});
     paintViolatePanels();
@@ -3938,12 +3990,12 @@ setInterval(tick,900);
     if(hasAwayPending()) paintAwayBanner(null, true);
   }
   window.addEventListener('pagehide', function(){
-    if(hostTok() || leaveRecorded) return;
+    if(hostTok() || isWatchOnly() || leaveRecorded) return;
     if(!leaveAnchorQ) freezeLeaveAnchor();
     reportAway('pagehide', {exit:true});
   });
   document.addEventListener('visibilitychange', function(){
-    if(hostTok()) return;
+    if(hostTok() || isWatchOnly()) return;
     if(document.hidden){
       freezeLeaveAnchor();
       markAwayAndShow('hidden');
