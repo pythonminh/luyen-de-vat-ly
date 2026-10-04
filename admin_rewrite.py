@@ -1673,6 +1673,89 @@ def api_lesson_tikz_act():
     return jsonify(ok=True, note=note)
 
 
+def _extract_tikz_code(raw):
+    s = str(raw or "").strip()
+    obj = _parse_obj(s)
+    for key in ("tikz", "code", "tikzpicture"):
+        if str(obj.get(key) or "").strip():
+            s = str(obj.get(key) or "")
+            break
+    m = re.search(
+        r"\\begin\s*\{\s*tikzpicture\b.*?\\end\s*\{\s*tikzpicture\s*\}",
+        s,
+        re.I | re.S,
+    )
+    if not m:
+        raise ValueError("AI chưa trả khối \\begin{tikzpicture}...\\end{tikzpicture}.")
+    code = m.group(0)
+    code = re.sub(r"\\usetikzlibrary\s*\{[^}]*\}", "", code, flags=re.I)
+    code = re.sub(r"\\usepackage\s*(?:\[[^\]]*\])?\s*\{[^}]*\}", "", code, flags=re.I)
+    code = re.sub(r"\\documentclass\b[^\n]*", "", code, flags=re.I)
+    code = base.repair_tikz(code)
+    code = _clean_tikz_code(code)
+    if not re.search(r"\\begin\s*\{\s*center\s*\}", code, re.I):
+        code = "\\begin{center}\n" + code.strip() + "\n\\end{center}"
+    return code
+
+
+def _tikz_suggest_prompt(pack):
+    labs = "ABCD"
+    opts = []
+    for i, o in enumerate(pack.get("options") or []):
+        mark = " [đúng]" if o.get("correct") else ""
+        lab = labs[i] if i < len(labs) else str(i + 1)
+        opts.append(f"{lab}. {o.get('text') or ''}{mark}")
+    kind = pack.get("kind") or ""
+    return (
+        "Bạn là giáo viên THPT, vẽ hình minh họa cho đề bằng TikZ để học sinh nhìn ra tình huống.\n"
+        "Đọc kỹ ĐỀ, phương án và lời giải. Vẽ đúng thứ đề mô tả: đường tròn, đường kính, dao động, vectơ, mạch, đồ thị, trục số, hình học...\n"
+        "Không bịa chi tiết không có trong đề. Không chép nguyên mã TikZ cũ nếu sai hoặc thiếu.\n"
+        "CHỈ trả đúng một khối, không markdown, không lời dẫn:\n"
+        "\\begin{tikzpicture}[scale=1]\n...\n\\end{tikzpicture}\n"
+        "Biên dịch pdflatex: chỉ \\draw, \\node, \\path, \\fill, \\foreach, \\clip, \\coordinate.\n"
+        "Mũi tên >=stealth. Không \\usetikzlibrary, không pgfplots, không \\begin{axis}.\n"
+        "Chữ tiếng Việt có dấu: \\node {\\text{...}}; cấm chữ có dấu trong $...$.\n"
+        "Hình vừa một cột đề (không quá 11cm). Ghi đủ ký hiệu trên hình (O, M, đường kính, trục...).\n"
+        f"Loại câu: {kind}\n===STEM===\n{pack.get('text') or ''}\n"
+        + (("===OPTIONS===\n" + "\n".join(opts) + "\n") if opts else "")
+        + (f"===ANSWER===\n{pack.get('answer') or ''}\n" if pack.get("answer") else "")
+        + (f"===SOLUTION===\n{(pack.get('solution') or '')[:1800]}\n" if pack.get("solution") else "")
+    )
+
+
+@base.app.post("/api/admin/suggest-tikz")
+def api_suggest_tikz():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get("src") or data.get("path") or "").replace("\\", "/").strip()
+    try:
+        fi = int(data.get("file_idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu file_idx."), 400
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    q, _tex = _load_q(src, fi)
+    if not q:
+        return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
+    keys = _keys_from_payload(data)
+    if not keys:
+        return jsonify(ok=False, error="Thiếu Gemini API key. Mở trang 🤖 Gemini rồi nạp key."), 400
+    from admin_classify import _gemini_once
+
+    pack = _q_plain_pack(q)
+    raw, err = _gemini_once(keys, _tikz_suggest_prompt(pack), 2500)
+    if not raw:
+        return jsonify(ok=False, error=err or "Gemini không trả mã TikZ."), 502
+    try:
+        code = _extract_tikz_code(raw)
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 502
+    hid = base.tikz_remember(code)
+    html = base.html_question(code, src)
+    return jsonify(ok=True, code=code, hid=hid, html=html, url="/tikz/" + hid + ".png")
+
+
 REWRITE_CLIENT_JS = r"""
 <style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}</style>
 <script>
@@ -2363,27 +2446,98 @@ document.addEventListener('change',function(e){
   inp.value='';
   if(box&&f) rwUploadImg(box, f);
 });
+function rwTikzAiSlot(box){
+  return '<div class="rwtikzairow" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px">'
+    +'<button type="button" class="btn primary rwtikzai">AI gợi ý theo đề</button>'
+    +'<span class="muted">Đọc đề + đáp án rồi viết tikzpicture. Xem trước rồi chèn.</span></div>'
+    +'<div class="rwtikzaiout"></div>';
+}
+function rwPaintTikzLib(box, items){
+  box._tikz=box._tikz||{};
+  let h='<div class="muted">Mã đã có trong bài / thư mục tikz/. Bấm hình để chèn. Cất để giữ vào thư mục.</div><div class="rwimggrid">';
+  (items||[]).forEach(function(im){
+    box._tikz[im.hid]=im.code||'';
+    h+='<div class="rwtikzpick" data-hid="'+esc(im.hid)+'"><img alt="" src="'+esc(im.url)+'" loading="lazy"><small>'+esc(im.name)+'</small>';
+    if(!im.stored) h+='<button type="button" class="btn mini rwtikzsave" data-hid="'+esc(im.hid)+'">Cất</button>';
+    h+='</div>';
+  });
+  h+='</div>';
+  if(!(items||[]).length) h+='<div class="muted">Bài này chưa có mã sẵn. Bấm <b>AI gợi ý theo đề</b>.</div>';
+  return h;
+}
 async function rwLoadTikz(box){
-  box.innerHTML='<div class="muted">Đang mở mã TikZ đã vẽ trong bài...</div>';
+  box.innerHTML=rwTikzAiSlot(box)+'<div class="rwtikzlib muted">Đang mở mã TikZ đã vẽ trong bài...</div>';
   try{
     const r=await fetch('/api/admin/lesson-tikz?src='+encodeURIComponent(box.getAttribute('data-src')||''),{credentials:'same-origin'});
     const d=await r.json();
-    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không mở được mã TikZ.')+'</div>';return;}
-    box._tikz={};
-    let h='<div class="muted">Mã TikZ trong thư mục tikz/ của bài và mã đã có trong file TEX. Bấm hình để chèn vào câu. Cất để giữ mã vào thư mục.</div><div class="rwimggrid">';
-    (d.items||[]).forEach(function(im){
-      box._tikz[im.hid]=im.code||'';
-      h+='<div class="rwtikzpick" data-hid="'+esc(im.hid)+'"><img alt="" src="'+esc(im.url)+'" loading="lazy"><small>'+esc(im.name)+'</small>';
-      if(!im.stored) h+='<button type="button" class="btn mini rwtikzsave" data-hid="'+esc(im.hid)+'">Cất</button>';
-      h+='</div>';
-    });
-    h+='</div>';
-    if(!(d.items||[]).length) h+='<div class="muted">Bài này chưa có mã TikZ. Vẽ trong đề bằng \\begin{tikzpicture}...\\end{tikzpicture} rồi mở lại.</div>';
-    box.innerHTML=h;
-  }catch(err){box.innerHTML='<div class="err">'+esc(err)+'</div>';}
+    const lib=box.querySelector('.rwtikzlib');
+    if(!d.ok){
+      if(lib) lib.innerHTML='<div class="err">'+esc(d.error||'Không mở được mã TikZ.')+'</div>';
+      return;
+    }
+    if(lib) lib.innerHTML=rwPaintTikzLib(box, d.items||[]);
+  }catch(err){
+    const lib=box.querySelector('.rwtikzlib');
+    if(lib) lib.innerHTML='<div class="err">'+esc(err)+'</div>';
+  }
+}
+async function rwSuggestTikz(box){
+  const ks=keys();
+  if(!ks.length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');return;}
+  const slot=box.querySelector('.rwtikzaiout');
+  if(!slot) return;
+  const t0=Date.now();
+  const tick=setInterval(function(){
+    const s=Math.max(1, Math.round((Date.now()-t0)/1000));
+    slot.innerHTML='<div class="muted">Đang đọc đề và gợi ý TikZ… <b>'+s+'s</b> (thường 15–45s). Đừng đóng hộp.</div>';
+  },400);
+  slot.innerHTML='<div class="muted">Đang đọc đề và gợi ý TikZ… <b>1s</b></div>';
+  try{
+    const r=await fetch('/api/admin/suggest-tikz',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({src:box.getAttribute('data-src')||'',file_idx:+(box.getAttribute('data-fi')||0),api_keys:ks})});
+    const d=await r.json();
+    clearInterval(tick);
+    const sec=Math.max(1, Math.round((Date.now()-t0)/1000));
+    if(!d.ok){slot.innerHTML='<div class="err">'+esc(d.error||'Không gợi ý được')+' · '+sec+'s</div>';return;}
+    box._tikz=box._tikz||{};
+    if(d.hid) box._tikz[d.hid]=d.code||'';
+    slot._code=d.code||'';
+    slot.innerHTML='<div class="success">Gợi ý xong sau '+sec+'s — xem hình, sửa mã nếu cần, rồi chèn vào câu.</div>'
+      +'<div class="ai-tikz rwtikzprev">'+(d.html||'')+'</div>'
+      +'<textarea class="rwta rwtikzta" style="min-height:140px">'+esc(d.code||'')+'</textarea>'
+      +'<p><button type="button" class="btn rwtikzprevbtn">Xem trước</button> '
+      +'<button type="button" class="btn green rwtikzinsert">Chèn vào câu</button> '
+      +'<button type="button" class="btn rwtikzkeep">Cất vào thư mục</button> '
+      +'<button type="button" class="btn rwtikzai">Gợi ý lại</button></p>';
+    if(window.ldvlArmTikz) ldvlArmTikz(slot);
+    if(window.ldvlTypeset) ldvlTypeset(slot);
+  }catch(err){
+    clearInterval(tick);
+    slot.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';
+  }
+}
+async function rwPreviewTikzTa(box){
+  const slot=box.querySelector('.rwtikzaiout');
+  const ta=slot&&slot.querySelector('.rwtikzta');
+  const prev=slot&&slot.querySelector('.rwtikzprev');
+  if(!ta||!prev) return;
+  prev.innerHTML='⏳ Đang vẽ...';
+  try{
+    const r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:ta.value||'',src:box.getAttribute('data-src')||''})});
+    const d=await r.json();
+    if(!d.ok){prev.innerHTML='<div class="err">'+esc(d.error||'Không xem trước được')+'</div>';return;}
+    prev.innerHTML=d.html||'';
+    if(window.ldvlArmTikz) ldvlArmTikz(prev);
+    if(window.ldvlTypeset) ldvlTypeset(prev);
+  }catch(err){prev.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
+}
+function rwTikzDraft(box){
+  const ta=box.querySelector('.rwtikzta');
+  if(ta&&String(ta.value||'').trim()) return String(ta.value||'');
+  return '';
 }
 async function rwUseTikz(box, hid, store){
-  const code=(box._tikz&&box._tikz[hid])||'';
+  const code=hid?((box._tikz&&box._tikz[hid])||''):rwTikzDraft(box);
   if(!code){alert('Không thấy mã TikZ.');return;}
   if(store){
     try{
@@ -2417,6 +2571,38 @@ document.addEventListener('click',function(e){
     e.stopPropagation();
     const box=save.closest('.rwtikzbox');
     if(box) rwUseTikz(box, save.getAttribute('data-hid')||'', true);
+    return;
+  }
+  const aiBtn=e.target.closest&&e.target.closest('.rwtikzai');
+  if(aiBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    const box=aiBtn.closest('.rwtikzbox');
+    if(box) rwSuggestTikz(box);
+    return;
+  }
+  const prevBtn=e.target.closest&&e.target.closest('.rwtikzprevbtn');
+  if(prevBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    const box=prevBtn.closest('.rwtikzbox');
+    if(box) rwPreviewTikzTa(box);
+    return;
+  }
+  const ins=e.target.closest&&e.target.closest('.rwtikzinsert');
+  if(ins){
+    e.preventDefault();
+    e.stopPropagation();
+    const box=ins.closest('.rwtikzbox');
+    if(box) rwUseTikz(box, '', false);
+    return;
+  }
+  const keep=e.target.closest&&e.target.closest('.rwtikzkeep');
+  if(keep){
+    e.preventDefault();
+    e.stopPropagation();
+    const box=keep.closest('.rwtikzbox');
+    if(box) rwUseTikz(box, '', true);
     return;
   }
   const openBtn=e.target.closest&&e.target.closest('.rwtikzbtn');
@@ -2690,7 +2876,7 @@ document.addEventListener('click',async function(e){
   const srcChars=(sourceTex||'').trim().length;
   const srcImgs=sourceImages.length;
   const srcBytes=Math.round(bagChars()*0.75);
-  const expectSec=Math.min(200, 80+nBag*30);
+  const expectSec=chapter==='1'?Math.min(540, 150+nBag*45):Math.min(240, 80+nBag*30);
   function srcLabel(){
     const bits=[];
     if(srcChars) bits.push(srcChars.toLocaleString('vi-VN')+' chữ');
@@ -2737,7 +2923,7 @@ document.addEventListener('click',async function(e){
       const job=d.job;
       d=null;
       let missed=0;
-      while(Date.now()-t0<300000){
+      while(Date.now()-t0<720000){
         await new Promise(function(res){setTimeout(res,2500);});
         let pr,praw,pd;
         try{
@@ -2750,9 +2936,10 @@ document.addEventListener('click',async function(e){
           missed=0;
           const el=Math.max(waited, Number(pd.elapsed)||0);
           const left=Math.max(0,expectSec-el);
+          const cap=(pd.note?pd.note+' ':'')+waitLabel+'. Đã chờ '+el+'s.';
           aiMeter({
             kind:'wait',
-            caption:waitLabel+'. Đã chờ '+el+'s.',
+            caption:cap,
             time:el+'s',
             src:srcLabel(),
             rate:rateLabel(el),
@@ -2772,13 +2959,13 @@ document.addEventListener('click',async function(e){
             pct:Math.min(92,Math.round(waited/expectSec*100)),
             hint:'cứ để trang mở'
           });
-          if(missed<12) continue;
+          if(missed<24) continue;
           throw new Error('Không thấy phiên sau '+waited+'s. Bấm AI phân tích lại.');
         }
         d=pd;
         break;
       }
-      if(!d) throw new Error('Quá 5 phút chưa có kết quả. Bấm AI phân tích lại.');
+      if(!d) throw new Error('Quá 12 phút chưa có kết quả. Bấm AI phân tích lại.');
     }
     if(!d.ok){stopWait();aiStatus(d.error||'Lỗi','err');out.innerHTML='<div class="err">'+esc(d.error||'Lỗi')+'</div>';return;}
     if(!String(d.latex||'').trim()){
