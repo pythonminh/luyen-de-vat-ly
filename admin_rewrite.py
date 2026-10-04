@@ -1756,119 +1756,281 @@ def api_suggest_tikz():
     return jsonify(ok=True, code=code, hid=hid, html=html, url="/tikz/" + hid + ".png")
 
 
-_HAND_SYM = (
-    (r"\\dfrac", r"\\frac"),
-    (r"\\tfrac", r"\\frac"),
-    (r"\\times", "×"),
-    (r"\\cdot", "·"),
-    (r"\\pm", "±"),
-    (r"\\pi", "π"),
-    (r"\\omega", "ω"),
-    (r"\\Delta", "Δ"),
-    (r"\\delta", "δ"),
-    (r"\\theta", "θ"),
-    (r"\\phi", "φ"),
-    (r"\\alpha", "α"),
-    (r"\\beta", "β"),
-    (r"\\vec", ""),
-    (r"\\overrightarrow", ""),
-    (r"\\cos", "cos"),
-    (r"\\sin", "sin"),
-    (r"\\tan", "tan"),
-    (r"\\left", ""),
-    (r"\\right", ""),
-    (r"\\,", " "),
-    (r"\\;", " "),
-    (r"\\quad", " "),
+_NOTEBOOK_GEMINI = """Xuất ra ẢNH một trang A4. Không viết lại prompt. Không giải thích cách làm. Hãy trực tiếp tạo sản phẩm trực quan.
+
+Bạn là chuyên gia thiết kế tài liệu học tập trực quan cho học sinh THPT.
+
+NHIỆM VỤ:
+Từ nội dung LaTeX tôi cung cấp, hãy chuyển nó thành MỘT TRANG VỞ HỌC TẬP HOÀN CHỈNH, trực quan, đẹp, khoa học và dễ học.
+
+KHÔNG tạo prompt.
+KHÔNG giải thích cách làm.
+Hãy trực tiếp tạo sản phẩm trực quan từ nội dung được cung cấp.
+
+=============================
+I. TỰ NHẬN DIỆN NỘI DUNG
+=============================
+
+Trước tiên hãy tự xác định:
+
+- Môn học: Toán / Vật lý / Hóa học / môn khác.
+- Chủ đề.
+- Dạng bài.
+- Mức độ kiến thức.
+- Những công thức, định nghĩa, quy tắc quan trọng.
+- Những hình vẽ, đồ thị, sơ đồ hoặc quá trình cần minh họa.
+
+Không được thay đổi dữ kiện toán học, vật lý, hóa học hoặc kết quả của bài.
+
+=============================
+II. PHONG CÁCH TRANG VỞ
+=============================
+
+Thiết kế thành MỘT TRANG DỌC TỈ LỆ A4.
+
+Phong cách:
+
+- giống một trang vở học tập cao cấp;
+- nền giấy kẻ ô hoặc dòng rất nhẹ;
+- có thể có mép lò xo bên trái;
+- tiêu đề nổi bật;
+- các khung nội dung bo góc;
+- màu pastel nhẹ;
+- chữ tiếng Việt rõ ràng;
+- công thức toán học sắc nét;
+- bố cục thoáng, dễ đọc;
+- ưu tiên tính chính xác hơn trang trí.
+
+Không làm giống poster quảng cáo.
+
+Không nhồi quá nhiều chi tiết trang trí.
+
+=============================
+III. BỐ CỤC TỰ ĐỘNG
+=============================
+
+Tùy nội dung, tự lựa chọn bố cục phù hợp.
+
+Có thể gồm:
+
+1. DẠNG BÀI / CHỦ ĐỀ
+
+2. BÀI TOÁN
+   Đưa nguyên nội dung câu hỏi vào.
+
+3. KIẾN THỨC CẦN NHỚ
+   Chỉ đưa những kiến thức thực sự cần cho bài.
+
+4. PHÂN TÍCH / Ý TƯỞNG GIẢI
+
+5. HƯỚNG DẪN GIẢI
+   Trình bày từng bước:
+   - Công thức
+   - Thay số
+   - Biến đổi
+   - Kết quả
+
+6. HÌNH MINH HỌA
+   Chỉ tạo khi hình giúp học sinh hiểu bài.
+
+7. NHẬN XÉT – GHI NHỚ
+   Tóm tắt mẹo hoặc kết luận quan trọng.
+
+Không bắt buộc phải sử dụng tất cả các khung.
+Tự bỏ những phần không cần thiết để trang không bị chật.
+
+=============================
+IV. QUY TẮC MINH HỌA
+=============================
+
+Nếu là TOÁN:
+
+- Vẽ hình hình học chính xác.
+- Vẽ trục tọa độ.
+- Vẽ đồ thị hàm số.
+- Vẽ miền nghiệm.
+- Vẽ biểu đồ, sơ đồ hoặc hình học không gian khi cần.
+- Các điểm, đường, góc, tọa độ phải đúng.
+- Làm nổi bật phần cần quan sát.
+
+Nếu là VẬT LÝ:
+
+- Vẽ sơ đồ vật lý chính xác.
+- Vẽ vectơ lực, vận tốc, gia tốc khi cần.
+- Vẽ đồ thị x-t, v-t, a-t...
+- Với dao động điều hòa có thể minh họa chuyển động tròn đều và hình chiếu.
+- Với sóng có thể minh họa phương truyền sóng và trạng thái dao động.
+- Với điện có thể vẽ mạch điện.
+- Với quang học có thể vẽ tia sáng, thấu kính, gương...
+- Nếu quá trình có sự thay đổi theo thời gian, minh họa bằng chuỗi trạng thái.
+
+Nếu là HÓA HỌC:
+
+- Vẽ sơ đồ phản ứng.
+- Mô hình nguyên tử/phân tử khi cần.
+- Sơ đồ chuyển hóa.
+- Bảng dữ kiện.
+- Quy trình tính toán.
+- Làm nổi bật chất, phương trình và kết quả quan trọng.
+
+Nếu là môn khác:
+
+Tự lựa chọn loại hình minh họa phù hợp với nội dung.
+
+=============================
+V. MINH HỌA ĐỘNG
+=============================
+
+Nếu nội dung có một quá trình động hoặc thay đổi theo thời gian:
+
+Hãy tạo minh họa dạng animation nếu công cụ hỗ trợ.
+
+Ví dụ:
+
+t₀ → t₁ → t₂ → t₃
+
+hoặc
+
+Bước 1 → Bước 2 → Bước 3 → Kết quả.
+
+Nếu không thể tạo animation thật:
+
+hãy tạo một chuỗi 4–8 khung hình liên tiếp giống animation,
+kèm mũi tên hoặc thanh thời gian để học sinh nhìn vào có thể hiểu quá trình chuyển động.
+
+KHÔNG tạo animation nếu nội dung không cần chuyển động.
+
+=============================
+VI. CÔNG THỨC
+=============================
+
+Giữ nguyên công thức từ LaTeX.
+
+Không tự ý đổi:
+
+- số liệu;
+- đơn vị;
+- ký hiệu;
+- dấu;
+- số mũ;
+- chỉ số;
+- góc;
+- điều kiện;
+- đáp án.
+
+Công thức phải được trình bày rõ ràng như tài liệu giáo khoa.
+
+=============================
+VII. BÀI TRẮC NGHIỆM
+=============================
+
+Nếu có:
+
+\\choice
+{$...$}
+{$...$}
+{$...$}
+{\\True $...$}
+
+hãy trình bày thành 4 đáp án A, B, C, D.
+
+Đáp án đúng phải được làm nổi bật.
+
+Không thay đổi nội dung đáp án.
+
+Nếu có \\loigiai thì đưa lời giải vào phần Hướng dẫn giải.
+
+=============================
+VIII. BÀI ĐÚNG – SAI
+=============================
+
+Nếu có dạng đúng/sai:
+
+- trình bày từng mệnh đề a), b), c), d);
+- đánh dấu đúng/sai rõ ràng;
+- giải thích ngắn gọn cho từng mệnh đề nếu có lời giải.
+
+=============================
+IX. BÀI TRẢ LỜI NGẮN
+=============================
+
+Nếu có \\shortans:
+
+- trình bày bài toán;
+- các bước tính;
+- kết quả cuối cùng trong một ô nổi bật.
+
+=============================
+X. ĐỘ CHÍNH XÁC
+=============================
+
+ĐÂY LÀ QUY TẮC QUAN TRỌNG NHẤT:
+
+- Không được bịa dữ kiện.
+- Không được tự thay đổi đề.
+- Không được tự đổi đáp án.
+- Không được bỏ công thức.
+- Không được vẽ hình sai bản chất.
+- Không được vẽ đồ thị sai.
+- Không được thêm kiến thức không liên quan.
+- Nếu hình minh họa không cần thiết thì không tạo.
+
+Nội dung khoa học phải chính xác trước khi đẹp.
+
+=============================
+XI. KẾT QUẢ CUỐI
+=============================
+
+Tạo một trang học tập hoàn chỉnh:
+
+[DẠNG BÀI]
+↓
+[BÀI TOÁN]
+↓
+[KIẾN THỨC / HÌNH MINH HỌA]
+↓
+[PHÂN TÍCH]
+↓
+[HƯỚNG DẪN GIẢI]
+↓
+[ĐÁP ÁN / KẾT QUẢ]
+↓
+[GHI NHỚ]
+
+Tự điều chỉnh bố cục để toàn bộ nội dung nằm gọn trong một trang A4.
+
+NỘI DUNG LATEX:
+--------------------------------
+[DÁN LATEX VÀO ĐÂY]
+--------------------------------
+
+Hãy trực tiếp tạo trang vở học tập hoàn chỉnh.
+"""
+
+_NOTEBOOK_MOTION = (
+    "Trang tĩnh đã xong. Nếu bài có quá trình theo thời gian, hãy tạo thêm animation "
+    "hoặc chuỗi 4–8 khung theo mục V. Không đổi số liệu, công thức, đáp án. "
+    "Xuất ra ẢNH/GIF, không viết lại prompt."
 )
 
 
-def _hand_math(s):
-    """LaTeX → chữ học sinh viết tay, không còn lệnh \\frac để Gemini vẽ được."""
-    t = _clean_tex(s)
-    t = re.sub(r"\\begin\s*\{\s*tikzpicture\b.*?\\end\s*\{\s*tikzpicture\s*\}", " ", t, flags=re.I | re.S)
-    t = re.sub(r"\\includegraphics(?:\s*\[[^\]]*\])?\s*\{[^}]+\}", " ", t, flags=re.I)
-    t = re.sub(r"\\begin\s*\{\s*center\s*\}|\\end\s*\{\s*center\s*\}", " ", t, flags=re.I)
-    for a, b in _HAND_SYM:
-        t = re.sub(a + r"\b", b, t)
-    for _ in range(4):
-        t2 = re.sub(r"\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}", r"(\1)/(\2)", t)
-        if t2 == t:
-            break
-        t = t2
-    t = re.sub(r"\\(?:mathrm|text|textbf|textit)\s*\{([^{}]*)\}", r"\1", t)
-    t = re.sub(r"\\[a-zA-Z]+\*?", " ", t)
-    t = t.replace("$", "").replace("{", "").replace("}", "")
-    t = t.replace("~", " ")
-    t = re.sub(r"[ \t]+", " ", t)
-    t = re.sub(r"\n{3,}", "\n\n", t)
-    return t.strip()
+def _notebook_latex(q, tex, fi):
+    inner = _ex_inner(tex, fi) if tex is not None else ""
+    if not inner:
+        inner = str((q or {}).get("raw") or "").strip()
+    inner = str(inner or "").strip()
+    if not inner:
+        raise ValueError("Không lấy được LaTeX của câu.")
+    if not re.search(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", inner, re.I):
+        inner = "\\begin{ex}\n" + inner + "\n\\end{ex}"
+    if len(inner) > 24000:
+        inner = inner[:24000].rstrip() + "\n% … cắt bớt vì quá dài"
+    return inner
 
 
-def _notebook_correct_line(pack):
-    kind = str(pack.get("kind") or "").upper()
-    opts = pack.get("options") or []
-    if kind == "TN":
-        labs = [chr(65 + i) for i, o in enumerate(opts) if o.get("correct")]
-        texts = [_hand_math(o.get("text") or "") for i, o in enumerate(opts) if o.get("correct")]
-        if labs:
-            return "Phương án đúng: " + ", ".join(labs) + ((" — " + "; ".join(texts)) if texts else "")
-    if kind == "DS":
-        bits = []
-        for i, o in enumerate(opts):
-            lab = chr(65 + i) if i < 4 else str(i + 1)
-            bits.append(lab + (" Đúng" if o.get("correct") else " Sai"))
-        return "Đáp án: " + "; ".join(bits) if bits else ""
-    ans = _hand_math(pack.get("answer") or "")
-    return ("Đáp án: " + ans) if ans else ""
-
-
-def _notebook_options_block(pack):
-    kind = str(pack.get("kind") or "").upper()
-    opts = pack.get("options") or []
-    lines = []
-    if kind == "TN":
-        for i, o in enumerate(opts):
-            lab = chr(65 + i)
-            mark = "  ← khoanh tròn đỏ, đây là đáp án đúng" if o.get("correct") else ""
-            lines.append(f"{lab}. {_hand_math(o.get('text') or '')}{mark}")
-    elif kind == "DS":
-        for i, o in enumerate(opts):
-            lab = chr(65 + i) if i < 4 else str(i + 1)
-            ds = "Đúng" if o.get("correct") else "Sai"
-            lines.append(f"{lab}) {_hand_math(o.get('text') or '')}  → ghi {ds} (đáp án đúng)")
-    return "\n".join(lines)
-
-
-def _notebook_image_prompt(pack):
-    stem = _hand_math(pack.get("text") or "")
-    sol = _hand_math((pack.get("solution") or "")[:900])
-    opts = _notebook_options_block(pack)
-    key = _notebook_correct_line(pack)
-    kind = str(pack.get("kind") or "")
-    still = (
-        "Tạo MỘT ảnh (không phải văn bản). Ảnh là trang vở học sinh Việt Nam nhìn từ trên xuống, "
-        "giấy kẻ ngang hơi ngả vàng, bút bi xanh, bút chì, tẩy vụn, bóng đèn lớp học.\n"
-        "Viết tay tiếng Việt ngay ngắn, giữ ĐÚNG mọi số liệu. Cấm in chữ máy tính, cấm lệnh LaTeX (không \\frac, không $).\n"
-        "Bố cục trang vở:\n"
-        "1) Tiêu đề nhỏ: Vật lý · trắc nghiệm · " + kind + "\n"
-        "2) ĐỀ BÀI (viết đủ, công thức dạng học sinh: ví dụ x = 1,25 cos(2πt − π/12) cm):\n"
-        + stem + "\n"
-        + (("3) CÁC LỰA CHỌN:\n" + opts + "\n") if opts else "")
-        + "4) " + (key or "Không khoanh đáp án — chỉ ghi lời giải ngắn.") + "\n"
-        + ("5) LỜI GIẢI viết tay góc dưới, gọn:\n" + sol + "\n" if sol else "")
-        + "6) MINH HỌA ĐỘNG trên cùng trang: vẽ hiện tượng vật lý của đề như storyboard/hoạt hình giấy — "
-        "nhiều bóng mờ (ghost frames) theo thời gian, mũi tên chuyển động, đánh số t = 0, T/4, T/2... "
-        "Đúng tình huống đề (dao động, đường tròn, mạch, đồ thị...). Không bịa thêm vật lạ.\n"
-        "Tỷ lệ 3:4 hoặc 4:5, ảnh điện thoại chụp vở thật, góc hơi lệch, ánh sáng cửa sổ."
-    )
-    motion = (
-        "Tạo ảnh ĐỘNG (GIF hoặc video ngắn lặp) cùng trang vở ở trên. "
-        "Chữ đề bài, phương án và đáp án giữ nguyên không nhấp nháy. "
-        "Chỉ phần hình minh họa chuyển động: vật/điểm chạy đúng phương trình trong đề, "
-        "mũi tên và vị trí bóng mờ thay đổi theo nhịp. Nền giấy vở kẻ ngang. Không thêm chữ mới."
-    )
-    return still.strip(), motion.strip()
+def _notebook_image_prompt(latex):
+    body = _NOTEBOOK_GEMINI.replace("[DÁN LATEX VÀO ĐÂY]", str(latex or "").strip() or "% (trống)")
+    return body.strip(), _NOTEBOOK_MOTION
 
 
 @base.app.post("/api/admin/notebook-prompt")
@@ -1883,12 +2045,15 @@ def api_notebook_prompt():
         return jsonify(ok=False, error="Thiếu file_idx."), 400
     if not src.startswith("ngan-hang/"):
         return jsonify(ok=False, error="File không hợp lệ."), 400
-    q, _tex = _load_q(src, fi)
+    q, tex = _load_q(src, fi)
     if not q:
         return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
-    pack = _q_plain_pack(q)
-    still, motion = _notebook_image_prompt(pack)
-    return jsonify(ok=True, prompt=still, motion=motion, gemini="https://gemini.google.com/app")
+    try:
+        latex = _notebook_latex(q, tex, fi)
+        still, motion = _notebook_image_prompt(latex)
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True, prompt=still, motion=motion, latex=latex, gemini="https://gemini.google.com/app")
 
 
 REWRITE_CLIENT_JS = r"""
@@ -2632,15 +2797,15 @@ async function rwLoadNotebook(box){
     const d=await r.json();
     if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không tạo được prompt')+'</div>';return;}
     box._nb=d;
-    box.innerHTML='<div class="success">Prompt đã sẵn — copy rồi dán vào Gemini để tạo ảnh trang vở (đề + đáp án + hình động).</div>'
-      +'<p class="muted">1) Copy &nbsp; 2) Mở Gemini &nbsp; 3) Dán và bảo <b>Tạo ảnh</b>. Ảnh tĩnh: prompt trên. Ảnh động GIF: prompt dưới.</p>'
-      +'<label><b>Prompt ảnh trang vở</b></label>'
-      +'<textarea class="rwta rwnbstill">'+esc(d.prompt||'')+'</textarea>'
-      +'<p><button type="button" class="btn primary rwnbcopy" data-which="still">📋 Copy prompt ảnh</button> '
+    box.innerHTML='<div class="success">Đã gắn đề LaTeX vào lệnh trang vở. Copy rồi dán Gemini — Gemini phải <b>vẽ ảnh</b>, không viết lại prompt.</div>'
+      +'<p class="muted">1) Copy lệnh &nbsp; 2) Mở Gemini (bật tạo ảnh) &nbsp; 3) Dán cả khối. Nếu cần ảnh động: copy lệnh phụ.</p>'
+      +'<label><b>Lệnh tạo trang vở A4</b></label>'
+      +'<textarea class="rwta rwnbstill" style="min-height:220px">'+esc(d.prompt||'')+'</textarea>'
+      +'<p><button type="button" class="btn primary rwnbcopy" data-which="still">📋 Copy lệnh trang vở</button> '
       +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">↗ Mở Gemini</a></p>'
-      +'<label><b>Prompt ảnh động (GIF / video lặp)</b></label>'
+      +'<label><b>Lệnh phụ — animation / chuỗi khung</b></label>'
       +'<textarea class="rwta sm rwnbmotion">'+esc(d.motion||'')+'</textarea>'
-      +'<p><button type="button" class="btn rwnbcopy" data-which="motion">📋 Copy prompt động</button></p>';
+      +'<p><button type="button" class="btn rwnbcopy" data-which="motion">📋 Copy lệnh động</button></p>';
   }catch(err){box.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
 }
 async function rwLoadTikz(box){
@@ -2808,7 +2973,7 @@ document.addEventListener('click',function(e){
     const box=nbCopy.closest('.rwnbbox');
     const which=nbCopy.getAttribute('data-which')||'still';
     const ta=box&&box.querySelector(which==='motion'?'.rwnbmotion':'.rwnbstill');
-    copyText(ta?ta.value:'').then(function(){nbCopy.textContent='✅ Đã copy'; setTimeout(function(){nbCopy.textContent=which==='motion'?'📋 Copy prompt động':'📋 Copy prompt ảnh';},1400);},function(){prompt('Copy prompt', ta?ta.value:'');});
+    copyText(ta?ta.value:'').then(function(){nbCopy.textContent='✅ Đã copy'; setTimeout(function(){nbCopy.textContent=which==='motion'?'📋 Copy lệnh động':'📋 Copy lệnh trang vở';},1400);},function(){prompt('Copy lệnh', ta?ta.value:'');});
     return;
   }
   const openBtn=e.target.closest&&e.target.closest('.rwtikzbtn');
