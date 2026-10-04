@@ -7,7 +7,7 @@
       },
       "pp": {
         "status": "approved",
-        "updated": "2026-09-16T11:57:22Z"
+        "updated": "2026-09-27T15:24:10Z"
       }
     },
     "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề": {
@@ -43,11 +43,11 @@
     "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn": {
       "lt": {
         "status": "approved",
-        "updated": "2026-09-03T15:19:42Z"
+        "updated": "2026-10-02T04:43:41Z"
       },
       "pp": {
         "status": "approved",
-        "updated": "2026-09-16T11:57:22Z"
+        "updated": "2026-10-02T04:43:42Z"
       }
     },
     "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 4. Nhiệt dung riêng": {
@@ -416,8 +416,8 @@
         "updated": "2026-09-24T08:27:47Z"
       },
       "pp": {
-        "status": "pending",
-        "updated": "2026-09-24T02:10:24Z"
+        "status": "approved",
+        "updated": "2026-09-27T15:24:13Z"
       }
     },
     "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa": {
@@ -838,6 +838,16 @@
       "pp": {
         "status": "approved",
         "updated": "2026-09-16T11:57:22Z"
+      }
+    },
+    "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn": {
+      "lt": {
+        "status": "pending",
+        "updated": "2026-10-02T05:13:47Z"
+      },
+      "pp": {
+        "status": "approved",
+        "updated": "2026-10-02T04:43:43Z"
       }
     }
   }

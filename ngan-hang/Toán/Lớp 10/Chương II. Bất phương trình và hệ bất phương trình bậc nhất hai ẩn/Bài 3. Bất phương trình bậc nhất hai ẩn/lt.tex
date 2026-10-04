@@ -3,18 +3,97 @@
 % Chương: Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn
 % Bài: Bài 3. Bất phương trình bậc nhất hai ẩn
 % Loại: Lý thuyết
-% File riêng, không trộn vào de.tex — thay nội dung khi soạn xong
+% File riêng, không trộn vào de.tex
 \input{../../../../_lenh/lythuyet.tex}
 
+Tuyệt vời! Dưới đây là bản soạn lý thuyết cho bài "Bất phương trình bậc nhất hai ẩn" theo yêu cầu của bạn, tuân thủ cấu trúc và giọng văn SGK KNTT, đồng thời sửa chữa các thiếu sót trong file TEX cũ.
+
+```latex
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn
+% Bài: Bài 3. Bất phương trình bậc nhất hai ẩn
+% Loại: Lý thuyết
+% File riêng, không trộn vào de.tex
 \subsection{Lý thuyết}
-\subsubsection{Nội dung}
-\textit{Chưa soạn. Viết LaTeX vào file lt.tex này (cùng thư mục với de.tex).}
-\begin{kienthuc}
-Các ý kiến thức cốt lõi của bài.
-\end{kienthuc}
+
 \begin{emdahoc}
-\begin{itemize}\item \end{itemize}
+Trong các lớp dưới, các em đã được học về:
+\begin{itemize}
+    \item Bất phương trình bậc nhất một ẩn và cách giải.
+    \item Hệ tọa độ Descartes, cách biểu diễn điểm trên mặt phẳng tọa độ.
+    \item Phương trình đường thẳng trong mặt phẳng tọa độ.
+\end{itemize}
 \end{emdahoc}
+
+\subsubsection{Bất phương trình bậc nhất hai ẩn}
+
+\begin{hoatdong}
+Một cửa hàng bán hai loại áo sơ mi và quần âu. Giá một chiếc áo sơ mi là 200 nghìn đồng, giá một chiếc quần âu là 300 nghìn đồng. Gọi $x$ là số áo sơ mi bán được và $y$ là số quần âu bán được trong một ngày.
+\begin{itemize}
+    \item Viết biểu thức biểu thị tổng số tiền thu được từ việc bán áo sơ mi và quần âu.
+    \item Nếu cửa hàng đặt mục tiêu tổng số tiền thu được trong một ngày phải lớn hơn hoặc bằng 1 triệu đồng, hãy viết một bất đẳng thức biểu thị điều kiện này.
+\end{itemize}
+\end{hoatdong}
+
+\begin{kienthuc}
+\chuy{Định nghĩa:}
+Bất phương trình bậc nhất hai ẩn $x, y$ là bất phương trình có một trong các dạng:
+$$ax + by + c < 0$$
+hoặc $ax + by + c \leq 0$, $ax + by + c > 0$, $ax + by + c \geq 0$, trong đó $a, b, c$ là các số thực cho trước, với $a$ và $b$ không đồng thời bằng $0$.
+\end{kienthuc}
+
+\begin{kienthuc}
+\chuy{Nghiệm của bất phương trình bậc nhất hai ẩn:}
+Cặp số $(x_0; y_0)$ được gọi là một \chuy{nghiệm} của bất phương trình $ax + by + c < 0$ (hoặc $\leq 0, >, \geq 0$) nếu $ax_0 + by_0 + c$ thỏa mãn bất đẳng thức đó.
+\end{kienthuc}
+
+\begin{hoatdong}
+Kiểm tra xem cặp số $(1; 2)$ có phải là nghiệm của bất phương trình $2x - y + 1 > 0$ hay không.
+\end{hoatdong}
+
+\subsubsection{Biểu diễn miền nghiệm của bất phương trình bậc nhất hai ẩn}
+
+\begin{kienthuc}
+\chuy{Đường thẳng biên và miền nghiệm:}
+Trong mặt phẳng tọa độ $Oxy$, đường thẳng $d$ có phương trình $ax + by + c = 0$ chia mặt phẳng thành hai nửa mặt phẳng.
+\begin{itemize}
+    \item Mỗi nửa mặt phẳng (không kể đường thẳng $d$) là miền nghiệm của một trong các bất phương trình $ax + by + c < 0$ hoặc $ax + by + c > 0$.
+    \item Mỗi nửa mặt phẳng (kể cả đường thẳng $d$) là miền nghiệm của một trong các bất phương trình $ax + by + c \leq 0$ hoặc $ax + by + c \geq 0$.
+\end{itemize}
+Đường thẳng $d$ được gọi là \chuy{đường biên} của miền nghiệm.
+\end{kienthuc}
+
+\begin{kienthuc}
+\chuy{Cách xác định miền nghiệm của bất phương trình bậc nhất hai ẩn:}
+Để xác định miền nghiệm của bất phương trình $ax + by + c < 0$ (hoặc $\leq 0, >, \geq 0$), ta thực hiện các bước sau:
+\begin{itemize}
+    \item \textbf{Bước 1:} Vẽ đường thẳng $d \colon ax + by + c = 0$ trên mặt phẳng tọa độ.
+    \begin{itemize}
+        \item Nếu là bất phương trình dạng $ax + by + c < 0$ hoặc $ax + by + c > 0$, ta vẽ đường thẳng $d$ bằng nét đứt (vì các điểm trên đường thẳng $d$ không thuộc miền nghiệm).
+        \item Nếu là bất phương trình dạng $ax + by + c \leq 0$ hoặc $ax + by + c \geq 0$, ta vẽ đường thẳng $d$ bằng nét liền (vì các điểm trên đường thẳng $d$ thuộc miền nghiệm).
+    \end{itemize}
+    \item \textbf{Bước 2:} Chọn một điểm $M(x_0; y_0)$ không nằm trên đường thẳng $d$. Thông thường, ta chọn gốc tọa độ $O(0; 0)$ nếu nó không nằm trên $d$.
+    \item \textbf{Bước 3:} Thay tọa độ điểm $M$ vào bất phương trình.
+    \begin{itemize}
+        \item Nếu $M$ thỏa mãn bất phương trình, thì nửa mặt phẳng chứa $M$ là miền nghiệm.
+        \item Nếu $M$ không thỏa mãn bất phương trình, thì nửa mặt phẳng không chứa $M$ là miền nghiệm.
+    \end{itemize}
+    \item \textbf{Bước 4:} Gạch bỏ (hoặc tô màu) nửa mặt phẳng không phải là miền nghiệm. Phần còn lại chính là miền nghiệm cần tìm.
+\end{itemize}
+\end{kienthuc}
+
+\begin{hoatdong}
+Xác định miền nghiệm của bất phương trình $x - 2y + 2 \leq 0$.
+\end{hoatdong}
+
+\begin{emcobiet}
+Trong thực tế, nhiều bài toán tối ưu hóa (tìm giá trị lớn nhất, nhỏ nhất) thường được mô hình hóa bằng các bất phương trình bậc nhất hai ẩn hoặc hệ bất phương trình bậc nhất hai ẩn. Việc biểu diễn miền nghiệm giúp chúng ta hình dung được tập hợp các giải pháp khả thi của bài toán.
+\end{emcobiet}
+
 \begin{emcothe}
-\begin{itemize}\item \end{itemize}
+\begin{itemize}
+    \item Giải các bài toán thực tế bằng cách lập và giải bất phương trình bậc nhất hai ẩn.
+    \item Mở rộng khái niệm sang hệ bất phương trình bậc nhất hai ẩn và xác định miền nghiệm của hệ.
+\end{itemize}
 \end{emcothe}

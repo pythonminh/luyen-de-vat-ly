@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 184,
-  "total_questions": 12580,
+  "total_files": 188,
+  "total_questions": 12812,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -170,6 +170,29 @@
       "count": 0,
       "dang": {},
       "dang_kinds": {}
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/có bản .tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/có bản .tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/có bản .tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương I. Mệnh đề và tập hợp",
+      "BaiHoc": "Bài 2. Tập hợp và các phép toán trên tập hợp",
+      "De": "Bài 2. Tập hợp và các phép toán trên tập hợp",
+      "questions": 21,
+      "count": 21,
+      "dang": {
+        "Chưa phân dạng": 21
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 12,
+          "DS": 2,
+          "TLN": 4,
+          "TL": 3
+        }
+      }
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 2. Tập hợp và các phép toán trên tập hợp/dang-bai-toan-tham-so-ve-tap-hop-va-khoang.tex",
@@ -425,6 +448,29 @@
       }
     },
     {
+      "id": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/cơ_bản.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/cơ_bản.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/cơ_bản.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
+      "BaiHoc": "Bài 3. Bất phương trình bậc nhất hai ẩn",
+      "De": "Bài 3. Bất phương trình bậc nhất hai ẩn",
+      "questions": 23,
+      "count": 23,
+      "dang": {
+        "Chưa phân dạng": 23
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 12,
+          "DS": 4,
+          "TLN": 4,
+          "TL": 3
+        }
+      }
+    },
+    {
       "id": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/de.tex",
       "file": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/de.tex",
       "path": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/de.tex",
@@ -433,45 +479,126 @@
       "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
       "BaiHoc": "Bài 3. Bất phương trình bậc nhất hai ẩn",
       "De": "Bài 3. Bất phương trình bậc nhất hai ẩn",
-      "questions": 17,
-      "count": 17,
+      "questions": 42,
+      "count": 42,
       "dang": {
-        "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": 4,
-        "Kiểm tra một cặp số là nghiệm của bất phương trình": 8,
-        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 1,
-        "Xác định đường biên và miền nghiệm": 3,
-        "Xác định bất phương trình từ miền nghiệm": 1
+        "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": 6,
+        "Kiểm tra một cặp số là nghiệm của bất phương trình": 11,
+        "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": 11,
+        "Xác định đường biên và miền nghiệm": 8,
+        "Xác định bất phương trình từ miền nghiệm": 6
       },
       "dang_kinds": {
         "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm": {
-          "TN": 1,
+          "TN": 3,
           "DS": 3,
           "TLN": 0,
           "TL": 0
         },
         "Kiểm tra một cặp số là nghiệm của bất phương trình": {
-          "TN": 6,
-          "DS": 1,
+          "TN": 8,
+          "DS": 2,
           "TLN": 1,
           "TL": 0
         },
         "Lập và giải bài toán thực tế bằng bất phương trình bậc nhất hai ẩn": {
-          "TN": 1,
+          "TN": 7,
           "DS": 0,
-          "TLN": 0,
-          "TL": 0
+          "TLN": 2,
+          "TL": 2
         },
         "Xác định đường biên và miền nghiệm": {
-          "TN": 0,
+          "TN": 4,
           "DS": 1,
           "TLN": 2,
-          "TL": 0
+          "TL": 1
         },
         "Xác định bất phương trình từ miền nghiệm": {
-          "TN": 1,
+          "TN": 5,
+          "DS": 0,
+          "TLN": 1,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/cơ bản.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/cơ bản.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/cơ bản.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
+      "BaiHoc": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
+      "De": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
+      "questions": 22,
+      "count": 22,
+      "dang": {
+        "Chưa phân dạng": 22
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 12,
+          "DS": 2,
+          "TLN": 4,
+          "TL": 4
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/de.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/de.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 4: Hệ bất phương trình bậc nhất hai ẩn/de.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn",
+      "BaiHoc": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
+      "De": "Bài 4: Hệ bất phương trình bậc nhất hai ẩn",
+      "questions": 237,
+      "count": 237,
+      "dang": {
+        "Kiểm tra cặp số là nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 59,
+        "Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế": 24,
+        "Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 34,
+        "Giải bài toán thực tế liên quan đến bất phương trình/hệ bất phương trình bậc nhất hai ẩn": 20,
+        "Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm": 35,
+        "Kiểm tra tính đúng sai của các khẳng định về bất phương trình/hệ bất phương trình bậc nhất hai ẩn và bài toán thực tế": 65
+      },
+      "dang_kinds": {
+        "Kiểm tra cặp số là nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
+          "TN": 50,
+          "DS": 4,
+          "TLN": 0,
+          "TL": 5
+        },
+        "Lập bất phương trình/hệ bất phương trình bậc nhất hai ẩn từ bài toán thực tế": {
+          "TN": 14,
+          "DS": 2,
+          "TLN": 3,
+          "TL": 5
+        },
+        "Xác định miền nghiệm của bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
+          "TN": 30,
+          "DS": 0,
+          "TLN": 2,
+          "TL": 2
+        },
+        "Giải bài toán thực tế liên quan đến bất phương trình/hệ bất phương trình bậc nhất hai ẩn": {
+          "TN": 20,
           "DS": 0,
           "TLN": 0,
           "TL": 0
+        },
+        "Bài toán tối ưu hóa (tìm GTLN/GTNN) trên miền nghiệm": {
+          "TN": 12,
+          "DS": 0,
+          "TLN": 22,
+          "TL": 1
+        },
+        "Kiểm tra tính đúng sai của các khẳng định về bất phương trình/hệ bất phương trình bậc nhất hai ẩn và bài toán thực tế": {
+          "TN": 0,
+          "DS": 3,
+          "TLN": 0,
+          "TL": 62
         }
       }
     },
@@ -1327,22 +1454,22 @@
       "Chuong": "Chương II. Động học",
       "BaiHoc": "L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được",
       "De": "L10C2 Bài 4. Độ dịch chuyển và quãng đường đi được",
-      "questions": 101,
-      "count": 101,
+      "questions": 106,
+      "count": 106,
       "dang": {
-        "Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng": 52,
+        "Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng": 53,
         "Khái niệm và đặc điểm của chất điểm": 10,
         "Nhận biết chuyển động cơ học và vật mốc": 5,
         "Tính tương đối của chuyển động và hệ quy chiếu": 16,
-        "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": 6,
+        "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": 9,
         "Thành phần và cấu trúc của hệ quy chiếu": 3,
-        "Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng": 9
+        "Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng": 10
       },
       "dang_kinds": {
         "Phân biệt quãng đường và độ dịch chuyển trong chuyển động thẳng": {
           "TN": 32,
           "DS": 15,
-          "TLN": 5,
+          "TLN": 6,
           "TL": 0
         },
         "Khái niệm và đặc điểm của chất điểm": {
@@ -1364,7 +1491,7 @@
           "TL": 0
         },
         "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": {
-          "TN": 3,
+          "TN": 6,
           "DS": 3,
           "TLN": 0,
           "TL": 0
@@ -1376,7 +1503,7 @@
           "TL": 0
         },
         "Tổng hợp độ dịch chuyển bằng vectơ trong mặt phẳng": {
-          "TN": 6,
+          "TN": 7,
           "DS": 3,
           "TLN": 0,
           "TL": 0
@@ -1392,19 +1519,20 @@
       "Chuong": "Chương II. Động học",
       "BaiHoc": "L10C2 Bài 5. Tốc độ và vận tốc",
       "De": "L10C2 Bài 5. Tốc độ và vận tốc",
-      "questions": 196,
-      "count": 196,
+      "questions": 202,
+      "count": 202,
       "dang": {
-        "Cộng vận tốc cho các chuyển động cùng phương": 37,
+        "Cộng vận tốc cho các chuyển động cùng phương": 39,
         "Tính vận tốc trung bình, độ dịch chuyển và tổng hợp độ dịch chuyển": 131,
         "Phân biệt tốc độ trung bình và vận tốc trung bình trong chuyển động đổi chiều": 12,
-        "Tính vận tốc tương đối giữa hai vật": 16
+        "Tính vận tốc tương đối giữa hai vật": 19,
+        "Nhận biết chuyển động cơ học và vật mốc": 1
       },
       "dang_kinds": {
         "Cộng vận tốc cho các chuyển động cùng phương": {
-          "TN": 13,
+          "TN": 14,
           "DS": 17,
-          "TLN": 2,
+          "TLN": 3,
           "TL": 5
         },
         "Tính vận tốc trung bình, độ dịch chuyển và tổng hợp độ dịch chuyển": {
@@ -1420,9 +1548,15 @@
           "TL": 2
         },
         "Tính vận tốc tương đối giữa hai vật": {
-          "TN": 8,
+          "TN": 9,
           "DS": 6,
-          "TLN": 2,
+          "TLN": 4,
+          "TL": 0
+        },
+        "Nhận biết chuyển động cơ học và vật mốc": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
           "TL": 0
         }
       }
@@ -2548,23 +2682,58 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 1. Dao động điều hòa",
       "De": "L11C1 Bài 1. Dao động điều hòa",
-      "questions": 28,
-      "count": 28,
+      "questions": 45,
+      "count": 45,
       "dang": {
-        "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": 9,
-        "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 19
+        "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": 11,
+        "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": 20,
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 4,
+        "Chưa có dạng": 4,
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 3,
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": 1,
+        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": 2
       },
       "dang_kinds": {
         "Mối liên hệ giữa dao động điều hòa và chuyển động tròn đều. Bài toán đếm số dao động": {
-          "TN": 6,
+          "TN": 8,
           "DS": 2,
           "TLN": 1,
           "TL": 0
         },
         "Xác định chu kì, tần số và biên độ từ các dữ kiện quỹ đạo và thời gian": {
-          "TN": 9,
+          "TN": 10,
           "DS": 4,
           "TLN": 6,
+          "TL": 0
+        },
+        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
+          "TN": 4,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Chưa có dạng": {
+          "TN": 4,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 2
+        },
+        "Xác định li độ và pha của dao động tại một thời điểm xác định": {
+          "TN": 1,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Xác định các đại lượng dựa vào đồ thị dao động ($x-t$, $v-t$, $a-t$).": {
+          "TN": 2,
+          "DS": 0,
+          "TLN": 0,
           "TL": 0
         }
       }
@@ -2696,10 +2865,10 @@
       "questions": 10,
       "count": 10,
       "dang": {
-        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": 10
+        "Khai thác các thông số từ đồ thị": 10
       },
       "dang_kinds": {
-        "Khai thác các đại lượng đặc trưng từ đồ thị vận tốc – thời gian hoặc gia tốc – thời gian": {
+        "Khai thác các thông số từ đồ thị": {
           "TN": 3,
           "DS": 4,
           "TLN": 3,
@@ -2719,10 +2888,10 @@
       "questions": 6,
       "count": 6,
       "dang": {
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 6
+        "Khai thác các thông số từ đồ thị": 6
       },
       "dang_kinds": {
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": {
+        "Khai thác các thông số từ đồ thị": {
           "TN": 1,
           "DS": 2,
           "TLN": 3,
@@ -2742,10 +2911,10 @@
       "questions": 14,
       "count": 14,
       "dang": {
-        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": 14
+        "Xác định và tính toán các đại lượng tức thời": 14
       },
       "dang_kinds": {
-        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": {
+        "Xác định và tính toán các đại lượng tức thời": {
           "TN": 6,
           "DS": 5,
           "TLN": 3,
@@ -2765,10 +2934,10 @@
       "questions": 25,
       "count": 25,
       "dang": {
-        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 25
+        "Xác định và tính toán các đại lượng tức thời": 25
       },
       "dang_kinds": {
-        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
+        "Xác định và tính toán các đại lượng tức thời": {
           "TN": 6,
           "DS": 13,
           "TLN": 6,
@@ -2785,129 +2954,45 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
       "De": "L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa",
-      "questions": 129,
-      "count": 129,
+      "questions": 175,
+      "count": 175,
       "dang": {
-        "Liên hệ li độ - gia tốc": 17,
-        "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": 26,
-        "Liên hệ li độ - vận tốc": 26,
-        "Liên hệ vận tốc cực đại và gia tốc cực đại": 1,
-        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": 7,
-        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": 19,
-        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": 15,
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": 1,
-        "Xác định quãng đường đi được trong khoảng thời gian xác định": 2,
-        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": 3,
-        "Xác định li độ và pha của dao động tại một thời điểm xác định": 1,
-        "Xác định tốc độ trung bình": 2,
-        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": 3,
-        "Đồ thị li độ - vận tốc": 1,
-        "Đồ thị vận tốc - gia tốc": 1,
-        "Xác định các đại lượng đặc trưng của dao động điều hòa từ vận tốc cực đại và gia tốc cực đại": 1,
-        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": 3
+        "Liên hệ li độ, vận tốc, gia tốc": 73,
+        "Xác định và tính toán các đại lượng tức thời": 64,
+        "Khai thác các thông số từ đồ thị": 6,
+        "Tính quãng đường và tốc độ trung bình": 10,
+        "Khai thác phương trình dao động điều hòa": 22
       },
       "dang_kinds": {
-        "Liên hệ li độ - gia tốc": {
-          "TN": 12,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 0
+        "Liên hệ li độ, vận tốc, gia tốc": {
+          "TN": 42,
+          "DS": 18,
+          "TLN": 9,
+          "TL": 4
         },
-        "Áp dụng hệ thức độc lập thời gian giữa li độ, vận tốc và gia tốc": {
-          "TN": 16,
-          "DS": 7,
-          "TLN": 3,
-          "TL": 0
-        },
-        "Liên hệ li độ - vận tốc": {
-          "TN": 14,
-          "DS": 9,
-          "TLN": 3,
-          "TL": 0
-        },
-        "Liên hệ vận tốc cực đại và gia tốc cực đại": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định chiều và tính chất chuyển động của vật dao động điều hòa": {
-          "TN": 7,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định các đại lượng đặc trưng của dao động điều hòa từ phương trình li độ": {
-          "TN": 11,
+        "Xác định và tính toán các đại lượng tức thời": {
+          "TN": 48,
           "DS": 8,
           "TLN": 0,
-          "TL": 0
+          "TL": 8
         },
-        "Xác định giá trị cực đại và giá trị tại các vị trí đặc biệt của vận tốc và gia tốc": {
-          "TN": 15,
+        "Khai thác các thông số từ đồ thị": {
+          "TN": 6,
           "DS": 0,
           "TLN": 0,
           "TL": 0
         },
-        "Khai thác các thông số đặc trưng từ đồ thị li độ – thời gian": {
-          "TN": 1,
+        "Tính quãng đường và tốc độ trung bình": {
+          "TN": 6,
           "DS": 0,
           "TLN": 0,
-          "TL": 0
+          "TL": 4
         },
-        "Xác định quãng đường đi được trong khoảng thời gian xác định": {
-          "TN": 2,
+        "Khai thác phương trình dao động điều hòa": {
+          "TN": 18,
           "DS": 0,
           "TLN": 0,
-          "TL": 0
-        },
-        "Xác định và tính toán các đại lượng vận tốc, gia tốc tại thời điểm xác định": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định li độ và pha của dao động tại một thời điểm xác định": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định tốc độ trung bình": {
-          "TN": 2,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định độ lệch pha giữa hai dao động điều hòa cùng chu kì": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đồ thị li độ - vận tốc": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đồ thị vận tốc - gia tốc": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định các đại lượng đặc trưng của dao động điều hòa từ vận tốc cực đại và gia tốc cực đại": {
-          "TN": 1,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Xác định các đại lượng đặc trưng của dao động dựa vào số dao động toàn phần và thời gian": {
-          "TN": 3,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
+          "TL": 4
         }
       }
     },
@@ -2920,17 +3005,17 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
       "De": "L11C1 Bài 4. Bài tập về dao động điều hòa · Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian",
-      "questions": 16,
-      "count": 16,
+      "questions": 21,
+      "count": 21,
       "dang": {
-        "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": 16
+        "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": 21
       },
       "dang_kinds": {
         "Viết phương trình dao động điều hòa từ đồ thị li độ – thời gian": {
-          "TN": 7,
+          "TN": 10,
           "DS": 4,
           "TLN": 3,
-          "TL": 2
+          "TL": 4
         }
       }
     },
@@ -2989,11 +3074,11 @@
       "Chuong": "Chương I. Dao động",
       "BaiHoc": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa",
       "De": "L11C1 Bài 5. Động năng. Thế năng. Sự chuyển hóa giữa động năng và thế năng trong dao động điều hòa",
-      "questions": 336,
-      "count": 336,
+      "questions": 259,
+      "count": 259,
       "dang": {
         "Chu kì biến thiên của động năng, thế năng": 16,
-        "Tính động năng, thế năng và cơ năng của dao động điều hòa": 137,
+        "Tính động năng, thế năng và cơ năng của dao động điều hòa": 60,
         "Lý thuyết và sự chuyển hóa năng lượng trong dao động điều hòa": 32,
         "Năng lượng của con lắc đơn": 39,
         "Xác định các thông số dao động từ năng lượng": 46,
@@ -3009,10 +3094,10 @@
           "TL": 3
         },
         "Tính động năng, thế năng và cơ năng của dao động điều hòa": {
-          "TN": 49,
-          "DS": 44,
-          "TLN": 32,
-          "TL": 12
+          "TN": 25,
+          "DS": 20,
+          "TLN": 12,
+          "TL": 3
         },
         "Lý thuyết và sự chuyển hóa năng lượng trong dao động điều hòa": {
           "TN": 11,
@@ -3904,10 +3989,10 @@
       "questions": 21,
       "count": 21,
       "dang": {
-        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 21
+        "Hiện tượng và ứng dụng của sự hóa hơi": 21
       },
       "dang_kinds": {
-        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": {
+        "Hiện tượng và ứng dụng của sự hóa hơi": {
           "TN": 10,
           "DS": 5,
           "TLN": 0,
@@ -3924,20 +4009,20 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Mô hình động học phân tử về cấu tạo chất",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Mô hình động học phân tử về cấu tạo chất",
-      "questions": 15,
-      "count": 15,
+      "questions": 23,
+      "count": 23,
       "dang": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 7,
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 8
+        "Mô hình động học phân tử và chuyển động Brown": 15,
+        "Đặc điểm và phân loại chất rắn": 8
       },
       "dang_kinds": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
+        "Mô hình động học phân tử và chuyển động Brown": {
           "TN": 6,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 1
+          "DS": 2,
+          "TLN": 3,
+          "TL": 4
         },
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": {
+        "Đặc điểm và phân loại chất rắn": {
           "TN": 3,
           "DS": 4,
           "TLN": 0,
@@ -3957,28 +4042,14 @@
       "questions": 91,
       "count": 91,
       "dang": {
-        "Đặc điểm và phân loại chất rắn": 63,
-        "Ứng dụng tính chất chất rắn": 10,
-        "Phân loại chất rắn": 18
+        "Đặc điểm và phân loại chất rắn": 91
       },
       "dang_kinds": {
         "Đặc điểm và phân loại chất rắn": {
-          "TN": 30,
-          "DS": 8,
-          "TLN": 10,
-          "TL": 15
-        },
-        "Ứng dụng tính chất chất rắn": {
-          "TN": 2,
-          "DS": 1,
-          "TLN": 3,
-          "TL": 4
-        },
-        "Phân loại chất rắn": {
-          "TN": 9,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 4
+          "TN": 41,
+          "DS": 11,
+          "TLN": 16,
+          "TL": 23
         }
       }
     },
@@ -3991,14 +4062,14 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể · Quá trình chuyển pha",
-      "questions": 19,
-      "count": 19,
+      "questions": 18,
+      "count": 18,
       "dang": {
-        "Quá trình chuyển pha": 19
+        "Quá trình chuyển pha": 18
       },
       "dang_kinds": {
         "Quá trình chuyển pha": {
-          "TN": 9,
+          "TN": 8,
           "DS": 3,
           "TLN": 3,
           "TL": 4
@@ -4014,27 +4085,27 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 41,
-      "count": 41,
+      "questions": 40,
+      "count": 40,
       "dang": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 13,
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": 26,
-        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": 2
+        "Mô hình động học phân tử và chuyển động Brown": 13,
+        "Đặc điểm và phân loại chất rắn": 25,
+        "Hiện tượng và ứng dụng của sự hóa hơi": 2
       },
       "dang_kinds": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
+        "Mô hình động học phân tử và chuyển động Brown": {
           "TN": 13,
           "DS": 0,
           "TLN": 0,
           "TL": 0
         },
-        "Phân biệt đặc điểm cấu trúc phân tử của chất ở thể rắn, lỏng, khí": {
-          "TN": 23,
+        "Đặc điểm và phân loại chất rắn": {
+          "TN": 22,
           "DS": 3,
           "TLN": 0,
           "TL": 0
         },
-        "Giải thích hiện tượng và ứng dụng liên quan đến sự hóa hơi": {
+        "Hiện tượng và ứng dụng của sự hóa hơi": {
           "TN": 2,
           "DS": 0,
           "TLN": 0,
@@ -4051,19 +4122,10 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
       "De": "L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể",
-      "questions": 8,
-      "count": 8,
-      "dang": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": 8
-      },
-      "dang_kinds": {
-        "Mô hình động học phân tử về cấu tạo chất và chuyển động Brown": {
-          "TN": 3,
-          "DS": 4,
-          "TLN": 0,
-          "TL": 1
-        }
-      }
+      "questions": 0,
+      "count": 0,
+      "dang": {},
+      "dang_kinds": {}
     },
     {
       "id": "ngan-hang/Vật lý/Lớp 12/Chương I. Vật lí nhiệt/L12C1 Bài 1. Cấu trúc của chất. Sự chuyển thể/Ôn tập 2.tex",
@@ -4143,17 +4205,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Các cách làm biến đổi nội năng của một vật",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Các cách làm biến đổi nội năng của một vật",
-      "questions": 15,
-      "count": 15,
+      "questions": 1,
+      "count": 1,
       "dang": {
-        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 15
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 1
       },
       "dang_kinds": {
         "Lý thuyết về nội năng, các cách biến đổi và định luật I": {
-          "TN": 11,
-          "DS": 1,
-          "TLN": 1,
-          "TL": 2
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
         }
       }
     },
@@ -4166,17 +4228,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Khái niệm nội năng và các yếu tố ảnh hưởng đến nội năng",
-      "questions": 17,
-      "count": 17,
+      "questions": 1,
+      "count": 1,
       "dang": {
-        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 17
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 1
       },
       "dang_kinds": {
         "Lý thuyết về nội năng, các cách biến đổi và định luật I": {
-          "TN": 12,
-          "DS": 2,
-          "TLN": 1,
-          "TL": 2
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
         }
       }
     },
@@ -4189,17 +4251,17 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Lý thuyết về nội năng và các cách biến đổi nội năng",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học · Lý thuyết về nội năng và các cách biến đổi nội năng",
-      "questions": 14,
-      "count": 14,
+      "questions": 4,
+      "count": 4,
       "dang": {
-        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 14
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 4
       },
       "dang_kinds": {
         "Lý thuyết về nội năng, các cách biến đổi và định luật I": {
-          "TN": 7,
-          "DS": 2,
-          "TLN": 3,
-          "TL": 2
+          "TN": 1,
+          "DS": 0,
+          "TLN": 2,
+          "TL": 1
         }
       }
     },
@@ -4258,19 +4320,19 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
       "De": "L12C1 Bài 2. Nội năng. Định luật I của nhiệt động lực học",
-      "questions": 146,
-      "count": 146,
+      "questions": 107,
+      "count": 107,
       "dang": {
-        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 61,
+        "Lý thuyết về nội năng, các cách biến đổi và định luật I": 22,
         "Tính độ biến thiên nội năng và nhiệt lượng": 64,
         "Tính toán hiệu suất và công suất động cơ nhiệt": 21
       },
       "dang_kinds": {
         "Lý thuyết về nội năng, các cách biến đổi và định luật I": {
-          "TN": 36,
-          "DS": 15,
-          "TLN": 7,
-          "TL": 3
+          "TN": 9,
+          "DS": 5,
+          "TLN": 6,
+          "TL": 2
         },
         "Tính độ biến thiên nội năng và nhiệt lượng": {
           "TN": 16,
@@ -4570,10 +4632,10 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "L12C1 Bài 4. Nhiệt dung riêng",
       "De": "L12C1 Bài 4. Nhiệt dung riêng",
-      "questions": 150,
-      "count": 150,
+      "questions": 133,
+      "count": 133,
       "dang": {
-        "Bài toán cân bằng nhiệt": 48,
+        "Bài toán cân bằng nhiệt": 31,
         "Bài toán cân bằng nhiệt (phương pháp hỗn hợp)": 14,
         "So sánh nhiệt dung riêng dựa trên đồ thị và số liệu": 29,
         "Xác định nhiệt dung riêng của một chất": 27,
@@ -4584,10 +4646,10 @@
       },
       "dang_kinds": {
         "Bài toán cân bằng nhiệt": {
-          "TN": 31,
-          "DS": 5,
-          "TLN": 10,
-          "TL": 2
+          "TN": 21,
+          "DS": 1,
+          "TLN": 8,
+          "TL": 1
         },
         "Bài toán cân bằng nhiệt (phương pháp hỗn hợp)": {
           "TN": 3,
@@ -4726,15 +4788,14 @@
       "questions": 34,
       "count": 34,
       "dang": {
-        "Bài toán công suất, hiệu suất và thời gian đun": 20,
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 22,
         "Nhận biết khái niệm, đơn vị và ý nghĩa vật lí của nhiệt dung riêng": 4,
         "Giải thích hiện tượng thực tế liên quan đến chuyển thể": 5,
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": 2,
         "Nhận biết và phân tích các quá trình chuyển thể": 3
       },
       "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian đun": {
-          "TN": 12,
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
+          "TN": 14,
           "DS": 5,
           "TLN": 1,
           "TL": 2
@@ -4747,12 +4808,6 @@
         },
         "Giải thích hiện tượng thực tế liên quan đến chuyển thể": {
           "TN": 5,
-          "DS": 0,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": {
-          "TN": 2,
           "DS": 0,
           "TLN": 0,
           "TL": 0
@@ -4777,10 +4832,10 @@
       "questions": 18,
       "count": 18,
       "dang": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": 18
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 18
       },
       "dang_kinds": {
-        "Bài toán công suất, hiệu suất và thời gian nóng chảy": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
           "TN": 10,
           "DS": 5,
           "TLN": 1,
@@ -4823,10 +4878,10 @@
       "questions": 1,
       "count": 1,
       "dang": {
-        "Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi": 1
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 1
       },
       "dang_kinds": {
-        "Bài toán nhiệt hóa hơi nước ở nhiệt độ sôi": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
           "TN": 1,
           "DS": 0,
           "TLN": 0,
@@ -4846,10 +4901,10 @@
       "questions": 5,
       "count": 5,
       "dang": {
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": 5
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 5
       },
       "dang_kinds": {
-        "Bài toán nhiệt học tổng hợp yêu cầu tính năng lượng cho toàn bộ quá trình đun nóng khối chất lỏng đến nhiệt độ sôi rồi h": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
           "TN": 5,
           "DS": 0,
           "TLN": 0,
@@ -4892,10 +4947,10 @@
       "questions": 7,
       "count": 7,
       "dang": {
-        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": 7
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": 7
       },
       "dang_kinds": {
-        "Bài toán xác định nhiệt nóng chảy riêng bằng thực nghiệm (thiết kế thí nghiệm với nước đá, đo đạc khối lượng, thời gian,": {
+        "Bài toán thực nghiệm xác định nhiệt hóa hơi riêng của nước thông qua các phép đo thời gian, công suất ấm đun và độ hụt k": {
           "TN": 6,
           "DS": 0,
           "TLN": 1,
@@ -4938,10 +4993,10 @@
       "questions": 31,
       "count": 31,
       "dang": {
-        "Đọc và phân tích đồ thị quá trình chuyển thể": 31
+        "Nhận biết và phân tích các quá trình chuyển thể": 31
       },
       "dang_kinds": {
-        "Đọc và phân tích đồ thị quá trình chuyển thể": {
+        "Nhận biết và phân tích các quá trình chuyển thể": {
           "TN": 15,
           "DS": 11,
           "TLN": 3,
@@ -5030,10 +5085,10 @@
       "questions": 1,
       "count": 1,
       "dang": {
-        "Tính nhiệt hóa hơi": 1
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": 1
       },
       "dang_kinds": {
-        "Tính nhiệt hóa hơi": {
+        "Bài toán đun nóng chất lỏng đến nhiệt độ sôi rồi hóa hơi": {
           "TN": 1,
           "DS": 0,
           "TLN": 0,
