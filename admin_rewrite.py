@@ -1761,7 +1761,13 @@ _NOTEBOOK_GEMINI = """Xuất ra ẢNH một trang A4. Không viết lại prompt
 Bạn là chuyên gia thiết kế tài liệu học tập trực quan cho học sinh THPT.
 
 NHIỆM VỤ:
-Từ nội dung LaTeX tôi cung cấp, hãy chuyển nó thành MỘT TRANG VỞ HỌC TẬP HOÀN CHỈNH, trực quan, đẹp, khoa học và dễ học.
+Từ nội dung LaTeX tôi cung cấp, hãy chuyển nó thành MỘT TRANG VỞ HỌC TẬP HOÀN CHỈNH, trực quan, đẹp, khoa học và dễ học — trình độ infographic giáo khoa, không phải ảnh chụp vở viết tay cẩu thả.
+
+BẮT BUỘC có thanh thương hiệu ở MÉP TRÊN CÙNG (trên cả tiêu đề bài), không được quên, không được viết sai số:
+
+Lớp Học Thầy Minh    ·    Zalo 0946111107
+
+Thanh này: nền xanh đậm hoặc navy, chữ trắng rõ, có thể thêm icon điện thoại/Zalo. Chiếm trọn chiều ngang trang.
 
 KHÔNG tạo prompt.
 KHÔNG giải thích cách làm.
@@ -1783,27 +1789,40 @@ Trước tiên hãy tự xác định:
 Không được thay đổi dữ kiện toán học, vật lý, hóa học hoặc kết quả của bài.
 
 =============================
-II. PHONG CÁCH TRANG VỞ
+II. PHONG CÁCH TRANG VỞ — BẮT BUỘC GIỐNG MẪU KHỐI
 =============================
 
-Thiết kế thành MỘT TRANG DỌC TỈ LỆ A4.
+Thiết kế thành MỘT TRANG DỌC TỈ LỆ A4 (khoảng 1240×1754 px hoặc 1480×2100 px), độ nét cao, như tài liệu in màu của trung tâm luyện thi.
 
-Phong cách:
+Mẫu bố cục chuyên nghiệp (bắt buộc dùng KHỐI / CARD, không để chữ trôi tự do trên giấy):
 
-- giống một trang vở học tập cao cấp;
-- nền giấy kẻ ô hoặc dòng rất nhẹ;
-- có thể có mép lò xo bên trái;
-- tiêu đề nổi bật;
-- các khung nội dung bo góc;
-- màu pastel nhẹ;
-- chữ tiếng Việt rõ ràng;
-- công thức toán học sắc nét;
-- bố cục thoáng, dễ đọc;
-- ưu tiên tính chính xác hơn trang trí.
+- Nền giấy vở kẻ ô rất nhạt + gáy lò xo bên trái.
+- Mỗi phần là một KHUNG BO GÓC lớn, viền 2–3 px, nền pastel riêng, bóng nhẹ.
+- Tiêu đề mỗi khung: viên thuốc (pill) góc trên-trái, chữ trắng đậm, có icon.
+  • Bài toán → pill xanh lá.
+  • Hướng dẫn giải → pill tím.
+  • Minh họa → pill xanh dương.
+  • Đồ thị / chuỗi thời gian → pill vàng/cam.
+  • Nhận xét – Ghi nhớ → pill hồng, khung full-width đáy trang.
+- Chữ trong khung: font sans-serif giáo khoa (kiểu Nunito / Quicksand / Be Vietnam), không scribble, không chữ máy tính pixel.
+- Công thức: rendered đẹp như sách giáo khoa (x = 1,25 cos(2πt − π/12)), căn giữa khi là công thức chính.
+- Phương án A B C D nằm một hàng hoặc lưới gọn; đáp án đúng là viên thuốc xanh lá đậm, chữ trắng; phương án sai nền trắng viền xám.
+- Hai cột khi có hình: trái = đề + lời giải; phải = hình minh họa xếp chồng.
+- Lề đều, khoảng cách giữa các khối 10–14 px, không chồng chữ, không cắt công thức.
+- Màu pastel đồng bộ (xanh mint, xanh baby, vàng kem, hồng nhạt) — sạch, trung tâm gia sư, không neon, không poster quảng cáo lòe.
 
-Không làm giống poster quảng cáo.
+Không làm ảnh chụp vở bút bi lem, không giấy nhàu, không sticker lung tung.
 
-Không nhồi quá nhiều chi tiết trang trí.
+=============================
+II.b THƯƠNG HIỆU (KHÔNG ĐƯỢC THIẾU)
+=============================
+
+Dòng đầu tiên của trang, trên tiêu đề dạng bài:
+
+Lớp Học Thầy Minh
+Zalo: 0946111107
+
+Viết đúng chính tả và đúng số 0946111107. Có thể thêm dòng phụ nhỏ: lophocthayminh.onrender.com
 
 =============================
 III. BỐ CỤC TỰ ĐỘNG
@@ -1981,23 +2000,21 @@ Nội dung khoa học phải chính xác trước khi đẹp.
 XI. KẾT QUẢ CUỐI
 =============================
 
-Tạo một trang học tập hoàn chỉnh:
+Tạo một trang học tập hoàn chỉnh, các khối bo góc như infographic giáo khoa:
 
-[DẠNG BÀI]
+[THANH THƯƠNG HIỆU: Lớp Học Thầy Minh · Zalo 0946111107]
 ↓
-[BÀI TOÁN]
+[DẠNG BÀI — pill + tiêu đề chủ đề]
 ↓
-[KIẾN THỨC / HÌNH MINH HỌA]
+Hàng giữa 2 cột:
+  trái: [BÀI TOÁN] rồi [HƯỚNG DẪN GIẢI]
+  phải: [HÌNH MINH HỌA] / [CHUỖI THỜI GIAN nếu có quá trình động]
 ↓
-[PHÂN TÍCH]
+[ĐÁP ÁN nổi bật]
 ↓
-[HƯỚNG DẪN GIẢI]
-↓
-[ĐÁP ÁN / KẾT QUẢ]
-↓
-[GHI NHỚ]
+[NHẬN XÉT – GHI NHỚ — khung full đáy trang]
 
-Tự điều chỉnh bố cục để toàn bộ nội dung nằm gọn trong một trang A4.
+Tự điều chỉnh để toàn bộ nằm gọn một trang A4, nét, đều, chuyên nghiệp.
 
 NỘI DUNG LATEX:
 --------------------------------
