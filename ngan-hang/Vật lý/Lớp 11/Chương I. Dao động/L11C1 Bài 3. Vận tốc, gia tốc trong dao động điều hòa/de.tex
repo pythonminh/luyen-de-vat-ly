@@ -2833,118 +2833,40 @@ plot (\x,{0.3*cos(\x*360/0.4)});
 \end{ex}
 
 \dangbt{Tính quãng đường và tốc độ trung bình}
-\begin{ex}
-% ID: L11C1B3-197-TL
-% Mức: TH
-Một vật dao động điều hòa với biên độ $A=6\ \mathrm{cm}$ và chu kì $T=0{,}5\ \mathrm{s}$. Tại thời điểm $t=0$, vật có li độ $x=3\ \mathrm{cm}$ và đang chuyển động theo chiều âm.
-
-\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
-    \item Xác định tần số góc của dao động.
-
-    \item Viết phương trình dao động của vật.
-
-    \item Viết phương trình vận tốc và tính vận tốc cực đại.
-
-    \item Xác định thời điểm đầu tiên vật đi qua vị trí cân bằng.
-
-    \item Tính quãng đường vật đi được từ $t=0$ đến
-    $t=0{,}75\ \mathrm{s}$.
-
-    \item Tính tốc độ trung bình của vật trong khoảng thời gian trên.
-\end{enumerate}
-
+\begin{ex}Một vật dao động điều hòa với biên độ $A=6\ \mathrm{cm}$ và chu kì $T=0{,}5\ \mathrm{s}$. Tại thời điểm $t=0$, vật có li độ $x=3\ \mathrm{cm}$ và đang chuyển động theo chiều âm.
+a) Xác định tần số góc của dao động.
+b) Viết phương trình dao động của vật.
+c) Viết phương trình vận tốc và tính vận tốc cực đại.
+d) Xác định thời điểm đầu tiên vật đi qua vị trí cân bằng.
+e) Tính quãng đường vật đi được từ $t=0$ đến $t=0{,}75\ \mathrm{s}$.
+f) Tính tốc độ trung bình của vật trong khoảng thời gian trên.
 \loigiai{
-\begin{enumerate}[label=\alph*), leftmargin=*, itemsep=4pt]
-    \item Tần số góc:
-    \[
-    \omega=\dfrac{2\pi}{T}
-    =4\pi\ \mathrm{rad/s}.
-    \]
-
-    \item Phương trình dao động:
-    \[
-    x=6\cos(4\pi t+\varphi)\ \mathrm{cm}.
-    \]
-
-    Tại $t=0$:
-    \[
-    3=6\cos\varphi
-    \]
-    nên:
-    \[
-    \cos\varphi=\dfrac12.
-    \]
-
-    Vì vật chuyển động theo chiều âm:
-    \[
-    v_0=-\omega A\sin\varphi<0.
-    \]
-
-    Suy ra:
-    \[
-    \sin\varphi>0
-    \]
-    và:
-    \[
-    \varphi=\dfrac{\pi}{3}.
-    \]
-
-    Vậy:
-    \[
-    x=6\cos\left(4\pi t+\dfrac{\pi}{3}\right)\ \mathrm{cm}.
-    \]
-
-    \item Phương trình vận tốc:
-    \[
-    v=-24\pi\sin\left(4\pi t+\dfrac{\pi}{3}\right)
-    \ \mathrm{cm/s}.
-    \]
-
-    Vận tốc cực đại:
-    \[
-    v_{\max}=\omega A=24\pi\ \mathrm{cm/s}.
-    \]
-
-    \item Vật đi qua vị trí cân bằng khi:
-    \[
-    x=0.
-    \]
-
-    Do đó:
-    \[
-    4\pi t+\dfrac{\pi}{3}
-    =\dfrac{\pi}{2}+k\pi.
-    \]
-
-    Thời điểm đầu tiên ứng với $k=0$:
-    \[
-    4\pi t=\dfrac{\pi}{6}.
-    \]
-
-    Suy ra:
-    \[
-    t=\dfrac1{24}\ \mathrm{s}.
-    \]
-
-    \item Ta có:
-    \[
-    0{,}75\ \mathrm{s}
-    =\dfrac{3T}{2}.
-    \]
-
-    Trong thời gian $\dfrac{3T}{2}$, vật đi được:
-    \[
-    S=6A=36\ \mathrm{cm}.
-    \]
-
-    \item Tốc độ trung bình:
-    \[
-    v_{\mathrm{tb}}
-    =\dfrac{S}{\Delta t}
-    =\dfrac{36}{0{,}75}
-    =48\ \mathrm{cm/s}.
-    \]
-\end{enumerate}
+a) Tần số góc của dao động là: $\omega=\dfrac{2\pi}{T}=4\pi\ \mathrm{rad/s}$.
+b) Phương trình dao động có dạng $x=A\cos(\omega t+\varphi)$.
+Thay $A=6\ \mathrm{cm}$ và $\omega=4\pi\ \mathrm{rad/s}$, ta có: $x=6\cos(4\pi t+\varphi)\ \mathrm{cm}$.
+Tại $t=0$, vật có li độ $x=3\ \mathrm{cm}$, nên: $3=6\cos\varphi \Rightarrow \cos\varphi=\dfrac12$.
+Vật đang chuyển động theo chiều âm, nên vận tốc $v<0$. Ta có $v=-\omega A\sin\varphi$.
+Vì $v<0$ và $-\omega A<0$, suy ra $\sin\varphi>0$.
+Từ $\cos\varphi=\dfrac12$ và $\sin\varphi>0$, ta chọn $\varphi=\dfrac{\pi}{3}$.
+Vậy phương trình dao động của vật là: $x=6\cos\left(4\pi t+\dfrac{\pi}{3}\right)\ \mathrm{cm}$.
+c) Phương trình vận tốc của vật là đạo hàm của phương trình li độ theo thời gian:
+$v=\dfrac{dx}{dt}=-6\cdot 4\pi\sin\left(4\pi t+\dfrac{\pi}{3}\right)=-24\pi\sin\left(4\pi t+\dfrac{\pi}{3}\right)\ \mathrm{cm/s}$.
+Vận tốc cực đại của vật là: $v_{\max}=\omega A=4\pi \cdot 6=24\pi\ \mathrm{cm/s}$.
+d) Vật đi qua vị trí cân bằng khi $x=0$.
+$6\cos\left(4\pi t+\dfrac{\pi}{3}\right)=0 \Rightarrow \cos\left(4\pi t+\dfrac{\pi}{3}\right)=0$.
+Suy ra $4\pi t+\dfrac{\pi}{3}=\dfrac{\pi}{2}+k\pi$, với $k$ là số nguyên.
+Để tìm thời điểm đầu tiên vật đi qua vị trí cân bằng, ta chọn $k=0$.
+$4\pi t+\dfrac{\pi}{3}=\dfrac{\pi}{2} \Rightarrow 4\pi t=\dfrac{\pi}{2}-\dfrac{\pi}{3}=\dfrac{\pi}{6}$.
+$t=\dfrac{\pi}{6 \cdot 4\pi}=\dfrac{1}{24}\ \mathrm{s}$.
+e) Quãng đường vật đi được từ $t=0$ đến $t=0{,}75\ \mathrm{s}$.
+Ta có $T=0{,}5\ \mathrm{s}$.
+Thời gian $\Delta t=0{,}75\ \mathrm{s}=\dfrac{3}{2}T$.
+Trong một chu kì ($T)$, quãng đường vật đi được là $4A$.
+Trong nửa chu kì ($T/2)$, quãng đường vật đi được là $2A$.
+Vậy trong thời gian $\dfrac{3T}{2}$, quãng đường vật đi được là $S=4A+2A=6A$.
+$S=6 \cdot 6=36\ \mathrm{cm}$.
+f) Tốc độ trung bình của vật trong khoảng thời gian trên là:
+$v_{\mathrm{tb}}=\dfrac{S}{\Delta t}=\dfrac{36}{0{,}75}=48\ \mathrm{cm/s}$.
 }
 \end{ex}
 ```latex
