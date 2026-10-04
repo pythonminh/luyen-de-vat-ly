@@ -1756,8 +1756,143 @@ def api_suggest_tikz():
     return jsonify(ok=True, code=code, hid=hid, html=html, url="/tikz/" + hid + ".png")
 
 
+_HAND_SYM = (
+    (r"\\dfrac", r"\\frac"),
+    (r"\\tfrac", r"\\frac"),
+    (r"\\times", "×"),
+    (r"\\cdot", "·"),
+    (r"\\pm", "±"),
+    (r"\\pi", "π"),
+    (r"\\omega", "ω"),
+    (r"\\Delta", "Δ"),
+    (r"\\delta", "δ"),
+    (r"\\theta", "θ"),
+    (r"\\phi", "φ"),
+    (r"\\alpha", "α"),
+    (r"\\beta", "β"),
+    (r"\\vec", ""),
+    (r"\\overrightarrow", ""),
+    (r"\\cos", "cos"),
+    (r"\\sin", "sin"),
+    (r"\\tan", "tan"),
+    (r"\\left", ""),
+    (r"\\right", ""),
+    (r"\\,", " "),
+    (r"\\;", " "),
+    (r"\\quad", " "),
+)
+
+
+def _hand_math(s):
+    """LaTeX → chữ học sinh viết tay, không còn lệnh \\frac để Gemini vẽ được."""
+    t = _clean_tex(s)
+    t = re.sub(r"\\begin\s*\{\s*tikzpicture\b.*?\\end\s*\{\s*tikzpicture\s*\}", " ", t, flags=re.I | re.S)
+    t = re.sub(r"\\includegraphics(?:\s*\[[^\]]*\])?\s*\{[^}]+\}", " ", t, flags=re.I)
+    t = re.sub(r"\\begin\s*\{\s*center\s*\}|\\end\s*\{\s*center\s*\}", " ", t, flags=re.I)
+    for a, b in _HAND_SYM:
+        t = re.sub(a + r"\b", b, t)
+    for _ in range(4):
+        t2 = re.sub(r"\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}", r"(\1)/(\2)", t)
+        if t2 == t:
+            break
+        t = t2
+    t = re.sub(r"\\(?:mathrm|text|textbf|textit)\s*\{([^{}]*)\}", r"\1", t)
+    t = re.sub(r"\\[a-zA-Z]+\*?", " ", t)
+    t = t.replace("$", "").replace("{", "").replace("}", "")
+    t = t.replace("~", " ")
+    t = re.sub(r"[ \t]+", " ", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    return t.strip()
+
+
+def _notebook_correct_line(pack):
+    kind = str(pack.get("kind") or "").upper()
+    opts = pack.get("options") or []
+    if kind == "TN":
+        labs = [chr(65 + i) for i, o in enumerate(opts) if o.get("correct")]
+        texts = [_hand_math(o.get("text") or "") for i, o in enumerate(opts) if o.get("correct")]
+        if labs:
+            return "Phương án đúng: " + ", ".join(labs) + ((" — " + "; ".join(texts)) if texts else "")
+    if kind == "DS":
+        bits = []
+        for i, o in enumerate(opts):
+            lab = chr(65 + i) if i < 4 else str(i + 1)
+            bits.append(lab + (" Đúng" if o.get("correct") else " Sai"))
+        return "Đáp án: " + "; ".join(bits) if bits else ""
+    ans = _hand_math(pack.get("answer") or "")
+    return ("Đáp án: " + ans) if ans else ""
+
+
+def _notebook_options_block(pack):
+    kind = str(pack.get("kind") or "").upper()
+    opts = pack.get("options") or []
+    lines = []
+    if kind == "TN":
+        for i, o in enumerate(opts):
+            lab = chr(65 + i)
+            mark = "  ← khoanh tròn đỏ, đây là đáp án đúng" if o.get("correct") else ""
+            lines.append(f"{lab}. {_hand_math(o.get('text') or '')}{mark}")
+    elif kind == "DS":
+        for i, o in enumerate(opts):
+            lab = chr(65 + i) if i < 4 else str(i + 1)
+            ds = "Đúng" if o.get("correct") else "Sai"
+            lines.append(f"{lab}) {_hand_math(o.get('text') or '')}  → ghi {ds} (đáp án đúng)")
+    return "\n".join(lines)
+
+
+def _notebook_image_prompt(pack):
+    stem = _hand_math(pack.get("text") or "")
+    sol = _hand_math((pack.get("solution") or "")[:900])
+    opts = _notebook_options_block(pack)
+    key = _notebook_correct_line(pack)
+    kind = str(pack.get("kind") or "")
+    still = (
+        "Tạo MỘT ảnh (không phải văn bản). Ảnh là trang vở học sinh Việt Nam nhìn từ trên xuống, "
+        "giấy kẻ ngang hơi ngả vàng, bút bi xanh, bút chì, tẩy vụn, bóng đèn lớp học.\n"
+        "Viết tay tiếng Việt ngay ngắn, giữ ĐÚNG mọi số liệu. Cấm in chữ máy tính, cấm lệnh LaTeX (không \\frac, không $).\n"
+        "Bố cục trang vở:\n"
+        "1) Tiêu đề nhỏ: Vật lý · trắc nghiệm · " + kind + "\n"
+        "2) ĐỀ BÀI (viết đủ, công thức dạng học sinh: ví dụ x = 1,25 cos(2πt − π/12) cm):\n"
+        + stem + "\n"
+        + (("3) CÁC LỰA CHỌN:\n" + opts + "\n") if opts else "")
+        + "4) " + (key or "Không khoanh đáp án — chỉ ghi lời giải ngắn.") + "\n"
+        + ("5) LỜI GIẢI viết tay góc dưới, gọn:\n" + sol + "\n" if sol else "")
+        + "6) MINH HỌA ĐỘNG trên cùng trang: vẽ hiện tượng vật lý của đề như storyboard/hoạt hình giấy — "
+        "nhiều bóng mờ (ghost frames) theo thời gian, mũi tên chuyển động, đánh số t = 0, T/4, T/2... "
+        "Đúng tình huống đề (dao động, đường tròn, mạch, đồ thị...). Không bịa thêm vật lạ.\n"
+        "Tỷ lệ 3:4 hoặc 4:5, ảnh điện thoại chụp vở thật, góc hơi lệch, ánh sáng cửa sổ."
+    )
+    motion = (
+        "Tạo ảnh ĐỘNG (GIF hoặc video ngắn lặp) cùng trang vở ở trên. "
+        "Chữ đề bài, phương án và đáp án giữ nguyên không nhấp nháy. "
+        "Chỉ phần hình minh họa chuyển động: vật/điểm chạy đúng phương trình trong đề, "
+        "mũi tên và vị trí bóng mờ thay đổi theo nhịp. Nền giấy vở kẻ ngang. Không thêm chữ mới."
+    )
+    return still.strip(), motion.strip()
+
+
+@base.app.post("/api/admin/notebook-prompt")
+def api_notebook_prompt():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get("src") or data.get("path") or "").replace("\\", "/").strip()
+    try:
+        fi = int(data.get("file_idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu file_idx."), 400
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    q, _tex = _load_q(src, fi)
+    if not q:
+        return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
+    pack = _q_plain_pack(q)
+    still, motion = _notebook_image_prompt(pack)
+    return jsonify(ok=True, prompt=still, motion=motion, gemini="https://gemini.google.com/app")
+
+
 REWRITE_CLIENT_JS = r"""
-<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}</style>
+<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox,.rwnbbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}</style>
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -2400,6 +2535,19 @@ async function rwUploadImg(box, file){
 window.ldvlAdminRewrite=function(src,fi,box){loadRewrite(src,fi,box,'ai')};
 window.ldvlAdminSimilar=function(src,fi,box){loadRewrite(src,fi,box,'similar')};
 window.ldvlAdminEdit=function(src,fi,box){loadRewrite(src,fi,box,'edit')};
+window.ldvlAdminNotebookPrompt=function(src,fi,box){
+  const bar=(box&&box.closest&&box.closest('.rwbar'))||document.querySelector('#rwPractice .rwbar');
+  if(!bar) return;
+  let host=bar.querySelector('.rwnbbox');
+  if(!host){
+    host=document.createElement('div');
+    host.className='rwnbbox';
+    bar.appendChild(host);
+  }
+  host.setAttribute('data-src', src);
+  host.setAttribute('data-fi', String(fi));
+  rwLoadNotebook(host);
+};
 document.addEventListener('click',function(e){
   const go=e.target.closest&&e.target.closest('.rwgo');
   const sim=e.target.closest&&e.target.closest('.rwsim');
@@ -2464,6 +2612,36 @@ function rwPaintTikzLib(box, items){
   h+='</div>';
   if(!(items||[]).length) h+='<div class="muted">Bài này chưa có mã sẵn. Bấm <b>AI gợi ý theo đề</b>.</div>';
   return h;
+}
+function copyText(s){
+  s=String(s||'');
+  if(!s) return Promise.reject(new Error('Trống'));
+  if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(s);
+  return new Promise(function(ok,bad){
+    const ta=document.createElement('textarea');
+    ta.value=s; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); ok(); }catch(e){ bad(e); }
+    ta.remove();
+  });
+}
+async function rwLoadNotebook(box){
+  box.innerHTML='<div class="muted">Đang soạn prompt trang vở từ đề LaTeX…</div>';
+  try{
+    const r=await fetch('/api/admin/notebook-prompt',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({src:box.getAttribute('data-src')||'',file_idx:+(box.getAttribute('data-fi')||0)})});
+    const d=await r.json();
+    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không tạo được prompt')+'</div>';return;}
+    box._nb=d;
+    box.innerHTML='<div class="success">Prompt đã sẵn — copy rồi dán vào Gemini để tạo ảnh trang vở (đề + đáp án + hình động).</div>'
+      +'<p class="muted">1) Copy &nbsp; 2) Mở Gemini &nbsp; 3) Dán và bảo <b>Tạo ảnh</b>. Ảnh tĩnh: prompt trên. Ảnh động GIF: prompt dưới.</p>'
+      +'<label><b>Prompt ảnh trang vở</b></label>'
+      +'<textarea class="rwta rwnbstill">'+esc(d.prompt||'')+'</textarea>'
+      +'<p><button type="button" class="btn primary rwnbcopy" data-which="still">📋 Copy prompt ảnh</button> '
+      +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">↗ Mở Gemini</a></p>'
+      +'<label><b>Prompt ảnh động (GIF / video lặp)</b></label>'
+      +'<textarea class="rwta sm rwnbmotion">'+esc(d.motion||'')+'</textarea>'
+      +'<p><button type="button" class="btn rwnbcopy" data-which="motion">📋 Copy prompt động</button></p>';
+  }catch(err){box.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
 }
 async function rwLoadTikz(box){
   box.innerHTML=rwTikzAiSlot(box)+'<div class="rwtikzlib muted">Đang mở mã TikZ đã vẽ trong bài...</div>';
@@ -2603,6 +2781,34 @@ document.addEventListener('click',function(e){
     e.stopPropagation();
     const box=keep.closest('.rwtikzbox');
     if(box) rwUseTikz(box, '', true);
+    return;
+  }
+  const nbBtn=e.target.closest&&e.target.closest('.rwnbprompt');
+  if(nbBtn){
+    e.preventDefault();
+    const bar=nbBtn.closest('.rwbar');
+    if(!bar) return;
+    const old=bar.querySelector('.rwnbbox');
+    if(old){old.remove();return;}
+    const p=dropOf(nbBtn);
+    if(!p) return;
+    const box=document.createElement('div');
+    box.className='rwnbbox';
+    box.setAttribute('data-src', p.src);
+    box.setAttribute('data-fi', String(p.fi));
+    const out=bar.querySelector('.rwout');
+    if(out) out.insertAdjacentElement('afterend', box);
+    else bar.appendChild(box);
+    rwLoadNotebook(box);
+    return;
+  }
+  const nbCopy=e.target.closest&&e.target.closest('.rwnbcopy');
+  if(nbCopy){
+    e.preventDefault();
+    const box=nbCopy.closest('.rwnbbox');
+    const which=nbCopy.getAttribute('data-which')||'still';
+    const ta=box&&box.querySelector(which==='motion'?'.rwnbmotion':'.rwnbstill');
+    copyText(ta?ta.value:'').then(function(){nbCopy.textContent='✅ Đã copy'; setTimeout(function(){nbCopy.textContent=which==='motion'?'📋 Copy prompt động':'📋 Copy prompt ảnh';},1400);},function(){prompt('Copy prompt', ta?ta.value:'');});
     return;
   }
   const openBtn=e.target.closest&&e.target.closest('.rwtikzbtn');
