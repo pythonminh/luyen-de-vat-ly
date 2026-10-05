@@ -2080,6 +2080,78 @@ def api_notebook_prompt():
     return jsonify(ok=True, prompt=still, motion=motion, latex=latex, gemini="https://gemini.google.com/app")
 
 
+_OCR_PHOTO = """Bạn chép đề thi THPT (Vật lý / Toán / Hóa) từ ảnh.
+Chỉ nhận dạng chữ. Không giải. Không bình luận. Không markdown. Không bọc ```.
+
+Quy tắc:
+- Giữ nguyên số liệu, đơn vị, ký hiệu, câu hỏi và phương án.
+- Công thức viết LaTeX trong $...$. Phân số \\frac, chỉ số _{}, số mũ ^{}.
+- Nhiều câu thì tách bằng một dòng trống, mỗi câu bắt đầu bằng "Câu n."
+- Phương án A B C D hoặc đúng/sai giữ đúng thứ tự trên ảnh.
+- Chữ mờ thì chép phần đọc được, không bịa chỗ không thấy.
+- Nếu ảnh không có chữ đề bài, trả về đúng một dòng: (không thấy chữ)
+"""
+
+
+def _clean_ocr(raw):
+    s = str(raw or "").strip()
+    s = re.sub(r"^```(?:latex|tex|text|markdown)?\s*", "", s, flags=re.I)
+    s = re.sub(r"\s*```$", "", s).strip()
+    if s in ("(không thấy chữ)", "không thấy chữ"):
+        return ""
+    return s
+
+
+def _prompt_from_ocr(text):
+    text = str(text or "").strip()
+    if len(text) > 24000:
+        text = text[:24000].rstrip() + "\n% … cắt bớt vì quá dài"
+    if not text:
+        raise ValueError("Chưa có chữ để viết prompt.")
+    latex = text
+    if not re.search(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", latex, re.I):
+        latex = "\\begin{ex}\n" + latex + "\n\\end{ex}"
+    still, motion = _notebook_image_prompt(latex)
+    return text, still, motion
+
+
+@base.app.post("/api/admin/photo-prompt")
+def api_photo_prompt():
+    """Ảnh chụp → nhận dạng chữ → viết lại prompt trang vở để dán Gemini."""
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    if "text" in data and not (data.get("source_images") or data.get("images")):
+        text = _clean_ocr(data.get("text") or "")
+        if not text:
+            return jsonify(ok=False, error="Ô chữ đang trống. Chụp lại hoặc dán chữ đề."), 400
+    else:
+        text = ""
+    if not text:
+        from dang_routes import _gemini_fill_raw, _images_from_payload
+
+        images = _images_from_payload({"source_images": data.get("source_images") or data.get("images") or []})
+        if not images:
+            return jsonify(ok=False, error="Chưa có ảnh, hoặc ảnh quá nặng."), 400
+        keys = _keys_from_payload(data)
+        if not keys:
+            return jsonify(ok=False, error="Nạp key Gemini (nút 🤖 Gemini) rồi chụp lại."), 400
+        raw, err = _gemini_fill_raw(keys, _OCR_PHOTO, 4000, 0.05, images)
+        text = _clean_ocr(raw)
+        if not text:
+            return jsonify(ok=False, error=err or "Không nhận dạng được chữ trong ảnh. Chụp gần hơn, đủ sáng."), 502
+    try:
+        text, still, motion = _prompt_from_ocr(text)
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(
+        ok=True,
+        text=text,
+        prompt=still,
+        motion=motion,
+        gemini="https://gemini.google.com/app",
+    )
+
 def _path_meta(src):
     parts = [p for p in str(src or "").replace("\\", "/").split("/") if p]
     mon = parts[1] if len(parts) > 1 else ""
@@ -2639,7 +2711,7 @@ def admin_phieu():
 
 
 REWRITE_CLIENT_JS = r"""
-<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox,.rwnbbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}</style>
+<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox,.rwnbbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}.aiphotobox{flex:1 1 100%;margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.aiphotobox .rwta{min-height:140px}</style>
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -3371,6 +3443,95 @@ function copyText(s){
     ta.remove();
   });
 }
+function photoAnchor(btn){
+  if(!btn||!btn.closest) return null;
+  return btn.closest('.qhead')||btn.closest('.quizacts')||btn.closest('.toolbar')||btn.closest('.ai-intake-bar')||btn.closest('.rwbar')||btn.parentElement;
+}
+function photoHost(btn){
+  var fold=btn&&btn.closest&&btn.closest('details');
+  if(fold&&!fold.open) fold.open=true;
+  var anchor=photoAnchor(btn);
+  var sib=anchor&&anchor.nextElementSibling;
+  if(sib&&sib.classList&&sib.classList.contains('aiphotobox')) return sib;
+  var inside=anchor&&anchor.querySelector&&anchor.querySelector(':scope > .aiphotobox');
+  if(inside) return inside;
+  var box=document.createElement('div');
+  box.className='aiphotobox';
+  if(anchor) anchor.insertAdjacentElement('afterend', box);
+  else document.body.appendChild(box);
+  return box;
+}
+function paintPhotoPrompt(box, d){
+  box._photo=d||{};
+  box.innerHTML='<div class="success">Đã nhận dạng chữ trong ảnh và viết lại prompt trang vở. Sửa chữ nếu máy đọc sai, rồi bấm Viết lại prompt.</div>'
+    +'<p class="muted">Copy prompt → Mở Gemini (bật tạo ảnh) → dán. Gemini phải vẽ ảnh, không viết lại prompt.</p>'
+    +'<label><b>Chữ nhận dạng</b></label>'
+    +'<textarea class="rwta aiphoto-text" spellcheck="false">'+esc(d.text||'')+'</textarea>'
+    +'<p><button type="button" class="btn aiphoto-redo">↻ Viết lại prompt từ chữ này</button> '
+    +'<button type="button" class="btn aiPhotoBtn" data-force="1">📷 Chụp ảnh khác</button></p>'
+    +'<label><b>Prompt đã viết lại</b></label>'
+    +'<textarea class="rwta aiphoto-prompt" style="min-height:220px" spellcheck="false">'+esc(d.prompt||'')+'</textarea>'
+    +'<p><button type="button" class="btn primary aiphoto-copy" data-which="prompt">📋 Copy prompt</button> '
+    +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">↗ Mở Gemini</a></p>'
+    +'<label><b>Lệnh phụ — animation / chuỗi khung</b></label>'
+    +'<textarea class="rwta sm aiphoto-motion" spellcheck="false">'+esc(d.motion||'')+'</textarea>'
+    +'<p><button type="button" class="btn aiphoto-copy" data-which="motion">📋 Copy lệnh động</button></p>';
+}
+function shrinkPhoto(file){
+  return new Promise(function(ok, bad){
+    if(!file){bad(new Error('Chưa chọn ảnh.'));return;}
+    if(file.size>12000000){bad(new Error('Ảnh quá lớn.'));return;}
+    var img=new Image();
+    var url=URL.createObjectURL(file);
+    img.onload=function(){
+      var max=1400,w=img.width||1,h=img.height||1,sc=Math.min(1,max/Math.max(w,h));
+      w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+      var c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      var dataUrl=c.toDataURL('image/jpeg',0.82);
+      var b64=(dataUrl.split(',')[1]||'');
+      if(!b64||b64.length>1800000){bad(new Error('Ảnh vẫn quá nặng sau khi thu nhỏ. Chụp gần phần chữ.'));return;}
+      ok({mime:'image/jpeg', data:b64});
+    };
+    img.onerror=function(){URL.revokeObjectURL(url); bad(new Error('Không đọc được ảnh.'));};
+    img.src=url;
+  });
+}
+async function runPhotoPrompt(box, payload){
+  var ks=keys();
+  if(!payload.text && !ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi chụp lại.');return;}
+  box.innerHTML='<div class="muted">'+(payload.text?'Đang viết lại prompt từ chữ đã sửa…':'Đang nhận dạng chữ trong ảnh, rồi viết lại prompt…')+'</div>';
+  try{
+    var body=payload.text?{text:payload.text}:{api_keys:ks, source_images:[payload.image]};
+    var r=await fetch('/api/admin/photo-prompt',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
+    var d=await r.json();
+    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không nhận dạng được')+'</div>';return;}
+    paintPhotoPrompt(box, d);
+  }catch(err){box.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
+}
+function ensurePhotoInput(){
+  var inp=document.getElementById('aiCamFile');
+  if(inp) return inp;
+  inp=document.createElement('input');
+  inp.type='file';
+  inp.id='aiCamFile';
+  inp.accept='image/*';
+  inp.setAttribute('capture','environment');
+  inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.addEventListener('change', async function(){
+    var file=inp.files&&inp.files[0];
+    inp.value='';
+    var box=window._aiPhotoHost;
+    if(!box||!file) return;
+    try{
+      var image=await shrinkPhoto(file);
+      await runPhotoPrompt(box, {image:image});
+    }catch(err){box.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
+  });
+  return inp;
+}
 async function rwLoadNotebook(box){
   box.innerHTML='<div class="muted">Đang soạn prompt trang vở từ đề LaTeX…</div>';
   try{
@@ -3536,6 +3697,41 @@ document.addEventListener('click',function(e){
     const p=dropOf(phieuBtn);
     if(!p) return;
     window.open('/admin/phieu?src='+encodeURIComponent(p.src)+'&file_idx='+p.fi,'_blank','noopener');
+    return;
+  }
+  const photoBtn=e.target.closest&&e.target.closest('.aiPhotoBtn');
+  if(photoBtn){
+    e.preventDefault();
+    var host=photoBtn.closest('.aiphotobox')||photoHost(photoBtn);
+    if(host.querySelector('.aiphoto-text')&&!photoBtn.getAttribute('data-force')){
+      host.remove();
+      return;
+    }
+    host.innerHTML='<div class="muted">Chọn hoặc chụp ảnh đề. Máy sẽ nhận dạng chữ rồi viết lại prompt trang vở.</div>';
+    if(host.scrollIntoView) host.scrollIntoView({block:'center'});
+    window._aiPhotoHost=host;
+    ensurePhotoInput().click();
+    return;
+  }
+  const photoRedo=e.target.closest&&e.target.closest('.aiphoto-redo');
+  if(photoRedo){
+    e.preventDefault();
+    var pbox=photoRedo.closest('.aiphotobox');
+    var pta=pbox&&pbox.querySelector('.aiphoto-text');
+    if(pbox) runPhotoPrompt(pbox, {text:(pta&&pta.value)||''});
+    return;
+  }
+  const photoCopy=e.target.closest&&e.target.closest('.aiphoto-copy');
+  if(photoCopy){
+    e.preventDefault();
+    var cbox=photoCopy.closest('.aiphotobox');
+    var which=photoCopy.getAttribute('data-which')||'prompt';
+    var cta=cbox&&cbox.querySelector(which==='motion'?'.aiphoto-motion':'.aiphoto-prompt');
+    var label=photoCopy.textContent;
+    copyText(cta?cta.value:'').then(function(){
+      photoCopy.textContent='✅ Đã copy';
+      setTimeout(function(){photoCopy.textContent=label;},1400);
+    }, function(){prompt('Copy prompt', cta?cta.value:'');});
     return;
   }
   const nbBtn=e.target.closest&&e.target.closest('.rwnbprompt');
