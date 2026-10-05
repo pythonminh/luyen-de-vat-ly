@@ -2287,16 +2287,56 @@ def api_notebook_prompt():
     return jsonify(ok=True, prompt=still, motion=motion, latex=latex, gemini="https://gemini.google.com/app")
 
 
-_OCR_PHOTO = """Bạn chép đề thi THPT (Vật lý / Toán / Hóa) từ ảnh.
-Chỉ nhận dạng chữ. Không giải. Không bình luận. Không markdown. Không bọc ```.
+_OCR_PHOTO = """Bạn là giáo viên THPT (Vật lý / Toán / Hóa). Đọc đề trong ảnh, chuyển thành LaTeX gói ex_test.
+Chỉ trả về các khối LaTeX. Không markdown. Không bọc ```. Không lời dẫn.
+
+Mỗi câu là một khối \\begin{ex} ... \\end{ex}. Tự nhận đúng 1 trong 4 dạng:
+
+1) TN — trắc nghiệm 4 phương án A B C D:
+\\begin{ex}
+Đề bài...
+\\choice
+{phương án A}
+{\\True phương án đúng}
+{phương án C}
+{phương án D}
+\\loigiai{lời giải}
+\\end{ex}
+
+2) ĐS — đúng/sai 4 mệnh đề a b c d:
+\\begin{ex}
+Đề bài...
+\\choiceTF
+{\\True mệnh đề a đúng}
+{mệnh đề b sai}
+{\\True mệnh đề c đúng}
+{mệnh đề d sai}
+\\loigiai{a) Đúng vì ... b) Sai vì ... c) ... d) ...}
+\\end{ex}
+
+3) TLN — trả lời ngắn (đáp án là một số):
+\\begin{ex}
+Đề bài...
+\\shortans{12,5}
+\\loigiai{lời giải ra đúng số 12,5}
+\\end{ex}
+
+4) TL — tự luận:
+\\begin{ex}
+Đề bài...
+\\loigiai{lời giải}
+\\end{ex}
 
 Quy tắc:
-- Giữ nguyên số liệu, đơn vị, ký hiệu, câu hỏi và phương án.
-- Công thức viết LaTeX trong $...$. Phân số \\frac, chỉ số _{}, số mũ ^{}.
-- Nhiều câu thì tách bằng một dòng trống, mỗi câu bắt đầu bằng "Câu n."
-- Phương án A B C D hoặc đúng/sai giữ đúng thứ tự trên ảnh.
-- Chữ mờ thì chép phần đọc được, không bịa chỗ không thấy.
-- Nếu ảnh không có chữ đề bài, trả về đúng một dòng: (không thấy chữ)
+- Giữ nguyên số liệu, đơn vị, ký hiệu, câu hỏi và thứ tự phương án như trên ảnh. Bỏ nhãn A. B. C. D. / a) b) trước phương án.
+- Công thức trong $...$. Phân số \\dfrac, chỉ số _{}, số mũ ^{}, đơn vị \\text{}. Số thập phân dùng dấu phẩy.
+- \\True đặt ở ĐÚNG phương án đúng (TN đúng 1 phương án; ĐS mỗi mệnh đề đúng đều có \\True).
+- Nếu ảnh đã có đáp án / lời giải thì dùng theo ảnh. Nếu không có thì tự giải cẩn thận rồi mới đánh \\True.
+- \\loigiai trình bày từng bước: công thức, thay số, kết quả, có đơn vị. Đáp án trong lời giải phải khớp \\True / \\shortans.
+- \\shortans chỉ ghi số, không đơn vị.
+- Nhiều câu trong ảnh thì viết nhiều khối ex liên tiếp.
+- Chữ mờ thì chép phần đọc được, không bịa dữ kiện.
+- Nếu ảnh không có đề bài, trả về đúng một dòng: (không thấy chữ)
 """
 
 
@@ -2315,10 +2355,9 @@ def _prompt_from_ocr(text):
         text = text[:24000].rstrip() + "\n% … cắt bớt vì quá dài"
     if not text:
         raise ValueError("Chưa có chữ để viết prompt.")
-    latex = text
-    if not re.search(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", latex, re.I):
-        latex = "\\begin{ex}\n" + latex + "\n\\end{ex}"
-    still, motion = _notebook_image_prompt(latex)
+    if not re.search(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", text, re.I):
+        text = "\\begin{ex}\n" + text + "\n\\end{ex}"
+    still, motion = _notebook_image_prompt(text)
     return text, still, motion
 
 
@@ -2343,7 +2382,7 @@ def api_photo_prompt():
         keys = _keys_from_payload(data)
         if not keys:
             return jsonify(ok=False, error="Nạp key Gemini (nút 🤖 Gemini) rồi chụp lại."), 400
-        raw, err = _gemini_fill_raw(keys, _OCR_PHOTO, 4000, 0.05, images)
+        raw, err = _gemini_fill_raw(keys, _OCR_PHOTO, 8000, 0.1, images)
         text = _clean_ocr(raw)
         if not text:
             return jsonify(ok=False, error=err or "Không nhận dạng được chữ trong ảnh. Chụp gần hơn, đủ sáng."), 502
@@ -2358,6 +2397,7 @@ def api_photo_prompt():
         motion=motion,
         gemini="https://gemini.google.com/app",
     )
+
 
 def _path_meta(src):
     parts = [p for p in str(src or "").replace("\\", "/").split("/") if p]
@@ -3672,9 +3712,10 @@ function paintPhotoPrompt(box, d){
   box._photo=d||{};
   box.innerHTML='<div class="success">Đã nhận dạng chữ trong ảnh và viết lại prompt trang vở. Sửa chữ nếu máy đọc sai, rồi bấm Viết lại prompt.</div>'
     +'<p class="muted">Copy prompt → Mở Gemini (bật tạo ảnh) → dán. Gemini phải vẽ ảnh, không viết lại prompt.</p>'
-    +'<label><b>Chữ nhận dạng</b></label>'
+    +'<label><b>LaTeX câu hỏi (TN / ĐS / TLN / TL, có \\True và lời giải)</b></label>'
     +'<textarea class="rwta aiphoto-text" spellcheck="false">'+esc(d.text||'')+'</textarea>'
-    +'<p><button type="button" class="btn aiphoto-redo">↻ Viết lại prompt từ chữ này</button> '
+    +'<p><button type="button" class="btn aiphoto-copy" data-which="text">📋 Copy LaTeX</button> '
+    +'<button type="button" class="btn aiphoto-redo">↻ Viết lại prompt từ LaTeX này</button> '
     +'<button type="button" class="btn aiPhotoBtn" data-force="1">📷 Chụp ảnh khác</button></p>'
     +'<label><b>Prompt đã viết lại</b></label>'
     +'<textarea class="rwta aiphoto-prompt" style="min-height:220px" spellcheck="false">'+esc(d.prompt||'')+'</textarea>'
@@ -3936,7 +3977,7 @@ document.addEventListener('click',function(e){
     e.preventDefault();
     var cbox=photoCopy.closest('.aiphotobox');
     var which=photoCopy.getAttribute('data-which')||'prompt';
-    var cta=cbox&&cbox.querySelector(which==='motion'?'.aiphoto-motion':'.aiphoto-prompt');
+    var cta=cbox&&cbox.querySelector(which==='motion'?'.aiphoto-motion':(which==='text'?'.aiphoto-text':'.aiphoto-prompt'));
     var label=photoCopy.textContent;
     copyText(cta?cta.value:'').then(function(){
       photoCopy.textContent='✅ Đã copy';
@@ -3950,16 +3991,29 @@ document.addEventListener('click',function(e){
     const bar=nbBtn.closest('.rwbar');
     if(!bar) return;
     const old=bar.querySelector('.rwnbbox');
-    if(old){old.remove();return;}
+    if(old){
+      old.remove();
+      const oldExtra=bar.querySelector('.rwnbextra');
+      if(oldExtra) oldExtra.remove();
+      return;
+    }
     const p=dropOf(nbBtn);
     if(!p) return;
+    const phieuHref='/admin/phieu?src='+encodeURIComponent(p.src)+'&file_idx='+p.fi;
+    window.open(phieuHref,'_blank','noopener');
+    const extra=document.createElement('div');
+    extra.className='rwnbextra';
+    extra.style.margin='8px 0';
+    extra.innerHTML='<a class="btn mini" href="'+esc(phieuHref)+'" target="_blank" rel="noopener">📝 Mở lại phiếu học tập</a> '
+      +'<button type="button" class="btn mini aiPhotoBtn">📷 Chụp ảnh đề → prompt</button>';
     const box=document.createElement('div');
     box.className='rwnbbox';
     box.setAttribute('data-src', p.src);
     box.setAttribute('data-fi', String(p.fi));
     const out=bar.querySelector('.rwout');
-    if(out) out.insertAdjacentElement('afterend', box);
-    else bar.appendChild(box);
+    if(out) out.insertAdjacentElement('afterend', extra);
+    else bar.appendChild(extra);
+    extra.insertAdjacentElement('afterend', box);
     rwLoadNotebook(box);
     return;
   }
