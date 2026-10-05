@@ -2182,6 +2182,62 @@ def _tikz_html_from_tex(tex, src):
     return "".join(htmls)
 
 
+_PHIEU_A4_HEAD = """Xuất ra ẢNH một trang A4 dọc (khoảng 1240×1754 px). Không viết lại prompt. Không giải thích. Hãy vẽ luôn.
+
+Thanh thương hiệu TRÊN CÙNG, chữ vừa (12 pt), không chiếm quá 8% chiều cao trang:
+Lớp Học Thầy Minh    ·    Zalo 0946111107
+Có thể thêm dòng nhỏ: lophocthayminh.onrender.com
+
+CHỮ NHỎ — DỄ ĐỌC (BẮT BUỘC, hay bị vẽ quá TO):
+- Chữ đề bài / lời giải: 10–11 pt, line-height 1.35, như đề thi in A4.
+- Tiêu đề phiếu: tối đa 13–14 pt, không banner khổ lớn.
+- Pill tên khối: 9–10 pt.
+- Công thức: 10–11 pt, sắc nét như sách giáo khoa, không phóng to giữa trang.
+- Không dùng chữ display khổ poster. Không để một dòng công thức chiếm 1/5 trang.
+- Lề 8–10 mm. Khối sát nhau (cách 6–8 px). Gọn MỘT trang, chữ đều, dễ đọc từ khoảng cách đọc giấy.
+
+Bố cục phiếu 4 khối pastel bo góc: 1 đề (xanh dương) · 2 công thức (cam) · 3 hình (tím) · 4 giải/kẻ vở (xanh ngọc).
+Nền giấy vở kẻ nhẹ, gáy lò xo trái. Không poster quảng cáo, không chữ viết tay lem.
+"""
+
+_PHIEU_A4_YES = """
+CHẾ ĐỘ PHIẾU: CÓ ĐÁP ÁN (bản giáo viên)
+- Làm nổi bật phương án / kết quả đúng (viên thuốc xanh).
+- Khối 4 hiện đủ lời giải từng bước và đáp số.
+- Không che đáp án.
+"""
+
+_PHIEU_A4_NO = """
+CHẾ ĐỘ PHIẾU: KHÔNG ĐÁP ÁN (bản học sinh làm bài)
+- KHÔNG khoanh, KHÔNG tô, KHÔNG ghi phương án đúng.
+- Các lựa chọn A B C D (hoặc đúng/sai) trông giống nhau.
+- Khối 4: ô kẻ vở trống để học sinh viết; ô đáp số để trống / nét đứt.
+- KHÔNG in lời giải, KHÔNG in đáp số, KHÔNG gợi ý đáp án trong hình.
+"""
+
+
+def _phieu_a4_prompt(title, subject, problem, formulas, solution, short, with_answer):
+    mode = _PHIEU_A4_YES if with_answer else _PHIEU_A4_NO
+    body = (
+        "TIÊU ĐỀ: " + str(title or "") + "\nBỘ MÔN: " + str(subject or "") + "\n"
+        "KHỐI 1 — ĐỀ BÀI:\n" + str(problem or "") + "\n\n"
+        "KHỐI 2 — CÔNG THỨC:\n" + str(formulas or "") + "\n\n"
+    )
+    if with_answer:
+        body += (
+            "KHỐI 4 — LỜI GIẢI (in ra):\n" + str(solution or "")[:1800] + "\n\n"
+            "ĐÁP ÁN NGẮN: " + str(short or "") + "\n"
+        )
+    else:
+        body += (
+            "KHỐI 4: chỉ dòng kẻ trống. Có lời giải dưới đây CHỈ để vẽ đúng hình minh họa, "
+            "KHÔNG chép lời giải hay đáp án lên phiếu:\n"
+            + str(solution or "")[:800]
+            + "\n"
+        )
+    return (_PHIEU_A4_HEAD + mode + "\n" + body + "\nXuất ra ẢNH trang A4. Không viết lại prompt.").strip()
+
+
 def _worksheet_seed(q, src, fi, tex):
     pack = _q_plain_pack(q)
     title, subject = _path_meta(src)
@@ -2193,19 +2249,10 @@ def _worksheet_seed(q, src, fi, tex):
     except ValueError:
         latex = problem
     fig = _tikz_html_from_tex(latex or (q.get("text") or ""), src)
-    still, motion = _notebook_image_prompt(latex or problem)
-    extra = (
-        "\n\n=============================\n"
-        "XII. VẼ ĐÚNG KIỂU PHIẾU 4 KHỐI TRÊN MỘT TRANG A4\n"
-        "=============================\n"
-        "Thanh trên: Lớp Học Thầy Minh · Zalo 0946111107\n"
-        "Khối 1 (xanh dương): đề bài. Khối 2 (cam): công thức. Khối 3 (tím): hình minh họa.\n"
-        "Khối 4 (xanh ngọc): lời giải / chỗ kẻ cho học sinh. Công thức phải nét như sách giáo khoa.\n"
-        "TIÊU ĐỀ: " + title + "\nBỘ MÔN: " + subject + "\n"
-        "KHỐI 1:\n" + (problem or "") + "\n\nKHỐI 2:\n" + _formula_guess(sol) + "\n\n"
-        "KHỐI 4:\n" + (sol or "")[:1600] + "\n\nĐÁP ÁN NGẮN: " + _worksheet_short(pack) + "\n"
-        "Xuất ra ẢNH trang A4. Không viết lại prompt."
-    )
+    formulas = _formula_guess(sol)
+    short = _worksheet_short(pack)
+    a4_yes = _phieu_a4_prompt(title, subject, problem, formulas, sol, short, True)
+    a4_no = _phieu_a4_prompt(title, subject, problem, formulas, sol, short, False)
     return {
         "src": src,
         "file_idx": fi,
@@ -2214,15 +2261,17 @@ def _worksheet_seed(q, src, fi, tex):
         "subject": subject,
         "class_line": "Lớp: .............",
         "problem": problem,
-        "formulas": _formula_guess(sol),
+        "formulas": formulas,
         "solution": sol,
-        "short_answer": _worksheet_short(pack),
+        "short_answer": short,
         "fig_html": fig,
         "brand": "Lớp Học Thầy Minh",
         "zalo": "0946111107",
         "year": "2026 - 2027",
-        "a4_prompt": (still + extra).strip(),
-        "a4_motion": motion,
+        "a4_prompt": a4_no,
+        "a4_prompt_yes": a4_yes,
+        "a4_prompt_no": a4_no,
+        "a4_motion": "",
         "gemini": "https://gemini.google.com/app",
     }
 
@@ -2366,6 +2415,15 @@ def api_worksheet():
                     seed["ai_note"] = (seed.get("ai_note") or "") + (" Hình: TikZ (Gemini ảnh: " + (ierr or "") + ")")
                 elif ierr or terr:
                     seed["ai_note"] = (seed.get("ai_note") or "") + " " + (ierr or terr or "")
+    seed["a4_prompt_yes"] = _phieu_a4_prompt(
+        seed.get("title"), seed.get("subject"), seed.get("problem"),
+        seed.get("formulas"), seed.get("solution"), seed.get("short_answer"), True,
+    )
+    seed["a4_prompt_no"] = _phieu_a4_prompt(
+        seed.get("title"), seed.get("subject"), seed.get("problem"),
+        seed.get("formulas"), seed.get("solution"), seed.get("short_answer"), False,
+    )
+    seed["a4_prompt"] = seed["a4_prompt_no"]
     return jsonify(ok=True, **seed)
 
 
@@ -2428,15 +2486,16 @@ def admin_phieu():
         ".phieu-ed textarea{width:100%;min-height:72px;font:12px/1.4 Consolas,ui-monospace,monospace;padding:8px;"
         "border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e2e8f0}"
         ".phieu-ed label{display:block;font-size:11px;font-weight:800;margin:8px 0 4px}"
-        ".phieu-sheet{background:#fff;color:#0f172a;padding:22px 24px;border:1px solid #cbd5e1;border-radius:12px;"
-        "min-height:297mm;box-shadow:0 12px 40px #0f172a22}"
-        ".phieu-brand{background:#0f3d7a;color:#fff;padding:8px 12px;border-radius:8px;display:flex;justify-content:space-between;"
-        "align-items:center;gap:8px;font-weight:800;margin:0 0 10px}"
+        ".phieu-sheet{background:#fff;color:#0f172a;padding:16px 18px;border:1px solid #cbd5e1;border-radius:12px;"
+        "min-height:297mm;box-shadow:0 12px 40px #0f172a22;font-size:12px;line-height:1.35}"
+        ".phieu-sheet mjx-container,.phieu-sheet .MathJax{font-size:95%!important}"
+        ".phieu-brand{background:#0f3d7a;color:#fff;padding:6px 10px;border-radius:8px;display:flex;justify-content:space-between;"
+        "align-items:center;gap:8px;font-weight:800;margin:0 0 8px;font-size:12px}"
+        ".phieu-k{border:2px solid;border-radius:10px;padding:8px;margin:0 0 8px;font-size:12px}"
+        ".phieu-k .pill{display:inline-block;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;margin:0 0 5px;text-transform:uppercase}"
         ".phieu-head{border-bottom:2px solid #0f172a;padding-bottom:8px;margin-bottom:10px}"
         ".phieu-head .row{display:flex;justify-content:space-between;gap:12px;font-size:12px;font-weight:800;text-transform:uppercase}"
         ".phieu-info{margin-top:8px;padding:8px;border:1px solid #0f172a;display:grid;grid-template-columns:1.4fr .8fr .8fr;gap:6px;font-size:12px;background:#f8fafc}"
-        ".phieu-k{border:2px solid;border-radius:10px;padding:10px;margin:0 0 10px}"
-        ".phieu-k .pill{display:inline-block;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;margin:0 0 6px;text-transform:uppercase}"
         ".k1{border-color:#2563eb;background:#eff6ff}.k1 .pill{background:#2563eb}"
         ".k2{border-color:#d97706;background:#fffbeb}.k2 .pill{background:#d97706}"
         ".k3{border-color:#7c3aed;background:#f5f3ff}.k3 .pill{background:#7c3aed}"
@@ -2462,6 +2521,7 @@ def admin_phieu():
         "<button type='button' class='btn' id='phieuGv'>👨‍🏫 Bản giáo viên</button>"
         "<label><input type='checkbox' id='phieuBlank'> Điền khuyết công thức</label>"
         "<label><input type='checkbox' id='phieuEmpty' checked> Ô đáp án trống (HS)</label>"
+        "<label><input type='checkbox' id='phieuPromptAns'> Lệnh A4 <b>có đáp án</b></label>"
         "<button type='button' class='btn' id='phieuAi'>✨ AI điền công thức + hình</button>"
         "<button type='button' class='btn' id='phieuImg'>🖼️ AI hình minh họa</button>"
         "<button type='button' class='btn' id='phieuCopyA4'>📋 Copy lệnh ảnh A4</button>"
@@ -2477,7 +2537,7 @@ def admin_phieu():
         "<label>Đáp số ngắn</label><textarea id='phieuAns' class='sm'></textarea>"
         "<label>Lệnh copy sang Gemini — tạo ẢNH trang A4</label>"
         "<textarea id='phieuA4' style='min-height:160px'></textarea>"
-        "<p class='muted' style='color:#94a3b8;font-size:12px'>Copy lệnh này → Mở Gemini (bật tạo ảnh) → dán. Gemini phải vẽ ảnh, không viết lại prompt.</p>"
+        "<p class='muted' style='color:#94a3b8;font-size:12px'>Tick <b>có đáp án</b> = bản GV. Bỏ tick = bản HS (không lộ đáp án). Chữ trong lệnh bắt Gemini vẽ 10–11 pt, không phóng to. Copy → Mở Gemini (bật tạo ảnh) → dán.</p>"
         "</div><div class='phieu-sheet' id='phieuSheet'></div></div></div>"
         "<script>(function(){"
         "document.body.classList.add('phieu-on');"
@@ -2488,7 +2548,11 @@ def admin_phieu():
         "$('phieuTitle').value=S.title||'';$('phieuSubject').value=S.subject||'';"
         "$('phieuB1').value=S.problem||'';$('phieuB2').value=S.formulas||'';"
         "$('phieuB4').value=S.solution||'';$('phieuAns').value=S.short_answer||'';"
-        "$('phieuA4').value=S.a4_prompt||'';"
+        "rebuildA4();"
+        "}"
+        "function rebuildA4(){"
+        " var yes=!!($('phieuPromptAns')&&$('phieuPromptAns').checked);"
+        " $('phieuA4').value=yes?(S.a4_prompt_yes||S.a4_prompt||''):(S.a4_prompt_no||S.a4_prompt||'');"
         "}"
         "function digits(s,empty){s=String(s||'');if(!s)return '';"
         "return s.split('').map(function(ch){if(ch===' '||ch==='\\t')return '';"
@@ -2531,10 +2595,12 @@ def admin_phieu():
         "fill(); paintNow();"
         "['phieuTitle','phieuSubject','phieuB1','phieuB2','phieuB4','phieuAns','phieuBlank','phieuEmpty'].forEach(function(id){"
         " var el=$(id); if(!el) return; el.addEventListener(el.type==='checkbox'?'change':'input', paint);});"
-        "$('phieuHs').onclick=function(){mode='student';paint()};"
-        "$('phieuGv').onclick=function(){mode='teacher';paint()};"
+        "if($('phieuPromptAns')) $('phieuPromptAns').onchange=function(){rebuildA4();};"
+        "$('phieuHs').onclick=function(){mode='student'; if($('phieuPromptAns')) $('phieuPromptAns').checked=false; rebuildA4(); paint()};"
+        "$('phieuGv').onclick=function(){mode='teacher'; if($('phieuPromptAns')) $('phieuPromptAns').checked=true; rebuildA4(); paint()};"
         "$('phieuPrint').onclick=function(){window.print()};"
         "function copyA4(){"
+        " rebuildA4();"
         " var s=($('phieuA4')&&$('phieuA4').value)||S.a4_prompt||'';"
         " if(!s){alert('Chưa có lệnh A4.');return;}"
         " var done=function(){$('phieuNote').textContent='Đã copy lệnh ảnh A4. Dán vào Gemini.';};"
@@ -2552,6 +2618,9 @@ def admin_phieu():
         " if(d.formulas) $('phieuB2').value=d.formulas;"
         " if(d.short_answer) $('phieuAns').value=d.short_answer;"
         " if(d.fig_html) S.fig_html=d.fig_html;"
+        " if(d.a4_prompt_yes) S.a4_prompt_yes=d.a4_prompt_yes;"
+        " if(d.a4_prompt_no) S.a4_prompt_no=d.a4_prompt_no;"
+        " rebuildA4();"
         " $('phieuNote').textContent=d.ai_note||'Đã điền công thức và hình.'; paint();"
         " }catch(e){$('phieuNote').textContent=String(e&&e.message||e);} };"
         "$('phieuImg').onclick=async function(){"
