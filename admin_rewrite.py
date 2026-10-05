@@ -2073,6 +2073,289 @@ def api_notebook_prompt():
     return jsonify(ok=True, prompt=still, motion=motion, latex=latex, gemini="https://gemini.google.com/app")
 
 
+def _path_meta(src):
+    parts = [p for p in str(src or "").replace("\\", "/").split("/") if p]
+    mon = parts[1] if len(parts) > 1 else ""
+    lop = parts[2] if len(parts) > 2 else ""
+    bai = parts[-2] if len(parts) > 3 else (parts[-1] if parts else "")
+    bai = re.sub(r"\.tex$", "", bai, flags=re.I)
+    title = "PHIẾU HỌC TẬP: " + (bai or "Câu hỏi")
+    subject = " · ".join(x for x in (mon, lop) if x) or "Bộ môn"
+    return title, subject
+
+
+def _worksheet_short(pack):
+    kind = str((pack or {}).get("kind") or "").upper()
+    opts = (pack or {}).get("options") or []
+    if kind == "TN":
+        labs = [chr(65 + i) for i, o in enumerate(opts) if o.get("correct")]
+        return labs[0] if labs else ""
+    if kind == "DS":
+        bits = []
+        for i, o in enumerate(opts):
+            lab = chr(65 + i) if i < 4 else str(i + 1)
+            bits.append(lab + ("-Đ" if o.get("correct") else "-S"))
+        return " ".join(bits)
+    return str((pack or {}).get("answer") or "").strip()
+
+
+def _worksheet_problem_tex(pack):
+    stem = _clean_tex((pack or {}).get("text") or "")
+    kind = str((pack or {}).get("kind") or "").upper()
+    opts = (pack or {}).get("options") or []
+    lines = [stem] if stem else []
+    if kind == "TN":
+        for i, o in enumerate(opts):
+            lab = chr(65 + i)
+            lines.append(lab + ". " + _clean_tex(o.get("text") or ""))
+    elif kind == "DS":
+        for i, o in enumerate(opts):
+            lab = chr(65 + i) if i < 4 else str(i + 1)
+            lines.append(lab + ") " + _clean_tex(o.get("text") or ""))
+    return "\n\n".join(lines).strip()
+
+
+def _formula_guess(sol):
+    out = []
+    for line in str(sol or "").splitlines():
+        t = line.strip()
+        if not t or t.startswith("%"):
+            continue
+        if len(t) > 220:
+            continue
+        if re.search(r"[=\\$]|\\omega|\\frac|T\s*=|A\s*=", t):
+            out.append(t)
+        if len(out) >= 8:
+            break
+    return "\n".join(out)
+
+
+def _tikz_html_from_tex(tex, src):
+    htmls = []
+    for m in base.TIKZ_RE.finditer(tex or ""):
+        htmls.append(base.html_question(m.group(0), src))
+        if len(htmls) >= 2:
+            break
+    return "".join(htmls)
+
+
+def _worksheet_seed(q, src, fi, tex):
+    pack = _q_plain_pack(q)
+    title, subject = _path_meta(src)
+    problem = _worksheet_problem_tex(pack)
+    sol = _clean_tex(pack.get("solution") or "")
+    latex = ""
+    try:
+        latex = _notebook_latex(q, tex, fi)
+    except ValueError:
+        latex = problem
+    fig = _tikz_html_from_tex(latex or (q.get("text") or ""), src)
+    return {
+        "src": src,
+        "file_idx": fi,
+        "kind": pack.get("kind") or "",
+        "title": title,
+        "subject": subject,
+        "class_line": "Lớp: .............",
+        "problem": problem,
+        "formulas": _formula_guess(sol),
+        "solution": sol,
+        "short_answer": _worksheet_short(pack),
+        "fig_html": fig,
+        "brand": "Lớp Học Thầy Minh",
+        "zalo": "0946111107",
+        "year": "2026 - 2027",
+    }
+
+
+def _worksheet_ai_prompt(latex):
+    return (
+        "Bạn là giáo viên THPT. Từ câu LaTeX, tách công thức cốt lõi để học sinh làm bài.\n"
+        "Không đổi số liệu, ký hiệu, đáp án. Trả ĐÚNG MỘT JSON:\n"
+        '{"formulas":"các công thức/định luật cần dùng, mỗi ý một dòng, bọc $...$ hoặc $$...$$",'
+        '"short_answer":"chữ đáp án A/B/C/D hoặc số cuối (VD 12,5) hoặc chuỗi Đúng/Sai"}\n'
+        "Phần formulas KHÔNG viết lời giải từng bước.\n"
+        "===LATEX===\n" + str(latex or "")[:8000]
+    )
+
+
+@base.app.post("/api/admin/worksheet")
+def api_worksheet():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get("src") or data.get("path") or "").replace("\\", "/").strip()
+    try:
+        fi = int(data.get("file_idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu file_idx."), 400
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    q, tex = _load_q(src, fi)
+    if not q:
+        return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
+    seed = _worksheet_seed(q, src, fi, tex)
+    keys = _keys_from_payload(data)
+    if keys:
+        from admin_classify import _gemini_once
+
+        try:
+            latex = _notebook_latex(q, tex, fi)
+        except ValueError:
+            latex = seed.get("problem") or ""
+        raw, err = _gemini_once(keys, _worksheet_ai_prompt(latex), 1800)
+        if raw:
+            obj = _parse_obj(raw)
+            formulas = str(obj.get("formulas") or "").strip()
+            short = str(obj.get("short_answer") or "").strip()
+            if formulas:
+                seed["formulas"] = formulas
+            if short:
+                seed["short_answer"] = short
+        elif err:
+            seed["ai_note"] = err
+    return jsonify(ok=True, **seed)
+
+
+@base.app.get("/admin/phieu")
+def admin_phieu():
+    if not base.can_manage_bank():
+        return base.page("Phiếu học tập", "<div class='wrap'><div class='err'>Chỉ ADMIN mới mở phiếu học tập.</div></div>")
+    src = str(request.args.get("src") or request.args.get("path") or "").replace("\\", "/").strip()
+    try:
+        fi = int(request.args.get("file_idx"))
+    except (TypeError, ValueError):
+        fi = -1
+    if not src.startswith("ngan-hang/") or fi < 0:
+        return base.page("Phiếu học tập", "<div class='wrap'><div class='err'>Thiếu câu (src, file_idx).</div></div>")
+    q, tex = _load_q(src, fi)
+    if not q:
+        return base.page("Phiếu học tập", "<div class='wrap'><div class='err'>Không tìm thấy câu.</div></div>")
+    seed = _worksheet_seed(q, src, fi, tex)
+    blob = json.dumps(seed, ensure_ascii=False).replace("<", "\\u003c")
+    body = (
+        "<style>"
+        "body.phieu-on .regline{display:none}"
+        "@media print{body{background:#fff!important}.top,.ldvl-drawer,.no-print{display:none!important}"
+        ".wrap{max-width:none;margin:0;padding:0}.phieu-sheet{box-shadow:none!important;border:none!important}"
+        "*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}"
+        ".phieu-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 12px;padding:10px;"
+        "border:1px solid #cbd5e1;border-radius:12px;background:#0f172a;color:#e2e8f0}"
+        ".phieu-tools .btn{font-size:12px}.phieu-tools label{font-size:12px;display:flex;gap:6px;align-items:center}"
+        ".phieu-grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.15fr);gap:14px;align-items:start}"
+        "@media(max-width:980px){.phieu-grid{grid-template-columns:1fr}}"
+        ".phieu-ed textarea{width:100%;min-height:72px;font:12px/1.4 Consolas,ui-monospace,monospace;padding:8px;"
+        "border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e2e8f0}"
+        ".phieu-ed label{display:block;font-size:11px;font-weight:800;margin:8px 0 4px}"
+        ".phieu-sheet{background:#fff;color:#0f172a;padding:22px 24px;border:1px solid #cbd5e1;border-radius:12px;"
+        "min-height:297mm;box-shadow:0 12px 40px #0f172a22}"
+        ".phieu-brand{background:#0f3d7a;color:#fff;padding:8px 12px;border-radius:8px;display:flex;justify-content:space-between;"
+        "align-items:center;gap:8px;font-weight:800;margin:0 0 10px}"
+        ".phieu-head{border-bottom:2px solid #0f172a;padding-bottom:8px;margin-bottom:10px}"
+        ".phieu-head .row{display:flex;justify-content:space-between;gap:12px;font-size:12px;font-weight:800;text-transform:uppercase}"
+        ".phieu-info{margin-top:8px;padding:8px;border:1px solid #0f172a;display:grid;grid-template-columns:1.4fr .8fr .8fr;gap:6px;font-size:12px;background:#f8fafc}"
+        ".phieu-k{border:2px solid;border-radius:10px;padding:10px;margin:0 0 10px}"
+        ".phieu-k .pill{display:inline-block;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;margin:0 0 6px;text-transform:uppercase}"
+        ".k1{border-color:#2563eb;background:#eff6ff}.k1 .pill{background:#2563eb}"
+        ".k2{border-color:#d97706;background:#fffbeb}.k2 .pill{background:#d97706}"
+        ".k3{border-color:#7c3aed;background:#f5f3ff}.k3 .pill{background:#7c3aed}"
+        ".k4{border-color:#059669;background:#ecfdf5}.k4 .pill{background:#059669}"
+        ".phieu-mid{display:grid;grid-template-columns:1fr 1fr;gap:10px}"
+        "@media(max-width:700px){.phieu-mid{grid-template-columns:1fr}}"
+        ".phieu-lined{min-height:220px;border:1px solid #cbd5e1;border-radius:6px;"
+        "background-color:#fff;background-image:linear-gradient(90deg,transparent 28px,#fca5a5 28px,#fca5a5 30px,transparent 30px),"
+        "linear-gradient(#e2e8f0 1px,transparent 1px);background-size:100% 100%,100% 26px;padding:8px;color:#94a3b8;font-size:11px}"
+        ".phieu-digits{display:flex;gap:4px;align-items:center;flex-wrap:wrap}"
+        ".phieu-digits b{min-width:22px;height:26px;border:2px dashed #059669;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;background:#fff}"
+        ".phieu-digits b.full{border-style:solid;font-weight:800;color:#065f46}"
+        ".phieu-foot{display:flex;justify-content:space-between;font-size:10px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:10px;padding-top:6px}"
+        ".badge-hs{border:1px solid #2563eb;background:#dbeafe;color:#1d4ed8;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:800}"
+        ".badge-gv{border:1px solid #059669;background:#d1fae5;color:#047857;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:800}"
+        "</style>"
+        "<div class='wrap phieu-page'><script type='application/json' id='phieuSeed'>"
+        + blob
+        + "</script>"
+        "<div class='phieu-tools no-print'>"
+        "<b>📝 Phiếu 4 khối</b>"
+        "<button type='button' class='btn primary' id='phieuHs'>🎓 Bản học sinh</button>"
+        "<button type='button' class='btn' id='phieuGv'>👨‍🏫 Bản giáo viên</button>"
+        "<label><input type='checkbox' id='phieuBlank'> Điền khuyết công thức</label>"
+        "<label><input type='checkbox' id='phieuEmpty' checked> Ô đáp án trống (HS)</label>"
+        "<button type='button' class='btn' id='phieuAi'>✨ AI điền công thức</button>"
+        "<button type='button' class='btn green' id='phieuPrint'>🖨️ In A4 / PDF</button>"
+        "<span class='muted' id='phieuNote' style='color:#94a3b8'></span></div>"
+        "<div class='phieu-grid'><div class='phieu-ed no-print'>"
+        "<label>Tiêu đề phiếu</label><textarea id='phieuTitle' class='sm'></textarea>"
+        "<label>Môn / chuyên đề</label><textarea id='phieuSubject' class='sm'></textarea>"
+        "<label>Khối 1 — Đề bài (LaTeX)</label><textarea id='phieuB1'></textarea>"
+        "<label>Khối 2 — Công thức</label><textarea id='phieuB2'></textarea>"
+        "<label>Khối 4 — Lời giải</label><textarea id='phieuB4'></textarea>"
+        "<label>Đáp số ngắn</label><textarea id='phieuAns' class='sm'></textarea>"
+        "</div><div class='phieu-sheet' id='phieuSheet'></div></div></div>"
+        "<script>(function(){"
+        "document.body.classList.add('phieu-on');"
+        "var S={};try{S=JSON.parse(document.getElementById('phieuSeed').textContent||'{}')}catch(e){S={}}"
+        "var mode='student';"
+        "function $(id){return document.getElementById(id)}"
+        "function fill(){"
+        "$('phieuTitle').value=S.title||'';$('phieuSubject').value=S.subject||'';"
+        "$('phieuB1').value=S.problem||'';$('phieuB2').value=S.formulas||'';"
+        "$('phieuB4').value=S.solution||'';$('phieuAns').value=S.short_answer||'';"
+        "}"
+        "function digits(s,empty){s=String(s||'');if(!s)return '';"
+        "return s.split('').map(function(ch){if(ch===' '||ch==='\\t')return '';"
+        "if(ch===','||ch==='.')return '<span>'+ch+'</span>';"
+        "return '<b class=\"'+(empty?'':'full')+'\">'+(empty?'':ch)+'</b>';}).join('');}"
+        "function paint(){"
+        "var t=$('phieuTitle').value, sub=$('phieuSubject').value, p=$('phieuB1').value;"
+        "var f=$('phieuB2').value, sol=$('phieuB4').value, ans=$('phieuAns').value.trim();"
+        "if(mode==='student'&&$('phieuBlank').checked) f=f.replace(/=\\s*([^$\\n]+)/g,'= $\\\\ldots\\\\ldots$');"
+        "var hs=mode==='student';"
+        "var fig=S.fig_html||'<div class=\"muted\">(Thêm hình TikZ ở câu nếu cần)</div>';"
+        "var b4=hs?'':('<div id=\"phieuSol\">'+escHtml(sol)+'</div>');"
+        "var lined=hs?'<div class=\"phieu-lined\">Học sinh trình bày các bước tính vào phần này</div>':'';"
+        "var box=''; if(ans && (hs?$('phieuEmpty').checked:true)){"
+        "box='<div class=\"phieu-digits\"><span style=\"font-size:11px;font-weight:800\">'+(hs?'ĐIỀN ĐÁP ÁN:':'ĐÁP ÁN:')+'</span>'+digits(ans,hs)+'</div>';}"
+        "$('phieuSheet').innerHTML="
+        "'<div class=\"phieu-brand\"><span>'+escHtml(S.brand||'Lớp Học Thầy Minh')+'</span><span>Zalo '+escHtml(S.zalo||'0946111107')+'</span></div>'"
+        "+'<div class=\"phieu-head\"><div class=\"row\"><div>TRƯỜNG / TRUNG TÂM: Lớp Học Thầy Minh<br><span style=\"color:#1d4ed8\">BỘ MÔN: '+escHtml(sub)+'</span></div>'"
+        "+'<div style=\"text-align:right\">'+escHtml(t)+' <span class=\"'+(hs?'badge-hs':'badge-gv')+'\">'+(hs?'BẢN HỌC SINH':'BẢN GIÁO VIÊN')+'</span><br><span style=\"color:#64748b;font-weight:600\">NĂM HỌC: '+(S.year||'')+'</span></div></div>'"
+        "+'<div class=\"phieu-info\"><div>Họ và tên học sinh: ................................................................</div><div>'+escHtml(S.class_line||'')+'</div><div>Điểm: ...../10</div>'"
+        "+'<div>Ngày: ..../..../2026</div><div>Lời phê: ................................</div><div></div></div></div>'"
+        "+'<div class=\"phieu-k k1\"><div class=\"pill\">Khối 1: Đề bài & dữ kiện</div><div id=\"phieuV1\">'+escHtml(p)+'</div></div>'"
+        "+'<div class=\"phieu-mid\"><div class=\"phieu-k k2\"><div class=\"pill\">Khối 2: Công thức cần dùng</div><div id=\"phieuV2\">'+escHtml(f)+'</div></div>'"
+        "+'<div class=\"phieu-k k3\"><div class=\"pill\">Khối 3: Sơ đồ / hình minh họa</div><div id=\"phieuV3\">'+fig+'</div></div></div>'"
+        "+'<div class=\"phieu-k k4\"><div class=\"pill\">Khối 4: Lời giải & kết luận</div>'+box+b4+lined+'</div>'"
+        "+'<div class=\"phieu-foot\"><span>Lớp Học Thầy Minh · Zalo 0946111107 · '+ (hs?'Dành cho học sinh làm bài':'Hướng dẫn giáo viên') +'</span><span>Trang 1/1</span></div>';"
+        "previewTex('phieuV1', p); previewTex('phieuV2', f); if(!hs) previewTex('phieuSol', sol);"
+        "if(window.ldvlArmTikz) ldvlArmTikz($('phieuSheet'));"
+        "}"
+        "function escHtml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}"
+        "async function previewTex(id, tex){ var el=$(id); if(!el) return;"
+        " try{ var r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:tex||'',src:S.src||''})});"
+        " var d=await r.json(); if(d&&d.html) el.innerHTML=d.html; if(window.ldvlTypeset) ldvlTypeset(el);}catch(e){} }"
+        "fill(); paint();"
+        "['phieuTitle','phieuSubject','phieuB1','phieuB2','phieuB4','phieuAns','phieuBlank','phieuEmpty'].forEach(function(id){"
+        " var el=$(id); if(!el) return; el.addEventListener(el.type==='checkbox'?'change':'input', paint);});"
+        "$('phieuHs').onclick=function(){mode='student';paint()};"
+        "$('phieuGv').onclick=function(){mode='teacher';paint()};"
+        "$('phieuPrint').onclick=function(){window.print()};"
+        "$('phieuAi').onclick=async function(){"
+        " var ks=(window.ldvlFilledKeys&&ldvlFilledKeys())||[];"
+        " if(!ks.length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');return;}"
+        " $('phieuNote').textContent='Đang gọi AI điền công thức…';"
+        " try{ var r=await fetch('/api/admin/worksheet',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',"
+        " body:JSON.stringify({src:S.src,file_idx:S.file_idx,api_keys:ks})}); var d=await r.json();"
+        " if(!d.ok){alert(d.error||'Không điền được');return;}"
+        " if(d.formulas) $('phieuB2').value=d.formulas;"
+        " if(d.short_answer) $('phieuAns').value=d.short_answer;"
+        " $('phieuNote').textContent=d.ai_note||'Đã điền công thức.'; paint();"
+        " }catch(e){$('phieuNote').textContent=String(e&&e.message||e);} };"
+        "})();</script>"
+    )
+    return base.page("Phiếu học tập", body)
+
+
 REWRITE_CLIENT_JS = r"""
 <style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox,.rwnbbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}</style>
 <script>
@@ -2963,6 +3246,14 @@ document.addEventListener('click',function(e){
     e.stopPropagation();
     const box=keep.closest('.rwtikzbox');
     if(box) rwUseTikz(box, '', true);
+    return;
+  }
+  const phieuBtn=e.target.closest&&e.target.closest('.rwphieu');
+  if(phieuBtn){
+    e.preventDefault();
+    const p=dropOf(phieuBtn);
+    if(!p) return;
+    window.open('/admin/phieu?src='+encodeURIComponent(p.src)+'&file_idx='+p.fi,'_blank','noopener');
     return;
   }
   const nbBtn=e.target.closest&&e.target.closest('.rwnbprompt');
