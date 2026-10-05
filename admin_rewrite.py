@@ -1927,24 +1927,19 @@ kèm mũi tên hoặc thanh thời gian để học sinh nhìn vào có thể hi
 KHÔNG tạo animation nếu nội dung không cần chuyển động.
 
 =============================
-VI. CÔNG THỨC
+VI. CHỮ, CÔNG THỨC, XUỐNG DÒNG — QUAN TRỌNG NHẤT
 =============================
 
-Giữ nguyên công thức từ LaTeX.
+Phần NỘI DUNG ở cuối prompt đã được xuống dòng sẵn. Mỗi dòng là một dòng trên trang.
 
-Không tự ý đổi:
-
-- số liệu;
-- đơn vị;
-- ký hiệu;
-- dấu;
-- số mũ;
-- chỉ số;
-- góc;
-- điều kiện;
-- đáp án.
-
-Công thức phải được trình bày rõ ràng như tài liệu giáo khoa.
+- Xuống dòng đúng như bản chữ. Không gộp nhiều dòng thành một dòng.
+- Không cắt một dòng ra hai dòng ở giữa một từ hoặc giữa một công thức.
+- Trong mỗi khung: chữ căn trái, dãn dòng đều (khoảng 1,4), chừa lề trong khung khoảng 12 px. Hết chiều ngang khung thì xuống dòng tại khoảng trắng.
+- Không để chữ tràn khỏi khung, không chồng dòng, không dính chữ vào viền. Thiếu chỗ thì thu nhỏ chữ, không cắt mất chữ.
+- Dòng là công thức (chỉ số, số mũ, phân số, ≈ × °): đặt một dòng riêng, căn giữa, viết như sách giáo khoa. Không in dấu $, không in gạch chéo ngược, không in lệnh TeX.
+- Mệnh đề a) b) c) d) hoặc A. B. C. D.: mỗi mệnh đề một khối. Nhãn ĐÚNG hoặc SAI nằm cùng hàng với câu, căn phải.
+- Lời giải nằm dưới mệnh đề, căn trái, mỗi câu một dòng.
+- Giữ nguyên số liệu, đơn vị, ký hiệu và đáp án. Không đổi kết quả.
 
 =============================
 VII. BÀI TRẮC NGHIỆM
@@ -2023,12 +2018,12 @@ Hàng giữa 2 cột:
 
 Tự điều chỉnh để toàn bộ nằm gọn một trang A4, nét, đều, chuyên nghiệp.
 
-NỘI DUNG LATEX:
+NỘI DUNG TRANG — mỗi dòng dưới đây là một dòng trên trang, giữ nguyên thứ tự, không gộp, không cắt giữa dòng:
 --------------------------------
 [DÁN LATEX VÀO ĐÂY]
 --------------------------------
 
-Hãy trực tiếp tạo trang vở học tập hoàn chỉnh.
+Hãy trực tiếp vẽ trang. Chữ phải thẳng hàng, xuống dòng đúng bản trên, công thức căn giữa, không in mã TeX.
 """
 
 _NOTEBOOK_MOTION = (
@@ -2052,8 +2047,220 @@ def _notebook_latex(q, tex, fi):
     return inner
 
 
+_SUP_DIGIT = str.maketrans("0123456789+-=()", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾")
+_SUB_DIGIT = str.maketrans("0123456789+-=()aeoxhklmnpst", "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₒₓₕₖₗₘₙₚₛₜ")
+_TEX_SYMBOL = {
+    "approx": "≈", "sim": "∼", "times": "×", "cdot": "·", "pm": "±", "mp": "∓",
+    "leq": "≤", "le": "≤", "geq": "≥", "ge": "≥", "neq": "≠", "ne": "≠",
+    "rightarrow": "→", "to": "→", "leftarrow": "←", "leftrightarrow": "↔",
+    "infty": "∞", "degree": "°", "circ": "°", "angle": "∠",
+    "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "Delta": "Δ",
+    "theta": "θ", "lambda": "λ", "mu": "μ", "pi": "π", "sigma": "σ", "omega": "ω", "Omega": "Ω",
+    "phi": "φ", "varphi": "φ", "varepsilon": "ε", "epsilon": "ε",
+    "quad": " ", "qquad": "  ", " ": " ", ",": " ", ";": " ", "!": "",
+}
+
+
+def _brace_span(s, i):
+    while i < len(s) and s[i] in " \t":
+        i += 1
+    if i >= len(s) or s[i] != "{":
+        return "", i
+    depth = 0
+    j = i
+    while j < len(s):
+        if s[j] == "{":
+            depth += 1
+        elif s[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return s[i + 1:j], j + 1
+        j += 1
+    return s[i + 1:], len(s)
+
+
+def _script_chars(body, table):
+    body = str(body or "").strip().replace(" ", "")
+    if body and all(ord(ch) in table for ch in body):
+        return body.translate(table)
+    return ""
+
+
+def _tex_to_lines(s, depth=0):
+    """LaTeX → dòng chữ thường. Không để lại dấu \\ kẻo Gemini nuốt \\t \\a \\f thành ký tự điều khiển."""
+    if depth > 12:
+        return re.sub(r"\\+", "", str(s or ""))
+    s = str(s or "")
+    out = []
+    i = 0
+    n = len(s)
+    while i < n:
+        ch = s[i]
+        if ch == "%" and (i == 0 or s[i - 1] != "\\"):
+            while i < n and s[i] != "\n":
+                i += 1
+            continue
+        if ch == "\\":
+            if i + 1 < n and s[i + 1] == "\\":
+                out.append("\n")
+                i += 2
+                continue
+            j = i + 1
+            if j < n and (s[j].isalpha() or s[j] == "@"):
+                while j < n and (s[j].isalpha() or s[j] == "@"):
+                    j += 1
+                name = s[i + 1:j]
+                i = j
+                low = name.lower()
+                if name in _TEX_SYMBOL or low in _TEX_SYMBOL:
+                    out.append(_TEX_SYMBOL.get(name) or _TEX_SYMBOL[low])
+                    continue
+                if low in ("newline", "par", "linebreak", "cr"):
+                    out.append("\n")
+                    continue
+                if low == "true":
+                    out.append("ĐÚNG. ")
+                    continue
+                if low == "false":
+                    out.append("SAI. ")
+                    continue
+                if low in ("frac", "dfrac", "tfrac", "cfrac"):
+                    a, i = _brace_span(s, i)
+                    b, i = _brace_span(s, i)
+                    out.append("(" + _tex_to_lines(a, depth + 1).strip() + ")/(" + _tex_to_lines(b, depth + 1).strip() + ")")
+                    continue
+                if low == "sqrt":
+                    while i < n and s[i] in " \t":
+                        i += 1
+                    if i < n and s[i] == "[":
+                        k = s.find("]", i)
+                        i = n if k < 0 else k + 1
+                    inner, i = _brace_span(s, i)
+                    out.append("√(" + _tex_to_lines(inner, depth + 1).strip() + ")")
+                    continue
+                if low in ("text", "mathrm", "mathbf", "textbf", "textit", "mathit", "operatorname", "mbox", "textrm", "textsf", "emph"):
+                    inner, i = _brace_span(s, i)
+                    out.append(_tex_to_lines(inner, depth + 1))
+                    continue
+                if low in ("choice", "choicetf"):
+                    labels = "ABCD" if low == "choice" else "abcd"
+                    k = 0
+                    while True:
+                        t = i
+                        while t < n and s[t] in " \t\n":
+                            t += 1
+                        if t >= n or s[t] != "{":
+                            i = t
+                            break
+                        inner, i = _brace_span(s, t)
+                        lab = labels[k] if k < len(labels) else str(k + 1)
+                        punct = "." if low == "choice" else ")"
+                        out.append("\n" + lab + punct + " " + _tex_to_lines(inner, depth + 1).strip() + "\n")
+                        k += 1
+                    continue
+                if low == "loigiai":
+                    inner, i = _brace_span(s, i)
+                    out.append("\nLời giải:\n" + _tex_to_lines(inner, depth + 1).strip() + "\n")
+                    continue
+                if low == "shortans":
+                    inner, i = _brace_span(s, i)
+                    out.append("\nĐáp án: " + _tex_to_lines(inner, depth + 1).strip() + "\n")
+                    continue
+                if low == "dangbt":
+                    inner, i = _brace_span(s, i)
+                    out.append("\nDạng bài: " + _tex_to_lines(inner, depth + 1).strip() + "\n")
+                    continue
+                if low in ("begin", "end", "item", "label"):
+                    if low != "item":
+                        _inner, i = _brace_span(s, i)
+                    else:
+                        out.append("\n• ")
+                    continue
+                _inner, i2 = _brace_span(s, i)
+                if i2 != i:
+                    if _inner:
+                        out.append(_tex_to_lines(_inner, depth + 1))
+                    i = i2
+                continue
+            nxt = s[i + 1] if i + 1 < n else ""
+            plain = {"{": "{", "}": "}", "$": "", "&": " ", "%": "%", "_": "", "^": "", ",": " ", ";": " ", " ": " "}
+            if nxt in plain:
+                out.append(plain[nxt])
+                i += 2
+                continue
+            i += 1
+            continue
+        if ch == "$":
+            i += 1
+            continue
+        if ch in "{}":
+            i += 1
+            continue
+        if ch in "^_":
+            table = _SUP_DIGIT if ch == "^" else _SUB_DIGIT
+            i += 1
+            if i < n and s[i] == "\\":
+                j = i + 1
+                while j < n and s[j].isalpha():
+                    j += 1
+                name = s[i + 1:j]
+                token = _TEX_SYMBOL.get(name) or _TEX_SYMBOL.get(name.lower())
+                if token:
+                    out.append(token)
+                else:
+                    out.append(_tex_to_lines(s[i:j], depth + 1))
+                i = j
+                continue
+            if i < n and s[i] == "{":
+                inner, i = _brace_span(s, i)
+                inner = _tex_to_lines(inner, depth + 1).strip()
+            elif i < n:
+                inner = s[i]
+                i += 1
+            else:
+                inner = ""
+            uni = _script_chars(inner, table)
+            out.append(uni or inner)
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _wrap_page_line(line, width=76):
+    line = re.sub(r"[ \t]+", " ", str(line or "")).strip()
+    if not line or len(line) <= width:
+        return [line] if line else []
+    rows, cur = [], ""
+    for word in line.split(" "):
+        if not cur:
+            cur = word
+        elif len(cur) + 1 + len(word) <= width:
+            cur += " " + word
+        else:
+            rows.append(cur)
+            cur = word
+    if cur:
+        rows.append(cur)
+    return rows
+
+
+def _page_lines_for_gemini(latex):
+    raw = _tex_to_lines(latex)
+    raw = raw.replace("\r\n", "\n").replace("\r", "\n")
+    raw = raw.replace("\\", "")
+    raw = re.sub(r"(?<=\S)([≈×≤≥≠→←])", r" \1", raw)
+    raw = re.sub(r"([≈×≤≥≠→←])(?=\S)", r"\1 ", raw)
+    lines = []
+    for piece in raw.split("\n"):
+        lines.extend(_wrap_page_line(piece))
+    text = "\n".join(lines)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text or "(trống)"
+
+
 def _notebook_image_prompt(latex):
-    body = _NOTEBOOK_GEMINI.replace("[DÁN LATEX VÀO ĐÂY]", str(latex or "").strip() or "% (trống)")
+    body = _NOTEBOOK_GEMINI.replace("[DÁN LATEX VÀO ĐÂY]", _page_lines_for_gemini(latex))
     return body.strip(), _NOTEBOOK_MOTION
 
 
@@ -3701,6 +3908,7 @@ document.addEventListener('click',function(e){
   }
   const photoBtn=e.target.closest&&e.target.closest('.aiPhotoBtn');
   if(photoBtn){
+    if(window.ldvlPhotoReady) return;
     e.preventDefault();
     var host=photoBtn.closest('.aiphotobox')||photoHost(photoBtn);
     if(host.querySelector('.aiphoto-text')&&!photoBtn.getAttribute('data-force')){
@@ -3715,6 +3923,7 @@ document.addEventListener('click',function(e){
   }
   const photoRedo=e.target.closest&&e.target.closest('.aiphoto-redo');
   if(photoRedo){
+    if(window.ldvlPhotoReady) return;
     e.preventDefault();
     var pbox=photoRedo.closest('.aiphotobox');
     var pta=pbox&&pbox.querySelector('.aiphoto-text');
@@ -3723,6 +3932,7 @@ document.addEventListener('click',function(e){
   }
   const photoCopy=e.target.closest&&e.target.closest('.aiphoto-copy');
   if(photoCopy){
+    if(window.ldvlPhotoReady) return;
     e.preventDefault();
     var cbox=photoCopy.closest('.aiphotobox');
     var which=photoCopy.getAttribute('data-which')||'prompt';

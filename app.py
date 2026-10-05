@@ -535,7 +535,7 @@ body.cinema .qbox{padding-right:12px}
 }
 @media(orientation:landscape) and (max-height:500px){
 .quizacts{position:fixed;left:0;right:0;bottom:0;z-index:90;margin:0;display:flex;flex-wrap:nowrap;gap:8px;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid var(--line);box-shadow:0 -6px 20px #0f172a18}
-.quizacts .btn{flex:1 1 0;min-height:40px;font-size:14px;display:inline-flex;align-items:center;justify-content:center}button.aiPhotoBtn{background:#f59e0b!important;color:#1c1917!important;border:1px solid #b45309!important;font-weight:900}
+.quizacts .btn{flex:1 1 0;min-height:40px;font-size:14px;display:inline-flex;align-items:center;justify-content:center}button.aiPhotoBtn,.nav button.aiPhotoBtn{background:#f59e0b!important;color:#1c1917!important;border:1px solid #b45309!important;font-weight:900!important}.aiphotobox{margin:10px 16px;padding:10px;border:1px solid #7dd3fc;border-radius:10px;background:#fff;color:#19324d}.aiphotobox .rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;box-sizing:border-box}.aiphotobox .success{color:#0d7b35;font-weight:800}.aiphotobox .err{color:#b42318;font-weight:800}#ldvlPhotoFab{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:2147483001;display:flex;align-items:flex-start}#ldvlPhotoFab[hidden],body.cinema #ldvlPhotoFab{display:none}#ldvlPhotoFab .fabmain{width:58px;height:58px;padding:0;border-radius:50%!important;font-size:26px;box-shadow:0 6px 18px #0005;cursor:pointer}#ldvlPhotoFab .fabhide{margin-left:-16px;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:#334155;color:#fff;font-weight:900;line-height:22px;cursor:pointer}
 .body:has(.quizacts){padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
 }
 @media(max-width:1024px){
@@ -692,6 +692,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         nav += [
             "<a href='/member/ai' title='Gemini'>🤖</a>",
             "<a href='/xem' title='Xem chiếu'>📺 Chiếu</a>",
+            "<button type='button' class='aiPhotoBtn' title='Chụp hình, nhận dạng chữ, viết lại prompt'>📷 Chụp</button>",
             "<a href='/admin' title='ngan-hang'>📂</a>",
             f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener' title='GitHub'>🐙</a>",
             "<a href='/admin/ly-thuyet' title='Duyệt lý thuyết'>📖 LT</a>",
@@ -800,7 +801,84 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "});"
         "document.addEventListener('fullscreenchange',function(){var b=document.getElementById('ldvlFs');if(b)b.textContent=document.fullscreenElement?'⛶ Thu nhỏ':'⛶ Toàn màn hình'});"
         "</script>"
-        "<script src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js' onerror=\"this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js'\"></script>"
+        + ("<script>window.ldvlPhotoReady=true;"
+        "(function(){"
+        "function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\"/g,'&quot;')}"
+        "function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}"
+        "function photoDock(){"
+        "var box=document.getElementById('ldvlPhotoDock');"
+        "if(box) return box;"
+        "box=document.createElement('div');"
+        "box.id='ldvlPhotoDock';box.className='aiphotobox';"
+        "var top=document.querySelector('.top');"
+        "if(top&&top.parentNode)top.parentNode.insertBefore(box,top.nextSibling);"
+        "else document.body.insertBefore(box,document.body.firstChild);"
+        "return box;"
+        "}"
+        "function paint(box,d){"
+        "box.innerHTML='<div class=\"success\">Đã nhận dạng chữ và viết lại prompt. Sửa chữ nếu máy đọc sai, rồi bấm Viết lại prompt.</div>'"
+        "+'<label><b>Chữ nhận dạng</b></label><textarea class=\"rwta aiphoto-text\" spellcheck=\"false\">'+esc(d.text||'')+'</textarea>'"
+        "+'<p><button type=\"button\" class=\"btn aiphoto-redo\">↻ Viết lại prompt từ chữ này</button> <button type=\"button\" class=\"btn aiPhotoBtn\" data-force=\"1\">📷 Chụp lại</button></p>'"
+        "+'<label><b>Prompt đã viết lại</b></label><textarea class=\"rwta aiphoto-prompt\" style=\"min-height:220px\" spellcheck=\"false\">'+esc(d.prompt||'')+'</textarea>'"
+        "+'<p><button type=\"button\" class=\"btn primary aiphoto-copy\" data-which=\"prompt\">📋 Copy prompt</button> '"
+        "+'<a class=\"btn\" href=\"'+esc(d.gemini||'https://gemini.google.com/app')+'\" target=\"_blank\" rel=\"noopener\">↗ Mở Gemini</a></p>'"
+        "+'<label><b>Lệnh phụ — animation</b></label><textarea class=\"rwta aiphoto-motion\" spellcheck=\"false\">'+esc(d.motion||'')+'</textarea>'"
+        "+'<p><button type=\"button\" class=\"btn aiphoto-copy\" data-which=\"motion\">📋 Copy lệnh động</button></p>';"
+        "}"
+        "function shrink(file){return new Promise(function(ok,bad){"
+        "if(!file){bad(new Error('Chưa chọn ảnh.'));return;}"
+        "if(file.size>12000000){bad(new Error('Ảnh quá lớn.'));return;}"
+        "var img=new Image(),url=URL.createObjectURL(file);"
+        "img.onload=function(){var max=1400,w=img.width||1,h=img.height||1,sc=Math.min(1,max/Math.max(w,h));"
+        "w=Math.max(1,Math.round(w*sc));h=Math.max(1,Math.round(h*sc));"
+        "var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);"
+        "URL.revokeObjectURL(url);var b64=(c.toDataURL('image/jpeg',0.82).split(',')[1]||'');"
+        "if(!b64||b64.length>1800000){bad(new Error('Ảnh vẫn quá nặng. Chụp gần phần chữ.'));return;}"
+        "ok({mime:'image/jpeg',data:b64});};"
+        "img.onerror=function(){URL.revokeObjectURL(url);bad(new Error('Không đọc được ảnh.'));};"
+        "img.src=url;});}"
+        "async function run(box,payload){"
+        "var ks=keys();"
+        "if(!payload.text&&!ks.length){alert('Nạp key Gemini (nút 🤖 trên thanh) rồi chụp lại.');return;}"
+        "box.innerHTML='<div class=\"muted\">'+(payload.text?'Đang viết lại prompt…':'Đang nhận dạng chữ, rồi viết lại prompt…')+'</div>';"
+        "try{var body=payload.text?{text:payload.text}:{api_keys:ks,source_images:[payload.image]};"
+        "var r=await fetch('/api/admin/photo-prompt',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});"
+        "var d=await r.json();"
+        "if(!d.ok){box.innerHTML='<div class=\"err\">'+esc(d.error||'Không nhận dạng được')+'</div>';return;}"
+        "paint(box,d);}catch(err){box.innerHTML='<div class=\"err\">'+esc(err&&err.message||err)+'</div>';}}"
+        "function cam(){var inp=document.getElementById('aiCamFile');if(inp)return inp;"
+        "inp=document.createElement('input');inp.type='file';inp.id='aiCamFile';inp.accept='image/*';inp.setAttribute('capture','environment');inp.hidden=true;"
+        "document.body.appendChild(inp);"
+        "inp.addEventListener('change',async function(){var file=inp.files&&inp.files[0];inp.value='';var box=window._aiPhotoHost;if(!box||!file)return;"
+        "try{var image=await shrink(file);await run(box,{image:image});}catch(err){box.innerHTML='<div class=\"err\">'+esc(err&&err.message||err)+'</div>';}});"
+        "return inp;}"
+        "function copyText(s){s=String(s||'');if(navigator.clipboard&&navigator.clipboard.writeText)return navigator.clipboard.writeText(s);"
+        "return new Promise(function(ok,bad){var ta=document.createElement('textarea');ta.value=s;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok();}catch(e){bad(e);}ta.remove();});}"
+        "function fab(){if(document.getElementById('ldvlPhotoFab'))return;"
+        "var w=document.createElement('div');w.id='ldvlPhotoFab';"
+        "w.innerHTML='<button type=\"button\" class=\"aiPhotoBtn fabmain\" title=\"Chụp hình → prompt\">📷</button><button type=\"button\" class=\"fabhide\" title=\"Ẩn bóng (bấm 📷 Chụp trên thanh để hiện lại)\">×</button>';"
+        "try{if(localStorage.getItem('ldvlPhotoFab')==='0')w.hidden=true;}catch(e){}"
+        "document.body.appendChild(w);}"
+        "if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fab);else fab();"
+        "document.addEventListener('click',function(e){"
+        "var hide=e.target.closest&&e.target.closest('#ldvlPhotoFab .fabhide');"
+        "if(hide){e.preventDefault();var fw=document.getElementById('ldvlPhotoFab');if(fw)fw.hidden=true;try{localStorage.setItem('ldvlPhotoFab','0');}catch(err){}return;}"
+        "var photoBtn=e.target.closest&&e.target.closest('.aiPhotoBtn');"
+        "if(photoBtn&&photoBtn.closest('.nav')){var fw2=document.getElementById('ldvlPhotoFab');if(fw2)fw2.hidden=false;try{localStorage.setItem('ldvlPhotoFab','1');}catch(err){}}"
+        "if(photoBtn){e.preventDefault();var host=photoBtn.closest('.aiphotobox')||photoDock();"
+        "if(host.querySelector('.aiphoto-text')&&!photoBtn.getAttribute('data-force')){host.remove();return;}"
+        "host.innerHTML='<div class=\"muted\">Chọn hoặc chụp ảnh đề. Máy nhận dạng chữ rồi viết lại prompt.</div>';"
+        "window.scrollTo({top:0,behavior:'smooth'});"
+        "window._aiPhotoHost=host;cam().click();return;}"
+        "var redo=e.target.closest&&e.target.closest('.aiphoto-redo');"
+        "if(redo){e.preventDefault();var pbox=redo.closest('.aiphotobox');var pta=pbox&&pbox.querySelector('.aiphoto-text');if(pbox)run(pbox,{text:(pta&&pta.value)||''});return;}"
+        "var cp=e.target.closest&&e.target.closest('.aiphoto-copy');"
+        "if(cp){e.preventDefault();var cbox=cp.closest('.aiphotobox');var which=cp.getAttribute('data-which')||'prompt';"
+        "var cta=cbox&&cbox.querySelector(which==='motion'?'.aiphoto-motion':'.aiphoto-prompt');var label=cp.textContent;"
+        "copyText(cta?cta.value:'').then(function(){cp.textContent='Đã copy';setTimeout(function(){cp.textContent=label;},1400);},function(){prompt('Copy prompt',cta?cta.value:'');});}"
+        "});"
+        "})();</script>" if admin_ui else "")
+        + "<script src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js' onerror=\"this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js'\"></script>"
     )
     pwa_tip = (
         "<div id='ldvlPwaTip' class='pwatip' hidden>"
