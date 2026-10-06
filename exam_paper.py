@@ -991,9 +991,11 @@ def _xlsx_text(s):
 def _xlsx_sheet(rows):
     body = []
     for r, row in enumerate(rows, 1):
+        head = str(row[0] if row else "")
+        bold = head == "Câu" or head.startswith("Mã đề")
         cells = []
         for c, val in enumerate(row, 1):
-            style = ' s="1"' if r == 1 else ""
+            style = ' s="1"' if bold else ""
             ref = f"{_xlsx_col(c)}{r}"
             cells.append(f'<c r="{ref}" t="inlineStr"{style}><is><t>{_xlsx_text(val)}</t></is></c>')
         body.append(f'<row r="{r}">' + "".join(cells) + "</row>")
@@ -1091,19 +1093,14 @@ _XLSX_PART = {"TN": "Trắc nghiệm", "DS": "Đúng/Sai", "TLN": "Trả lời n
 
 
 def _answer_sheets(qs, copies):
-    """Mỗi mã đề một sheet. Tên sheet là mã đề."""
-    sheets = []
-    used = set()
+    """Một sheet, mỗi mã đề là một khối riêng, cách nhau một hàng trống."""
+    rows = []
     for copy in copies:
+        if rows:
+            rows.append([""])
         code = str(copy.get("code") or "").strip() or "de"
-        name = f"Mã {code}"
-        base = name
-        n = 2
-        while name in used:
-            name = f"{base}-{n}"
-            n += 1
-        used.add(name)
-        rows = [["Câu", "Phần", "Đáp án", "a", "b", "c", "d"]]
+        rows.append([f"Mã đề {code}"])
+        rows.append(["Câu", "Phần", "Đáp án", "a", "b", "c", "d"])
         for r in _copy_answer_rows(qs, copy):
             ans = r["answer"]
             if r["kind"] == "TLN":
@@ -1118,8 +1115,7 @@ def _answer_sheets(qs, copies):
                 parts = list(mask[:4]) + [""] * (4 - len(mask[:4]))
                 ans = "".join(parts).rstrip() or ans
             rows.append([r["n"], _XLSX_PART.get(r["kind"], r["kind"]), ans, *parts])
-        sheets.append((name, rows))
-    return sheets
+    return [("Đáp án", rows)]
 
 
 def _answer_xlsx_download():
