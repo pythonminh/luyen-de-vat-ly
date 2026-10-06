@@ -1250,10 +1250,108 @@ def _chapter_rows(mon, lop, chuong):
     return rows
 
 
+def _plain_snip(text, n=72):
+    t = re.sub(r"\\[a-zA-Z]+\*?", " ", str(text or ""))
+    t = t.replace("{", " ").replace("}", " ").replace("$", " ")
+    t = re.sub(r"\s+", " ", t).strip()
+    if len(t) > n:
+        t = t[: n - 1] + "…"
+    return t
+
+
+def _chapter_chosen(rows, form, shuffle):
+    """Câu đã tick, hoặc số câu theo loại. None nếu không dùng cách này."""
+    index = {}
+    for i, (_title, path, qs) in enumerate(rows):
+        for q in qs:
+            try:
+                index[(i, int(q.get("idx")))] = (path, q)
+            except (TypeError, ValueError):
+                continue
+    chosen = []
+    seen = set()
+    raws = form.getlist("qsel") if hasattr(form, "getlist") else []
+    for raw in raws:
+        try:
+            a, b = str(raw).split(":", 1)
+            key = (int(a), int(b))
+        except (TypeError, ValueError):
+            continue
+        if key in index and key not in seen:
+            seen.add(key)
+            chosen.append(index[key])
+    if chosen:
+        return chosen
+    wants = {}
+    any_pick = False
+    for kind, _lab in _MX_KINDS:
+        try:
+            n = max(0, int(form.get(f"kpick:{kind}") or 0))
+        except (TypeError, ValueError):
+            n = 0
+        wants[kind] = n
+        if n:
+            any_pick = True
+    if not any_pick:
+        return None
+    pools = {k: [] for k, _lab in _MX_KINDS}
+    for _title, path, qs in rows:
+        for q in qs:
+            k = str(q.get("kind") or "")
+            if k in pools:
+                pools[k].append((path, q))
+    chosen = []
+    for kind, _lab in _MX_KINDS:
+        n = wants.get(kind) or 0
+        pool = pools.get(kind) or []
+        if n <= 0 or not pool:
+            continue
+        if shuffle:
+            chosen.extend(random.sample(pool, min(n, len(pool))))
+        else:
+            chosen.extend(pool[: min(n, len(pool))])
+    return chosen
+
+
+def _merge_chosen(chosen):
+    picked = []
+    merged = []
+    for path, q in chosen:
+        picked.append({"path": path, "idx": int(q["idx"])})
+        qq = dict(q)
+        qq["idx"] = len(merged)
+        merged.append(qq)
+    return picked, merged
+
+
 def build_chapter_exam(shuffle, auto_print, copies_n, ruled, mon, lop, chuong):
     back = "/member/chapter/matrix?" + _chapter_query(mon, lop, chuong)
     rows = _chapter_rows(mon, lop, chuong)
     form = request.form
+    chosen = _chapter_chosen(rows, form, bool(shuffle))
+    if chosen is not None:
+        if not chosen or not rows:
+            return page(
+                "Tạo đề",
+                "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+                "Chưa chọn được câu nào. Điền <b>số câu theo loại</b>, tick câu trong từng bài, "
+                "hoặc điền ô ma trận rồi bấm <b>Tạo đề</b>, <b>Trộn đề</b> hoặc <b>In đề</b>.</div>"
+                f"<p><a class='btn' href='{_esc(back)}'>← Về ma trận</a></p></div></div></div>",
+            )
+        picked, merged = _merge_chosen(chosen)
+        title = " · ".join(x for x in (mon, ("Lớp " + lop) if lop else "", chuong) if x)
+        _save_exam(
+            rows[0][1],
+            merged,
+            [q["idx"] for q in merged],
+            copies_n,
+            shuffle=bool(shuffle or copies_n > 1),
+            title=title,
+            back=back,
+            qmap=picked,
+            ruled=ruled,
+        )
+        return render_exam(auto_print=auto_print)
     picked = []
     merged = []
     for i, (_title, path, qs) in enumerate(rows):
@@ -1326,6 +1424,51 @@ def chapter_matrix_html(mon, lop, chuong):
         )
     back = "/member/chapter?" + _chapter_query(mon, lop, chuong)
     heading = " · ".join(x for x in (mon, ("Lớp " + lop) if lop else "", chuong) if x)
+    levlab = dict(_MX_LEVELS)
+    short_kind = {"TN": "TN", "DS": "ĐS", "TLN": "TLN", "TL": "TL"}
+    kc = {k: 0 for k, _lab in _MX_KINDS}
+    pick_blocks = []
+    for i, (title, _path, qs) in enumerate(rows):
+        lines = []
+        for q in qs:
+            k = str(q.get("kind") or "")
+            if k in kc:
+                kc[k] += 1
+            try:
+                idx = int(q.get("idx"))
+            except (TypeError, ValueError):
+                continue
+            lab = levlab.get(str(q.get("level") or ""), str(q.get("level") or ""))
+            lines.append(
+                "<label class='qselrow'>"
+                f"<input type='checkbox' name='qsel' value='{i}:{idx}' data-k='{html.escape(k, quote=True)}'>"
+                f"<b>{html.escape(short_kind.get(k, k))}</b>"
+                f"<span class='tag'>{html.escape(lab)}</span>"
+                f"<span class='qid'>{html.escape(str(q.get('id') or ''))}</span>"
+                f"{html.escape(_plain_snip(q.get('text') or ''))}"
+                "</label>"
+            )
+        pick_blocks.append(
+            f"<details class='chpick'><summary>{i + 1}. {html.escape(title)}"
+            f" <span class='tag'>{len(qs)} câu</span></summary>"
+            + "".join(lines)
+            + "</details>"
+        )
+    kind_inputs = "".join(
+        f"<label>{html.escape(label)} <input class='kpick' data-k='{kind}' name='kpick:{kind}' "
+        f"type='number' min='0' max='{kc[kind]}' value='0'> / {kc[kind]}</label>"
+        for kind, label in _MX_KINDS
+        if kc[kind]
+    )
+    pick_bar = (
+        "<div class='kindbar'><b>Tạo / trộn đề theo số câu, từ câu được chọn</b>"
+        + kind_inputs
+        + "<button type='button' class='btn primary' id='applyKpick'>Áp dụng số câu</button></div>"
+        "<p class='muted'>Điền số câu mỗi loại rồi bấm <b>Tạo đề</b> hoặc <b>Trộn đề</b>. "
+        "Muốn đúng từng câu thì mở bài bên dưới, tick câu, rồi bấm tạo đề. "
+        "<b>Áp dụng số câu</b> tick sẵn bấy nhiêu câu mỗi loại.</p>"
+        + "".join(pick_blocks)
+    )
     controls = (
         "<label class='examcopies'>Số bản trộn <input name='exam_copies' type='number' min='1' max='20' value='1'></label>"
         "<label class='examcopies'>Ghi bài <select name='exam_ruled'>"
@@ -1344,8 +1487,10 @@ def chapter_matrix_html(mon, lop, chuong):
         f"<input type='hidden' name='chuong' value='{_esc(chuong)}'>"
         "<div class='notice'>📝 <b>Ma trận cả chương</b> — mỗi dòng là một bài. Số xanh là số câu đang có, ô là số câu lấy. "
         f"Kho cả chương: <b>{total}</b> câu. "
-        "<b>Tạo đề</b> lấy đúng số đó từ nhiều bài. <b>Trộn đề</b> và <b>In đề</b> xáo câu trong từng phần, đảo A–D và a)–d).</div>"
+        "Ngay dưới là <b>tạo / trộn theo số câu từ câu được chọn</b>. "
+        "Bảng tiếp theo là ma trận từng bài. <b>Trộn đề</b> và <b>In đề</b> xáo câu trong từng phần, đảo A–D và a)–d).</div>"
         + "<div class='modebar'>" + controls + submits + "</div>"
+        + pick_bar
         + "<div class='selectwrap'><table class='selectgrid mxone'><tr><th>Bài</th>"
         + "".join(
             "<th>"
@@ -1374,13 +1519,27 @@ def chapter_matrix_html(mon, lop, chuong):
         ".exammatrix .mxpick{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px}"
         ".exammatrix .mxpick b{font-size:11px;line-height:1;font-weight:800;color:#166534;min-width:1.1em;text-align:right}"
         ".exammatrix .mxpick .n{width:26px;padding:1px 0;font-size:12px;font-weight:800}"
-        ".exammatrix .mxpick.off{opacity:.38}</style>"
+        ".exammatrix .mxpick.off{opacity:.38}"
+        ".exammatrix .kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:10px;border:2px solid #15803d;border-radius:10px;background:#f0fdf4}"
+        ".exammatrix .kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}"
+        ".exammatrix .kindbar input{width:58px;padding:6px;border:1px solid #86efac;border-radius:6px;text-align:center}"
+        ".exammatrix .chpick{margin:6px 0;border:1px solid #d7e2ee;border-radius:8px;background:#fff;padding:6px 10px}"
+        ".exammatrix .chpick summary{cursor:pointer;font-weight:800}"
+        ".exammatrix .qselrow{display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-top:1px dashed #e5edf5;font-size:13px;line-height:1.35}"
+        ".exammatrix .qselrow input{margin-top:3px}</style>"
         "<script>(function(){var f=document.getElementById('examMatrix');if(!f)return;"
-        "function upd(){var t=0;f.querySelectorAll('.n').forEach(function(x){var m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});"
-        "var s=document.getElementById('examSum');if(s)s.textContent='TỔNG CHỌN: '+t+' câu — điền NB/TH/VD/VDC rồi Tạo đề, Trộn đề hoặc In đề.';}"
-        "f.querySelectorAll('.n').forEach(function(x){x.addEventListener('input',upd)});upd();"
-        "f.addEventListener('submit',function(e){var t=0;f.querySelectorAll('.n').forEach(function(x){t+=Number(x.value)||0});"
-        "if(t<=0){e.preventDefault();alert('Hãy điền số câu NB/TH/VD/VDC trong ma trận rồi bấm Tạo đề, Trộn đề hoặc In đề.');}});"
+        "function clamp(x){var m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;return v;}"
+        "function countAll(){var m=0,k=0;f.querySelectorAll('.n').forEach(function(x){m+=clamp(x)});f.querySelectorAll('.kpick').forEach(function(x){k+=clamp(x)});return {m:m,k:k,s:f.querySelectorAll('input[name=qsel]:checked').length};}"
+        "function upd(){var c=countAll();var s=document.getElementById('examSum');if(s)s.textContent='Theo loại: '+c.k+' câu · Đã tick: '+c.s+' câu · Ma trận: '+c.m+' câu';}"
+        "var apply=document.getElementById('applyKpick');if(apply)apply.addEventListener('click',function(){"
+        "f.querySelectorAll('input[name=qsel]').forEach(function(x){x.checked=false});"
+        "f.querySelectorAll('.kpick').forEach(function(inp){var k=inp.getAttribute('data-k');var want=clamp(inp);var boxes=f.querySelectorAll('input[name=qsel][data-k=\"'+k+'\"]');for(var i=0;i<boxes.length&&i<want;i++)boxes[i].checked=true;});"
+        "upd();});"
+        "f.querySelectorAll('.n,.kpick').forEach(function(x){x.addEventListener('input',upd)});"
+        "f.querySelectorAll('input[name=qsel]').forEach(function(x){x.addEventListener('change',upd)});"
+        "upd();"
+        "f.addEventListener('submit',function(e){var c=countAll();"
+        "if(c.m+c.k+c.s<=0){e.preventDefault();alert('Điền số câu theo loại, tick câu trong bài, hoặc điền ô ma trận, rồi bấm Tạo đề, Trộn đề hoặc In đề.');}});"
         "})();</script>"
     )
 
