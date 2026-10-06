@@ -538,6 +538,27 @@
       "password_sha256": "71c9349b93f39f2fa8ce0a4e9953162c7643ca11faa093b38c8ee27a71174a8c",
       "password_enc": "v1:zWWHUzHi_ovTbiMX",
       "updated_at": "2026-09-22 07:46:26"
+    },
+    {
+      "username": "khánh thy",
+      "name": "phạm hoàng khánh thy",
+      "phone": "0934174811",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "requested_package": {
+        "kind": "mon1",
+        "grades": [
+          "10"
+        ],
+        "subjects": [
+          "Toán"
+        ]
+      },
+      "package_status": "pending",
+      "password_sha256": "9def43a03c3e4d38f133e15215e2a5c470d016fad41145fd26e4596db1a42eda",
+      "password_enc": "v1:uTzDHwG7rd6VNmoQRa8=",
+      "updated_at": "2026-10-06 15:37:29"
     }
   ]
 }
