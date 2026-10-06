@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import io
+import json
 import random
 import re
 import urllib.parse
@@ -11,7 +12,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from flask import redirect, request, send_file, session
+from flask import jsonify, redirect, request, send_file, session
 
 from app import (
     KIND_ORDER,
@@ -226,6 +227,34 @@ def _tn_letter(q):
 
 def _ds_mask(q):
     return "".join("Đ" if (s or {}).get("correct") else "S" for s in (q.get("statements") or [])) or "—"
+
+
+def _copy_answer_rows(qs, copy):
+    """Đáp án đúng của một mã đề, sau khi đã trộn phương án."""
+    by = {int(q.get("idx")): q for q in qs}
+    groups = {k: [] for k in KIND_ORDER}
+    for i in list(copy.get("ids") or []):
+        q = by.get(int(i))
+        if not q:
+            continue
+        k = str(q.get("kind") or "TL")
+        (groups[k] if k in groups else groups.setdefault("TL", [])).append(q)
+    rows = []
+    seq = 0
+    for kind in KIND_ORDER:
+        for q in groups.get(kind) or []:
+            seq += 1
+            qq = apply_perm(q, copy)
+            if kind == "TN":
+                ans = _tn_letter(qq)
+            elif kind == "DS":
+                ans = _ds_mask(qq)
+            elif kind == "TLN":
+                ans = str(qq.get("answer") or "").strip()
+            else:
+                ans = ""
+            rows.append({"n": seq, "kind": kind, "answer": ans})
+    return rows
 
 
 def _opt_span(tex):
@@ -448,7 +477,13 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
         f"<div class='exkgrid'>{''.join(key_rows)}</div></section>"
     )
     phieu = _phieu_html(sheet, str(copy.get("code") or ""), title)
-    return "<section class='excopy'>" + "".join(parts) + phieu + (key if show_key else "") + "</section>", key
+    return (
+        f"<section class='excopy' data-code='{code}'>"
+        + "".join(parts)
+        + phieu
+        + (key if show_key else "")
+        + "</section>"
+    ), key
 
 
 def exam_css():
@@ -460,8 +495,18 @@ def exam_css():
 .exambar input[type=number]{width:64px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
 .exambar select{padding:6px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}
 .exambar .muted{font-size:12px;font-weight:700;color:#64748b}
-.exampaper{background:#fff;border:1px solid #d7e2ee;border-radius:12px;padding:18px 22px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.55;color:#111}
+.gradebox{margin:0 0 12px;padding:10px 12px;border:1px solid #fecdd3;border-radius:10px;background:#fff7f7}
+.gradebox .muted{display:block;margin-top:6px;font-size:12px;font-weight:700;color:#64748b}
+.gradesum{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;font-size:20px;margin-top:8px}
+.gradesum span{font-size:14px;font-weight:700}
+.grademeta{font-size:12px;color:#64748b;margin:4px 0 8px}
+.gradewrong{font-size:14px;line-height:1.5}
+.gradecode{font-weight:800}
+.exampaper{width:186mm;max-width:none;margin:0 auto;background:#fff;border:1px solid #d7e2ee;border-radius:12px;padding:0;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.55;color:#111}
+.excopy{width:186mm}
 .excopy + .excopy{margin-top:28px;padding-top:16px;border-top:2px dashed #94a3b8}
+.expage{position:relative;box-sizing:border-box;width:186mm;min-height:245mm;margin:0 auto 8mm;padding:0 0 14mm;background:#fff;outline:1px solid #e2e8f0}
+.expagefoot{position:absolute;left:0;right:0;bottom:3mm;text-align:center;font:700 12pt/1.2 'Times New Roman',Times,serif;color:#111}
 .exheadblock{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:10px;align-items:start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}
 .exschool,.exmeta{font-size:13px}.extitle{text-align:center;font-size:18px}
 .exnote{margin:8px 0 14px}
@@ -496,11 +541,16 @@ def exam_css():
 .bub{display:inline-block;width:12px;height:12px;border:1.5px solid #e11d48;border-radius:50%;vertical-align:middle}
 .phtl{margin:3px 0;font-size:14px}
 @media print{
-  .top,.nav,.drawer,.exambar,.subnav,.regline,.navtoggle,.clock,.whobar{display:none!important}
+  @page{size:A4;margin:12mm 12mm 16mm 12mm}
+  .top,.nav,.drawer,.exambar,.gradebox,.subnav,.regline,.navtoggle,.clock,.whobar{display:none!important}
   body{background:#fff}
-  .wrap,.examwrap,.exampaper{max-width:none;margin:0;padding:0;overflow:visible}
+  .wrap,.examwrap,.exampaper{max-width:none;width:auto;margin:0;padding:0;overflow:visible}
   .exampaper{border:0;border-radius:0}
-  .excopy + .excopy{margin:0;padding:0;border:0;break-before:page;page-break-before:always}
+  .excopy,.expage{width:auto}
+  .excopy + .excopy{margin:0;padding:0;border:0;break-before:auto;page-break-before:auto}
+  .expage{outline:0;margin:0;min-height:245mm;height:253mm;break-after:page;page-break-after:always}
+  .exampaper .excopy:last-child .expage:last-child{break-after:auto;page-break-after:auto}
+  .expage .exphieu,.expage .exanswer{break-before:auto;page-break-before:auto;margin-top:0}
   .exphieu{break-before:page;page-break-before:always;margin:0;border-color:#e11d48}
   .exanswer{break-before:page;page-break-before:always}
   .bub,.phtn th,.phtn td,.phds th,.phds td,.phtln th,.phtln td,.phcode,.phdiem{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -563,11 +613,48 @@ def render_exam(auto_print=False):
         + ("" if exam.get("qmap") else "<button class='btn' name='exam_action' value='practice'>▶ Làm bài với đề này</button>")
         + f"<a class='btn' href='{_esc(back)}'>← Chọn lại số câu</a>"
         + "</form>"
+        "<div class='gradebox noprint'>"
+        "<button type='button' class='btn' id='gradeCam'>📷 Chụp phiếu chấm điểm</button>"
+        "<input id='gradeFile' type='file' accept='image/*' capture='environment' hidden>"
+        "<span class='muted'>Chụp phiếu học sinh đã tô, thấy rõ mã đề và các ô. Đừng chụp trang đáp án.</span>"
+        "<div id='gradeOut'></div>"
+        "</div>"
     )
     print_js = (
-        "<script>window.addEventListener('load',function(){if(window.ldvlTypeset)ldvlTypeset(document.body);"
-        + ("setTimeout(function(){window.print()},600);" if auto_print else "")
-        + "})</script>"
+        "<script>function paginateExams(){if(document.body.getAttribute('data-expage')==='1')return;"
+        "var ruler=document.createElement('div');ruler.style.cssText='position:absolute;left:0;top:0;height:228mm;width:186mm;visibility:hidden';"
+        "document.body.appendChild(ruler);var limit=ruler.offsetHeight||900;ruler.remove();"
+        "document.querySelectorAll('.excopy').forEach(function(copy){copy.style.width='186mm';});"
+        "document.querySelectorAll('.excopy').forEach(function(copy){"
+        "var code=copy.getAttribute('data-code')||'';"
+        "var blocks=Array.prototype.filter.call(copy.children,function(el){return el.nodeType===1&&!el.classList.contains('expagefoot');});"
+        "var heights=blocks.map(function(el){var st=getComputedStyle(el);return el.offsetHeight+(parseFloat(st.marginTop)||0)+(parseFloat(st.marginBottom)||0);});"
+        "var groups=[],cur=[],h=0;function flush(){if(cur.length){groups.push(cur);cur=[];h=0;}}"
+        "blocks.forEach(function(el,idx){var force=el.classList.contains('exphieu')||el.classList.contains('exanswer');"
+        "if(force){flush();groups.push([el]);return;}var bh=heights[idx]||0;if(cur.length&&h+bh>limit)flush();cur.push(el);h+=bh;});flush();"
+        "var n=groups.length;groups.forEach(function(group,i){var page=document.createElement('section');page.className='expage';"
+        "group.forEach(function(el){page.appendChild(el);});var foot=document.createElement('div');foot.className='expagefoot';"
+        "foot.textContent='Mã đề '+code+' · Trang '+(i+1)+'/'+n;page.appendChild(foot);copy.appendChild(page);});"
+        "copy.style.width='';});document.body.setAttribute('data-expage','1');}"
+        "window.addEventListener('load',function(){function done(){try{paginateExams();}catch(err){}"
+        + ("setTimeout(function(){window.print();},250);" if auto_print else "")
+        + "}if(window.MathJax&&MathJax.startup&&MathJax.startup.promise){MathJax.startup.promise.then(function(){"
+        "return MathJax.typesetPromise?MathJax.typesetPromise([document.body]):null;}).then(done).catch(done);}"
+        "else{if(window.ldvlTypeset)ldvlTypeset(document.body);setTimeout(done,900);}});"
+        "var cam=document.getElementById('gradeCam'),file=document.getElementById('gradeFile'),out=document.getElementById('gradeOut');"
+        "if(cam&&file){cam.onclick=function(){file.click();};"
+        "file.onchange=function(){var f=file.files&&file.files[0];if(!f)return;"
+        "var img=new Image(),url=URL.createObjectURL(f);"
+        "img.onload=function(){var w=img.naturalWidth,h=img.naturalHeight,max=1600;"
+        "if(w>max){h=Math.round(h*max/w);w=max;}if(h>max){w=Math.round(w*max/h);h=max;}"
+        "var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);"
+        "URL.revokeObjectURL(url);var b64=(c.toDataURL('image/jpeg',0.82).split(',')[1]||'');"
+        "var keys=[];try{keys=(window.ldvlGetGeminiKeys?ldvlGetGeminiKeys():[]).filter(function(k){return String(k||'').trim().length>=20});}catch(e){}"
+        "out.textContent='Đang đọc phiếu...';"
+        "fetch('/api/exam/grade-photo',{method:'POST',headers:{'Content-Type':'application/json'},"
+        "body:JSON.stringify({mime:'image/jpeg',data:b64,api_keys:keys})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})"
+        ".then(function(x){if(!x.j||!x.j.ok){out.textContent=(x.j&&x.j.error)||'Không chấm được.';return;}out.innerHTML=x.j.html||'';})"
+        ".catch(function(){out.textContent='Lỗi mạng khi gửi ảnh phiếu.';});file.value='';};img.src=url;};}</script>"
     )
     body = (
         "<div class='wrap examwrap'>"
@@ -1064,6 +1151,189 @@ def member_exam_print():
     if request.method == "POST":
         return build_from_request(shuffle=False, auto_print=True)
     return render_exam(auto_print=True)
+
+
+def _norm_letter(s):
+    m = re.search(r"[ABCD]", str(s or "").upper())
+    return m.group(0) if m else ""
+
+
+def _norm_ds(s):
+    t = str(s or "").upper().replace("Đ", "D").replace("Ð", "D")
+    return re.sub(r"[^DS]", "", t)
+
+
+def _norm_tln(s):
+    t = str(s or "").strip()
+    t = t.replace("$", "").replace("\\,", "").replace("\\;", "")
+    t = re.sub(r"\\[a-zA-Z]+\*?\{([^{}]*)\}", r"\1", t)
+    t = t.replace("{", "").replace("}", "").replace("\\", "")
+    t = t.replace(" ", "").replace(",", ".")
+    t = t.replace("−", "-").replace("–", "-").replace("—", "-")
+    try:
+        v = float(t)
+    except ValueError:
+        return t.lower()
+    if abs(v - round(v)) < 1e-9:
+        return str(int(round(v)))
+    return "%g" % v
+
+
+def _ds_points(got, exp):
+    n = min(len(got), len(exp))
+    hit = sum(1 for i in range(n) if got[i] == exp[i])
+    return {1: 0.1, 2: 0.25, 3: 0.5, 4: 1.0}.get(hit, 0)
+
+
+def _score_sheet(rows, read):
+    """Chấm theo ô đã tô. TN và trả lời ngắn 0,25 điểm; đúng/sai theo số ý đúng."""
+    tn = read.get("tn") if isinstance(read.get("tn"), dict) else {}
+    ds = read.get("ds") if isinstance(read.get("ds"), dict) else {}
+    tln = read.get("tln") if isinstance(read.get("tln"), dict) else {}
+    total = 0.0
+    lines = []
+    counts = {"TN": [0, 0], "DS": [0, 0], "TLN": [0, 0]}
+    for r in rows:
+        if r["kind"] == "TL":
+            continue
+        n = str(r["n"])
+        if r["kind"] == "TN":
+            got, exp = _norm_letter(tn.get(n)), _norm_letter(r["answer"])
+            ok = bool(got) and got == exp
+            pt = 0.25 if ok else 0
+            show = got or "—"
+        elif r["kind"] == "DS":
+            got, exp = _norm_ds(ds.get(n)), _norm_ds(r["answer"])
+            ok = bool(got) and got == exp
+            pt = _ds_points(got, exp)
+            show = got or "—"
+        else:
+            got, exp = _norm_tln(tln.get(n)), _norm_tln(r["answer"])
+            ok = bool(got) and got == exp
+            pt = 0.25 if ok else 0
+            show = got or "—"
+        total += pt
+        counts[r["kind"]][0] += 1 if ok else 0
+        counts[r["kind"]][1] += 1
+        if not ok:
+            lines.append(
+                f"<div>Câu {n}: tô <b>{_esc(show)}</b> · đúng <b>{_esc(r['answer'] or '—')}</b></div>"
+            )
+    def _pair(k):
+        a, b = counts[k]
+        return f"{a}/{b}"
+    summary = (
+        f"Trắc nghiệm {_pair('TN')} · Đúng/Sai {_pair('DS')} · Trả lời ngắn {_pair('TLN')}"
+    )
+    wrong = "".join(lines) or "<div>Không có câu khách quan nào sai.</div>"
+    html = (
+        f"<div class='gradesum'><b>Điểm: {total:.2f}</b>"
+        f"<span>{summary}</span></div>"
+        "<div class='grademeta'>TN và trả lời ngắn: 0,25 điểm/câu đúng. "
+        "Đúng/Sai: 1 ý 0,1 · 2 ý 0,25 · 3 ý 0,5 · 4 ý 1. Tự luận chưa chấm.</div>"
+        f"<div class='gradewrong'><b>Câu chưa đúng</b>{wrong}</div>"
+    )
+    return {"score": round(total, 2), "html": html}
+
+
+def _read_sheet_with_gemini(image, outline, api_key):
+    from student_gemini import _gemini_generate
+    prompt = (
+        "Đây là ảnh PHIẾU TRẢ LỜI TRẮC NGHIỆM. Học sinh tô tròn các ô.\n"
+        "Chỉ đọc ô đã tô trên phiếu. Nếu ảnh có kèm khối ĐÁP ÁN của giáo viên thì bỏ qua hoàn toàn.\n"
+        "Phần I: mỗi hàng là một câu, cột A B C D, một ô được tô.\n"
+        "Phần II: mỗi câu có ý a b c d, mỗi ý một cột Đúng và một cột Sai.\n"
+        "Phần III: mỗi câu là lưới. Hàng là ký tự − , 0 1 2 3 4 5 6 7 8 9. "
+        "Bốn cột là bốn vị trí của số, từ trái sang phải. Ghép các ô tô thành một số, ví dụ − 1 , 5 thành -1.5.\n"
+        "Cấu trúc câu của đề này:\n" + outline + "\n"
+        "Trả về JSON duy nhất, không markdown:\n"
+        '{"code":"402","tn":{"1":"A"},"ds":{"19":"ĐSĐS"},"tln":{"26":"-1.5"}}\n'
+        "code là số mã đề in trong ô Mã đề. "
+        "tn là một chữ A, B, C hoặc D. "
+        "ds là đúng 4 ký tự Đ hoặc S theo thứ tự a b c d. "
+        "tln là số đọc từ ô tô. Câu bỏ trống thì không ghi."
+    )
+    raw = _gemini_generate(
+        api_key, prompt, max_tokens=2500, temperature=0,
+        images=[{"mime": image.get("mime") or "image/jpeg", "data": image.get("data") or ""}],
+    )
+    text = (raw or "").strip()
+    text = re.sub(r"^```(?:json)?", "", text).strip()
+    text = re.sub(r"```$", "", text).strip()
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m:
+        raise ValueError("Không đọc được phiếu. Chụp thẳng, đủ sáng, thấy mã đề và các ô tô.")
+    data = json.loads(m.group(0))
+    if not isinstance(data, dict):
+        raise ValueError("Phiếu trả về không đúng dạng.")
+    return data
+
+
+@app.post("/api/exam/grade-photo")
+def member_exam_grade_photo():
+    if not can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN mới chấm phiếu."), 403
+    exam = session.get("exam") or {}
+    copies = list(exam.get("copies") or [])
+    if not copies:
+        return jsonify(ok=False, error="Chưa có đề trong phiên này. Tạo hoặc trộn đề rồi chấm."), 400
+    body = request.get_json(silent=True) or {}
+    raw_img = str(body.get("data") or "")
+    if raw_img.strip().startswith("data:") and "," in raw_img[:80]:
+        raw_img = raw_img.split(",", 1)[1]
+    image = {"mime": body.get("mime") or "image/jpeg", "data": raw_img.strip()}
+    if not image["data"] or len(image["data"]) > 6_000_000:
+        return jsonify(ok=False, error="Ảnh phiếu không hợp lệ."), 400
+    from app import GEMINI_KEY
+    api_keys = []
+    if str(GEMINI_KEY or "").strip():
+        api_keys.append(str(GEMINI_KEY).strip())
+    extra = body.get("api_keys") if isinstance(body.get("api_keys"), list) else []
+    extra = list(extra) + [body.get("api_key")]
+    for item in extra:
+        s = str(item or "").strip()
+        if len(s) >= 20 and s not in api_keys:
+            api_keys.append(s)
+    if not api_keys:
+        return jsonify(ok=False, error="Chưa có key Gemini. Nạp key ở mục phản biện, hoặc đặt GEMINI_API_KEY trên máy chủ."), 400
+    qs = load_exam_qs(exam)
+    keys = []
+    for c in copies:
+        rows = _copy_answer_rows(qs, c)
+        keys.append((str(c.get("code") or ""), rows))
+    outline = "\n".join(
+        f"Câu {r['n']}: " + {"TN": "A/B/C/D", "DS": "Đúng/Sai 4 ý a b c d", "TLN": "số", "TL": "tự luận, bỏ qua"}.get(r["kind"], "")
+        for r in (keys[0][1] if keys else [])
+        if r["kind"] != "TL"
+    )
+    read = None
+    last_err = "Gemini không đọc được phiếu."
+    for api_key in api_keys:
+        try:
+            read = _read_sheet_with_gemini(image, outline, api_key)
+            break
+        except Exception as e:
+            last_err = str(e)[:300] or last_err
+            if api_key and api_key in last_err:
+                last_err = last_err.replace(api_key, "…")
+    if not isinstance(read, dict):
+        return jsonify(ok=False, error=last_err), 502
+    code = re.sub(r"\D", "", str(read.get("code") or ""))
+    match = None
+    for c, rows in keys:
+        if c == code or c.lstrip("0") == code.lstrip("0"):
+            match = (c, rows)
+            break
+    if not match and len(keys) == 1:
+        match = keys[0]
+        code = match[0]
+    if not match:
+        return jsonify(ok=False, error=f"Không thấy mã đề {code or '?'} trong các đề đang mở."), 404
+    scored = _score_sheet(match[1], read)
+    scored["ok"] = True
+    scored["code"] = match[0]
+    scored["html"] = f"<div class='gradecode'>Mã đề {_esc(match[0])}</div>" + scored["html"]
+    return jsonify(scored)
 
 
 @app.post("/member/exam/key")
