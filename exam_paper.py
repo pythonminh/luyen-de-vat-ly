@@ -279,12 +279,9 @@ def _choice_class(options):
     opts = list(options or [])
     if len(opts) != 4:
         return "stack"
-    span = max(_opt_span(o.get("text") or "") for o in opts)
-    if span <= 14:
+    if max(_opt_span(o.get("text") or "") for o in opts) <= 14:
         return "grid4"
-    if span <= 42:
-        return "grid2"
-    return "stack"
+    return "grid2"
 
 
 def _rules_html(kind):
@@ -406,7 +403,8 @@ def _q_html(q, seq, src, show_key=False, ruled=False):
                 f"<div class='exopt'><span class='exlab'>{lab}.</span> "
                 f"<span class='exoptxt'>{html_question(s.get('text') or '', src)}{mark}</span></div>"
             )
-        body = "<div class='exopts stack'>" + "".join(bits) + "</div>"
+        cols = "grid2" if len(bits) >= 2 else "stack"
+        body = f"<div class='exopts {cols}'>" + "".join(bits) + "</div>"
     elif kind == "TLN":
         if not ruled:
             body = "<div class='exblank'>Đáp án: …………………………</div>"
@@ -504,7 +502,7 @@ def exam_css():
 .grademeta{font-size:12px;color:#64748b;margin:4px 0 8px}
 .gradewrong{font-size:14px;line-height:1.5}
 .gradecode{font-weight:800}
-.exampaper{width:100%;max-width:none;margin:0;background:#fff;border:0;border-radius:0;padding:0 4px;font-family:'Times New Roman',Times,serif;font-size:13.5pt;line-height:1.28;color:#111}
+.exampaper{width:100%;max-width:none;margin:0;background:#fff;border:0;border-radius:0;padding:0 4px;font-family:'Times New Roman',Times,serif;font-size:13pt;line-height:1.25;color:#111}
 .excopy{width:100%}
 .excopy + .excopy{margin-top:18px;padding-top:10px;border-top:2px dashed #94a3b8}
 .expage{position:relative;box-sizing:border-box;width:100%;min-height:0;height:auto;margin:0 0 14px;padding:0 0 8mm;background:#fff;outline:0}
@@ -513,7 +511,7 @@ def exam_css():
 .exschool,.exmeta{font-size:12.5pt}.extitle{text-align:center;font-size:16pt}
 .exnote{margin:2px 0 6px}
 .expart{margin:8px 0 3px;font-size:13.5pt;border-bottom:1px solid #bbb;padding-bottom:2px}
-.exq{margin:0 0 5px;break-inside:avoid;page-break-inside:avoid}
+.exq{margin:0 0 3px;break-inside:avoid;page-break-inside:avoid}
 .exstem{margin:0}
 .exstem p{margin:0}
 .exno{float:left;margin-right:.35em}
