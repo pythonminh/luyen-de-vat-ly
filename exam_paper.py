@@ -279,7 +279,10 @@ def _choice_class(options):
     opts = list(options or [])
     if len(opts) != 4:
         return "stack"
-    if max(_opt_span(o.get("text") or "") for o in opts) <= 36:
+    span = max(_opt_span(o.get("text") or "") for o in opts)
+    if span <= 14:
+        return "grid4"
+    if span <= 42:
         return "grid2"
     return "stack"
 
@@ -422,8 +425,7 @@ def _q_html(q, seq, src, show_key=False, ruled=False):
     if ruled:
         body += _rules_html(kind)
     return (
-        f"<article class='exq'><div class='exhead'><b>Câu {seq}.</b></div>"
-        f"<div class='exstem'>{stem}</div>{body}</article>"
+        f"<article class='exq'><div class='exstem'><b class='exno'>Câu {seq}.</b> {stem}</div>{body}</article>"
     )
 
 
@@ -489,7 +491,7 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
 def exam_css():
     return """
 <style>
-.examwrap{max-width:980px;margin:auto}
+.examwrap{max-width:none;width:100%;margin:0;padding:0}
 .exambar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:10px;border:1px solid #d7e2ee;border-radius:10px;background:#f8fbff}
 .exambar label{font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:6px}
 .exambar input[type=number]{width:64px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
@@ -502,20 +504,24 @@ def exam_css():
 .grademeta{font-size:12px;color:#64748b;margin:4px 0 8px}
 .gradewrong{font-size:14px;line-height:1.5}
 .gradecode{font-weight:800}
-.exampaper{width:186mm;max-width:none;margin:0 auto;background:#fff;border:1px solid #d7e2ee;border-radius:12px;padding:0;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.55;color:#111}
-.excopy{width:186mm}
-.excopy + .excopy{margin-top:28px;padding-top:16px;border-top:2px dashed #94a3b8}
-.expage{position:relative;box-sizing:border-box;width:186mm;min-height:245mm;margin:0 auto 8mm;padding:0 0 14mm;background:#fff;outline:1px solid #e2e8f0}
-.expagefoot{position:absolute;left:0;right:0;bottom:3mm;text-align:center;font:700 12pt/1.2 'Times New Roman',Times,serif;color:#111}
-.exheadblock{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:10px;align-items:start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}
-.exschool,.exmeta{font-size:13px}.extitle{text-align:center;font-size:18px}
-.exnote{margin:8px 0 14px}
-.expart{margin:18px 0 8px;font-size:15px;border-bottom:1px solid #bbb;padding-bottom:4px}
-.exq{margin:0 0 14px;break-inside:avoid;page-break-inside:avoid}
-.exstem{margin:4px 0 8px}
-.exopts{display:grid;gap:3px 16px;padding-left:8px}
+.exampaper{width:100%;max-width:none;margin:0;background:#fff;border:0;border-radius:0;padding:0 4px;font-family:'Times New Roman',Times,serif;font-size:13.5pt;line-height:1.28;color:#111}
+.excopy{width:100%}
+.excopy + .excopy{margin-top:18px;padding-top:10px;border-top:2px dashed #94a3b8}
+.expage{position:relative;box-sizing:border-box;width:100%;min-height:0;height:auto;margin:0 0 14px;padding:0 0 8mm;background:#fff;outline:0}
+.expagefoot{position:absolute;left:0;right:0;bottom:2mm;text-align:center;font:700 11pt/1.2 'Times New Roman',Times,serif;color:#111}
+.exheadblock{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:8px;align-items:start;border-bottom:2px solid #111;padding-bottom:4px;margin-bottom:6px}
+.exschool,.exmeta{font-size:12.5pt}.extitle{text-align:center;font-size:16pt}
+.exnote{margin:2px 0 6px}
+.expart{margin:8px 0 3px;font-size:13.5pt;border-bottom:1px solid #bbb;padding-bottom:2px}
+.exq{margin:0 0 5px;break-inside:avoid;page-break-inside:avoid}
+.exstem{margin:0}
+.exstem p{margin:0}
+.exno{float:left;margin-right:.35em}
+.exq img{max-width:100%;max-height:40mm;height:auto}
+.exopts{display:grid;gap:1px 14px;padding-left:1.15em}
 .exopts.stack{grid-template-columns:1fr}
 .exopts.grid2{grid-template-columns:1fr 1fr}
+.exopts.grid4{grid-template-columns:1fr 1fr 1fr 1fr}
 .exopt{display:flex;gap:6px;align-items:flex-start;min-width:0}
 .exoptxt{min-width:0}
 .exrules{margin:8px 0 2px;background-image:repeating-linear-gradient(to bottom,transparent,transparent calc(1.15em - 1px),#334155 calc(1.15em - 1px),#334155 1.15em);-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -541,14 +547,14 @@ def exam_css():
 .bub{display:inline-block;width:12px;height:12px;border:1.5px solid #e11d48;border-radius:50%;vertical-align:middle}
 .phtl{margin:3px 0;font-size:14px}
 @media print{
-  @page{size:A4;margin:12mm 12mm 16mm 12mm}
+  @page{size:A4;margin:10mm 10mm 12mm 10mm}
   .top,.nav,.drawer,.exambar,.gradebox,.subnav,.regline,.navtoggle,.clock,.whobar{display:none!important}
   body{background:#fff}
   .wrap,.examwrap,.exampaper{max-width:none;width:auto;margin:0;padding:0;overflow:visible}
   .exampaper{border:0;border-radius:0}
   .excopy,.expage{width:auto}
   .excopy + .excopy{margin:0;padding:0;border:0;break-before:auto;page-break-before:auto}
-  .expage{outline:0;margin:0;min-height:245mm;height:253mm;break-after:page;page-break-after:always}
+  .expage{outline:0;margin:0;min-height:252mm;height:262mm;padding:0 0 12mm;break-after:page;page-break-after:always}
   .exampaper .excopy:last-child .expage:last-child{break-after:auto;page-break-after:auto}
   .expage .exphieu,.expage .exanswer{break-before:auto;page-break-before:auto;margin-top:0}
   .exphieu{break-before:page;page-break-before:always;margin:0;border-color:#e11d48}
@@ -623,9 +629,9 @@ def render_exam(auto_print=False):
     )
     print_js = (
         "<script>function paginateExams(){if(document.body.getAttribute('data-expage')==='1')return;"
-        "var ruler=document.createElement('div');ruler.style.cssText='position:absolute;left:0;top:0;height:228mm;width:186mm;visibility:hidden';"
+        "var ruler=document.createElement('div');ruler.style.cssText='position:absolute;left:0;top:0;height:242mm;width:190mm;visibility:hidden';"
         "document.body.appendChild(ruler);var limit=ruler.offsetHeight||900;ruler.remove();"
-        "document.querySelectorAll('.excopy').forEach(function(copy){copy.style.width='186mm';});"
+        "document.querySelectorAll('.excopy').forEach(function(copy){copy.style.width='190mm';});"
         "document.querySelectorAll('.excopy').forEach(function(copy){"
         "var code=copy.getAttribute('data-code')||'';"
         "var blocks=Array.prototype.filter.call(copy.children,function(el){return el.nodeType===1&&!el.classList.contains('expagefoot');});"
