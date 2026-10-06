@@ -502,15 +502,15 @@ def exam_css():
 .grademeta{font-size:12px;color:#64748b;margin:4px 0 8px}
 .gradewrong{font-size:14px;line-height:1.5}
 .gradecode{font-weight:800}
-.exampaper{width:100%;max-width:none;margin:0;background:#fff;border:0;border-radius:0;padding:0 4px;font-family:'Times New Roman',Times,serif;font-size:13pt;line-height:1.25;color:#111}
+.exampaper{width:100%;max-width:none;margin:0;background:#fff;border:0;border-radius:0;padding:0 4px;font-family:'Times New Roman',Times,serif;font-size:12pt;line-height:1.2;color:#111}
 .excopy{width:100%}
 .excopy + .excopy{margin-top:18px;padding-top:10px;border-top:2px dashed #94a3b8}
 .expage{position:relative;box-sizing:border-box;width:100%;min-height:0;height:auto;margin:0 0 14px;padding:0 0 8mm;background:#fff;outline:0}
 .expagefoot{position:absolute;left:0;right:0;bottom:2mm;text-align:center;font:700 11pt/1.2 'Times New Roman',Times,serif;color:#111}
-.exheadblock{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:8px;align-items:start;border-bottom:2px solid #111;padding-bottom:4px;margin-bottom:6px}
-.exschool,.exmeta{font-size:12.5pt}.extitle{text-align:center;font-size:16pt}
-.exnote{margin:2px 0 6px}
-.expart{margin:8px 0 3px;font-size:13.5pt;border-bottom:1px solid #bbb;padding-bottom:2px}
+.exheadblock{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:6px;align-items:start;border-bottom:1.5px solid #111;padding-bottom:2px;margin-bottom:3px}
+.exschool,.exmeta{font-size:11pt;line-height:1.2}.extitle{text-align:center;font-size:14pt;line-height:1.2}
+.exnote{margin:1px 0 3px}
+.expart{margin:6px 0 2px;font-size:12.5pt;border-bottom:1px solid #bbb;padding-bottom:1px}
 .exq{margin:0 0 3px;break-inside:avoid;page-break-inside:avoid}
 .exstem{margin:0}
 .exstem p{margin:0}
@@ -627,7 +627,7 @@ def render_exam(auto_print=False):
     )
     print_js = (
         "<script>function paginateExams(){if(document.body.getAttribute('data-expage')==='1')return;"
-        "var ruler=document.createElement('div');ruler.style.cssText='position:absolute;left:0;top:0;height:242mm;width:190mm;visibility:hidden';"
+        "var ruler=document.createElement('div');ruler.style.cssText='position:absolute;left:0;top:0;height:248mm;width:190mm;visibility:hidden';"
         "document.body.appendChild(ruler);var limit=ruler.offsetHeight||900;ruler.remove();"
         "document.querySelectorAll('.excopy').forEach(function(copy){copy.style.width='190mm';});"
         "document.querySelectorAll('.excopy').forEach(function(copy){"
