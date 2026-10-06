@@ -609,6 +609,7 @@ def render_exam(auto_print=False):
         "<button class='btn' name='exam_action' value='shuffle'>🔀 Trộn đề</button>"
         "<button class='btn primary' name='exam_action' value='print' formaction='/member/exam/print'>🖨 In đề</button>"
         "<button class='btn' name='exam_action' value='azota' formaction='/member/exam/azota'>⬇ Word Azota</button>"
+        "<button class='btn' name='exam_action' value='xlsx' formaction='/member/exam/xlsx'>⬇ Excel đáp án</button>"
         f"<button class='btn' name='exam_action' value='key' formaction='/member/exam/key'>{html.escape(key_lab)}</button>"
         + ("" if exam.get("qmap") else "<button class='btn' name='exam_action' value='practice'>▶ Làm bài với đề này</button>")
         + f"<a class='btn' href='{_esc(back)}'>← Chọn lại số câu</a>"
@@ -974,6 +975,182 @@ def _azota_download():
     return send_file(pack, as_attachment=True, download_name="azota-de.zip", mimetype="application/zip")
 
 
+def _xlsx_col(n):
+    s = ""
+    while n:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+
+def _xlsx_text(s):
+    t = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", str(s or ""))
+    return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _xlsx_sheet(rows):
+    body = []
+    for r, row in enumerate(rows, 1):
+        cells = []
+        for c, val in enumerate(row, 1):
+            style = ' s="1"' if r == 1 else ""
+            ref = f"{_xlsx_col(c)}{r}"
+            cells.append(f'<c r="{ref}" t="inlineStr"{style}><is><t>{_xlsx_text(val)}</t></is></c>')
+        body.append(f'<row r="{r}">' + "".join(cells) + "</row>")
+    return (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<worksheet xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main'>"
+        "<sheetData>" + "".join(body) + "</sheetData></worksheet>"
+    )
+
+
+def _xlsx_bytes(sheets):
+    """sheets: [(tên sheet, các hàng)]. Hàng đầu là tiêu đề."""
+    overrides = [
+        "<Override PartName='/xl/workbook.xml' "
+        "ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml'/>",
+        "<Override PartName='/xl/styles.xml' "
+        "ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml'/>",
+    ]
+    wb_sheets = []
+    rels = []
+    files = {}
+    for i, (name, rows) in enumerate(sheets, 1):
+        safe = re.sub(r"[:\\/?*\[\]]", " ", str(name))[:31] or f"Sheet{i}"
+        overrides.append(
+            f"<Override PartName='/xl/worksheets/sheet{i}.xml' "
+            "ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml'/>"
+        )
+        wb_sheets.append(f"<sheet name='{_xlsx_text(safe)}' sheetId='{i}' r:id='rId{i}'/>")
+        rels.append(
+            f"<Relationship Id='rId{i}' "
+            "Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet' "
+            f"Target='worksheets/sheet{i}.xml'/>"
+        )
+        files[f"xl/worksheets/sheet{i}.xml"] = _xlsx_sheet(rows)
+    style_id = len(sheets) + 1
+    rels.append(
+        f"<Relationship Id='rId{style_id}' "
+        "Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles' "
+        "Target='styles.xml'/>"
+    )
+    content_types = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'>"
+        "<Default Extension='rels' ContentType='application/vnd.openxmlformats-package.relationships+xml'/>"
+        "<Default Extension='xml' ContentType='application/xml'/>"
+        + "".join(overrides)
+        + "</Types>"
+    )
+    workbook = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<workbook xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main' "
+        "xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships'>"
+        "<sheets>" + "".join(wb_sheets) + "</sheets></workbook>"
+    )
+    styles = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<styleSheet xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main'>"
+        "<fonts count='2'><font><sz val='11'/><name val='Calibri'/></font>"
+        "<font><b/><sz val='11'/><name val='Calibri'/></font></fonts>"
+        "<fills count='2'><fill><patternFill patternType='none'/></fill>"
+        "<fill><patternFill patternType='gray125'/></fill></fills>"
+        "<borders count='1'><border><left/><right/><top/><bottom/><diagonal/></border></borders>"
+        "<cellStyleXfs count='1'><xf numFmtId='0' fontId='0' fillId='0' borderId='0'/></cellStyleXfs>"
+        "<cellXfs count='2'><xf numFmtId='0' fontId='0' fillId='0' borderId='0' xfId='0'/>"
+        "<xf numFmtId='0' fontId='1' fillId='0' borderId='0' xfId='0' applyFont='1'/></cellXfs>"
+        "</styleSheet>"
+    )
+    pkg_rels = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'>"
+        "<Relationship Id='rId1' "
+        "Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument' "
+        "Target='xl/workbook.xml'/></Relationships>"
+    )
+    wb_rels = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'>"
+        + "".join(rels)
+        + "</Relationships>"
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types)
+        zf.writestr("_rels/.rels", pkg_rels)
+        zf.writestr("xl/workbook.xml", workbook.encode("utf-8"))
+        zf.writestr("xl/_rels/workbook.xml.rels", wb_rels)
+        zf.writestr("xl/styles.xml", styles)
+        for path, xml in files.items():
+            zf.writestr(path, xml.encode("utf-8"))
+    buf.seek(0)
+    return buf
+
+
+_XLSX_PART = {"TN": "Trắc nghiệm", "DS": "Đúng/Sai", "TLN": "Trả lời ngắn", "TL": "Tự luận"}
+
+
+def _answer_tables(qs, copies):
+    long_rows = [["Mã đề", "Câu", "Phần", "Đáp án", "a", "b", "c", "d"]]
+    wide_header = ["Mã đề"]
+    wide_body = []
+    width = 0
+    packed = []
+    for copy in copies:
+        rows = _copy_answer_rows(qs, copy)
+        packed.append((str(copy.get("code") or ""), rows))
+        width = max(width, len(rows))
+    wide_header += [f"Câu {i}" for i in range(1, width + 1)]
+    for code, rows in packed:
+        wide = [code]
+        for r in rows:
+            ans = r["answer"]
+            if r["kind"] == "TLN":
+                ans = latex_plain(ans).strip() or "—"
+            elif r["kind"] == "TL":
+                ans = "Tự luận"
+            elif not ans:
+                ans = "—"
+            parts = ["", "", "", ""]
+            if r["kind"] == "DS":
+                mask = _norm_ds(ans).replace("D", "Đ")
+                parts = list(mask[:4]) + [""] * (4 - len(mask[:4]))
+                ans = "".join(parts).rstrip() or ans
+            long_rows.append([code, r["n"], _XLSX_PART.get(r["kind"], r["kind"]), ans, *parts])
+            wide.append(ans)
+        wide += [""] * (width - len(rows))
+        wide_body.append(wide)
+    return long_rows, [wide_header] + wide_body
+
+
+def _answer_xlsx_download():
+    if not can_manage_bank():
+        return redirect("/member")
+    exam = session.get("exam") or {}
+    copies = list(exam.get("copies") or [])
+    if not copies:
+        return page(
+            "Excel đáp án",
+            "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+            "Chưa có đề. Hãy tạo đề rồi bấm <b>Excel đáp án</b>.</div>"
+            "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>",
+        )
+    try:
+        qs = load_exam_qs(exam)
+    except Exception as e:
+        return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+    long_rows, wide_rows = _answer_tables(qs, copies)
+    blob = _xlsx_bytes([("Đáp án", long_rows), ("Bảng ngang", wide_rows)])
+    codes = [str(c.get("code") or "") for c in copies]
+    name = f"dap-an-{codes[0]}.xlsx" if len(codes) == 1 else "dap-an.xlsx"
+    return send_file(
+        blob,
+        as_attachment=True,
+        download_name=name,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
 def _redirect_select(path, dang=""):
     if dang:
         return redirect(
@@ -1016,6 +1193,8 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         return render_exam(auto_print=False)
     if action == "azota":
         return _azota_download()
+    if action == "xlsx":
+        return _answer_xlsx_download()
     if action == "practice":
         exam = session.get("exam") or {}
         if exam.get("qmap"):
@@ -1143,6 +1322,11 @@ def member_exam():
 
 @app.route("/member/exam/azota", methods=["POST"])
 def member_exam_azota():
+    return build_from_request()
+
+
+@app.route("/member/exam/xlsx", methods=["POST"])
+def member_exam_xlsx():
     return build_from_request()
 
 
