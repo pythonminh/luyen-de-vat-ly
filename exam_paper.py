@@ -1145,11 +1145,13 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
     )
     top = "<div class='modebar'>" + practice + controls + submits + "</div>"
     bottom = "<div class='modebar'>" + practice + submits + "</div>"
+    chapter_btn = _chapter_matrix_btn(path)
     return (
         "<form method='post' action='/member/exam' id='examMatrix' class='exammatrix'>"
         f"<input type='hidden' name='path' value='{_esc(path)}'>"
         f"<input type='hidden' name='dang' value='{_esc(dang)}'>"
-        "<div class='notice'>📝 <b>Ma trận đề</b> — mỗi dạng một dòng. Số xanh là số câu đang có, ô là số câu lấy. "
+        + chapter_btn
+        + "<div class='notice'>📝 <b>Ma trận đề</b> — mỗi dạng một dòng. Số xanh là số câu đang có, ô là số câu lấy. "
         "Dạng ít câu thì bấm <b>AI gợi ý gom dạng</b> để gộp dạng cùng kỹ năng. "
         "<b>Tạo đề</b> lấy đúng số đó. <b>Trộn đề</b> và <b>In đề</b> xáo câu trong từng phần, đảo A–D và a)–d), "
         "mỗi bản một mã đề. In thì mỗi mã đề sang trang mới, cuối đề có phiếu tô đáp án.</div>"
@@ -1193,6 +1195,30 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
         "f.addEventListener('submit',function(e){var t=0;f.querySelectorAll('.n').forEach(function(x){t+=Number(x.value)||0});"
         "if(t<=0){e.preventDefault();alert('Hãy điền số câu NB/TH/VD/VDC trong ma trận rồi bấm Tạo đề, Trộn đề hoặc In đề.');}});"
         "})();</script>"
+    )
+
+
+def _chapter_matrix_btn(path):
+    """Nút mở ma trận cả chương, gắn ngay trên ma trận của một bài."""
+    try:
+        from app import chapter_lessons_for
+        _sibs, cur = chapter_lessons_for(path)
+    except Exception:
+        return ""
+    cur = cur or {}
+    mon = str(cur.get("Mon") or "").strip()
+    lop = str(cur.get("Lop") or "").strip()
+    chuong = str(cur.get("Chuong") or "").strip()
+    if not mon or not chuong:
+        return ""
+    href = "/member/chapter/matrix?" + _chapter_query(mon, lop, chuong)
+    short = chuong if len(chuong) <= 56 else chuong[:55] + "…"
+    return (
+        "<p style='margin:0 0 8px'><a class='btn green' href='"
+        + _esc(href)
+        + "'>📝 Tạo đề theo ma trận cả chương</a> <span class='muted'>"
+        + html.escape(short)
+        + "</span></p>"
     )
 
 
