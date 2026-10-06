@@ -2601,6 +2601,17 @@ def member_chapter():
         + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong)
         + " <span class='tag'>" + str(len(sibs)) + " bài · " + str(total) + " câu</span></div><div class='body'>"
         + "<p class='muted'>Bấm tên chương ở menu là vào đây. Thả đề, AI tách vào từng bài và từng dạng đang có. Bấm một dạng nếu chỉ muốn mở riêng chỗ đó.</p>"
+        + (
+            "<p><a class='btn green' href='"
+            + html.escape(
+                "/member/chapter/matrix?mon=" + urllib.parse.quote(mon, safe="")
+                + "&lop=" + urllib.parse.quote(lop, safe="")
+                + "&chuong=" + urllib.parse.quote(chuong, safe=""),
+                quote=True,
+            )
+            + "'>📝 Tạo đề theo ma trận</a></p>"
+            if can_manage_bank() else ""
+        )
         + admin
         + "<div class='drawbais'>" + ''.join(blocks) + "</div>"
         + "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"

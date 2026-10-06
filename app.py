@@ -1816,6 +1816,16 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
                         f"<summary class='drawbai{' on' if on else ''}'><span class='drawname'>{title}</span><span class='drawn'>{n}</span></summary>"
                         f"<div class='drawdangs'>{''.join(dlinks)}</div></details>"
                     )
+                if has_full_bank_access():
+                    mx_href = (
+                        "/member/chapter/matrix?mon=" + urllib.parse.quote(mon, safe="")
+                        + "&lop=" + urllib.parse.quote(str(lop), safe="")
+                        + "&chuong=" + urllib.parse.quote(chuong, safe="")
+                    )
+                    bais.insert(
+                        0,
+                        f"<a class='drawdang' href='{html.escape(mx_href, quote=True)}'><span class='drawname'>📝 Tạo đề theo ma trận</span></a>",
+                    )
                 if open_ch:
                     open_lop = True
                 ch_n = 0

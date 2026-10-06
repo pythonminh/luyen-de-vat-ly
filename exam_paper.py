@@ -58,6 +58,36 @@ def load_qs(path):
     return qs
 
 
+def load_exam_qs(exam):
+    """Câu của đề đang lưu. Đề cả chương lấy từng bài theo qmap, idx là vị trí trong đề."""
+    exam = exam or {}
+    qmap = exam.get("qmap") or []
+    if not qmap:
+        return load_qs(str(exam.get("path") or ""))
+    cache = {}
+    out = []
+    for i, item in enumerate(qmap):
+        if not isinstance(item, dict):
+            continue
+        p = str(item.get("path") or "").replace("\\", "/")
+        try:
+            old = int(item.get("idx"))
+        except (TypeError, ValueError):
+            continue
+        if p not in cache:
+            try:
+                cache[p] = {int(q.get("idx")): q for q in load_qs(p) if str(q.get("idx", "")).isdigit() or isinstance(q.get("idx"), int)}
+            except Exception:
+                cache[p] = {}
+        srcq = cache[p].get(old)
+        if not srcq:
+            continue
+        q = dict(srcq)
+        q["idx"] = i
+        out.append(q)
+    return out
+
+
 def lesson_title(path):
     p = str(path or "").replace("\\", "/")
     folder = p.rsplit("/", 1)[0] if "/" in p else p
@@ -492,7 +522,7 @@ def render_exam(auto_print=False):
             "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>",
         )
     try:
-        qs = load_qs(path)
+        qs = load_exam_qs(exam)
     except Exception as e:
         return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     title = exam.get("title") or lesson_title(path)
@@ -503,10 +533,12 @@ def render_exam(auto_print=False):
         html_copy, key = _copy_html(qs, copy, title, show_key=show_key, ruled=ruled)
         papers.append(html_copy)
         keys.append(key)
-    back = "/member/select?path=" + urllib.parse.quote(path, safe="")
     dang = str(exam.get("dang") or "")
-    if dang:
-        back = "/member/dang?path=" + urllib.parse.quote(path, safe="") + "&dang=" + urllib.parse.quote(dang, safe="")
+    back = str(exam.get("back") or "")
+    if not back:
+        back = "/member/select?path=" + urllib.parse.quote(path, safe="")
+        if dang:
+            back = "/member/dang?path=" + urllib.parse.quote(path, safe="") + "&dang=" + urllib.parse.quote(dang, safe="")
     codes = ", ".join(str(c.get("code") or "") for c in copies)
     key_toggle = "1" if not show_key else "0"
     key_lab = "Ẩn đáp án" if show_key else "Hiện đáp án (trang giáo viên)"
@@ -528,9 +560,9 @@ def render_exam(auto_print=False):
         "<button class='btn primary' name='exam_action' value='print' formaction='/member/exam/print'>🖨 In đề</button>"
         "<button class='btn' name='exam_action' value='azota' formaction='/member/exam/azota'>⬇ Word Azota</button>"
         f"<button class='btn' name='exam_action' value='key' formaction='/member/exam/key'>{html.escape(key_lab)}</button>"
-        "<button class='btn' name='exam_action' value='practice'>▶ Làm bài với đề này</button>"
-        f"<a class='btn' href='{_esc(back)}'>← Chọn lại số câu</a>"
-        "</form>"
+        + ("" if exam.get("qmap") else "<button class='btn' name='exam_action' value='practice'>▶ Làm bài với đề này</button>")
+        + f"<a class='btn' href='{_esc(back)}'>← Chọn lại số câu</a>"
+        + "</form>"
     )
     print_js = (
         "<script>window.addEventListener('load',function(){if(window.ldvlTypeset)ldvlTypeset(document.body);"
@@ -558,7 +590,7 @@ def _ruled_flag(exam=None):
     return str(raw).strip().lower() in {"1", "true", "on", "yes", "co"}
 
 
-def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None, ruled=None):
+def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None, ruled=None, title="", back="", qmap=None):
     ids = [int(i) for i in ids if str(i).isdigit() or isinstance(i, int)]
     if not ids:
         return None
@@ -576,12 +608,15 @@ def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None, ruled=N
     exam = {
         "path": path,
         "dang": dang or "",
-        "title": lesson_title(path),
+        "title": title or lesson_title(path),
+        "back": back or "",
         "copies": copies,
         "show_key": bool(session.get("exam", {}).get("show_key") if show_key is None else show_key),
         "ruled": bool(session.get("exam", {}).get("ruled") if ruled is None else ruled),
         "base_ids": list(ids),
     }
+    if qmap:
+        exam["qmap"] = [dict(x) for x in qmap if isinstance(x, dict)]
     session["exam"] = exam
     session.modified = True
     return exam
@@ -826,7 +861,7 @@ def _azota_download():
             "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>",
         )
     try:
-        qs = load_qs(path)
+        qs = load_exam_qs(exam)
     except Exception as e:
         return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     title = exam.get("title") or lesson_title(path)
@@ -896,6 +931,14 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         return _azota_download()
     if action == "practice":
         exam = session.get("exam") or {}
+        if exam.get("qmap"):
+            back = str(exam.get("back") or "/member")
+            return page(
+                "Làm bài",
+                "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+                "Đề tạo từ cả chương dùng In đề hoặc Word Azota. Làm bài từng câu mở ma trận của một bài.</div>"
+                f"<p><a class='btn' href='{_esc(back)}'>← Về ma trận</a></p></div></div></div>",
+            )
         copy = (exam.get("copies") or [{}])[0]
         ids = list(copy.get("ids") or exam.get("base_ids") or [])
         p = str(exam.get("path") or path)
@@ -922,6 +965,17 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         )
         return redirect("/member/practice")
 
+    if str(request.form.get("chapter") or "") == "1" and action in {"create", "shuffle", "print", ""}:
+        return build_chapter_exam(
+            shuffle=bool(shuffle or action == "shuffle"),
+            auto_print=bool(auto_print or action == "print"),
+            copies_n=copies_n,
+            ruled=ruled,
+            mon=str(request.form.get("mon") or "").strip(),
+            lop=str(request.form.get("lop") or "").strip(),
+            chuong=str(request.form.get("chuong") or "").strip(),
+        )
+
     qs = None
     ids = []
     if path:
@@ -937,9 +991,9 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         exam = session.get("exam") or {}
         p = str(exam.get("path") or path)
         ids = list(exam.get("base_ids") or (exam.get("copies") or [{}])[0].get("ids") or [])
-        if p and ids:
+        if (p or exam.get("qmap")) and ids:
             try:
-                qs = load_qs(p)
+                qs = load_exam_qs(exam) if exam.get("qmap") else load_qs(p)
             except Exception as e:
                 return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
             exam["ruled"] = ruled
@@ -951,6 +1005,9 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
                     shuffle=True,
                     dang=exam.get("dang") or dang,
                     ruled=ruled,
+                    title=exam.get("title") or "",
+                    back=exam.get("back") or "",
+                    qmap=exam.get("qmap") or None,
                 )
             return render_exam(auto_print=auto_print)
 
@@ -1137,6 +1194,197 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
         "if(t<=0){e.preventDefault();alert('Hãy điền số câu NB/TH/VD/VDC trong ma trận rồi bấm Tạo đề, Trộn đề hoặc In đề.');}});"
         "})();</script>"
     )
+
+
+def _chapter_query(mon, lop, chuong):
+    return (
+        "mon="
+        + urllib.parse.quote(str(mon or ""), safe="")
+        + "&lop="
+        + urllib.parse.quote(str(lop or ""), safe="")
+        + "&chuong="
+        + urllib.parse.quote(str(chuong or ""), safe="")
+    )
+
+
+def _chapter_rows(mon, lop, chuong):
+    from dang_routes import _chapter_lessons, _lesson_title
+
+    rows = []
+    for item in _chapter_lessons(mon, lop, chuong):
+        path = str(item.get("path") or item.get("file") or "").replace("\\", "/")
+        title = _lesson_title(item) or (path.rsplit("/", 1)[-1] if path else "Bài")
+        if not path.startswith("ngan-hang/"):
+            continue
+        try:
+            qs = load_qs(path)
+        except Exception:
+            qs = []
+        rows.append((title, path, qs))
+    return rows
+
+
+def build_chapter_exam(shuffle, auto_print, copies_n, ruled, mon, lop, chuong):
+    back = "/member/chapter/matrix?" + _chapter_query(mon, lop, chuong)
+    rows = _chapter_rows(mon, lop, chuong)
+    form = request.form
+    picked = []
+    merged = []
+    for i, (_title, path, qs) in enumerate(rows):
+        for kind, _kl in _MX_KINDS:
+            for lev, _ll in _MX_LEVELS:
+                try:
+                    n = max(0, int(form.get(f"cpick:{i}:{kind}:{lev}") or 0))
+                except (TypeError, ValueError):
+                    n = 0
+                if n <= 0:
+                    continue
+                pool = [q for q in qs if q.get("kind") == kind and q.get("level") == lev]
+                if not pool:
+                    continue
+                for q in random.sample(pool, min(n, len(pool))):
+                    picked.append({"path": path, "idx": int(q["idx"])})
+                    qq = dict(q)
+                    qq["idx"] = len(merged)
+                    merged.append(qq)
+    if not merged or not rows:
+        return page(
+            "Tạo đề",
+            "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+            "Chưa chọn được câu nào. Điền số câu <b>NB / TH / VD / VDC</b> theo từng bài rồi bấm "
+            "<b>Tạo đề</b>, <b>Trộn đề</b> hoặc <b>In đề</b>.</div>"
+            f"<p><a class='btn' href='{_esc(back)}'>← Về ma trận</a></p></div></div></div>",
+        )
+    title = " · ".join(x for x in (mon, ("Lớp " + lop) if lop else "", chuong) if x)
+    _save_exam(
+        rows[0][1],
+        merged,
+        [q["idx"] for q in merged],
+        copies_n,
+        shuffle=bool(shuffle or copies_n > 1),
+        title=title,
+        back=back,
+        qmap=picked,
+        ruled=ruled,
+    )
+    return render_exam(auto_print=auto_print)
+
+
+def chapter_matrix_html(mon, lop, chuong):
+    rows = _chapter_rows(mon, lop, chuong)
+    if not rows:
+        return ""
+    body_rows = []
+    total = 0
+    for i, (title, _path, qs) in enumerate(rows):
+        total += len(qs)
+        kind_cells = []
+        for kind, label in _MX_KINDS:
+            picks = []
+            for z, lab in _MX_LEVELS:
+                n = sum(1 for q in qs if q.get("kind") == kind and q.get("level") == z)
+                off = " off" if n <= 0 else ""
+                dis = " disabled" if n <= 0 else ""
+                picks.append(
+                    f"<span class='mxpick{off}' title='{html.escape(label)} · {html.escape(lab)} · kho {n}'>"
+                    f"<b>{n}</b>"
+                    f"<input class='n' type='number' min='0' max='{n}' value='0' "
+                    f"name='cpick:{i}:{kind}:{z}' aria-label='{html.escape(title)} {html.escape(label)} {html.escape(lab)}'{dis}>"
+                    f"</span>"
+                )
+            kind_cells.append("<td class='mxkind'><div class='mxline'>" + "".join(picks) + "</div></td>")
+        body_rows.append(
+            f"<tr><td class='mxname'>{i + 1}. {html.escape(title)} <span class='tag'>{len(qs)}</span></td>"
+            + "".join(kind_cells)
+            + "</tr>"
+        )
+    back = "/member/chapter?" + _chapter_query(mon, lop, chuong)
+    heading = " · ".join(x for x in (mon, ("Lớp " + lop) if lop else "", chuong) if x)
+    controls = (
+        "<label class='examcopies'>Số bản trộn <input name='exam_copies' type='number' min='1' max='20' value='1'></label>"
+        "<label class='examcopies'>Ghi bài <select name='exam_ruled'>"
+        "<option value='0'>Không dòng kẻ</option><option value='1'>Có dòng kẻ</option></select></label>"
+    )
+    submits = (
+        "<button class='btn green' type='submit' name='exam_action' value='create'>📝 Tạo đề</button>"
+        "<button class='btn' type='submit' name='exam_action' value='shuffle'>🔀 Trộn đề</button>"
+        "<button class='btn' type='submit' name='exam_action' value='print'>🖨 In đề</button>"
+    )
+    return (
+        "<form method='post' action='/member/exam' id='examMatrix' class='exammatrix'>"
+        "<input type='hidden' name='chapter' value='1'>"
+        f"<input type='hidden' name='mon' value='{_esc(mon)}'>"
+        f"<input type='hidden' name='lop' value='{_esc(lop)}'>"
+        f"<input type='hidden' name='chuong' value='{_esc(chuong)}'>"
+        "<div class='notice'>📝 <b>Ma trận cả chương</b> — mỗi dòng là một bài. Số xanh là số câu đang có, ô là số câu lấy. "
+        f"Kho cả chương: <b>{total}</b> câu. "
+        "<b>Tạo đề</b> lấy đúng số đó từ nhiều bài. <b>Trộn đề</b> và <b>In đề</b> xáo câu trong từng phần, đảo A–D và a)–d).</div>"
+        + "<div class='modebar'>" + controls + submits + "</div>"
+        + "<div class='selectwrap'><table class='selectgrid mxone'><tr><th>Bài</th>"
+        + "".join(
+            "<th>"
+            + html.escape(label)
+            + "<div class='mxlabs'><span title='Nhận biết'>NB</span><span title='Thông hiểu'>TH</span>"
+            "<span title='Vận dụng'>VD</span><span title='Vận dụng cao'>VDC</span></div></th>"
+            for _kind, label in _MX_KINDS
+        )
+        + "</tr>"
+        + "".join(body_rows)
+        + "</table></div>"
+        "<div id='examSum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>"
+        + "<div class='modebar'>" + submits + f"<a class='btn' href='{_esc(back)}'>← Cả chương</a></div>"
+        + "</form>"
+        "<p class='muted' style='margin-top:8px'>" + html.escape(heading) + "</p>"
+        "<style>.exammatrix .modebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}"
+        ".exammatrix .examcopies{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}"
+        ".exammatrix .examcopies input,.exammatrix .examcopies select{padding:6px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}"
+        ".exammatrix .examcopies input{width:64px;text-align:center}"
+        ".exammatrix table.mxone{width:max-content}"
+        ".exammatrix .mxone th,.exammatrix .mxone td{padding:3px 5px;vertical-align:middle}"
+        ".exammatrix .mxname{text-align:left;font-weight:700;line-height:1.25;white-space:nowrap}"
+        ".exammatrix .mxlabs,.exammatrix .mxline{display:grid;grid-template-columns:repeat(4,48px);gap:2px;justify-content:center;align-items:center}"
+        ".exammatrix .mxlabs span{font-size:10px;font-weight:800;color:#334155;text-align:center}"
+        ".exammatrix td.mxkind{background:#f0fdf4}"
+        ".exammatrix .mxpick{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px}"
+        ".exammatrix .mxpick b{font-size:11px;line-height:1;font-weight:800;color:#166534;min-width:1.1em;text-align:right}"
+        ".exammatrix .mxpick .n{width:26px;padding:1px 0;font-size:12px;font-weight:800}"
+        ".exammatrix .mxpick.off{opacity:.38}</style>"
+        "<script>(function(){var f=document.getElementById('examMatrix');if(!f)return;"
+        "function upd(){var t=0;f.querySelectorAll('.n').forEach(function(x){var m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;t+=v});"
+        "var s=document.getElementById('examSum');if(s)s.textContent='TỔNG CHỌN: '+t+' câu — điền NB/TH/VD/VDC rồi Tạo đề, Trộn đề hoặc In đề.';}"
+        "f.querySelectorAll('.n').forEach(function(x){x.addEventListener('input',upd)});upd();"
+        "f.addEventListener('submit',function(e){var t=0;f.querySelectorAll('.n').forEach(function(x){t+=Number(x.value)||0});"
+        "if(t<=0){e.preventDefault();alert('Hãy điền số câu NB/TH/VD/VDC trong ma trận rồi bấm Tạo đề, Trộn đề hoặc In đề.');}});"
+        "})();</script>"
+    )
+
+
+@app.get("/member/chapter/matrix")
+def member_chapter_matrix():
+    if not can_manage_bank():
+        return redirect("/member/login")
+    mon = str(request.args.get("mon") or "").strip()
+    lop = str(request.args.get("lop") or "").strip()
+    chuong = str(request.args.get("chuong") or "").strip()
+    if not mon or not chuong:
+        return redirect("/member")
+    grid = chapter_matrix_html(mon, lop, chuong)
+    back = "/member/chapter?" + _chapter_query(mon, lop, chuong)
+    if not grid:
+        return page(
+            "Ma trận",
+            "<div class='wrap'><div class='panel'><div class='body'><div class='err'>Không thấy bài trong chương này.</div>"
+            f"<p><a class='btn' href='{_esc(back)}'>← Cả chương</a></p></div></div></div>",
+        )
+    title = " · ".join(x for x in (mon, ("Lớp " + lop) if lop else "", chuong) if x)
+    body = (
+        "<div class='wrap'><div class='panel'><div class='head'>📝 Tạo đề theo ma trận · "
+        + html.escape(title)
+        + "</div><div class='body'>"
+        + grid
+        + "</div></div></div>"
+    )
+    return page("Tạo đề theo ma trận", body)
 
 
 def exam_buttons_html(admin=True):
