@@ -240,8 +240,8 @@ def _copy_answer_rows(qs, copy):
         k = str(q.get("kind") or "TL")
         (groups[k] if k in groups else groups.setdefault("TL", [])).append(q)
     rows = []
-    seq = 0
     for kind in KIND_ORDER:
+        seq = 0
         for q in groups.get(kind) or []:
             seq += 1
             qq = apply_perm(q, copy)
@@ -448,7 +448,6 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
         "</header>"
         "<p class='exnote'>Họ tên: ……………………………… Lớp: ………… SBD: …………</p>"
     ]
-    seq = 0
     key_rows = []
     sheet = []
     for kind in KIND_ORDER:
@@ -456,6 +455,8 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
         if not arr:
             continue
         parts.append(f"<h3 class='expart'>{html.escape(KIND_LABEL[kind])}</h3>")
+        key_rows.append(f"<span class='exkpart'>{html.escape(KIND_LABEL[kind])}</span>")
+        seq = 0
         for q in arr:
             seq += 1
             src = str(q.get("src") or "")
@@ -528,8 +529,9 @@ def exam_css():
 .exblank{margin:8px 0;color:#444}
 .exkeyline{margin-top:8px;padding:8px;border:1px dashed #7dd3fc;border-radius:8px;background:#f0f9ff;font-size:14px}
 .exanswer{margin-top:18px;padding-top:12px;border-top:2px solid #111}
-.exkgrid{display:flex;flex-wrap:wrap;gap:8px 16px}
-.exk{min-width:6.5rem}
+.exkgrid{display:flex;flex-wrap:wrap;gap:4px 16px}
+.exkpart{flex-basis:100%;font-weight:800;margin-top:6px}
+.exk{min-width:4.2rem}
 .exphieu{margin-top:18px;padding:12px 14px;border:2px solid #e11d48;border-radius:8px;background:#fff}
 .phtitle{margin:0 0 8px;text-align:center;font-size:18px;letter-spacing:.03em}
 .phmeta{display:flex;gap:10px;align-items:stretch;margin-bottom:8px}
@@ -834,12 +836,12 @@ def _azota_lines(qs, copy):
     blocks = []
     keys = {k: [] for k in KIND_ORDER}
     solutions = []
-    seq = 0
     for kind in KIND_ORDER:
         arr = groups.get(kind) or []
         if not arr:
             continue
         blocks.append(("p", titles[kind], True))
+        seq = 0
         for q in arr:
             seq += 1
             srcq = apply_perm(q, copy)
@@ -868,7 +870,7 @@ def _azota_lines(qs, copy):
                 keys[kind].append((seq, "tự luận"))
             sol = latex_plain(srcq.get("solution") or "")
             if sol:
-                solutions.append(f"Câu {seq}. {sol}")
+                solutions.append(f"{titles[kind]} — Câu {seq}. {sol}")
     code = str(copy.get("code") or "")
     head = [
         ("p", f"Mã đề {code}. File này tải lên Azota: Đề thi → Tạo đề thi → chọn file Word.", True),
@@ -1413,8 +1415,9 @@ def _score_sheet(rows, read):
         counts[r["kind"]][0] += 1 if ok else 0
         counts[r["kind"]][1] += 1
         if not ok:
+            part = {"TN": "Phần I", "DS": "Phần II", "TLN": "Phần III"}.get(r["kind"], "")
             lines.append(
-                f"<div>Câu {n}: tô <b>{_esc(show)}</b> · đúng <b>{_esc(r['answer'] or '—')}</b></div>"
+                f"<div>{part} · Câu {n}: tô <b>{_esc(show)}</b> · đúng <b>{_esc(r['answer'] or '—')}</b></div>"
             )
     def _pair(k):
         a, b = counts[k]
@@ -1499,7 +1502,9 @@ def member_exam_grade_photo():
         rows = _copy_answer_rows(qs, c)
         keys.append((str(c.get("code") or ""), rows))
     outline = "\n".join(
-        f"Câu {r['n']}: " + {"TN": "A/B/C/D", "DS": "Đúng/Sai 4 ý a b c d", "TLN": "số", "TL": "tự luận, bỏ qua"}.get(r["kind"], "")
+        {"TN": "Phần I", "DS": "Phần II", "TLN": "Phần III"}.get(r["kind"], "")
+        + f" câu {r['n']}: "
+        + {"TN": "A/B/C/D", "DS": "Đúng/Sai 4 ý a b c d", "TLN": "số"}.get(r["kind"], "")
         for r in (keys[0][1] if keys else [])
         if r["kind"] != "TL"
     )
