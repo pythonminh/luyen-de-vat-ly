@@ -1092,29 +1092,40 @@ def _xlsx_bytes(sheets):
 _XLSX_PART = {"TN": "Trắc nghiệm", "DS": "Đúng/Sai", "TLN": "Trả lời ngắn", "TL": "Tự luận"}
 
 
+def _answer_text(r):
+    ans = r["answer"]
+    if r["kind"] == "TLN":
+        return latex_plain(ans).strip() or "—"
+    if r["kind"] == "TL":
+        return "Tự luận"
+    if r["kind"] == "DS":
+        mask = _norm_ds(ans).replace("D", "Đ")
+        return mask or ans or "—"
+    return ans or "—"
+
+
 def _answer_sheets(qs, copies):
-    """Một sheet, mỗi mã đề là một khối riêng, cách nhau một hàng trống."""
-    rows = []
+    """Một sheet: mỗi câu một hàng, các mã đề là các cột kế nhau."""
+    packed = []
+    order = []
+    seen = set()
     for copy in copies:
-        if rows:
-            rows.append([""])
         code = str(copy.get("code") or "").strip() or "de"
-        rows.append([f"Mã đề {code}"])
-        rows.append(["Câu", "Phần", "Đáp án", "a", "b", "c", "d"])
+        by_n = {}
         for r in _copy_answer_rows(qs, copy):
-            ans = r["answer"]
-            if r["kind"] == "TLN":
-                ans = latex_plain(ans).strip() or "—"
-            elif r["kind"] == "TL":
-                ans = "Tự luận"
-            elif not ans:
-                ans = "—"
-            parts = ["", "", "", ""]
-            if r["kind"] == "DS":
-                mask = _norm_ds(ans).replace("D", "Đ")
-                parts = list(mask[:4]) + [""] * (4 - len(mask[:4]))
-                ans = "".join(parts).rstrip() or ans
-            rows.append([r["n"], _XLSX_PART.get(r["kind"], r["kind"]), ans, *parts])
+            by_n[int(r["n"])] = r
+            if int(r["n"]) not in seen:
+                seen.add(int(r["n"]))
+                order.append(int(r["n"]))
+        packed.append((code, by_n))
+    rows = [["Câu", "Phần"] + [f"Mã {code}" for code, _by in packed]]
+    for n in order:
+        kind = ""
+        for _code, by_n in packed:
+            if n in by_n:
+                kind = _XLSX_PART.get(by_n[n]["kind"], by_n[n]["kind"])
+                break
+        rows.append([n, kind] + [_answer_text(by_n[n]) if n in by_n else "" for _code, by_n in packed])
     return [("Đáp án", rows)]
 
 
