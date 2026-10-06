@@ -1090,20 +1090,21 @@ def _xlsx_bytes(sheets):
 _XLSX_PART = {"TN": "Trắc nghiệm", "DS": "Đúng/Sai", "TLN": "Trả lời ngắn", "TL": "Tự luận"}
 
 
-def _answer_tables(qs, copies):
-    long_rows = [["Mã đề", "Câu", "Phần", "Đáp án", "a", "b", "c", "d"]]
-    wide_header = ["Mã đề"]
-    wide_body = []
-    width = 0
-    packed = []
+def _answer_sheets(qs, copies):
+    """Mỗi mã đề một sheet. Tên sheet là mã đề."""
+    sheets = []
+    used = set()
     for copy in copies:
-        rows = _copy_answer_rows(qs, copy)
-        packed.append((str(copy.get("code") or ""), rows))
-        width = max(width, len(rows))
-    wide_header += [f"Câu {i}" for i in range(1, width + 1)]
-    for code, rows in packed:
-        wide = [code]
-        for r in rows:
+        code = str(copy.get("code") or "").strip() or "de"
+        name = f"Mã {code}"
+        base = name
+        n = 2
+        while name in used:
+            name = f"{base}-{n}"
+            n += 1
+        used.add(name)
+        rows = [["Câu", "Phần", "Đáp án", "a", "b", "c", "d"]]
+        for r in _copy_answer_rows(qs, copy):
             ans = r["answer"]
             if r["kind"] == "TLN":
                 ans = latex_plain(ans).strip() or "—"
@@ -1116,11 +1117,9 @@ def _answer_tables(qs, copies):
                 mask = _norm_ds(ans).replace("D", "Đ")
                 parts = list(mask[:4]) + [""] * (4 - len(mask[:4]))
                 ans = "".join(parts).rstrip() or ans
-            long_rows.append([code, r["n"], _XLSX_PART.get(r["kind"], r["kind"]), ans, *parts])
-            wide.append(ans)
-        wide += [""] * (width - len(rows))
-        wide_body.append(wide)
-    return long_rows, [wide_header] + wide_body
+            rows.append([r["n"], _XLSX_PART.get(r["kind"], r["kind"]), ans, *parts])
+        sheets.append((name, rows))
+    return sheets
 
 
 def _answer_xlsx_download():
@@ -1139,8 +1138,8 @@ def _answer_xlsx_download():
         qs = load_exam_qs(exam)
     except Exception as e:
         return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
-    long_rows, wide_rows = _answer_tables(qs, copies)
-    blob = _xlsx_bytes([("Đáp án", long_rows), ("Bảng ngang", wide_rows)])
+    sheets = _answer_sheets(qs, copies)
+    blob = _xlsx_bytes(sheets)
     codes = [str(c.get("code") or "") for c in copies]
     name = f"dap-an-{codes[0]}.xlsx" if len(codes) == 1 else "dap-an.xlsx"
     return send_file(
