@@ -989,19 +989,22 @@ def _xlsx_text(s):
 
 
 def _xlsx_sheet(rows):
+    width = max((len(row) for row in rows), default=1)
     body = []
     for r, row in enumerate(rows, 1):
-        head = str(row[0] if row else "")
-        bold = head == "Câu" or head.startswith("Mã đề")
         cells = []
-        for c, val in enumerate(row, 1):
-            style = ' s="1"' if bold else ""
+        for c in range(1, width + 1):
+            val = row[c - 1] if c - 1 < len(row) else ""
+            style = 2 if c == 1 and r > 1 else 1
             ref = f"{_xlsx_col(c)}{r}"
-            cells.append(f'<c r="{ref}" t="inlineStr"{style}><is><t>{_xlsx_text(val)}</t></is></c>')
+            cells.append(
+                f'<c r="{ref}" t="inlineStr" s="{style}"><is><t>{_xlsx_text(val)}</t></is></c>'
+            )
         body.append(f'<row r="{r}">' + "".join(cells) + "</row>")
     return (
         "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
         "<worksheet xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main'>"
+        f"<cols><col min='1' max='{width}' width='9' customWidth='1'/></cols>"
         "<sheetData>" + "".join(body) + "</sheetData></worksheet>"
     )
 
@@ -1053,14 +1056,20 @@ def _xlsx_bytes(sheets):
     styles = (
         "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
         "<styleSheet xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main'>"
-        "<fonts count='2'><font><sz val='11'/><name val='Calibri'/></font>"
-        "<font><b/><sz val='11'/><name val='Calibri'/></font></fonts>"
+        "<fonts count='3'><font><sz val='11'/><name val='Calibri'/></font>"
+        "<font><sz val='13'/><name val='Times New Roman'/></font>"
+        "<font><b/><sz val='13'/><name val='Times New Roman'/></font></fonts>"
         "<fills count='2'><fill><patternFill patternType='none'/></fill>"
         "<fill><patternFill patternType='gray125'/></fill></fills>"
-        "<borders count='1'><border><left/><right/><top/><bottom/><diagonal/></border></borders>"
+        "<borders count='2'><border><left/><right/><top/><bottom/><diagonal/></border>"
+        "<border><left style='thin'><color auto='1'/></left><right style='thin'><color auto='1'/></right>"
+        "<top style='thin'><color auto='1'/></top><bottom style='thin'><color auto='1'/></bottom><diagonal/></border></borders>"
         "<cellStyleXfs count='1'><xf numFmtId='0' fontId='0' fillId='0' borderId='0'/></cellStyleXfs>"
-        "<cellXfs count='2'><xf numFmtId='0' fontId='0' fillId='0' borderId='0' xfId='0'/>"
-        "<xf numFmtId='0' fontId='1' fillId='0' borderId='0' xfId='0' applyFont='1'/></cellXfs>"
+        "<cellXfs count='3'><xf numFmtId='0' fontId='0' fillId='0' borderId='0' xfId='0'/>"
+        "<xf numFmtId='0' fontId='1' fillId='0' borderId='1' xfId='0' applyFont='1' applyBorder='1' applyAlignment='1'>"
+        "<alignment horizontal='center' vertical='center'/></xf>"
+        "<xf numFmtId='0' fontId='2' fillId='0' borderId='1' xfId='0' applyFont='1' applyBorder='1' applyAlignment='1'>"
+        "<alignment horizontal='center' vertical='center'/></xf></cellXfs>"
         "</styleSheet>"
     )
     pkg_rels = (
@@ -1089,43 +1098,37 @@ def _xlsx_bytes(sheets):
     return buf
 
 
-_XLSX_PART = {"TN": "Trắc nghiệm", "DS": "Đúng/Sai", "TLN": "Trả lời ngắn", "TL": "Tự luận"}
-
-
 def _answer_text(r):
     ans = r["answer"]
     if r["kind"] == "TLN":
         return latex_plain(ans).strip() or "—"
     if r["kind"] == "TL":
-        return "Tự luận"
+        return "TL"
     if r["kind"] == "DS":
-        mask = _norm_ds(ans).replace("D", "Đ")
-        return mask or ans or "—"
+        return _norm_ds(ans) or "—"
     return ans or "—"
 
 
 def _answer_sheets(qs, copies):
-    """Một sheet: mỗi câu một hàng, các mã đề là các cột kế nhau."""
+    """Một bảng như phiếu đáp án nhà trường: hàng 1 là mã đề, cột A là số câu.
+
+    Số câu đếm lại từ 1 ở mỗi phần. Đúng/sai ghi D và S.
+    """
     packed = []
-    order = []
-    seen = set()
     for copy in copies:
         code = str(copy.get("code") or "").strip() or "de"
-        by_n = {}
+        groups = {k: [] for k in KIND_ORDER}
         for r in _copy_answer_rows(qs, copy):
-            by_n[int(r["n"])] = r
-            if int(r["n"]) not in seen:
-                seen.add(int(r["n"]))
-                order.append(int(r["n"]))
-        packed.append((code, by_n))
-    rows = [["Câu", "Phần"] + [f"Mã {code}" for code, _by in packed]]
-    for n in order:
-        kind = ""
-        for _code, by_n in packed:
-            if n in by_n:
-                kind = _XLSX_PART.get(by_n[n]["kind"], by_n[n]["kind"])
-                break
-        rows.append([n, kind] + [_answer_text(by_n[n]) if n in by_n else "" for _code, by_n in packed])
+            groups[r["kind"]].append(_answer_text(r))
+        packed.append((code, groups))
+    rows = [[""] + [code for code, _groups in packed]]
+    for kind in KIND_ORDER:
+        n = max((len(groups[kind]) for _code, groups in packed), default=0)
+        for i in range(n):
+            rows.append(
+                [str(i + 1)]
+                + [groups[kind][i] if i < len(groups[kind]) else "" for _code, groups in packed]
+            )
     return [("Đáp án", rows)]
 
 
