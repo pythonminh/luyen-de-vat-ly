@@ -2,11 +2,14 @@
 """ADMIN: AI viết lại đề + lời giải; chỉ ghi TEX khi ADMIN chấp nhận."""
 from __future__ import annotations
 
+import ast
 import base64
 import hashlib
 import json
 import re
+import urllib.error
 import urllib.parse
+import urllib.request
 
 from flask import jsonify, request
 
@@ -933,7 +936,11 @@ def api_tex_preview():
     if not base.can_manage_bank():
         return jsonify(ok=False, error="Chỉ ADMIN."), 403
     data = request.get_json(silent=True) or {}
-    tex = _clean_tex(data.get("tex") or data.get("latex") or "")
+    tex = str(data.get("tex") or data.get("latex") or "")
+    if data.get("phieu") or data.get("raw"):
+        tex = _formulas_to_tex(tex)
+    else:
+        tex = _clean_tex(tex)
     src = str(data.get("src") or data.get("path") or "")
     return jsonify(ok=True, html=base.html_question(tex, src))
 
@@ -1673,8 +1680,1285 @@ def api_lesson_tikz_act():
     return jsonify(ok=True, note=note)
 
 
+def _extract_tikz_code(raw):
+    s = str(raw or "").strip()
+    obj = _parse_obj(s)
+    for key in ("tikz", "code", "tikzpicture"):
+        if str(obj.get(key) or "").strip():
+            s = str(obj.get(key) or "")
+            break
+    m = re.search(
+        r"\\begin\s*\{\s*tikzpicture\b.*?\\end\s*\{\s*tikzpicture\s*\}",
+        s,
+        re.I | re.S,
+    )
+    if not m:
+        raise ValueError("AI chưa trả khối \\begin{tikzpicture}...\\end{tikzpicture}.")
+    code = m.group(0)
+    code = re.sub(r"\\usetikzlibrary\s*\{[^}]*\}", "", code, flags=re.I)
+    code = re.sub(r"\\usepackage\s*(?:\[[^\]]*\])?\s*\{[^}]*\}", "", code, flags=re.I)
+    code = re.sub(r"\\documentclass\b[^\n]*", "", code, flags=re.I)
+    code = base.repair_tikz(code)
+    code = _clean_tikz_code(code)
+    if not re.search(r"\\begin\s*\{\s*center\s*\}", code, re.I):
+        code = "\\begin{center}\n" + code.strip() + "\n\\end{center}"
+    return code
+
+
+def _tikz_suggest_prompt(pack):
+    labs = "ABCD"
+    opts = []
+    for i, o in enumerate(pack.get("options") or []):
+        mark = " [đúng]" if o.get("correct") else ""
+        lab = labs[i] if i < len(labs) else str(i + 1)
+        opts.append(f"{lab}. {o.get('text') or ''}{mark}")
+    kind = pack.get("kind") or ""
+    return (
+        "Bạn là giáo viên THPT, vẽ hình minh họa cho đề bằng TikZ để học sinh nhìn ra tình huống.\n"
+        "Đọc kỹ ĐỀ, phương án và lời giải. Vẽ đúng thứ đề mô tả: đường tròn, đường kính, dao động, vectơ, mạch, đồ thị, trục số, hình học...\n"
+        "Không bịa chi tiết không có trong đề. Không chép nguyên mã TikZ cũ nếu sai hoặc thiếu.\n"
+        "CHỈ trả đúng một khối, không markdown, không lời dẫn:\n"
+        "\\begin{tikzpicture}[scale=1]\n...\n\\end{tikzpicture}\n"
+        "Biên dịch pdflatex: chỉ \\draw, \\node, \\path, \\fill, \\foreach, \\clip, \\coordinate.\n"
+        "Mũi tên >=stealth. Không \\usetikzlibrary, không pgfplots, không \\begin{axis}.\n"
+        "Chữ tiếng Việt có dấu: \\node {\\text{...}}; cấm chữ có dấu trong $...$.\n"
+        "Hình vừa một cột đề (không quá 11cm). Ghi đủ ký hiệu trên hình (O, M, đường kính, trục...).\n"
+        f"Loại câu: {kind}\n===STEM===\n{pack.get('text') or ''}\n"
+        + (("===OPTIONS===\n" + "\n".join(opts) + "\n") if opts else "")
+        + (f"===ANSWER===\n{pack.get('answer') or ''}\n" if pack.get("answer") else "")
+        + (f"===SOLUTION===\n{(pack.get('solution') or '')[:1800]}\n" if pack.get("solution") else "")
+    )
+
+
+@base.app.post("/api/admin/suggest-tikz")
+def api_suggest_tikz():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get("src") or data.get("path") or "").replace("\\", "/").strip()
+    try:
+        fi = int(data.get("file_idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu file_idx."), 400
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    q, _tex = _load_q(src, fi)
+    if not q:
+        return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
+    keys = _keys_from_payload(data)
+    if not keys:
+        return jsonify(ok=False, error="Thiếu Gemini API key. Mở trang 🤖 Gemini rồi nạp key."), 400
+    from admin_classify import _gemini_once
+
+    pack = _q_plain_pack(q)
+    raw, err = _gemini_once(keys, _tikz_suggest_prompt(pack), 2500)
+    if not raw:
+        return jsonify(ok=False, error=err or "Gemini không trả mã TikZ."), 502
+    try:
+        code = _extract_tikz_code(raw)
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 502
+    hid = base.tikz_remember(code)
+    html = base.html_question(code, src)
+    return jsonify(ok=True, code=code, hid=hid, html=html, url="/tikz/" + hid + ".png")
+
+
+_NOTEBOOK_GEMINI = """Xuất ra ẢNH một trang A4. Không viết lại prompt. Không giải thích cách làm. Hãy trực tiếp tạo sản phẩm trực quan.
+
+Bạn là chuyên gia thiết kế tài liệu học tập trực quan cho học sinh THPT.
+
+NHIỆM VỤ:
+Từ nội dung LaTeX tôi cung cấp, hãy chuyển nó thành MỘT TRANG VỞ HỌC TẬP HOÀN CHỈNH, trực quan, đẹp, khoa học và dễ học — trình độ infographic giáo khoa, không phải ảnh chụp vở viết tay cẩu thả.
+
+BẮT BUỘC có thanh thương hiệu ở MÉP TRÊN CÙNG (trên cả tiêu đề bài), không được quên, không được viết sai số:
+
+Lớp Học Thầy Minh    ·    Zalo 0946111107
+
+Thanh này: nền xanh đậm hoặc navy, chữ trắng rõ, có thể thêm icon điện thoại/Zalo. Chiếm trọn chiều ngang trang.
+
+KHÔNG tạo prompt.
+KHÔNG giải thích cách làm.
+Hãy trực tiếp tạo sản phẩm trực quan từ nội dung được cung cấp.
+
+=============================
+I. TỰ NHẬN DIỆN NỘI DUNG
+=============================
+
+Trước tiên hãy tự xác định:
+
+- Môn học: Toán / Vật lý / Hóa học / môn khác.
+- Chủ đề.
+- Dạng bài.
+- Mức độ kiến thức.
+- Những công thức, định nghĩa, quy tắc quan trọng.
+- Những hình vẽ, đồ thị, sơ đồ hoặc quá trình cần minh họa.
+
+Không được thay đổi dữ kiện toán học, vật lý, hóa học hoặc kết quả của bài.
+
+=============================
+II. PHONG CÁCH TRANG VỞ — BẮT BUỘC GIỐNG MẪU KHỐI
+=============================
+
+Thiết kế thành MỘT TRANG DỌC TỈ LỆ A4 (khoảng 1240×1754 px hoặc 1480×2100 px), độ nét cao, như tài liệu in màu của trung tâm luyện thi.
+
+Mẫu bố cục chuyên nghiệp (bắt buộc dùng KHỐI / CARD, không để chữ trôi tự do trên giấy):
+
+- Nền giấy vở kẻ ô rất nhạt + gáy lò xo bên trái.
+- Mỗi phần là một KHUNG BO GÓC lớn, viền 2–3 px, nền pastel riêng, bóng nhẹ.
+- Tiêu đề mỗi khung: viên thuốc (pill) góc trên-trái, chữ trắng đậm, có icon.
+  • Bài toán → pill xanh lá.
+  • Hướng dẫn giải → pill tím.
+  • Minh họa → pill xanh dương.
+  • Đồ thị / chuỗi thời gian → pill vàng/cam.
+  • Nhận xét – Ghi nhớ → pill hồng, khung full-width đáy trang.
+- Chữ trong khung: font sans-serif giáo khoa (kiểu Nunito / Quicksand / Be Vietnam), không scribble, không chữ máy tính pixel.
+- Công thức: rendered đẹp như sách giáo khoa (x = 1,25 cos(2πt − π/12)), căn giữa khi là công thức chính.
+- Phương án A B C D nằm một hàng hoặc lưới gọn; đáp án đúng là viên thuốc xanh lá đậm, chữ trắng; phương án sai nền trắng viền xám.
+- Hai cột khi có hình: trái = đề + lời giải; phải = hình minh họa xếp chồng.
+- Lề đều, khoảng cách giữa các khối 10–14 px, không chồng chữ, không cắt công thức.
+- Màu pastel đồng bộ (xanh mint, xanh baby, vàng kem, hồng nhạt) — sạch, trung tâm gia sư, không neon, không poster quảng cáo lòe.
+
+Không làm ảnh chụp vở bút bi lem, không giấy nhàu, không sticker lung tung.
+
+=============================
+II.b THƯƠNG HIỆU (KHÔNG ĐƯỢC THIẾU)
+=============================
+
+Dòng đầu tiên của trang, trên tiêu đề dạng bài:
+
+Lớp Học Thầy Minh
+Zalo: 0946111107
+
+Viết đúng chính tả và đúng số 0946111107. Có thể thêm dòng phụ nhỏ: lophocthayminh.onrender.com
+
+=============================
+III. BỐ CỤC TỰ ĐỘNG
+=============================
+
+Tùy nội dung, tự lựa chọn bố cục phù hợp.
+
+Có thể gồm:
+
+1. DẠNG BÀI / CHỦ ĐỀ
+
+2. BÀI TOÁN
+   Đưa nguyên nội dung câu hỏi vào.
+
+3. KIẾN THỨC CẦN NHỚ
+   Chỉ đưa những kiến thức thực sự cần cho bài.
+
+4. PHÂN TÍCH / Ý TƯỞNG GIẢI
+
+5. HƯỚNG DẪN GIẢI
+   Trình bày từng bước:
+   - Công thức
+   - Thay số
+   - Biến đổi
+   - Kết quả
+
+6. HÌNH MINH HỌA
+   Chỉ tạo khi hình giúp học sinh hiểu bài.
+
+7. NHẬN XÉT – GHI NHỚ
+   Tóm tắt mẹo hoặc kết luận quan trọng.
+
+Không bắt buộc phải sử dụng tất cả các khung.
+Tự bỏ những phần không cần thiết để trang không bị chật.
+
+=============================
+IV. QUY TẮC MINH HỌA
+=============================
+
+Nếu là TOÁN:
+
+- Vẽ hình hình học chính xác.
+- Vẽ trục tọa độ.
+- Vẽ đồ thị hàm số.
+- Vẽ miền nghiệm.
+- Vẽ biểu đồ, sơ đồ hoặc hình học không gian khi cần.
+- Các điểm, đường, góc, tọa độ phải đúng.
+- Làm nổi bật phần cần quan sát.
+
+Nếu là VẬT LÝ:
+
+- Vẽ sơ đồ vật lý chính xác.
+- Vẽ vectơ lực, vận tốc, gia tốc khi cần.
+- Vẽ đồ thị x-t, v-t, a-t...
+- Với dao động điều hòa có thể minh họa chuyển động tròn đều và hình chiếu.
+- Với sóng có thể minh họa phương truyền sóng và trạng thái dao động.
+- Với điện có thể vẽ mạch điện.
+- Với quang học có thể vẽ tia sáng, thấu kính, gương...
+- Nếu quá trình có sự thay đổi theo thời gian, minh họa bằng chuỗi trạng thái.
+
+Nếu là HÓA HỌC:
+
+- Vẽ sơ đồ phản ứng.
+- Mô hình nguyên tử/phân tử khi cần.
+- Sơ đồ chuyển hóa.
+- Bảng dữ kiện.
+- Quy trình tính toán.
+- Làm nổi bật chất, phương trình và kết quả quan trọng.
+
+Nếu là môn khác:
+
+Tự lựa chọn loại hình minh họa phù hợp với nội dung.
+
+=============================
+V. MINH HỌA ĐỘNG
+=============================
+
+Nếu nội dung có một quá trình động hoặc thay đổi theo thời gian:
+
+Hãy tạo minh họa dạng animation nếu công cụ hỗ trợ.
+
+Ví dụ:
+
+t₀ → t₁ → t₂ → t₃
+
+hoặc
+
+Bước 1 → Bước 2 → Bước 3 → Kết quả.
+
+Nếu không thể tạo animation thật:
+
+hãy tạo một chuỗi 4–8 khung hình liên tiếp giống animation,
+kèm mũi tên hoặc thanh thời gian để học sinh nhìn vào có thể hiểu quá trình chuyển động.
+
+KHÔNG tạo animation nếu nội dung không cần chuyển động.
+
+=============================
+VI. CHỮ, CÔNG THỨC, XUỐNG DÒNG — QUAN TRỌNG NHẤT
+=============================
+
+Phần NỘI DUNG ở cuối prompt đã được xuống dòng sẵn. Mỗi dòng là một dòng trên trang.
+
+- Xuống dòng đúng như bản chữ. Không gộp nhiều dòng thành một dòng.
+- Không cắt một dòng ra hai dòng ở giữa một từ hoặc giữa một công thức.
+- Trong mỗi khung: chữ căn trái, dãn dòng đều (khoảng 1,4), chừa lề trong khung khoảng 12 px. Hết chiều ngang khung thì xuống dòng tại khoảng trắng.
+- Không để chữ tràn khỏi khung, không chồng dòng, không dính chữ vào viền. Thiếu chỗ thì thu nhỏ chữ, không cắt mất chữ.
+- Dòng là công thức (chỉ số, số mũ, phân số, ≈ × °): đặt một dòng riêng, căn giữa, viết như sách giáo khoa. Không in dấu $, không in gạch chéo ngược, không in lệnh TeX.
+- Mệnh đề a) b) c) d) hoặc A. B. C. D.: mỗi mệnh đề một khối. Nhãn ĐÚNG hoặc SAI nằm cùng hàng với câu, căn phải.
+- Lời giải nằm dưới mệnh đề, căn trái, mỗi câu một dòng.
+- Giữ nguyên số liệu, đơn vị, ký hiệu và đáp án. Không đổi kết quả.
+
+=============================
+VII. BÀI TRẮC NGHIỆM
+=============================
+
+Nếu có:
+
+\\choice
+{$...$}
+{$...$}
+{$...$}
+{\\True $...$}
+
+hãy trình bày thành 4 đáp án A, B, C, D.
+
+Đáp án đúng phải được làm nổi bật.
+
+Không thay đổi nội dung đáp án.
+
+Nếu có \\loigiai thì đưa lời giải vào phần Hướng dẫn giải.
+
+=============================
+VIII. BÀI ĐÚNG – SAI
+=============================
+
+Nếu có dạng đúng/sai:
+
+- trình bày từng mệnh đề a), b), c), d);
+- đánh dấu đúng/sai rõ ràng;
+- giải thích ngắn gọn cho từng mệnh đề nếu có lời giải.
+
+=============================
+IX. BÀI TRẢ LỜI NGẮN
+=============================
+
+Nếu có \\shortans:
+
+- trình bày bài toán;
+- các bước tính;
+- kết quả cuối cùng trong một ô nổi bật.
+
+=============================
+X. ĐỘ CHÍNH XÁC
+=============================
+
+ĐÂY LÀ QUY TẮC QUAN TRỌNG NHẤT:
+
+- Không được bịa dữ kiện.
+- Không được tự thay đổi đề.
+- Không được tự đổi đáp án.
+- Không được bỏ công thức.
+- Không được vẽ hình sai bản chất.
+- Không được vẽ đồ thị sai.
+- Không được thêm kiến thức không liên quan.
+- Nếu hình minh họa không cần thiết thì không tạo.
+
+Nội dung khoa học phải chính xác trước khi đẹp.
+
+=============================
+XI. KẾT QUẢ CUỐI
+=============================
+
+Tạo một trang học tập hoàn chỉnh, các khối bo góc như infographic giáo khoa:
+
+[THANH THƯƠNG HIỆU: Lớp Học Thầy Minh · Zalo 0946111107]
+↓
+[DẠNG BÀI — pill + tiêu đề chủ đề]
+↓
+Hàng giữa 2 cột:
+  trái: [BÀI TOÁN] rồi [HƯỚNG DẪN GIẢI]
+  phải: [HÌNH MINH HỌA] / [CHUỖI THỜI GIAN nếu có quá trình động]
+↓
+[ĐÁP ÁN nổi bật]
+↓
+[NHẬN XÉT – GHI NHỚ — khung full đáy trang]
+
+Tự điều chỉnh để toàn bộ nằm gọn một trang A4, nét, đều, chuyên nghiệp.
+
+NỘI DUNG TRANG — mỗi dòng dưới đây là một dòng trên trang, giữ nguyên thứ tự, không gộp, không cắt giữa dòng:
+--------------------------------
+[DÁN LATEX VÀO ĐÂY]
+--------------------------------
+
+Hãy trực tiếp vẽ trang. Chữ phải thẳng hàng, xuống dòng đúng bản trên, công thức căn giữa, không in mã TeX.
+"""
+
+_NOTEBOOK_MOTION = (
+    "Trang tĩnh đã xong. Nếu bài có quá trình theo thời gian, hãy tạo thêm animation "
+    "hoặc chuỗi 4–8 khung theo mục V. Không đổi số liệu, công thức, đáp án. "
+    "Xuất ra ẢNH/GIF, không viết lại prompt."
+)
+
+
+def _notebook_latex(q, tex, fi):
+    inner = _ex_inner(tex, fi) if tex is not None else ""
+    if not inner:
+        inner = str((q or {}).get("raw") or "").strip()
+    inner = str(inner or "").strip()
+    if not inner:
+        raise ValueError("Không lấy được LaTeX của câu.")
+    if not re.search(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", inner, re.I):
+        inner = "\\begin{ex}\n" + inner + "\n\\end{ex}"
+    if len(inner) > 24000:
+        inner = inner[:24000].rstrip() + "\n% … cắt bớt vì quá dài"
+    return inner
+
+
+_SUP_DIGIT = str.maketrans("0123456789+-=()", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾")
+_SUB_DIGIT = str.maketrans("0123456789+-=()aeoxhklmnpst", "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₒₓₕₖₗₘₙₚₛₜ")
+_TEX_SYMBOL = {
+    "approx": "≈", "sim": "∼", "times": "×", "cdot": "·", "pm": "±", "mp": "∓",
+    "leq": "≤", "le": "≤", "geq": "≥", "ge": "≥", "neq": "≠", "ne": "≠",
+    "rightarrow": "→", "to": "→", "leftarrow": "←", "leftrightarrow": "↔",
+    "infty": "∞", "degree": "°", "circ": "°", "angle": "∠",
+    "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "Delta": "Δ",
+    "theta": "θ", "lambda": "λ", "mu": "μ", "pi": "π", "sigma": "σ", "omega": "ω", "Omega": "Ω",
+    "phi": "φ", "varphi": "φ", "varepsilon": "ε", "epsilon": "ε",
+    "quad": " ", "qquad": "  ", " ": " ", ",": " ", ";": " ", "!": "",
+}
+
+
+def _brace_span(s, i):
+    while i < len(s) and s[i] in " \t":
+        i += 1
+    if i >= len(s) or s[i] != "{":
+        return "", i
+    depth = 0
+    j = i
+    while j < len(s):
+        if s[j] == "{":
+            depth += 1
+        elif s[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return s[i + 1:j], j + 1
+        j += 1
+    return s[i + 1:], len(s)
+
+
+def _script_chars(body, table):
+    body = str(body or "").strip().replace(" ", "")
+    if body and all(ord(ch) in table for ch in body):
+        return body.translate(table)
+    return ""
+
+
+def _tex_to_lines(s, depth=0):
+    """LaTeX → dòng chữ thường. Không để lại dấu \\ kẻo Gemini nuốt \\t \\a \\f thành ký tự điều khiển."""
+    if depth > 12:
+        return re.sub(r"\\+", "", str(s or ""))
+    s = str(s or "")
+    out = []
+    i = 0
+    n = len(s)
+    while i < n:
+        ch = s[i]
+        if ch == "%" and (i == 0 or s[i - 1] != "\\"):
+            while i < n and s[i] != "\n":
+                i += 1
+            continue
+        if ch == "\\":
+            if i + 1 < n and s[i + 1] == "\\":
+                out.append("\n")
+                i += 2
+                continue
+            j = i + 1
+            if j < n and (s[j].isalpha() or s[j] == "@"):
+                while j < n and (s[j].isalpha() or s[j] == "@"):
+                    j += 1
+                name = s[i + 1:j]
+                i = j
+                low = name.lower()
+                if name in _TEX_SYMBOL or low in _TEX_SYMBOL:
+                    out.append(_TEX_SYMBOL.get(name) or _TEX_SYMBOL[low])
+                    continue
+                if low in ("newline", "par", "linebreak", "cr"):
+                    out.append("\n")
+                    continue
+                if low == "true":
+                    out.append("ĐÚNG. ")
+                    continue
+                if low == "false":
+                    out.append("SAI. ")
+                    continue
+                if low in ("frac", "dfrac", "tfrac", "cfrac"):
+                    a, i = _brace_span(s, i)
+                    b, i = _brace_span(s, i)
+                    out.append("(" + _tex_to_lines(a, depth + 1).strip() + ")/(" + _tex_to_lines(b, depth + 1).strip() + ")")
+                    continue
+                if low == "sqrt":
+                    while i < n and s[i] in " \t":
+                        i += 1
+                    if i < n and s[i] == "[":
+                        k = s.find("]", i)
+                        i = n if k < 0 else k + 1
+                    inner, i = _brace_span(s, i)
+                    out.append("√(" + _tex_to_lines(inner, depth + 1).strip() + ")")
+                    continue
+                if low in ("text", "mathrm", "mathbf", "textbf", "textit", "mathit", "operatorname", "mbox", "textrm", "textsf", "emph"):
+                    inner, i = _brace_span(s, i)
+                    out.append(_tex_to_lines(inner, depth + 1))
+                    continue
+                if low in ("choice", "choicetf"):
+                    labels = "ABCD" if low == "choice" else "abcd"
+                    k = 0
+                    while True:
+                        t = i
+                        while t < n and s[t] in " \t\n":
+                            t += 1
+                        if t >= n or s[t] != "{":
+                            i = t
+                            break
+                        inner, i = _brace_span(s, t)
+                        lab = labels[k] if k < len(labels) else str(k + 1)
+                        punct = "." if low == "choice" else ")"
+                        out.append("\n" + lab + punct + " " + _tex_to_lines(inner, depth + 1).strip() + "\n")
+                        k += 1
+                    continue
+                if low == "loigiai":
+                    inner, i = _brace_span(s, i)
+                    out.append("\nLời giải:\n" + _tex_to_lines(inner, depth + 1).strip() + "\n")
+                    continue
+                if low == "shortans":
+                    inner, i = _brace_span(s, i)
+                    out.append("\nĐáp án: " + _tex_to_lines(inner, depth + 1).strip() + "\n")
+                    continue
+                if low == "dangbt":
+                    inner, i = _brace_span(s, i)
+                    out.append("\nDạng bài: " + _tex_to_lines(inner, depth + 1).strip() + "\n")
+                    continue
+                if low in ("begin", "end", "item", "label"):
+                    if low != "item":
+                        _inner, i = _brace_span(s, i)
+                    else:
+                        out.append("\n• ")
+                    continue
+                _inner, i2 = _brace_span(s, i)
+                if i2 != i:
+                    if _inner:
+                        out.append(_tex_to_lines(_inner, depth + 1))
+                    i = i2
+                continue
+            nxt = s[i + 1] if i + 1 < n else ""
+            plain = {"{": "{", "}": "}", "$": "", "&": " ", "%": "%", "_": "", "^": "", ",": " ", ";": " ", " ": " "}
+            if nxt in plain:
+                out.append(plain[nxt])
+                i += 2
+                continue
+            i += 1
+            continue
+        if ch == "$":
+            i += 1
+            continue
+        if ch in "{}":
+            i += 1
+            continue
+        if ch in "^_":
+            table = _SUP_DIGIT if ch == "^" else _SUB_DIGIT
+            i += 1
+            if i < n and s[i] == "\\":
+                j = i + 1
+                while j < n and s[j].isalpha():
+                    j += 1
+                name = s[i + 1:j]
+                token = _TEX_SYMBOL.get(name) or _TEX_SYMBOL.get(name.lower())
+                if token:
+                    out.append(token)
+                else:
+                    out.append(_tex_to_lines(s[i:j], depth + 1))
+                i = j
+                continue
+            if i < n and s[i] == "{":
+                inner, i = _brace_span(s, i)
+                inner = _tex_to_lines(inner, depth + 1).strip()
+            elif i < n:
+                inner = s[i]
+                i += 1
+            else:
+                inner = ""
+            uni = _script_chars(inner, table)
+            out.append(uni or inner)
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _wrap_page_line(line, width=76):
+    line = re.sub(r"[ \t]+", " ", str(line or "")).strip()
+    if not line or len(line) <= width:
+        return [line] if line else []
+    rows, cur = [], ""
+    for word in line.split(" "):
+        if not cur:
+            cur = word
+        elif len(cur) + 1 + len(word) <= width:
+            cur += " " + word
+        else:
+            rows.append(cur)
+            cur = word
+    if cur:
+        rows.append(cur)
+    return rows
+
+
+def _page_lines_for_gemini(latex):
+    raw = _tex_to_lines(latex)
+    raw = raw.replace("\r\n", "\n").replace("\r", "\n")
+    raw = raw.replace("\\", "")
+    raw = re.sub(r"(?<=\S)([≈×≤≥≠→←])", r" \1", raw)
+    raw = re.sub(r"([≈×≤≥≠→←])(?=\S)", r"\1 ", raw)
+    lines = []
+    for piece in raw.split("\n"):
+        lines.extend(_wrap_page_line(piece))
+    text = "\n".join(lines)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text or "(trống)"
+
+
+def _notebook_image_prompt(latex):
+    body = _NOTEBOOK_GEMINI.replace("[DÁN LATEX VÀO ĐÂY]", _page_lines_for_gemini(latex))
+    return body.strip(), _NOTEBOOK_MOTION
+
+
+@base.app.post("/api/admin/notebook-prompt")
+def api_notebook_prompt():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get("src") or data.get("path") or "").replace("\\", "/").strip()
+    try:
+        fi = int(data.get("file_idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu file_idx."), 400
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    q, tex = _load_q(src, fi)
+    if not q:
+        return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
+    try:
+        latex = _notebook_latex(q, tex, fi)
+        still, motion = _notebook_image_prompt(latex)
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True, prompt=still, motion=motion, latex=latex, gemini="https://gemini.google.com/app")
+
+
+_OCR_PHOTO = """Bạn là giáo viên THPT (Vật lý / Toán / Hóa). Đọc đề trong ảnh, chuyển thành LaTeX gói ex_test.
+Chỉ trả về các khối LaTeX. Không markdown. Không bọc ```. Không lời dẫn.
+
+Mỗi câu là một khối \\begin{ex} ... \\end{ex}. Tự nhận đúng 1 trong 4 dạng:
+
+1) TN — trắc nghiệm 4 phương án A B C D:
+\\begin{ex}
+Đề bài...
+\\choice
+{phương án A}
+{\\True phương án đúng}
+{phương án C}
+{phương án D}
+\\loigiai{lời giải}
+\\end{ex}
+
+2) ĐS — đúng/sai 4 mệnh đề a b c d:
+\\begin{ex}
+Đề bài...
+\\choiceTF
+{\\True mệnh đề a đúng}
+{mệnh đề b sai}
+{\\True mệnh đề c đúng}
+{mệnh đề d sai}
+\\loigiai{a) Đúng vì ... b) Sai vì ... c) ... d) ...}
+\\end{ex}
+
+3) TLN — trả lời ngắn (đáp án là một số):
+\\begin{ex}
+Đề bài...
+\\shortans{12,5}
+\\loigiai{lời giải ra đúng số 12,5}
+\\end{ex}
+
+4) TL — tự luận:
+\\begin{ex}
+Đề bài...
+\\loigiai{lời giải}
+\\end{ex}
+
+Quy tắc:
+- Giữ nguyên số liệu, đơn vị, ký hiệu, câu hỏi và thứ tự phương án như trên ảnh. Bỏ nhãn A. B. C. D. / a) b) trước phương án.
+- Công thức trong $...$. Phân số \\dfrac, chỉ số _{}, số mũ ^{}, đơn vị \\text{}. Số thập phân dùng dấu phẩy.
+- \\True đặt ở ĐÚNG phương án đúng (TN đúng 1 phương án; ĐS mỗi mệnh đề đúng đều có \\True).
+- Nếu ảnh đã có đáp án / lời giải thì dùng theo ảnh. Nếu không có thì tự giải cẩn thận rồi mới đánh \\True.
+- \\loigiai trình bày từng bước: công thức, thay số, kết quả, có đơn vị. Đáp án trong lời giải phải khớp \\True / \\shortans.
+- \\shortans chỉ ghi số, không đơn vị.
+- Nhiều câu trong ảnh thì viết nhiều khối ex liên tiếp.
+- Chữ mờ thì chép phần đọc được, không bịa dữ kiện.
+- Nếu ảnh không có đề bài, trả về đúng một dòng: (không thấy chữ)
+"""
+
+
+def _clean_ocr(raw):
+    s = str(raw or "").strip()
+    s = re.sub(r"^```(?:latex|tex|text|markdown)?\s*", "", s, flags=re.I)
+    s = re.sub(r"\s*```$", "", s).strip()
+    if s in ("(không thấy chữ)", "không thấy chữ"):
+        return ""
+    return s
+
+
+def _prompt_from_ocr(text):
+    text = str(text or "").strip()
+    if len(text) > 24000:
+        text = text[:24000].rstrip() + "\n% … cắt bớt vì quá dài"
+    if not text:
+        raise ValueError("Chưa có chữ để viết prompt.")
+    if not re.search(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", text, re.I):
+        text = "\\begin{ex}\n" + text + "\n\\end{ex}"
+    still, motion = _notebook_image_prompt(text)
+    return text, still, motion
+
+
+@base.app.post("/api/admin/photo-prompt")
+def api_photo_prompt():
+    """Ảnh chụp → nhận dạng chữ → viết lại prompt trang vở để dán Gemini."""
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    if "text" in data and not (data.get("source_images") or data.get("images")):
+        text = _clean_ocr(data.get("text") or "")
+        if not text:
+            return jsonify(ok=False, error="Ô chữ đang trống. Chụp lại hoặc dán chữ đề."), 400
+    else:
+        text = ""
+    if not text:
+        from dang_routes import _gemini_fill_raw, _images_from_payload
+
+        images = _images_from_payload({"source_images": data.get("source_images") or data.get("images") or []})
+        if not images:
+            return jsonify(ok=False, error="Chưa có ảnh, hoặc ảnh quá nặng."), 400
+        keys = _keys_from_payload(data)
+        if not keys:
+            return jsonify(ok=False, error="Nạp key Gemini (nút 🤖 Gemini) rồi chụp lại."), 400
+        raw, err = _gemini_fill_raw(keys, _OCR_PHOTO, 8000, 0.1, images)
+        text = _clean_ocr(raw)
+        if not text:
+            return jsonify(ok=False, error=err or "Không nhận dạng được chữ trong ảnh. Chụp gần hơn, đủ sáng."), 502
+    try:
+        text, still, motion = _prompt_from_ocr(text)
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(
+        ok=True,
+        text=text,
+        prompt=still,
+        motion=motion,
+        gemini="https://gemini.google.com/app",
+    )
+
+
+def _path_meta(src):
+    parts = [p for p in str(src or "").replace("\\", "/").split("/") if p]
+    mon = parts[1] if len(parts) > 1 else ""
+    lop = parts[2] if len(parts) > 2 else ""
+    bai = parts[-2] if len(parts) > 3 else (parts[-1] if parts else "")
+    bai = re.sub(r"\.tex$", "", bai, flags=re.I)
+    title = "PHIẾU HỌC TẬP: " + (bai or "Câu hỏi")
+    subject = " · ".join(x for x in (mon, lop) if x) or "Bộ môn"
+    return title, subject
+
+
+def _worksheet_short(pack):
+    kind = str((pack or {}).get("kind") or "").upper()
+    opts = (pack or {}).get("options") or []
+    if kind == "TN":
+        labs = [chr(65 + i) for i, o in enumerate(opts) if o.get("correct")]
+        return labs[0] if labs else ""
+    if kind == "DS":
+        bits = []
+        for i, o in enumerate(opts):
+            lab = chr(65 + i) if i < 4 else str(i + 1)
+            bits.append(lab + ("-Đ" if o.get("correct") else "-S"))
+        return " ".join(bits)
+    return str((pack or {}).get("answer") or "").strip()
+
+
+def _worksheet_problem_tex(pack):
+    stem = _clean_tex((pack or {}).get("text") or "")
+    kind = str((pack or {}).get("kind") or "").upper()
+    opts = (pack or {}).get("options") or []
+    lines = [stem] if stem else []
+    if kind == "TN":
+        for i, o in enumerate(opts):
+            lab = chr(65 + i)
+            lines.append(lab + ". " + _clean_tex(o.get("text") or ""))
+    elif kind == "DS":
+        for i, o in enumerate(opts):
+            lab = chr(65 + i) if i < 4 else str(i + 1)
+            lines.append(lab + ") " + _clean_tex(o.get("text") or ""))
+    return "\n\n".join(lines).strip()
+
+
+def _formulas_to_tex(raw):
+    """AI hay trả list JSON; gom thành LaTeX $$...$$ để MathJax vẽ được."""
+    bits = []
+    if isinstance(raw, (list, tuple)):
+        bits = [str(x).strip() for x in raw if str(x).strip()]
+    else:
+        s = str(raw or "").strip()
+        if not s:
+            return ""
+        if s.startswith("[") and s.endswith("]"):
+            got = None
+            try:
+                got = json.loads(s)
+            except Exception:
+                try:
+                    got = ast.literal_eval(s)
+                except Exception:
+                    got = None
+            if isinstance(got, (list, tuple)):
+                bits = [str(x).strip() for x in got if str(x).strip()]
+            else:
+                bits = [ln.strip() for ln in s.splitlines() if ln.strip()]
+        else:
+            bits = [ln.strip() for ln in s.splitlines() if ln.strip()]
+    lines = []
+    for t in bits:
+        t = t.strip().strip("'").strip('"').strip()
+        t = t.replace("\\\\\\\\", "\\\\")
+        if not t:
+            continue
+        if not re.search(r"\$|\\\[|\\\(", t):
+            t = "$$" + t + "$$"
+        lines.append(t)
+    return "\n\n".join(lines)
+
+
+def _formula_guess(sol):
+    out = []
+    for line in str(sol or "").splitlines():
+        t = line.strip()
+        if not t or t.startswith("%"):
+            continue
+        if len(t) > 220:
+            continue
+        if re.search(r"[=\\$]|\\omega|\\frac|T\s*=|A\s*=|\\rho|\\Delta", t):
+            out.append(t)
+        if len(out) >= 8:
+            break
+    return _formulas_to_tex(out)
+
+
+def _tikz_html_from_tex(tex, src):
+    htmls = []
+    for m in base.TIKZ_RE.finditer(tex or ""):
+        htmls.append(base.html_question(m.group(0), src))
+        if len(htmls) >= 2:
+            break
+    return "".join(htmls)
+
+
+_PHIEU_A4_HEAD = """Xuất ra ẢNH một trang A4 dọc (khoảng 1240×1754 px). Không viết lại prompt. Không giải thích. Hãy vẽ luôn.
+
+Thanh thương hiệu TRÊN CÙNG, chữ vừa (12 pt), không chiếm quá 8% chiều cao trang:
+Lớp Học Thầy Minh    ·    Zalo 0946111107
+Có thể thêm dòng nhỏ: lophocthayminh.onrender.com
+
+CHỮ NHỎ — DỄ ĐỌC (BẮT BUỘC, hay bị vẽ quá TO):
+- Chữ đề bài / lời giải: 10–11 pt, line-height 1.35, như đề thi in A4.
+- Tiêu đề phiếu: tối đa 13–14 pt, không banner khổ lớn.
+- Pill tên khối: 9–10 pt.
+- Công thức: 10–11 pt, sắc nét như sách giáo khoa, không phóng to giữa trang.
+- Không dùng chữ display khổ poster. Không để một dòng công thức chiếm 1/5 trang.
+- Lề 8–10 mm. Khối sát nhau (cách 6–8 px). Gọn MỘT trang, chữ đều, dễ đọc từ khoảng cách đọc giấy.
+
+Bố cục phiếu 4 khối pastel bo góc: 1 đề (xanh dương) · 2 công thức (cam) · 3 hình (tím) · 4 giải/kẻ vở (xanh ngọc).
+Nền giấy vở kẻ nhẹ, gáy lò xo trái. Không poster quảng cáo, không chữ viết tay lem.
+"""
+
+_PHIEU_A4_YES = """
+CHẾ ĐỘ PHIẾU: CÓ ĐÁP ÁN (bản giáo viên)
+- Làm nổi bật phương án / kết quả đúng (viên thuốc xanh).
+- Khối 4 hiện đủ lời giải từng bước và đáp số.
+- Không che đáp án.
+"""
+
+_PHIEU_A4_NO = """
+CHẾ ĐỘ PHIẾU: KHÔNG ĐÁP ÁN (bản học sinh làm bài)
+- KHÔNG khoanh, KHÔNG tô, KHÔNG ghi phương án đúng.
+- Các lựa chọn A B C D (hoặc đúng/sai) trông giống nhau.
+- Khối 4: ô kẻ vở trống để học sinh viết; ô đáp số để trống / nét đứt.
+- KHÔNG in lời giải, KHÔNG in đáp số, KHÔNG gợi ý đáp án trong hình.
+"""
+
+
+def _phieu_a4_prompt(title, subject, problem, formulas, solution, short, with_answer):
+    mode = _PHIEU_A4_YES if with_answer else _PHIEU_A4_NO
+    body = (
+        "TIÊU ĐỀ: " + str(title or "") + "\nBỘ MÔN: " + str(subject or "") + "\n"
+        "KHỐI 1 — ĐỀ BÀI:\n" + str(problem or "") + "\n\n"
+        "KHỐI 2 — CÔNG THỨC:\n" + str(formulas or "") + "\n\n"
+    )
+    if with_answer:
+        body += (
+            "KHỐI 4 — LỜI GIẢI (in ra):\n" + str(solution or "")[:1800] + "\n\n"
+            "ĐÁP ÁN NGẮN: " + str(short or "") + "\n"
+        )
+    else:
+        body += (
+            "KHỐI 4: chỉ dòng kẻ trống. Có lời giải dưới đây CHỈ để vẽ đúng hình minh họa, "
+            "KHÔNG chép lời giải hay đáp án lên phiếu:\n"
+            + str(solution or "")[:800]
+            + "\n"
+        )
+    return (_PHIEU_A4_HEAD + mode + "\n" + body + "\nXuất ra ẢNH trang A4. Không viết lại prompt.").strip()
+
+
+def _worksheet_seed(q, src, fi, tex):
+    pack = _q_plain_pack(q)
+    title, subject = _path_meta(src)
+    problem = _worksheet_problem_tex(pack)
+    sol = _clean_tex(pack.get("solution") or "")
+    latex = ""
+    try:
+        latex = _notebook_latex(q, tex, fi)
+    except ValueError:
+        latex = problem
+    fig = _tikz_html_from_tex(latex or (q.get("text") or ""), src)
+    formulas = _formula_guess(sol)
+    short = _worksheet_short(pack)
+    a4_yes = _phieu_a4_prompt(title, subject, problem, formulas, sol, short, True)
+    a4_no = _phieu_a4_prompt(title, subject, problem, formulas, sol, short, False)
+    return {
+        "src": src,
+        "file_idx": fi,
+        "kind": pack.get("kind") or "",
+        "title": title,
+        "subject": subject,
+        "class_line": "Lớp: .............",
+        "problem": problem,
+        "formulas": formulas,
+        "solution": sol,
+        "short_answer": short,
+        "fig_html": fig,
+        "brand": "Lớp Học Thầy Minh",
+        "zalo": "0946111107",
+        "year": "2026 - 2027",
+        "a4_prompt": a4_no,
+        "a4_prompt_yes": a4_yes,
+        "a4_prompt_no": a4_no,
+        "a4_motion": "",
+        "gemini": "https://gemini.google.com/app",
+    }
+
+
+def _worksheet_ai_prompt(latex):
+    return (
+        "Bạn là giáo viên THPT. Từ câu LaTeX, tách công thức cốt lõi để học sinh làm bài.\n"
+        "Không đổi số liệu, ký hiệu, đáp án.\n"
+        "Trả ĐÚNG MỘT JSON, field formulas là MỘT CHUỖI (không phải mảng), mỗi công thức một dòng, bọc $$...$$.\n"
+        'Ví dụ: {"formulas":"$$\\\\rho = \\\\frac{m}{V}$$\\n$$\\\\delta x = \\\\frac{\\\\Delta x}{\\\\bar{x}}$$","short_answer":"A"}\n'
+        "Không viết lời giải trong formulas.\n"
+        "===LATEX===\n" + str(latex or "")[:8000]
+    )
+
+
+def _gemini_image(keys, prompt):
+    models = (
+        "gemini-2.5-flash-image",
+        "gemini-2.5-flash-image-preview",
+        "gemini-2.0-flash-preview-image-generation",
+        "gemini-2.0-flash-exp",
+    )
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"], "temperature": 0.35},
+    }
+    last = "Gemini không trả ảnh."
+    raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    for key in keys or []:
+        for model in models:
+            url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                + urllib.parse.quote(model, safe="-_.")
+                + ":generateContent?key="
+                + urllib.parse.quote(key, safe="")
+            )
+            try:
+                req = urllib.request.Request(
+                    url,
+                    data=raw,
+                    method="POST",
+                    headers={"Content-Type": "application/json", "User-Agent": "LDVL-Phieu/1"},
+                )
+                with urllib.request.urlopen(req, timeout=90) as r:
+                    obj = json.loads(r.read().decode("utf-8"))
+                for c in obj.get("candidates") or []:
+                    for p in ((c.get("content") or {}).get("parts") or []):
+                        if not isinstance(p, dict):
+                            continue
+                        blob = p.get("inlineData") or p.get("inline_data") or {}
+                        data = str(blob.get("data") or "")
+                        mime = str(blob.get("mimeType") or blob.get("mime_type") or "image/png")
+                        if data and len(data) > 80:
+                            return "data:" + mime + ";base64," + data, ""
+                last = "Model " + model + " không có ảnh trong phản hồi."
+            except urllib.error.HTTPError as e:
+                last = (e.read().decode("utf-8", "replace") or str(e))[:220]
+                continue
+            except Exception as e:
+                last = str(e)[:220]
+                continue
+    return "", last
+
+
+def _img_html(url):
+    return (
+        '<img src="'
+        + str(url)
+        + '" alt="Minh họa" style="max-height:180px;max-width:100%;height:auto;display:block;margin:4px auto;background:#fff">'
+    )
+
+
+def _worksheet_image_prompt(problem):
+    return (
+        "Create ONE clean academic textbook diagram (not a photo, not a poster) on white background "
+        "for this high-school science/math problem. Simple labeled schematic, Vietnamese or Latin symbols, "
+        "no handwriting mess, no extra decoration, no watermark.\n"
+        "Problem:\n" + str(problem or "")[:1200]
+    )
+
+
+def _worksheet_tikz_html(keys, q, src):
+    if not keys:
+        return "", "Thiếu key."
+    from admin_classify import _gemini_once
+
+    pack = _q_plain_pack(q)
+    raw, err = _gemini_once(keys, _tikz_suggest_prompt(pack), 2200)
+    if not raw:
+        return "", err or "Không vẽ được TikZ."
+    try:
+        code = _extract_tikz_code(raw)
+    except ValueError as e:
+        return "", str(e)
+    return base.html_question(code, src), ""
+
+
+@base.app.post("/api/admin/worksheet")
+def api_worksheet():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get("src") or data.get("path") or "").replace("\\", "/").strip()
+    try:
+        fi = int(data.get("file_idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu file_idx."), 400
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    q, tex = _load_q(src, fi)
+    if not q:
+        return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
+    seed = _worksheet_seed(q, src, fi, tex)
+    keys = _keys_from_payload(data)
+    if keys:
+        from admin_classify import _gemini_once
+
+        try:
+            latex = _notebook_latex(q, tex, fi)
+        except ValueError:
+            latex = seed.get("problem") or ""
+        raw, err = _gemini_once(keys, _worksheet_ai_prompt(latex), 1800)
+        if raw:
+            obj = _parse_obj(raw)
+            formulas = _formulas_to_tex(obj.get("formulas"))
+            short = str(obj.get("short_answer") or "").strip()
+            if formulas:
+                seed["formulas"] = formulas
+            if short:
+                seed["short_answer"] = short
+        elif err:
+            seed["ai_note"] = err
+        if bool(data.get("want_image")):
+            url, ierr = _gemini_image(keys, _worksheet_image_prompt(seed.get("problem") or latex))
+            if url:
+                seed["fig_html"] = _img_html(url)
+            else:
+                html, terr = _worksheet_tikz_html(keys, q, src)
+                if html:
+                    seed["fig_html"] = html
+                    seed["ai_note"] = (seed.get("ai_note") or "") + (" Hình: TikZ (Gemini ảnh: " + (ierr or "") + ")")
+                elif ierr or terr:
+                    seed["ai_note"] = (seed.get("ai_note") or "") + " " + (ierr or terr or "")
+    seed["a4_prompt_yes"] = _phieu_a4_prompt(
+        seed.get("title"), seed.get("subject"), seed.get("problem"),
+        seed.get("formulas"), seed.get("solution"), seed.get("short_answer"), True,
+    )
+    seed["a4_prompt_no"] = _phieu_a4_prompt(
+        seed.get("title"), seed.get("subject"), seed.get("problem"),
+        seed.get("formulas"), seed.get("solution"), seed.get("short_answer"), False,
+    )
+    seed["a4_prompt"] = seed["a4_prompt_no"]
+    return jsonify(ok=True, **seed)
+
+
+@base.app.post("/api/admin/worksheet-image")
+def api_worksheet_image():
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get("src") or data.get("path") or "").replace("\\", "/").strip()
+    try:
+        fi = int(data.get("file_idx"))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error="Thiếu file_idx."), 400
+    if not src.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="File không hợp lệ."), 400
+    keys = _keys_from_payload(data)
+    if not keys:
+        return jsonify(ok=False, error="Thiếu Gemini API key."), 400
+    q, tex = _load_q(src, fi)
+    if not q:
+        return jsonify(ok=False, error="Không tìm thấy câu."), 400
+    seed = _worksheet_seed(q, src, fi, tex)
+    problem = str(data.get("problem") or seed.get("problem") or "")
+    url, err = _gemini_image(keys, _worksheet_image_prompt(problem))
+    if url:
+        return jsonify(ok=True, fig_html=_img_html(url), via="image")
+    html, terr = _worksheet_tikz_html(keys, q, src)
+    if html:
+        return jsonify(ok=True, fig_html=html, via="tikz", note=err or "")
+    return jsonify(ok=False, error=err or terr or "Không tạo được hình."), 502
+
+
+@base.app.get("/admin/phieu")
+def admin_phieu():
+    if not base.can_manage_bank():
+        return base.page("Phiếu học tập", "<div class='wrap'><div class='err'>Chỉ ADMIN mới mở phiếu học tập.</div></div>")
+    src = str(request.args.get("src") or request.args.get("path") or "").replace("\\", "/").strip()
+    try:
+        fi = int(request.args.get("file_idx"))
+    except (TypeError, ValueError):
+        fi = -1
+    if not src.startswith("ngan-hang/") or fi < 0:
+        return base.page("Phiếu học tập", "<div class='wrap'><div class='err'>Thiếu câu (src, file_idx).</div></div>")
+    q, tex = _load_q(src, fi)
+    if not q:
+        return base.page("Phiếu học tập", "<div class='wrap'><div class='err'>Không tìm thấy câu.</div></div>")
+    seed = _worksheet_seed(q, src, fi, tex)
+    blob = json.dumps(seed, ensure_ascii=False).replace("<", "\\u003c")
+    body = (
+        "<style>"
+        "body.phieu-on .regline{display:none}"
+        "@media print{body{background:#fff!important}.top,.ldvl-drawer,.no-print{display:none!important}"
+        ".wrap{max-width:none;margin:0;padding:0}.phieu-sheet{box-shadow:none!important;border:none!important}"
+        "*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}"
+        ".phieu-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 12px;padding:10px;"
+        "border:1px solid #cbd5e1;border-radius:12px;background:#0f172a;color:#e2e8f0}"
+        ".phieu-tools .btn{font-size:12px}.phieu-tools label{font-size:12px;display:flex;gap:6px;align-items:center}"
+        ".phieu-grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.15fr);gap:14px;align-items:start}"
+        "@media(max-width:980px){.phieu-grid{grid-template-columns:1fr}}"
+        ".phieu-ed textarea{width:100%;min-height:72px;font:12px/1.4 Consolas,ui-monospace,monospace;padding:8px;"
+        "border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e2e8f0}"
+        ".phieu-ed label{display:block;font-size:11px;font-weight:800;margin:8px 0 4px}"
+        ".phieu-sheet{background:#fff;color:#0f172a;padding:16px 18px;border:1px solid #cbd5e1;border-radius:12px;"
+        "min-height:297mm;box-shadow:0 12px 40px #0f172a22;font-size:12px;line-height:1.35}"
+        ".phieu-sheet mjx-container,.phieu-sheet .MathJax{font-size:95%!important}"
+        ".phieu-brand{background:#0f3d7a;color:#fff;padding:6px 10px;border-radius:8px;display:flex;justify-content:space-between;"
+        "align-items:center;gap:8px;font-weight:800;margin:0 0 8px;font-size:12px}"
+        ".phieu-k{border:2px solid;border-radius:10px;padding:8px;margin:0 0 8px;font-size:12px}"
+        ".phieu-k .pill{display:inline-block;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;margin:0 0 5px;text-transform:uppercase}"
+        ".phieu-head{border-bottom:2px solid #0f172a;padding-bottom:8px;margin-bottom:10px}"
+        ".phieu-head .row{display:flex;justify-content:space-between;gap:12px;font-size:12px;font-weight:800;text-transform:uppercase}"
+        ".phieu-info{margin-top:8px;padding:8px;border:1px solid #0f172a;display:grid;grid-template-columns:1.4fr .8fr .8fr;gap:6px;font-size:12px;background:#f8fafc}"
+        ".k1{border-color:#2563eb;background:#eff6ff}.k1 .pill{background:#2563eb}"
+        ".k2{border-color:#d97706;background:#fffbeb}.k2 .pill{background:#d97706}"
+        ".k3{border-color:#7c3aed;background:#f5f3ff}.k3 .pill{background:#7c3aed}"
+        ".k4{border-color:#059669;background:#ecfdf5}.k4 .pill{background:#059669}"
+        ".phieu-mid{display:grid;grid-template-columns:1fr 1fr;gap:10px}"
+        "@media(max-width:700px){.phieu-mid{grid-template-columns:1fr}}"
+        ".phieu-lined{min-height:220px;border:1px solid #cbd5e1;border-radius:6px;"
+        "background-color:#fff;background-image:linear-gradient(90deg,transparent 28px,#fca5a5 28px,#fca5a5 30px,transparent 30px),"
+        "linear-gradient(#e2e8f0 1px,transparent 1px);background-size:100% 100%,100% 26px;padding:8px;color:#94a3b8;font-size:11px}"
+        ".phieu-digits{display:flex;gap:4px;align-items:center;flex-wrap:wrap}"
+        ".phieu-digits b{min-width:22px;height:26px;border:2px dashed #059669;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;background:#fff}"
+        ".phieu-digits b.full{border-style:solid;font-weight:800;color:#065f46}"
+        ".phieu-foot{display:flex;justify-content:space-between;font-size:10px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:10px;padding-top:6px}"
+        ".badge-hs{border:1px solid #2563eb;background:#dbeafe;color:#1d4ed8;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:800}"
+        ".badge-gv{border:1px solid #059669;background:#d1fae5;color:#047857;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:800}"
+        "</style>"
+        "<div class='wrap phieu-page'><script type='application/json' id='phieuSeed'>"
+        + blob
+        + "</script>"
+        "<div class='phieu-tools no-print'>"
+        "<b>📝 Phiếu 4 khối</b>"
+        "<button type='button' class='btn primary' id='phieuHs'>🎓 Bản học sinh</button>"
+        "<button type='button' class='btn' id='phieuGv'>👨‍🏫 Bản giáo viên</button>"
+        "<label><input type='checkbox' id='phieuBlank'> Điền khuyết công thức</label>"
+        "<label><input type='checkbox' id='phieuEmpty' checked> Ô đáp án trống (HS)</label>"
+        "<label><input type='checkbox' id='phieuPromptAns'> Lệnh A4 <b>có đáp án</b></label>"
+        "<button type='button' class='btn' id='phieuAi'>✨ AI điền công thức + hình</button>"
+        "<button type='button' class='btn' id='phieuImg'>🖼️ AI hình minh họa</button>"
+        "<button type='button' class='btn' id='phieuCopyA4'>📋 Copy lệnh ảnh A4</button>"
+        "<a class='btn' id='phieuOpenG' href='https://gemini.google.com/app' target='_blank' rel='noopener'>↗ Mở Gemini</a>"
+        "<button type='button' class='btn green' id='phieuPrint'>🖨️ In A4 / PDF</button>"
+        "<span class='muted' id='phieuNote' style='color:#94a3b8'></span></div>"
+        "<div class='phieu-grid'><div class='phieu-ed no-print'>"
+        "<label>Tiêu đề phiếu</label><textarea id='phieuTitle' class='sm'></textarea>"
+        "<label>Môn / chuyên đề</label><textarea id='phieuSubject' class='sm'></textarea>"
+        "<label>Khối 1 — Đề bài (LaTeX)</label><textarea id='phieuB1'></textarea>"
+        "<label>Khối 2 — Công thức</label><textarea id='phieuB2'></textarea>"
+        "<label>Khối 4 — Lời giải</label><textarea id='phieuB4'></textarea>"
+        "<label>Đáp số ngắn</label><textarea id='phieuAns' class='sm'></textarea>"
+        "<label>Lệnh copy sang Gemini — tạo ẢNH trang A4</label>"
+        "<textarea id='phieuA4' style='min-height:160px'></textarea>"
+        "<p class='muted' style='color:#94a3b8;font-size:12px'>Tick <b>có đáp án</b> = bản GV. Bỏ tick = bản HS (không lộ đáp án). Chữ trong lệnh bắt Gemini vẽ 10–11 pt, không phóng to. Copy → Mở Gemini (bật tạo ảnh) → dán.</p>"
+        "</div><div class='phieu-sheet' id='phieuSheet'></div></div></div>"
+        "<script>(function(){"
+        "document.body.classList.add('phieu-on');"
+        "var S={};try{S=JSON.parse(document.getElementById('phieuSeed').textContent||'{}')}catch(e){S={}}"
+        "var mode='student', paintN=0, paintT=0;"
+        "function $(id){return document.getElementById(id)}"
+        "function fill(){"
+        "$('phieuTitle').value=S.title||'';$('phieuSubject').value=S.subject||'';"
+        "$('phieuB1').value=S.problem||'';$('phieuB2').value=S.formulas||'';"
+        "$('phieuB4').value=S.solution||'';$('phieuAns').value=S.short_answer||'';"
+        "rebuildA4();"
+        "}"
+        "function rebuildA4(){"
+        " var yes=!!($('phieuPromptAns')&&$('phieuPromptAns').checked);"
+        " $('phieuA4').value=yes?(S.a4_prompt_yes||S.a4_prompt||''):(S.a4_prompt_no||S.a4_prompt||'');"
+        "}"
+        "function digits(s,empty){s=String(s||'');if(!s)return '';"
+        "return s.split('').map(function(ch){if(ch===' '||ch==='\\t')return '';"
+        "if(ch===','||ch==='.')return '<span>'+ch+'</span>';"
+        "return '<b class=\"'+(empty?'':'full')+'\">'+(empty?'':ch)+'</b>';}).join('');}"
+        "function schedulePaint(){clearTimeout(paintT);paintT=setTimeout(paintNow,120);}"
+        "function paint(){schedulePaint();}"
+        "async function paintNow(){"
+        "var n=++paintN;"
+        "var t=$('phieuTitle').value, sub=$('phieuSubject').value, p=$('phieuB1').value;"
+        "var f=$('phieuB2').value, sol=$('phieuB4').value, ans=$('phieuAns').value.trim();"
+        "if(mode==='student'&&$('phieuBlank').checked) f=f.replace(/=\\s*([^$\\n]+)/g,'= $\\\\ldots\\\\ldots$');"
+        "var hs=mode==='student';"
+        "var fig=S.fig_html||'<div class=\"muted\">Bấm AI hình minh họa</div>';"
+        "var b4=hs?'':('<div id=\"phieuSol\"></div>');"
+        "var lined=hs?'<div class=\"phieu-lined\">Học sinh trình bày các bước tính vào phần này</div>':'';"
+        "var box=''; if(ans && (hs?$('phieuEmpty').checked:true)){"
+        "box='<div class=\"phieu-digits\"><span style=\"font-size:11px;font-weight:800\">'+(hs?'ĐIỀN ĐÁP ÁN:':'ĐÁP ÁN:')+'</span>'+digits(ans,hs)+'</div>';}"
+        "$('phieuSheet').innerHTML="
+        "'<div class=\"phieu-brand\"><span>'+escHtml(S.brand||'Lớp Học Thầy Minh')+'</span><span>Zalo '+escHtml(S.zalo||'0946111107')+'</span></div>'"
+        "+'<div class=\"phieu-head\"><div class=\"row\"><div>TRƯỜNG / TRUNG TÂM: Lớp Học Thầy Minh<br><span style=\"color:#1d4ed8\">BỘ MÔN: '+escHtml(sub)+'</span></div>'"
+        "+'<div style=\"text-align:right\">'+escHtml(t)+' <span class=\"'+(hs?'badge-hs':'badge-gv')+'\">'+(hs?'BẢN HỌC SINH':'BẢN GIÁO VIÊN')+'</span><br><span style=\"color:#64748b;font-weight:600\">NĂM HỌC: '+(S.year||'')+'</span></div></div>'"
+        "+'<div class=\"phieu-info\"><div>Họ và tên học sinh: ................................................................</div><div>'+escHtml(S.class_line||'')+'</div><div>Điểm: ...../10</div>'"
+        "+'<div>Ngày: ..../..../2026</div><div>Lời phê: ................................</div><div></div></div></div>'"
+        "+'<div class=\"phieu-k k1\"><div class=\"pill\">Khối 1: Đề bài & dữ kiện</div><div id=\"phieuV1\"></div></div>'"
+        "+'<div class=\"phieu-mid\"><div class=\"phieu-k k2\"><div class=\"pill\">Khối 2: Công thức cần dùng</div><div id=\"phieuV2\"></div></div>'"
+        "+'<div class=\"phieu-k k3\"><div class=\"pill\">Khối 3: Sơ đồ / hình minh họa</div><div id=\"phieuV3\">'+fig+'</div></div></div>'"
+        "+'<div class=\"phieu-k k4\"><div class=\"pill\">Khối 4: Lời giải & kết luận</div>'+box+b4+lined+'</div>'"
+        "+'<div class=\"phieu-foot\"><span>Lớp Học Thầy Minh · Zalo 0946111107 · '+ (hs?'Dành cho học sinh làm bài':'Hướng dẫn giáo viên') +'</span><span>Trang 1/1</span></div>';"
+        "await Promise.all([previewTex('phieuV1', p), previewTex('phieuV2', f), hs?Promise.resolve():previewTex('phieuSol', sol)]);"
+        "if(n!==paintN) return;"
+        "if(window.ldvlArmTikz) ldvlArmTikz($('phieuSheet'));"
+        "if(window.ldvlTypeset) ldvlTypeset($('phieuSheet'));"
+        "}"
+        "function escHtml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}"
+        "async function previewTex(id, tex){ var el=$(id); if(!el) return;"
+        " try{ var r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:tex||'',src:S.src||'',phieu:true,raw:true})});"
+        " var d=await r.json(); if(d&&d.html) el.innerHTML=d.html;}catch(e){ if(el) el.textContent=String(tex||''); } }"
+        "function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}"
+        "fill(); paintNow();"
+        "['phieuTitle','phieuSubject','phieuB1','phieuB2','phieuB4','phieuAns','phieuBlank','phieuEmpty'].forEach(function(id){"
+        " var el=$(id); if(!el) return; el.addEventListener(el.type==='checkbox'?'change':'input', paint);});"
+        "if($('phieuPromptAns')) $('phieuPromptAns').onchange=function(){rebuildA4();};"
+        "$('phieuHs').onclick=function(){mode='student'; if($('phieuPromptAns')) $('phieuPromptAns').checked=false; rebuildA4(); paint()};"
+        "$('phieuGv').onclick=function(){mode='teacher'; if($('phieuPromptAns')) $('phieuPromptAns').checked=true; rebuildA4(); paint()};"
+        "$('phieuPrint').onclick=function(){window.print()};"
+        "function copyA4(){"
+        " rebuildA4();"
+        " var s=($('phieuA4')&&$('phieuA4').value)||S.a4_prompt||'';"
+        " if(!s){alert('Chưa có lệnh A4.');return;}"
+        " var done=function(){$('phieuNote').textContent='Đã copy lệnh ảnh A4. Dán vào Gemini.';};"
+        " if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s).then(done,function(){prompt('Copy lệnh A4',s);});"
+        " else {prompt('Copy lệnh A4',s); done();}"
+        "}"
+        "$('phieuCopyA4').onclick=copyA4;"
+        "$('phieuAi').onclick=async function(){"
+        " var ks=keys();"
+        " if(!ks.length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');return;}"
+        " $('phieuNote').textContent='Đang gọi AI (công thức + hình)…';"
+        " try{ var r=await fetch('/api/admin/worksheet',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',"
+        " body:JSON.stringify({src:S.src,file_idx:S.file_idx,api_keys:ks,want_image:true})}); var d=await r.json();"
+        " if(!d.ok){alert(d.error||'Không điền được');return;}"
+        " if(d.formulas) $('phieuB2').value=d.formulas;"
+        " if(d.short_answer) $('phieuAns').value=d.short_answer;"
+        " if(d.fig_html) S.fig_html=d.fig_html;"
+        " if(d.a4_prompt_yes) S.a4_prompt_yes=d.a4_prompt_yes;"
+        " if(d.a4_prompt_no) S.a4_prompt_no=d.a4_prompt_no;"
+        " rebuildA4();"
+        " $('phieuNote').textContent=d.ai_note||'Đã điền công thức và hình.'; paint();"
+        " }catch(e){$('phieuNote').textContent=String(e&&e.message||e);} };"
+        "$('phieuImg').onclick=async function(){"
+        " var ks=keys();"
+        " if(!ks.length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');return;}"
+        " $('phieuNote').textContent='Đang tạo hình minh họa…';"
+        " try{ var r=await fetch('/api/admin/worksheet-image',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',"
+        " body:JSON.stringify({src:S.src,file_idx:S.file_idx,api_keys:ks,problem:$('phieuB1').value||''})}); var d=await r.json();"
+        " if(!d.ok){alert(d.error||'Không tạo được hình'); $('phieuNote').textContent=d.error||''; return;}"
+        " S.fig_html=d.fig_html||S.fig_html;"
+        " $('phieuNote').textContent=d.via==='tikz'?'Đã vẽ TikZ (Gemini ảnh chưa được).':'Đã có hình AI.'; paint();"
+        " }catch(e){$('phieuNote').textContent=String(e&&e.message||e);} };"
+        "})();</script>"
+    )
+    return base.page("Phiếu học tập", body)
+
+
 REWRITE_CLIENT_JS = r"""
-<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}</style>
+<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox,.rwnbbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}.aiphotobox{flex:1 1 100%;margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.aiphotobox .rwta{min-height:140px}</style>
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -2317,6 +3601,19 @@ async function rwUploadImg(box, file){
 window.ldvlAdminRewrite=function(src,fi,box){loadRewrite(src,fi,box,'ai')};
 window.ldvlAdminSimilar=function(src,fi,box){loadRewrite(src,fi,box,'similar')};
 window.ldvlAdminEdit=function(src,fi,box){loadRewrite(src,fi,box,'edit')};
+window.ldvlAdminNotebookPrompt=function(src,fi,box){
+  const bar=(box&&box.closest&&box.closest('.rwbar'))||document.querySelector('#rwPractice .rwbar');
+  if(!bar) return;
+  let host=bar.querySelector('.rwnbbox');
+  if(!host){
+    host=document.createElement('div');
+    host.className='rwnbbox';
+    bar.appendChild(host);
+  }
+  host.setAttribute('data-src', src);
+  host.setAttribute('data-fi', String(fi));
+  rwLoadNotebook(host);
+};
 document.addEventListener('click',function(e){
   const go=e.target.closest&&e.target.closest('.rwgo');
   const sim=e.target.closest&&e.target.closest('.rwsim');
@@ -2363,27 +3660,218 @@ document.addEventListener('change',function(e){
   inp.value='';
   if(box&&f) rwUploadImg(box, f);
 });
+function rwTikzAiSlot(box){
+  return '<div class="rwtikzairow" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px">'
+    +'<button type="button" class="btn primary rwtikzai">AI gợi ý theo đề</button>'
+    +'<span class="muted">Đọc đề + đáp án rồi viết tikzpicture. Xem trước rồi chèn.</span></div>'
+    +'<div class="rwtikzaiout"></div>';
+}
+function rwPaintTikzLib(box, items){
+  box._tikz=box._tikz||{};
+  let h='<div class="muted">Mã đã có trong bài / thư mục tikz/. Bấm hình để chèn. Cất để giữ vào thư mục.</div><div class="rwimggrid">';
+  (items||[]).forEach(function(im){
+    box._tikz[im.hid]=im.code||'';
+    h+='<div class="rwtikzpick" data-hid="'+esc(im.hid)+'"><img alt="" src="'+esc(im.url)+'" loading="lazy"><small>'+esc(im.name)+'</small>';
+    if(!im.stored) h+='<button type="button" class="btn mini rwtikzsave" data-hid="'+esc(im.hid)+'">Cất</button>';
+    h+='</div>';
+  });
+  h+='</div>';
+  if(!(items||[]).length) h+='<div class="muted">Bài này chưa có mã sẵn. Bấm <b>AI gợi ý theo đề</b>.</div>';
+  return h;
+}
+function copyText(s){
+  s=String(s||'');
+  if(!s) return Promise.reject(new Error('Trống'));
+  if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(s);
+  return new Promise(function(ok,bad){
+    const ta=document.createElement('textarea');
+    ta.value=s; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); ok(); }catch(e){ bad(e); }
+    ta.remove();
+  });
+}
+function photoAnchor(btn){
+  if(!btn||!btn.closest) return null;
+  return btn.closest('.qhead')||btn.closest('.quizacts')||btn.closest('.toolbar')||btn.closest('.ai-intake-bar')||btn.closest('.rwbar')||btn.parentElement;
+}
+function photoHost(btn){
+  var fold=btn&&btn.closest&&btn.closest('details');
+  if(fold&&!fold.open) fold.open=true;
+  var anchor=photoAnchor(btn);
+  var sib=anchor&&anchor.nextElementSibling;
+  if(sib&&sib.classList&&sib.classList.contains('aiphotobox')) return sib;
+  var inside=anchor&&anchor.querySelector&&anchor.querySelector(':scope > .aiphotobox');
+  if(inside) return inside;
+  var box=document.createElement('div');
+  box.className='aiphotobox';
+  if(anchor) anchor.insertAdjacentElement('afterend', box);
+  else document.body.appendChild(box);
+  return box;
+}
+function paintPhotoPrompt(box, d){
+  box._photo=d||{};
+  box.innerHTML='<div class="success">Đã nhận dạng chữ trong ảnh và viết lại prompt trang vở. Sửa chữ nếu máy đọc sai, rồi bấm Viết lại prompt.</div>'
+    +'<p class="muted">Copy prompt → Mở Gemini (bật tạo ảnh) → dán. Gemini phải vẽ ảnh, không viết lại prompt.</p>'
+    +'<label><b>LaTeX câu hỏi (TN / ĐS / TLN / TL, có \\True và lời giải)</b></label>'
+    +'<textarea class="rwta aiphoto-text" spellcheck="false">'+esc(d.text||'')+'</textarea>'
+    +'<p><button type="button" class="btn aiphoto-copy" data-which="text">📋 Copy LaTeX</button> '
+    +'<button type="button" class="btn aiphoto-redo">↻ Viết lại prompt từ LaTeX này</button> '
+    +'<button type="button" class="btn aiPhotoBtn" data-force="1">📷 Chụp ảnh khác</button></p>'
+    +'<label><b>Prompt đã viết lại</b></label>'
+    +'<textarea class="rwta aiphoto-prompt" style="min-height:220px" spellcheck="false">'+esc(d.prompt||'')+'</textarea>'
+    +'<p><button type="button" class="btn primary aiphoto-copy" data-which="prompt">📋 Copy prompt</button> '
+    +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">↗ Mở Gemini</a></p>'
+    +'<label><b>Lệnh phụ — animation / chuỗi khung</b></label>'
+    +'<textarea class="rwta sm aiphoto-motion" spellcheck="false">'+esc(d.motion||'')+'</textarea>'
+    +'<p><button type="button" class="btn aiphoto-copy" data-which="motion">📋 Copy lệnh động</button></p>';
+}
+function shrinkPhoto(file){
+  return new Promise(function(ok, bad){
+    if(!file){bad(new Error('Chưa chọn ảnh.'));return;}
+    if(file.size>12000000){bad(new Error('Ảnh quá lớn.'));return;}
+    var img=new Image();
+    var url=URL.createObjectURL(file);
+    img.onload=function(){
+      var max=1400,w=img.width||1,h=img.height||1,sc=Math.min(1,max/Math.max(w,h));
+      w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+      var c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      var dataUrl=c.toDataURL('image/jpeg',0.82);
+      var b64=(dataUrl.split(',')[1]||'');
+      if(!b64||b64.length>1800000){bad(new Error('Ảnh vẫn quá nặng sau khi thu nhỏ. Chụp gần phần chữ.'));return;}
+      ok({mime:'image/jpeg', data:b64});
+    };
+    img.onerror=function(){URL.revokeObjectURL(url); bad(new Error('Không đọc được ảnh.'));};
+    img.src=url;
+  });
+}
+async function runPhotoPrompt(box, payload){
+  var ks=keys();
+  if(!payload.text && !ks.length){alert('Nạp key Gemini (nút 🤖 Gemini trên thanh menu) rồi chụp lại.');return;}
+  box.innerHTML='<div class="muted">'+(payload.text?'Đang viết lại prompt từ chữ đã sửa…':'Đang nhận dạng chữ trong ảnh, rồi viết lại prompt…')+'</div>';
+  try{
+    var body=payload.text?{text:payload.text}:{api_keys:ks, source_images:[payload.image]};
+    var r=await fetch('/api/admin/photo-prompt',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
+    var d=await r.json();
+    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không nhận dạng được')+'</div>';return;}
+    paintPhotoPrompt(box, d);
+  }catch(err){box.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
+}
+function ensurePhotoInput(){
+  var inp=document.getElementById('aiCamFile');
+  if(inp) return inp;
+  inp=document.createElement('input');
+  inp.type='file';
+  inp.id='aiCamFile';
+  inp.accept='image/*';
+  inp.setAttribute('capture','environment');
+  inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.addEventListener('change', async function(){
+    var file=inp.files&&inp.files[0];
+    inp.value='';
+    var box=window._aiPhotoHost;
+    if(!box||!file) return;
+    try{
+      var image=await shrinkPhoto(file);
+      await runPhotoPrompt(box, {image:image});
+    }catch(err){box.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
+  });
+  return inp;
+}
+async function rwLoadNotebook(box){
+  box.innerHTML='<div class="muted">Đang soạn prompt trang vở từ đề LaTeX…</div>';
+  try{
+    const r=await fetch('/api/admin/notebook-prompt',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({src:box.getAttribute('data-src')||'',file_idx:+(box.getAttribute('data-fi')||0)})});
+    const d=await r.json();
+    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không tạo được prompt')+'</div>';return;}
+    box._nb=d;
+    box.innerHTML='<div class="success">Đã gắn đề LaTeX vào lệnh trang vở. Copy rồi dán Gemini — Gemini phải <b>vẽ ảnh</b>, không viết lại prompt.</div>'
+      +'<p class="muted">1) Copy lệnh &nbsp; 2) Mở Gemini (bật tạo ảnh) &nbsp; 3) Dán cả khối. Nếu cần ảnh động: copy lệnh phụ.</p>'
+      +'<label><b>Lệnh tạo trang vở A4</b></label>'
+      +'<textarea class="rwta rwnbstill" style="min-height:220px">'+esc(d.prompt||'')+'</textarea>'
+      +'<p><button type="button" class="btn primary rwnbcopy" data-which="still">📋 Copy lệnh trang vở</button> '
+      +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">↗ Mở Gemini</a></p>'
+      +'<label><b>Lệnh phụ — animation / chuỗi khung</b></label>'
+      +'<textarea class="rwta sm rwnbmotion">'+esc(d.motion||'')+'</textarea>'
+      +'<p><button type="button" class="btn rwnbcopy" data-which="motion">📋 Copy lệnh động</button></p>';
+  }catch(err){box.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
+}
 async function rwLoadTikz(box){
-  box.innerHTML='<div class="muted">Đang mở mã TikZ đã vẽ trong bài...</div>';
+  box.innerHTML=rwTikzAiSlot(box)+'<div class="rwtikzlib muted">Đang mở mã TikZ đã vẽ trong bài...</div>';
   try{
     const r=await fetch('/api/admin/lesson-tikz?src='+encodeURIComponent(box.getAttribute('data-src')||''),{credentials:'same-origin'});
     const d=await r.json();
-    if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không mở được mã TikZ.')+'</div>';return;}
-    box._tikz={};
-    let h='<div class="muted">Mã TikZ trong thư mục tikz/ của bài và mã đã có trong file TEX. Bấm hình để chèn vào câu. Cất để giữ mã vào thư mục.</div><div class="rwimggrid">';
-    (d.items||[]).forEach(function(im){
-      box._tikz[im.hid]=im.code||'';
-      h+='<div class="rwtikzpick" data-hid="'+esc(im.hid)+'"><img alt="" src="'+esc(im.url)+'" loading="lazy"><small>'+esc(im.name)+'</small>';
-      if(!im.stored) h+='<button type="button" class="btn mini rwtikzsave" data-hid="'+esc(im.hid)+'">Cất</button>';
-      h+='</div>';
-    });
-    h+='</div>';
-    if(!(d.items||[]).length) h+='<div class="muted">Bài này chưa có mã TikZ. Vẽ trong đề bằng \\begin{tikzpicture}...\\end{tikzpicture} rồi mở lại.</div>';
-    box.innerHTML=h;
-  }catch(err){box.innerHTML='<div class="err">'+esc(err)+'</div>';}
+    const lib=box.querySelector('.rwtikzlib');
+    if(!d.ok){
+      if(lib) lib.innerHTML='<div class="err">'+esc(d.error||'Không mở được mã TikZ.')+'</div>';
+      return;
+    }
+    if(lib) lib.innerHTML=rwPaintTikzLib(box, d.items||[]);
+  }catch(err){
+    const lib=box.querySelector('.rwtikzlib');
+    if(lib) lib.innerHTML='<div class="err">'+esc(err)+'</div>';
+  }
+}
+async function rwSuggestTikz(box){
+  const ks=keys();
+  if(!ks.length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');return;}
+  const slot=box.querySelector('.rwtikzaiout');
+  if(!slot) return;
+  const t0=Date.now();
+  const tick=setInterval(function(){
+    const s=Math.max(1, Math.round((Date.now()-t0)/1000));
+    slot.innerHTML='<div class="muted">Đang đọc đề và gợi ý TikZ… <b>'+s+'s</b> (thường 15–45s). Đừng đóng hộp.</div>';
+  },400);
+  slot.innerHTML='<div class="muted">Đang đọc đề và gợi ý TikZ… <b>1s</b></div>';
+  try{
+    const r=await fetch('/api/admin/suggest-tikz',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({src:box.getAttribute('data-src')||'',file_idx:+(box.getAttribute('data-fi')||0),api_keys:ks})});
+    const d=await r.json();
+    clearInterval(tick);
+    const sec=Math.max(1, Math.round((Date.now()-t0)/1000));
+    if(!d.ok){slot.innerHTML='<div class="err">'+esc(d.error||'Không gợi ý được')+' · '+sec+'s</div>';return;}
+    box._tikz=box._tikz||{};
+    if(d.hid) box._tikz[d.hid]=d.code||'';
+    slot._code=d.code||'';
+    slot.innerHTML='<div class="success">Gợi ý xong sau '+sec+'s — xem hình, sửa mã nếu cần, rồi chèn vào câu.</div>'
+      +'<div class="ai-tikz rwtikzprev">'+(d.html||'')+'</div>'
+      +'<textarea class="rwta rwtikzta" style="min-height:140px">'+esc(d.code||'')+'</textarea>'
+      +'<p><button type="button" class="btn rwtikzprevbtn">Xem trước</button> '
+      +'<button type="button" class="btn green rwtikzinsert">Chèn vào câu</button> '
+      +'<button type="button" class="btn rwtikzkeep">Cất vào thư mục</button> '
+      +'<button type="button" class="btn rwtikzai">Gợi ý lại</button></p>';
+    if(window.ldvlArmTikz) ldvlArmTikz(slot);
+    if(window.ldvlTypeset) ldvlTypeset(slot);
+  }catch(err){
+    clearInterval(tick);
+    slot.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';
+  }
+}
+async function rwPreviewTikzTa(box){
+  const slot=box.querySelector('.rwtikzaiout');
+  const ta=slot&&slot.querySelector('.rwtikzta');
+  const prev=slot&&slot.querySelector('.rwtikzprev');
+  if(!ta||!prev) return;
+  prev.innerHTML='⏳ Đang vẽ...';
+  try{
+    const r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:ta.value||'',src:box.getAttribute('data-src')||''})});
+    const d=await r.json();
+    if(!d.ok){prev.innerHTML='<div class="err">'+esc(d.error||'Không xem trước được')+'</div>';return;}
+    prev.innerHTML=d.html||'';
+    if(window.ldvlArmTikz) ldvlArmTikz(prev);
+    if(window.ldvlTypeset) ldvlTypeset(prev);
+  }catch(err){prev.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
+}
+function rwTikzDraft(box){
+  const ta=box.querySelector('.rwtikzta');
+  if(ta&&String(ta.value||'').trim()) return String(ta.value||'');
+  return '';
 }
 async function rwUseTikz(box, hid, store){
-  const code=(box._tikz&&box._tikz[hid])||'';
+  const code=hid?((box._tikz&&box._tikz[hid])||''):rwTikzDraft(box);
   if(!code){alert('Không thấy mã TikZ.');return;}
   if(store){
     try{
@@ -2417,6 +3905,125 @@ document.addEventListener('click',function(e){
     e.stopPropagation();
     const box=save.closest('.rwtikzbox');
     if(box) rwUseTikz(box, save.getAttribute('data-hid')||'', true);
+    return;
+  }
+  const aiBtn=e.target.closest&&e.target.closest('.rwtikzai');
+  if(aiBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    const box=aiBtn.closest('.rwtikzbox');
+    if(box) rwSuggestTikz(box);
+    return;
+  }
+  const prevBtn=e.target.closest&&e.target.closest('.rwtikzprevbtn');
+  if(prevBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    const box=prevBtn.closest('.rwtikzbox');
+    if(box) rwPreviewTikzTa(box);
+    return;
+  }
+  const ins=e.target.closest&&e.target.closest('.rwtikzinsert');
+  if(ins){
+    e.preventDefault();
+    e.stopPropagation();
+    const box=ins.closest('.rwtikzbox');
+    if(box) rwUseTikz(box, '', false);
+    return;
+  }
+  const keep=e.target.closest&&e.target.closest('.rwtikzkeep');
+  if(keep){
+    e.preventDefault();
+    e.stopPropagation();
+    const box=keep.closest('.rwtikzbox');
+    if(box) rwUseTikz(box, '', true);
+    return;
+  }
+  const phieuBtn=e.target.closest&&e.target.closest('.rwphieu');
+  if(phieuBtn){
+    e.preventDefault();
+    const p=dropOf(phieuBtn);
+    if(!p) return;
+    window.open('/admin/phieu?src='+encodeURIComponent(p.src)+'&file_idx='+p.fi,'_blank','noopener');
+    return;
+  }
+  const photoBtn=e.target.closest&&e.target.closest('.aiPhotoBtn');
+  if(photoBtn){
+    if(window.ldvlPhotoReady) return;
+    e.preventDefault();
+    var host=photoBtn.closest('.aiphotobox')||photoHost(photoBtn);
+    if(host.querySelector('.aiphoto-text')&&!photoBtn.getAttribute('data-force')){
+      host.remove();
+      return;
+    }
+    host.innerHTML='<div class="muted">Chọn hoặc chụp ảnh đề. Máy sẽ nhận dạng chữ rồi viết lại prompt trang vở.</div>';
+    if(host.scrollIntoView) host.scrollIntoView({block:'center'});
+    window._aiPhotoHost=host;
+    ensurePhotoInput().click();
+    return;
+  }
+  const photoRedo=e.target.closest&&e.target.closest('.aiphoto-redo');
+  if(photoRedo){
+    if(window.ldvlPhotoReady) return;
+    e.preventDefault();
+    var pbox=photoRedo.closest('.aiphotobox');
+    var pta=pbox&&pbox.querySelector('.aiphoto-text');
+    if(pbox) runPhotoPrompt(pbox, {text:(pta&&pta.value)||''});
+    return;
+  }
+  const photoCopy=e.target.closest&&e.target.closest('.aiphoto-copy');
+  if(photoCopy){
+    if(window.ldvlPhotoReady) return;
+    e.preventDefault();
+    var cbox=photoCopy.closest('.aiphotobox');
+    var which=photoCopy.getAttribute('data-which')||'prompt';
+    var cta=cbox&&cbox.querySelector(which==='motion'?'.aiphoto-motion':(which==='text'?'.aiphoto-text':'.aiphoto-prompt'));
+    var label=photoCopy.textContent;
+    copyText(cta?cta.value:'').then(function(){
+      photoCopy.textContent='✅ Đã copy';
+      setTimeout(function(){photoCopy.textContent=label;},1400);
+    }, function(){prompt('Copy prompt', cta?cta.value:'');});
+    return;
+  }
+  const nbBtn=e.target.closest&&e.target.closest('.rwnbprompt');
+  if(nbBtn){
+    e.preventDefault();
+    const bar=nbBtn.closest('.rwbar');
+    if(!bar) return;
+    const old=bar.querySelector('.rwnbbox');
+    if(old){
+      old.remove();
+      const oldExtra=bar.querySelector('.rwnbextra');
+      if(oldExtra) oldExtra.remove();
+      return;
+    }
+    const p=dropOf(nbBtn);
+    if(!p) return;
+    const phieuHref='/admin/phieu?src='+encodeURIComponent(p.src)+'&file_idx='+p.fi;
+    window.open(phieuHref,'_blank','noopener');
+    const extra=document.createElement('div');
+    extra.className='rwnbextra';
+    extra.style.margin='8px 0';
+    extra.innerHTML='<a class="btn mini" href="'+esc(phieuHref)+'" target="_blank" rel="noopener">📝 Mở lại phiếu học tập</a> '
+      +'<button type="button" class="btn mini aiPhotoBtn">📷 Chụp ảnh đề → prompt</button>';
+    const box=document.createElement('div');
+    box.className='rwnbbox';
+    box.setAttribute('data-src', p.src);
+    box.setAttribute('data-fi', String(p.fi));
+    const out=bar.querySelector('.rwout');
+    if(out) out.insertAdjacentElement('afterend', extra);
+    else bar.appendChild(extra);
+    extra.insertAdjacentElement('afterend', box);
+    rwLoadNotebook(box);
+    return;
+  }
+  const nbCopy=e.target.closest&&e.target.closest('.rwnbcopy');
+  if(nbCopy){
+    e.preventDefault();
+    const box=nbCopy.closest('.rwnbbox');
+    const which=nbCopy.getAttribute('data-which')||'still';
+    const ta=box&&box.querySelector(which==='motion'?'.rwnbmotion':'.rwnbstill');
+    copyText(ta?ta.value:'').then(function(){nbCopy.textContent='✅ Đã copy'; setTimeout(function(){nbCopy.textContent=which==='motion'?'📋 Copy lệnh động':'📋 Copy lệnh trang vở';},1400);},function(){prompt('Copy lệnh', ta?ta.value:'');});
     return;
   }
   const openBtn=e.target.closest&&e.target.closest('.rwtikzbtn');
@@ -2690,7 +4297,7 @@ document.addEventListener('click',async function(e){
   const srcChars=(sourceTex||'').trim().length;
   const srcImgs=sourceImages.length;
   const srcBytes=Math.round(bagChars()*0.75);
-  const expectSec=Math.min(200, 80+nBag*30);
+  const expectSec=chapter==='1'?Math.min(540, 150+nBag*45):Math.min(240, 80+nBag*30);
   function srcLabel(){
     const bits=[];
     if(srcChars) bits.push(srcChars.toLocaleString('vi-VN')+' chữ');
@@ -2737,7 +4344,7 @@ document.addEventListener('click',async function(e){
       const job=d.job;
       d=null;
       let missed=0;
-      while(Date.now()-t0<300000){
+      while(Date.now()-t0<720000){
         await new Promise(function(res){setTimeout(res,2500);});
         let pr,praw,pd;
         try{
@@ -2750,9 +4357,10 @@ document.addEventListener('click',async function(e){
           missed=0;
           const el=Math.max(waited, Number(pd.elapsed)||0);
           const left=Math.max(0,expectSec-el);
+          const cap=(pd.note?pd.note+' ':'')+waitLabel+'. Đã chờ '+el+'s.';
           aiMeter({
             kind:'wait',
-            caption:waitLabel+'. Đã chờ '+el+'s.',
+            caption:cap,
             time:el+'s',
             src:srcLabel(),
             rate:rateLabel(el),
@@ -2772,13 +4380,13 @@ document.addEventListener('click',async function(e){
             pct:Math.min(92,Math.round(waited/expectSec*100)),
             hint:'cứ để trang mở'
           });
-          if(missed<12) continue;
+          if(missed<24) continue;
           throw new Error('Không thấy phiên sau '+waited+'s. Bấm AI phân tích lại.');
         }
         d=pd;
         break;
       }
-      if(!d) throw new Error('Quá 5 phút chưa có kết quả. Bấm AI phân tích lại.');
+      if(!d) throw new Error('Quá 12 phút chưa có kết quả. Bấm AI phân tích lại.');
     }
     if(!d.ok){stopWait();aiStatus(d.error||'Lỗi','err');out.innerHTML='<div class="err">'+esc(d.error||'Lỗi')+'</div>';return;}
     if(!String(d.latex||'').trim()){

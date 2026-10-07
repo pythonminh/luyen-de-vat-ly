@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import io
+import json
 import random
 import re
 import urllib.parse
@@ -11,7 +12,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from flask import redirect, request, send_file, session
+from flask import jsonify, redirect, request, send_file, session
 
 from app import (
     KIND_ORDER,
@@ -56,6 +57,36 @@ def load_qs(path):
         _, tex = read_tex(path)
         qs = nest_developments(parse_questions(tex))
     return qs
+
+
+def load_exam_qs(exam):
+    """Câu của đề đang lưu. Đề cả chương lấy từng bài theo qmap, idx là vị trí trong đề."""
+    exam = exam or {}
+    qmap = exam.get("qmap") or []
+    if not qmap:
+        return load_qs(str(exam.get("path") or ""))
+    cache = {}
+    out = []
+    for i, item in enumerate(qmap):
+        if not isinstance(item, dict):
+            continue
+        p = str(item.get("path") or "").replace("\\", "/")
+        try:
+            old = int(item.get("idx"))
+        except (TypeError, ValueError):
+            continue
+        if p not in cache:
+            try:
+                cache[p] = {int(q.get("idx")): q for q in load_qs(p) if str(q.get("idx", "")).isdigit() or isinstance(q.get("idx"), int)}
+            except Exception:
+                cache[p] = {}
+        srcq = cache[p].get(old)
+        if not srcq:
+            continue
+        q = dict(srcq)
+        q["idx"] = i
+        out.append(q)
+    return out
 
 
 def lesson_title(path):
@@ -198,6 +229,34 @@ def _ds_mask(q):
     return "".join("Đ" if (s or {}).get("correct") else "S" for s in (q.get("statements") or [])) or "—"
 
 
+def _copy_answer_rows(qs, copy):
+    """Đáp án đúng của một mã đề, sau khi đã trộn phương án."""
+    by = {int(q.get("idx")): q for q in qs}
+    groups = {k: [] for k in KIND_ORDER}
+    for i in list(copy.get("ids") or []):
+        q = by.get(int(i))
+        if not q:
+            continue
+        k = str(q.get("kind") or "TL")
+        (groups[k] if k in groups else groups.setdefault("TL", [])).append(q)
+    rows = []
+    for kind in KIND_ORDER:
+        seq = 0
+        for q in groups.get(kind) or []:
+            seq += 1
+            qq = apply_perm(q, copy)
+            if kind == "TN":
+                ans = _tn_letter(qq)
+            elif kind == "DS":
+                ans = _ds_mask(qq)
+            elif kind == "TLN":
+                ans = str(qq.get("answer") or "").strip()
+            else:
+                ans = ""
+            rows.append({"n": seq, "kind": kind, "answer": ans})
+    return rows
+
+
 def _opt_span(tex):
     """Độ dài nhìn thấy của một phương án. Hình hoặc công thức trưng bày thì xếp một cột."""
     s = str(tex or "")
@@ -220,9 +279,9 @@ def _choice_class(options):
     opts = list(options or [])
     if len(opts) != 4:
         return "stack"
-    if max(_opt_span(o.get("text") or "") for o in opts) <= 36:
-        return "grid2"
-    return "stack"
+    if max(_opt_span(o.get("text") or "") for o in opts) <= 14:
+        return "grid4"
+    return "grid2"
 
 
 def _rules_html(kind):
@@ -344,7 +403,8 @@ def _q_html(q, seq, src, show_key=False, ruled=False):
                 f"<div class='exopt'><span class='exlab'>{lab}.</span> "
                 f"<span class='exoptxt'>{html_question(s.get('text') or '', src)}{mark}</span></div>"
             )
-        body = "<div class='exopts stack'>" + "".join(bits) + "</div>"
+        cols = "grid2" if len(bits) >= 2 else "stack"
+        body = f"<div class='exopts {cols}'>" + "".join(bits) + "</div>"
     elif kind == "TLN":
         if not ruled:
             body = "<div class='exblank'>Đáp án: …………………………</div>"
@@ -363,8 +423,7 @@ def _q_html(q, seq, src, show_key=False, ruled=False):
     if ruled:
         body += _rules_html(kind)
     return (
-        f"<article class='exq'><div class='exhead'><b>Câu {seq}.</b></div>"
-        f"<div class='exstem'>{stem}</div>{body}</article>"
+        f"<article class='exq'><div class='exstem'><b class='exno'>Câu {seq}.</b> {stem}</div>{body}</article>"
     )
 
 
@@ -389,7 +448,6 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
         "</header>"
         "<p class='exnote'>Họ tên: ……………………………… Lớp: ………… SBD: …………</p>"
     ]
-    seq = 0
     key_rows = []
     sheet = []
     for kind in KIND_ORDER:
@@ -397,6 +455,8 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
         if not arr:
             continue
         parts.append(f"<h3 class='expart'>{html.escape(KIND_LABEL[kind])}</h3>")
+        key_rows.append(f"<span class='exkpart'>{html.escape(KIND_LABEL[kind])}</span>")
+        seq = 0
         for q in arr:
             seq += 1
             src = str(q.get("src") or "")
@@ -418,29 +478,49 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
         f"<div class='exkgrid'>{''.join(key_rows)}</div></section>"
     )
     phieu = _phieu_html(sheet, str(copy.get("code") or ""), title)
-    return "<section class='excopy'>" + "".join(parts) + phieu + (key if show_key else "") + "</section>", key
+    return (
+        f"<section class='excopy' data-code='{code}'>"
+        + "".join(parts)
+        + phieu
+        + (key if show_key else "")
+        + "</section>"
+    ), key
 
 
 def exam_css():
     return """
 <style>
-.examwrap{max-width:980px;margin:auto}
+.examwrap{max-width:none;width:100%;margin:0;padding:0}
 .exambar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:10px;border:1px solid #d7e2ee;border-radius:10px;background:#f8fbff}
 .exambar label{font-weight:800;font-size:13px;display:inline-flex;align-items:center;gap:6px}
 .exambar input[type=number]{width:64px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}
 .exambar select{padding:6px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}
 .exambar .muted{font-size:12px;font-weight:700;color:#64748b}
-.exampaper{background:#fff;border:1px solid #d7e2ee;border-radius:12px;padding:18px 22px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.55;color:#111}
-.excopy + .excopy{margin-top:28px;padding-top:16px;border-top:2px dashed #94a3b8}
-.exheadblock{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:10px;align-items:start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}
-.exschool,.exmeta{font-size:13px}.extitle{text-align:center;font-size:18px}
-.exnote{margin:8px 0 14px}
-.expart{margin:18px 0 8px;font-size:15px;border-bottom:1px solid #bbb;padding-bottom:4px}
-.exq{margin:0 0 14px;break-inside:avoid;page-break-inside:avoid}
-.exstem{margin:4px 0 8px}
-.exopts{display:grid;gap:3px 16px;padding-left:8px}
+.gradebox{margin:0 0 12px;padding:10px 12px;border:1px solid #fecdd3;border-radius:10px;background:#fff7f7}
+.gradebox .muted{display:block;margin-top:6px;font-size:12px;font-weight:700;color:#64748b}
+.gradesum{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;font-size:20px;margin-top:8px}
+.gradesum span{font-size:14px;font-weight:700}
+.grademeta{font-size:12px;color:#64748b;margin:4px 0 8px}
+.gradewrong{font-size:14px;line-height:1.5}
+.gradecode{font-weight:800}
+.exampaper{width:100%;max-width:none;margin:0;background:#fff;border:0;border-radius:0;padding:0 4px;font-family:'Times New Roman',Times,serif;font-size:12pt;line-height:1.2;color:#111}
+.excopy{width:100%}
+.excopy + .excopy{margin-top:18px;padding-top:10px;border-top:2px dashed #94a3b8}
+.expage{position:relative;box-sizing:border-box;width:100%;min-height:0;height:auto;margin:0 0 14px;padding:0 0 8mm;background:#fff;outline:0}
+.expagefoot{position:absolute;left:0;right:0;bottom:2mm;text-align:center;font:700 11pt/1.2 'Times New Roman',Times,serif;color:#111}
+.exheadblock{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:6px;align-items:start;border-bottom:1.5px solid #111;padding-bottom:2px;margin-bottom:3px}
+.exschool,.exmeta{font-size:11pt;line-height:1.2}.extitle{text-align:center;font-size:14pt;line-height:1.2}
+.exnote{margin:1px 0 3px}
+.expart{margin:6px 0 2px;font-size:12.5pt;border-bottom:1px solid #bbb;padding-bottom:1px}
+.exq{margin:0 0 3px;break-inside:avoid;page-break-inside:avoid}
+.exstem{margin:0}
+.exstem p{margin:0}
+.exno{float:left;margin-right:.35em}
+.exq img{max-width:100%;max-height:40mm;height:auto}
+.exopts{display:grid;gap:1px 14px;padding-left:1.15em}
 .exopts.stack{grid-template-columns:1fr}
 .exopts.grid2{grid-template-columns:1fr 1fr}
+.exopts.grid4{grid-template-columns:1fr 1fr 1fr 1fr}
 .exopt{display:flex;gap:6px;align-items:flex-start;min-width:0}
 .exoptxt{min-width:0}
 .exrules{margin:8px 0 2px;background-image:repeating-linear-gradient(to bottom,transparent,transparent calc(1.15em - 1px),#334155 calc(1.15em - 1px),#334155 1.15em);-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -449,8 +529,9 @@ def exam_css():
 .exblank{margin:8px 0;color:#444}
 .exkeyline{margin-top:8px;padding:8px;border:1px dashed #7dd3fc;border-radius:8px;background:#f0f9ff;font-size:14px}
 .exanswer{margin-top:18px;padding-top:12px;border-top:2px solid #111}
-.exkgrid{display:flex;flex-wrap:wrap;gap:8px 16px}
-.exk{min-width:6.5rem}
+.exkgrid{display:flex;flex-wrap:wrap;gap:4px 16px}
+.exkpart{flex-basis:100%;font-weight:800;margin-top:6px}
+.exk{min-width:4.2rem}
 .exphieu{margin-top:18px;padding:12px 14px;border:2px solid #e11d48;border-radius:8px;background:#fff}
 .phtitle{margin:0 0 8px;text-align:center;font-size:18px;letter-spacing:.03em}
 .phmeta{display:flex;gap:10px;align-items:stretch;margin-bottom:8px}
@@ -466,11 +547,16 @@ def exam_css():
 .bub{display:inline-block;width:12px;height:12px;border:1.5px solid #e11d48;border-radius:50%;vertical-align:middle}
 .phtl{margin:3px 0;font-size:14px}
 @media print{
-  .top,.nav,.drawer,.exambar,.subnav,.regline,.navtoggle,.clock,.whobar{display:none!important}
+  @page{size:A4;margin:10mm 10mm 12mm 10mm}
+  .top,.nav,.drawer,.exambar,.gradebox,.subnav,.regline,.navtoggle,.clock,.whobar{display:none!important}
   body{background:#fff}
-  .wrap,.examwrap,.exampaper{max-width:none;margin:0;padding:0;overflow:visible}
+  .wrap,.examwrap,.exampaper{max-width:none;width:auto;margin:0;padding:0;overflow:visible}
   .exampaper{border:0;border-radius:0}
-  .excopy + .excopy{margin:0;padding:0;border:0;break-before:page;page-break-before:always}
+  .excopy,.expage{width:auto}
+  .excopy + .excopy{margin:0;padding:0;border:0;break-before:auto;page-break-before:auto}
+  .expage{outline:0;margin:0;min-height:252mm;height:262mm;padding:0 0 12mm;break-after:page;page-break-after:always}
+  .exampaper .excopy:last-child .expage:last-child{break-after:auto;page-break-after:auto}
+  .expage .exphieu,.expage .exanswer{break-before:auto;page-break-before:auto;margin-top:0}
   .exphieu{break-before:page;page-break-before:always;margin:0;border-color:#e11d48}
   .exanswer{break-before:page;page-break-before:always}
   .bub,.phtn th,.phtn td,.phds th,.phds td,.phtln th,.phtln td,.phcode,.phdiem{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -492,7 +578,7 @@ def render_exam(auto_print=False):
             "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>",
         )
     try:
-        qs = load_qs(path)
+        qs = load_exam_qs(exam)
     except Exception as e:
         return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     title = exam.get("title") or lesson_title(path)
@@ -503,10 +589,12 @@ def render_exam(auto_print=False):
         html_copy, key = _copy_html(qs, copy, title, show_key=show_key, ruled=ruled)
         papers.append(html_copy)
         keys.append(key)
-    back = "/member/select?path=" + urllib.parse.quote(path, safe="")
     dang = str(exam.get("dang") or "")
-    if dang:
-        back = "/member/dang?path=" + urllib.parse.quote(path, safe="") + "&dang=" + urllib.parse.quote(dang, safe="")
+    back = str(exam.get("back") or "")
+    if not back:
+        back = "/member/select?path=" + urllib.parse.quote(path, safe="")
+        if dang:
+            back = "/member/dang?path=" + urllib.parse.quote(path, safe="") + "&dang=" + urllib.parse.quote(dang, safe="")
     codes = ", ".join(str(c.get("code") or "") for c in copies)
     key_toggle = "1" if not show_key else "0"
     key_lab = "Ẩn đáp án" if show_key else "Hiện đáp án (trang giáo viên)"
@@ -527,15 +615,53 @@ def render_exam(auto_print=False):
         "<button class='btn' name='exam_action' value='shuffle'>🔀 Trộn đề</button>"
         "<button class='btn primary' name='exam_action' value='print' formaction='/member/exam/print'>🖨 In đề</button>"
         "<button class='btn' name='exam_action' value='azota' formaction='/member/exam/azota'>⬇ Word Azota</button>"
+        "<button class='btn' name='exam_action' value='xlsx' formaction='/member/exam/xlsx'>⬇ Excel đáp án</button>"
         f"<button class='btn' name='exam_action' value='key' formaction='/member/exam/key'>{html.escape(key_lab)}</button>"
-        "<button class='btn' name='exam_action' value='practice'>▶ Làm bài với đề này</button>"
-        f"<a class='btn' href='{_esc(back)}'>← Chọn lại số câu</a>"
-        "</form>"
+        + ("" if exam.get("qmap") else "<button class='btn' name='exam_action' value='practice'>▶ Làm bài với đề này</button>")
+        + f"<a class='btn' href='{_esc(back)}'>← Chọn lại số câu</a>"
+        + "</form>"
+        "<div class='gradebox noprint'>"
+        "<button type='button' class='btn' id='gradeCam'>📷 Chụp phiếu chấm điểm</button>"
+        "<input id='gradeFile' type='file' accept='image/*' capture='environment' hidden>"
+        "<span class='muted'>Chụp phiếu học sinh đã tô, thấy rõ mã đề và các ô. Đừng chụp trang đáp án.</span>"
+        "<div id='gradeOut'></div>"
+        "</div>"
     )
     print_js = (
-        "<script>window.addEventListener('load',function(){if(window.ldvlTypeset)ldvlTypeset(document.body);"
-        + ("setTimeout(function(){window.print()},600);" if auto_print else "")
-        + "})</script>"
+        "<script>function paginateExams(){if(document.body.getAttribute('data-expage')==='1')return;"
+        "var ruler=document.createElement('div');ruler.style.cssText='position:absolute;left:0;top:0;height:248mm;width:190mm;visibility:hidden';"
+        "document.body.appendChild(ruler);var limit=ruler.offsetHeight||900;ruler.remove();"
+        "document.querySelectorAll('.excopy').forEach(function(copy){copy.style.width='190mm';});"
+        "document.querySelectorAll('.excopy').forEach(function(copy){"
+        "var code=copy.getAttribute('data-code')||'';"
+        "var blocks=Array.prototype.filter.call(copy.children,function(el){return el.nodeType===1&&!el.classList.contains('expagefoot');});"
+        "var heights=blocks.map(function(el){var st=getComputedStyle(el);return el.offsetHeight+(parseFloat(st.marginTop)||0)+(parseFloat(st.marginBottom)||0);});"
+        "var groups=[],cur=[],h=0;function flush(){if(cur.length){groups.push(cur);cur=[];h=0;}}"
+        "blocks.forEach(function(el,idx){var force=el.classList.contains('exphieu')||el.classList.contains('exanswer');"
+        "if(force){flush();groups.push([el]);return;}var bh=heights[idx]||0;if(cur.length&&h+bh>limit)flush();cur.push(el);h+=bh;});flush();"
+        "var n=groups.length;groups.forEach(function(group,i){var page=document.createElement('section');page.className='expage';"
+        "group.forEach(function(el){page.appendChild(el);});var foot=document.createElement('div');foot.className='expagefoot';"
+        "foot.textContent='Mã đề '+code+' · Trang '+(i+1)+'/'+n;page.appendChild(foot);copy.appendChild(page);});"
+        "copy.style.width='';});document.body.setAttribute('data-expage','1');}"
+        "window.addEventListener('load',function(){function done(){try{paginateExams();}catch(err){}"
+        + ("setTimeout(function(){window.print();},250);" if auto_print else "")
+        + "}if(window.MathJax&&MathJax.startup&&MathJax.startup.promise){MathJax.startup.promise.then(function(){"
+        "return MathJax.typesetPromise?MathJax.typesetPromise([document.body]):null;}).then(done).catch(done);}"
+        "else{if(window.ldvlTypeset)ldvlTypeset(document.body);setTimeout(done,900);}});"
+        "var cam=document.getElementById('gradeCam'),file=document.getElementById('gradeFile'),out=document.getElementById('gradeOut');"
+        "if(cam&&file){cam.onclick=function(){file.click();};"
+        "file.onchange=function(){var f=file.files&&file.files[0];if(!f)return;"
+        "var img=new Image(),url=URL.createObjectURL(f);"
+        "img.onload=function(){var w=img.naturalWidth,h=img.naturalHeight,max=1600;"
+        "if(w>max){h=Math.round(h*max/w);w=max;}if(h>max){w=Math.round(w*max/h);h=max;}"
+        "var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);"
+        "URL.revokeObjectURL(url);var b64=(c.toDataURL('image/jpeg',0.82).split(',')[1]||'');"
+        "var keys=[];try{keys=(window.ldvlGetGeminiKeys?ldvlGetGeminiKeys():[]).filter(function(k){return String(k||'').trim().length>=20});}catch(e){}"
+        "out.textContent='Đang đọc phiếu...';"
+        "fetch('/api/exam/grade-photo',{method:'POST',headers:{'Content-Type':'application/json'},"
+        "body:JSON.stringify({mime:'image/jpeg',data:b64,api_keys:keys})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})"
+        ".then(function(x){if(!x.j||!x.j.ok){out.textContent=(x.j&&x.j.error)||'Không chấm được.';return;}out.innerHTML=x.j.html||'';})"
+        ".catch(function(){out.textContent='Lỗi mạng khi gửi ảnh phiếu.';});file.value='';};img.src=url;};}</script>"
     )
     body = (
         "<div class='wrap examwrap'>"
@@ -558,7 +684,7 @@ def _ruled_flag(exam=None):
     return str(raw).strip().lower() in {"1", "true", "on", "yes", "co"}
 
 
-def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None, ruled=None):
+def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None, ruled=None, title="", back="", qmap=None):
     ids = [int(i) for i in ids if str(i).isdigit() or isinstance(i, int)]
     if not ids:
         return None
@@ -576,12 +702,15 @@ def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None, ruled=N
     exam = {
         "path": path,
         "dang": dang or "",
-        "title": lesson_title(path),
+        "title": title or lesson_title(path),
+        "back": back or "",
         "copies": copies,
         "show_key": bool(session.get("exam", {}).get("show_key") if show_key is None else show_key),
         "ruled": bool(session.get("exam", {}).get("ruled") if ruled is None else ruled),
         "base_ids": list(ids),
     }
+    if qmap:
+        exam["qmap"] = [dict(x) for x in qmap if isinstance(x, dict)]
     session["exam"] = exam
     session.modified = True
     return exam
@@ -707,12 +836,12 @@ def _azota_lines(qs, copy):
     blocks = []
     keys = {k: [] for k in KIND_ORDER}
     solutions = []
-    seq = 0
     for kind in KIND_ORDER:
         arr = groups.get(kind) or []
         if not arr:
             continue
         blocks.append(("p", titles[kind], True))
+        seq = 0
         for q in arr:
             seq += 1
             srcq = apply_perm(q, copy)
@@ -741,7 +870,7 @@ def _azota_lines(qs, copy):
                 keys[kind].append((seq, "tự luận"))
             sol = latex_plain(srcq.get("solution") or "")
             if sol:
-                solutions.append(f"Câu {seq}. {sol}")
+                solutions.append(f"{titles[kind]} — Câu {seq}. {sol}")
     code = str(copy.get("code") or "")
     head = [
         ("p", f"Mã đề {code}. File này tải lên Azota: Đề thi → Tạo đề thi → chọn file Word.", True),
@@ -826,7 +955,7 @@ def _azota_download():
             "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>",
         )
     try:
-        qs = load_qs(path)
+        qs = load_exam_qs(exam)
     except Exception as e:
         return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     title = exam.get("title") or lesson_title(path)
@@ -850,6 +979,191 @@ def _azota_download():
             zf.writestr(name, raw)
     pack.seek(0)
     return send_file(pack, as_attachment=True, download_name="azota-de.zip", mimetype="application/zip")
+
+
+def _xlsx_col(n):
+    s = ""
+    while n:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+
+def _xlsx_text(s):
+    t = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", str(s or ""))
+    return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _xlsx_sheet(rows):
+    width = max((len(row) for row in rows), default=1)
+    body = []
+    for r, row in enumerate(rows, 1):
+        cells = []
+        for c in range(1, width + 1):
+            val = row[c - 1] if c - 1 < len(row) else ""
+            style = 2 if c == 1 and r > 1 else 1
+            ref = f"{_xlsx_col(c)}{r}"
+            cells.append(
+                f'<c r="{ref}" t="inlineStr" s="{style}"><is><t>{_xlsx_text(val)}</t></is></c>'
+            )
+        body.append(f'<row r="{r}">' + "".join(cells) + "</row>")
+    return (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<worksheet xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main'>"
+        f"<cols><col min='1' max='{width}' width='9' customWidth='1'/></cols>"
+        "<sheetData>" + "".join(body) + "</sheetData></worksheet>"
+    )
+
+
+def _xlsx_bytes(sheets):
+    """sheets: [(tên sheet, các hàng)]. Hàng đầu là tiêu đề."""
+    overrides = [
+        "<Override PartName='/xl/workbook.xml' "
+        "ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml'/>",
+        "<Override PartName='/xl/styles.xml' "
+        "ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml'/>",
+    ]
+    wb_sheets = []
+    rels = []
+    files = {}
+    for i, (name, rows) in enumerate(sheets, 1):
+        safe = re.sub(r"[:\\/?*\[\]]", " ", str(name))[:31] or f"Sheet{i}"
+        overrides.append(
+            f"<Override PartName='/xl/worksheets/sheet{i}.xml' "
+            "ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml'/>"
+        )
+        wb_sheets.append(f"<sheet name='{_xlsx_text(safe)}' sheetId='{i}' r:id='rId{i}'/>")
+        rels.append(
+            f"<Relationship Id='rId{i}' "
+            "Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet' "
+            f"Target='worksheets/sheet{i}.xml'/>"
+        )
+        files[f"xl/worksheets/sheet{i}.xml"] = _xlsx_sheet(rows)
+    style_id = len(sheets) + 1
+    rels.append(
+        f"<Relationship Id='rId{style_id}' "
+        "Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles' "
+        "Target='styles.xml'/>"
+    )
+    content_types = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'>"
+        "<Default Extension='rels' ContentType='application/vnd.openxmlformats-package.relationships+xml'/>"
+        "<Default Extension='xml' ContentType='application/xml'/>"
+        + "".join(overrides)
+        + "</Types>"
+    )
+    workbook = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<workbook xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main' "
+        "xmlns:r='http://schemas.openxmlformats.org/officeDocument/2006/relationships'>"
+        "<sheets>" + "".join(wb_sheets) + "</sheets></workbook>"
+    )
+    styles = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<styleSheet xmlns='http://schemas.openxmlformats.org/spreadsheetml/2006/main'>"
+        "<fonts count='3'><font><sz val='11'/><name val='Calibri'/></font>"
+        "<font><sz val='13'/><name val='Times New Roman'/></font>"
+        "<font><b/><sz val='13'/><name val='Times New Roman'/></font></fonts>"
+        "<fills count='2'><fill><patternFill patternType='none'/></fill>"
+        "<fill><patternFill patternType='gray125'/></fill></fills>"
+        "<borders count='2'><border><left/><right/><top/><bottom/><diagonal/></border>"
+        "<border><left style='thin'><color auto='1'/></left><right style='thin'><color auto='1'/></right>"
+        "<top style='thin'><color auto='1'/></top><bottom style='thin'><color auto='1'/></bottom><diagonal/></border></borders>"
+        "<cellStyleXfs count='1'><xf numFmtId='0' fontId='0' fillId='0' borderId='0'/></cellStyleXfs>"
+        "<cellXfs count='3'><xf numFmtId='0' fontId='0' fillId='0' borderId='0' xfId='0'/>"
+        "<xf numFmtId='0' fontId='1' fillId='0' borderId='1' xfId='0' applyFont='1' applyBorder='1' applyAlignment='1'>"
+        "<alignment horizontal='center' vertical='center'/></xf>"
+        "<xf numFmtId='0' fontId='2' fillId='0' borderId='1' xfId='0' applyFont='1' applyBorder='1' applyAlignment='1'>"
+        "<alignment horizontal='center' vertical='center'/></xf></cellXfs>"
+        "</styleSheet>"
+    )
+    pkg_rels = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'>"
+        "<Relationship Id='rId1' "
+        "Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument' "
+        "Target='xl/workbook.xml'/></Relationships>"
+    )
+    wb_rels = (
+        "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+        "<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'>"
+        + "".join(rels)
+        + "</Relationships>"
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types)
+        zf.writestr("_rels/.rels", pkg_rels)
+        zf.writestr("xl/workbook.xml", workbook.encode("utf-8"))
+        zf.writestr("xl/_rels/workbook.xml.rels", wb_rels)
+        zf.writestr("xl/styles.xml", styles)
+        for path, xml in files.items():
+            zf.writestr(path, xml.encode("utf-8"))
+    buf.seek(0)
+    return buf
+
+
+def _answer_text(r):
+    ans = r["answer"]
+    if r["kind"] == "TLN":
+        return latex_plain(ans).strip() or "—"
+    if r["kind"] == "TL":
+        return "TL"
+    if r["kind"] == "DS":
+        return _norm_ds(ans) or "—"
+    return ans or "—"
+
+
+def _answer_sheets(qs, copies):
+    """Một bảng như phiếu đáp án nhà trường: hàng 1 là mã đề, cột A là số câu.
+
+    Số câu đếm lại từ 1 ở mỗi phần. Đúng/sai ghi D và S.
+    """
+    packed = []
+    for copy in copies:
+        code = str(copy.get("code") or "").strip() or "de"
+        groups = {k: [] for k in KIND_ORDER}
+        for r in _copy_answer_rows(qs, copy):
+            groups[r["kind"]].append(_answer_text(r))
+        packed.append((code, groups))
+    rows = [[""] + [code for code, _groups in packed]]
+    for kind in KIND_ORDER:
+        n = max((len(groups[kind]) for _code, groups in packed), default=0)
+        for i in range(n):
+            rows.append(
+                [str(i + 1)]
+                + [groups[kind][i] if i < len(groups[kind]) else "" for _code, groups in packed]
+            )
+    return [("Đáp án", rows)]
+
+
+def _answer_xlsx_download():
+    if not can_manage_bank():
+        return redirect("/member")
+    exam = session.get("exam") or {}
+    copies = list(exam.get("copies") or [])
+    if not copies:
+        return page(
+            "Excel đáp án",
+            "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+            "Chưa có đề. Hãy tạo đề rồi bấm <b>Excel đáp án</b>.</div>"
+            "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>",
+        )
+    try:
+        qs = load_exam_qs(exam)
+    except Exception as e:
+        return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+    sheets = _answer_sheets(qs, copies)
+    blob = _xlsx_bytes(sheets)
+    codes = [str(c.get("code") or "") for c in copies]
+    name = f"dap-an-{codes[0]}.xlsx" if len(codes) == 1 else "dap-an.xlsx"
+    return send_file(
+        blob,
+        as_attachment=True,
+        download_name=name,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 def _redirect_select(path, dang=""):
@@ -894,8 +1208,18 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         return render_exam(auto_print=False)
     if action == "azota":
         return _azota_download()
+    if action == "xlsx":
+        return _answer_xlsx_download()
     if action == "practice":
         exam = session.get("exam") or {}
+        if exam.get("qmap"):
+            back = str(exam.get("back") or "/member")
+            return page(
+                "Làm bài",
+                "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+                "Đề tạo từ cả chương dùng In đề hoặc Word Azota. Làm bài từng câu mở ma trận của một bài.</div>"
+                f"<p><a class='btn' href='{_esc(back)}'>← Về ma trận</a></p></div></div></div>",
+            )
         copy = (exam.get("copies") or [{}])[0]
         ids = list(copy.get("ids") or exam.get("base_ids") or [])
         p = str(exam.get("path") or path)
@@ -922,6 +1246,17 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         )
         return redirect("/member/practice")
 
+    if str(request.form.get("chapter") or "") == "1" and action in {"create", "shuffle", "print", ""}:
+        return build_chapter_exam(
+            shuffle=bool(shuffle or action == "shuffle"),
+            auto_print=bool(auto_print or action == "print"),
+            copies_n=copies_n,
+            ruled=ruled,
+            mon=str(request.form.get("mon") or "").strip(),
+            lop=str(request.form.get("lop") or "").strip(),
+            chuong=str(request.form.get("chuong") or "").strip(),
+        )
+
     qs = None
     ids = []
     if path:
@@ -937,9 +1272,9 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         exam = session.get("exam") or {}
         p = str(exam.get("path") or path)
         ids = list(exam.get("base_ids") or (exam.get("copies") or [{}])[0].get("ids") or [])
-        if p and ids:
+        if (p or exam.get("qmap")) and ids:
             try:
-                qs = load_qs(p)
+                qs = load_exam_qs(exam) if exam.get("qmap") else load_qs(p)
             except Exception as e:
                 return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
             exam["ruled"] = ruled
@@ -951,6 +1286,9 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
                     shuffle=True,
                     dang=exam.get("dang") or dang,
                     ruled=ruled,
+                    title=exam.get("title") or "",
+                    back=exam.get("back") or "",
+                    qmap=exam.get("qmap") or None,
                 )
             return render_exam(auto_print=auto_print)
 
@@ -1002,11 +1340,202 @@ def member_exam_azota():
     return build_from_request()
 
 
+@app.route("/member/exam/xlsx", methods=["POST"])
+def member_exam_xlsx():
+    return build_from_request()
+
+
 @app.route("/member/exam/print", methods=["GET", "POST"])
 def member_exam_print():
     if request.method == "POST":
         return build_from_request(shuffle=False, auto_print=True)
     return render_exam(auto_print=True)
+
+
+def _norm_letter(s):
+    m = re.search(r"[ABCD]", str(s or "").upper())
+    return m.group(0) if m else ""
+
+
+def _norm_ds(s):
+    t = str(s or "").upper().replace("Đ", "D").replace("Ð", "D")
+    return re.sub(r"[^DS]", "", t)
+
+
+def _norm_tln(s):
+    t = str(s or "").strip()
+    t = t.replace("$", "").replace("\\,", "").replace("\\;", "")
+    t = re.sub(r"\\[a-zA-Z]+\*?\{([^{}]*)\}", r"\1", t)
+    t = t.replace("{", "").replace("}", "").replace("\\", "")
+    t = t.replace(" ", "").replace(",", ".")
+    t = t.replace("−", "-").replace("–", "-").replace("—", "-")
+    try:
+        v = float(t)
+    except ValueError:
+        return t.lower()
+    if abs(v - round(v)) < 1e-9:
+        return str(int(round(v)))
+    return "%g" % v
+
+
+def _ds_points(got, exp):
+    n = min(len(got), len(exp))
+    hit = sum(1 for i in range(n) if got[i] == exp[i])
+    return {1: 0.1, 2: 0.25, 3: 0.5, 4: 1.0}.get(hit, 0)
+
+
+def _score_sheet(rows, read):
+    """Chấm theo ô đã tô. TN và trả lời ngắn 0,25 điểm; đúng/sai theo số ý đúng."""
+    tn = read.get("tn") if isinstance(read.get("tn"), dict) else {}
+    ds = read.get("ds") if isinstance(read.get("ds"), dict) else {}
+    tln = read.get("tln") if isinstance(read.get("tln"), dict) else {}
+    total = 0.0
+    lines = []
+    counts = {"TN": [0, 0], "DS": [0, 0], "TLN": [0, 0]}
+    for r in rows:
+        if r["kind"] == "TL":
+            continue
+        n = str(r["n"])
+        if r["kind"] == "TN":
+            got, exp = _norm_letter(tn.get(n)), _norm_letter(r["answer"])
+            ok = bool(got) and got == exp
+            pt = 0.25 if ok else 0
+            show = got or "—"
+        elif r["kind"] == "DS":
+            got, exp = _norm_ds(ds.get(n)), _norm_ds(r["answer"])
+            ok = bool(got) and got == exp
+            pt = _ds_points(got, exp)
+            show = got or "—"
+        else:
+            got, exp = _norm_tln(tln.get(n)), _norm_tln(r["answer"])
+            ok = bool(got) and got == exp
+            pt = 0.25 if ok else 0
+            show = got or "—"
+        total += pt
+        counts[r["kind"]][0] += 1 if ok else 0
+        counts[r["kind"]][1] += 1
+        if not ok:
+            part = {"TN": "Phần I", "DS": "Phần II", "TLN": "Phần III"}.get(r["kind"], "")
+            lines.append(
+                f"<div>{part} · Câu {n}: tô <b>{_esc(show)}</b> · đúng <b>{_esc(r['answer'] or '—')}</b></div>"
+            )
+    def _pair(k):
+        a, b = counts[k]
+        return f"{a}/{b}"
+    summary = (
+        f"Trắc nghiệm {_pair('TN')} · Đúng/Sai {_pair('DS')} · Trả lời ngắn {_pair('TLN')}"
+    )
+    wrong = "".join(lines) or "<div>Không có câu khách quan nào sai.</div>"
+    html = (
+        f"<div class='gradesum'><b>Điểm: {total:.2f}</b>"
+        f"<span>{summary}</span></div>"
+        "<div class='grademeta'>TN và trả lời ngắn: 0,25 điểm/câu đúng. "
+        "Đúng/Sai: 1 ý 0,1 · 2 ý 0,25 · 3 ý 0,5 · 4 ý 1. Tự luận chưa chấm.</div>"
+        f"<div class='gradewrong'><b>Câu chưa đúng</b>{wrong}</div>"
+    )
+    return {"score": round(total, 2), "html": html}
+
+
+def _read_sheet_with_gemini(image, outline, api_key):
+    from student_gemini import _gemini_generate
+    prompt = (
+        "Đây là ảnh PHIẾU TRẢ LỜI TRẮC NGHIỆM. Học sinh tô tròn các ô.\n"
+        "Chỉ đọc ô đã tô trên phiếu. Nếu ảnh có kèm khối ĐÁP ÁN của giáo viên thì bỏ qua hoàn toàn.\n"
+        "Phần I: mỗi hàng là một câu, cột A B C D, một ô được tô.\n"
+        "Phần II: mỗi câu có ý a b c d, mỗi ý một cột Đúng và một cột Sai.\n"
+        "Phần III: mỗi câu là lưới. Hàng là ký tự − , 0 1 2 3 4 5 6 7 8 9. "
+        "Bốn cột là bốn vị trí của số, từ trái sang phải. Ghép các ô tô thành một số, ví dụ − 1 , 5 thành -1.5.\n"
+        "Cấu trúc câu của đề này:\n" + outline + "\n"
+        "Trả về JSON duy nhất, không markdown:\n"
+        '{"code":"402","tn":{"1":"A"},"ds":{"19":"ĐSĐS"},"tln":{"26":"-1.5"}}\n'
+        "code là số mã đề in trong ô Mã đề. "
+        "tn là một chữ A, B, C hoặc D. "
+        "ds là đúng 4 ký tự Đ hoặc S theo thứ tự a b c d. "
+        "tln là số đọc từ ô tô. Câu bỏ trống thì không ghi."
+    )
+    raw = _gemini_generate(
+        api_key, prompt, max_tokens=2500, temperature=0,
+        images=[{"mime": image.get("mime") or "image/jpeg", "data": image.get("data") or ""}],
+    )
+    text = (raw or "").strip()
+    text = re.sub(r"^```(?:json)?", "", text).strip()
+    text = re.sub(r"```$", "", text).strip()
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m:
+        raise ValueError("Không đọc được phiếu. Chụp thẳng, đủ sáng, thấy mã đề và các ô tô.")
+    data = json.loads(m.group(0))
+    if not isinstance(data, dict):
+        raise ValueError("Phiếu trả về không đúng dạng.")
+    return data
+
+
+@app.post("/api/exam/grade-photo")
+def member_exam_grade_photo():
+    if not can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN mới chấm phiếu."), 403
+    exam = session.get("exam") or {}
+    copies = list(exam.get("copies") or [])
+    if not copies:
+        return jsonify(ok=False, error="Chưa có đề trong phiên này. Tạo hoặc trộn đề rồi chấm."), 400
+    body = request.get_json(silent=True) or {}
+    raw_img = str(body.get("data") or "")
+    if raw_img.strip().startswith("data:") and "," in raw_img[:80]:
+        raw_img = raw_img.split(",", 1)[1]
+    image = {"mime": body.get("mime") or "image/jpeg", "data": raw_img.strip()}
+    if not image["data"] or len(image["data"]) > 6_000_000:
+        return jsonify(ok=False, error="Ảnh phiếu không hợp lệ."), 400
+    from app import GEMINI_KEY
+    api_keys = []
+    if str(GEMINI_KEY or "").strip():
+        api_keys.append(str(GEMINI_KEY).strip())
+    extra = body.get("api_keys") if isinstance(body.get("api_keys"), list) else []
+    extra = list(extra) + [body.get("api_key")]
+    for item in extra:
+        s = str(item or "").strip()
+        if len(s) >= 20 and s not in api_keys:
+            api_keys.append(s)
+    if not api_keys:
+        return jsonify(ok=False, error="Chưa có key Gemini. Nạp key ở mục phản biện, hoặc đặt GEMINI_API_KEY trên máy chủ."), 400
+    qs = load_exam_qs(exam)
+    keys = []
+    for c in copies:
+        rows = _copy_answer_rows(qs, c)
+        keys.append((str(c.get("code") or ""), rows))
+    outline = "\n".join(
+        {"TN": "Phần I", "DS": "Phần II", "TLN": "Phần III"}.get(r["kind"], "")
+        + f" câu {r['n']}: "
+        + {"TN": "A/B/C/D", "DS": "Đúng/Sai 4 ý a b c d", "TLN": "số"}.get(r["kind"], "")
+        for r in (keys[0][1] if keys else [])
+        if r["kind"] != "TL"
+    )
+    read = None
+    last_err = "Gemini không đọc được phiếu."
+    for api_key in api_keys:
+        try:
+            read = _read_sheet_with_gemini(image, outline, api_key)
+            break
+        except Exception as e:
+            last_err = str(e)[:300] or last_err
+            if api_key and api_key in last_err:
+                last_err = last_err.replace(api_key, "…")
+    if not isinstance(read, dict):
+        return jsonify(ok=False, error=last_err), 502
+    code = re.sub(r"\D", "", str(read.get("code") or ""))
+    match = None
+    for c, rows in keys:
+        if c == code or c.lstrip("0") == code.lstrip("0"):
+            match = (c, rows)
+            break
+    if not match and len(keys) == 1:
+        match = keys[0]
+        code = match[0]
+    if not match:
+        return jsonify(ok=False, error=f"Không thấy mã đề {code or '?'} trong các đề đang mở."), 404
+    scored = _score_sheet(match[1], read)
+    scored["ok"] = True
+    scored["code"] = match[0]
+    scored["html"] = f"<div class='gradecode'>Mã đề {_esc(match[0])}</div>" + scored["html"]
+    return jsonify(scored)
 
 
 @app.post("/member/exam/key")
@@ -1088,11 +1617,13 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
     )
     top = "<div class='modebar'>" + practice + controls + submits + "</div>"
     bottom = "<div class='modebar'>" + practice + submits + "</div>"
+    chapter_btn = _chapter_matrix_btn(path)
     return (
         "<form method='post' action='/member/exam' id='examMatrix' class='exammatrix'>"
         f"<input type='hidden' name='path' value='{_esc(path)}'>"
         f"<input type='hidden' name='dang' value='{_esc(dang)}'>"
-        "<div class='notice'>📝 <b>Ma trận đề</b> — mỗi dạng một dòng. Số xanh là số câu đang có, ô là số câu lấy. "
+        + chapter_btn
+        + "<div class='notice'>📝 <b>Ma trận đề</b> — mỗi dạng một dòng. Số xanh là số câu đang có, ô là số câu lấy. "
         "Dạng ít câu thì bấm <b>AI gợi ý gom dạng</b> để gộp dạng cùng kỹ năng. "
         "<b>Tạo đề</b> lấy đúng số đó. <b>Trộn đề</b> và <b>In đề</b> xáo câu trong từng phần, đảo A–D và a)–d), "
         "mỗi bản một mã đề. In thì mỗi mã đề sang trang mới, cuối đề có phiếu tô đáp án.</div>"
@@ -1137,6 +1668,380 @@ def exam_matrix_html(path, qs, dang="", include_practice=True):
         "if(t<=0){e.preventDefault();alert('Hãy điền số câu NB/TH/VD/VDC trong ma trận rồi bấm Tạo đề, Trộn đề hoặc In đề.');}});"
         "})();</script>"
     )
+
+
+def _chapter_matrix_btn(path):
+    """Nút mở ma trận cả chương, gắn ngay trên ma trận của một bài."""
+    try:
+        from app import chapter_lessons_for
+        _sibs, cur = chapter_lessons_for(path)
+    except Exception:
+        return ""
+    cur = cur or {}
+    mon = str(cur.get("Mon") or "").strip()
+    lop = str(cur.get("Lop") or "").strip()
+    chuong = str(cur.get("Chuong") or "").strip()
+    if not mon or not chuong:
+        return ""
+    href = "/member/chapter/matrix?" + _chapter_query(mon, lop, chuong)
+    short = chuong if len(chuong) <= 56 else chuong[:55] + "…"
+    return (
+        "<p style='margin:0 0 8px'><a class='btn green' href='"
+        + _esc(href)
+        + "'>📝 Tạo đề theo ma trận cả chương</a> <span class='muted'>"
+        + html.escape(short)
+        + "</span></p>"
+    )
+
+
+def _chapter_query(mon, lop, chuong):
+    return (
+        "mon="
+        + urllib.parse.quote(str(mon or ""), safe="")
+        + "&lop="
+        + urllib.parse.quote(str(lop or ""), safe="")
+        + "&chuong="
+        + urllib.parse.quote(str(chuong or ""), safe="")
+    )
+
+
+def _chapter_rows(mon, lop, chuong):
+    from dang_routes import _chapter_lessons, _lesson_title
+
+    rows = []
+    for item in _chapter_lessons(mon, lop, chuong):
+        path = str(item.get("path") or item.get("file") or "").replace("\\", "/")
+        title = _lesson_title(item) or (path.rsplit("/", 1)[-1] if path else "Bài")
+        if not path.startswith("ngan-hang/"):
+            continue
+        try:
+            qs = load_qs(path)
+        except Exception:
+            qs = []
+        rows.append((title, path, qs))
+    return rows
+
+
+def _plain_snip(text, n=72):
+    t = re.sub(r"\\[a-zA-Z]+\*?", " ", str(text or ""))
+    t = t.replace("{", " ").replace("}", " ").replace("$", " ")
+    t = re.sub(r"\s+", " ", t).strip()
+    if len(t) > n:
+        t = t[: n - 1] + "…"
+    return t
+
+
+def _chapter_chosen(rows, form, shuffle):
+    """Câu đã tick, hoặc số câu theo loại. None nếu không dùng cách này."""
+    index = {}
+    for i, (_title, path, qs) in enumerate(rows):
+        for q in qs:
+            try:
+                index[(i, int(q.get("idx")))] = (path, q)
+            except (TypeError, ValueError):
+                continue
+    chosen = []
+    seen = set()
+    raws = form.getlist("qsel") if hasattr(form, "getlist") else []
+    for raw in raws:
+        try:
+            a, b = str(raw).split(":", 1)
+            key = (int(a), int(b))
+        except (TypeError, ValueError):
+            continue
+        if key in index and key not in seen:
+            seen.add(key)
+            chosen.append(index[key])
+    if chosen:
+        return chosen
+    wants = {}
+    any_pick = False
+    for kind, _lab in _MX_KINDS:
+        try:
+            n = max(0, int(form.get(f"kpick:{kind}") or 0))
+        except (TypeError, ValueError):
+            n = 0
+        wants[kind] = n
+        if n:
+            any_pick = True
+    if not any_pick:
+        return None
+    pools = {k: [] for k, _lab in _MX_KINDS}
+    for _title, path, qs in rows:
+        for q in qs:
+            k = str(q.get("kind") or "")
+            if k in pools:
+                pools[k].append((path, q))
+    chosen = []
+    for kind, _lab in _MX_KINDS:
+        n = wants.get(kind) or 0
+        pool = pools.get(kind) or []
+        if n <= 0 or not pool:
+            continue
+        if shuffle:
+            chosen.extend(random.sample(pool, min(n, len(pool))))
+        else:
+            chosen.extend(pool[: min(n, len(pool))])
+    return chosen
+
+
+def _merge_chosen(chosen):
+    picked = []
+    merged = []
+    for path, q in chosen:
+        picked.append({"path": path, "idx": int(q["idx"])})
+        qq = dict(q)
+        qq["idx"] = len(merged)
+        merged.append(qq)
+    return picked, merged
+
+
+def build_chapter_exam(shuffle, auto_print, copies_n, ruled, mon, lop, chuong):
+    back = "/member/chapter/matrix?" + _chapter_query(mon, lop, chuong)
+    rows = _chapter_rows(mon, lop, chuong)
+    form = request.form
+    chosen = _chapter_chosen(rows, form, bool(shuffle))
+    if chosen is not None:
+        if not chosen or not rows:
+            return page(
+                "Tạo đề",
+                "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+                "Chưa chọn được câu nào. Điền <b>số câu theo loại</b>, tick câu trong từng bài, "
+                "hoặc điền ô ma trận rồi bấm <b>Tạo đề</b>, <b>Trộn đề</b> hoặc <b>In đề</b>.</div>"
+                f"<p><a class='btn' href='{_esc(back)}'>← Về ma trận</a></p></div></div></div>",
+            )
+        picked, merged = _merge_chosen(chosen)
+        title = " · ".join(x for x in (mon, ("Lớp " + lop) if lop else "", chuong) if x)
+        _save_exam(
+            rows[0][1],
+            merged,
+            [q["idx"] for q in merged],
+            copies_n,
+            shuffle=bool(shuffle or copies_n > 1),
+            title=title,
+            back=back,
+            qmap=picked,
+            ruled=ruled,
+        )
+        return render_exam(auto_print=auto_print)
+    picked = []
+    merged = []
+    for i, (_title, path, qs) in enumerate(rows):
+        for kind, _kl in _MX_KINDS:
+            for lev, _ll in _MX_LEVELS:
+                try:
+                    n = max(0, int(form.get(f"cpick:{i}:{kind}:{lev}") or 0))
+                except (TypeError, ValueError):
+                    n = 0
+                if n <= 0:
+                    continue
+                pool = [q for q in qs if q.get("kind") == kind and q.get("level") == lev]
+                if not pool:
+                    continue
+                for q in random.sample(pool, min(n, len(pool))):
+                    picked.append({"path": path, "idx": int(q["idx"])})
+                    qq = dict(q)
+                    qq["idx"] = len(merged)
+                    merged.append(qq)
+    if not merged or not rows:
+        return page(
+            "Tạo đề",
+            "<div class='wrap'><div class='panel'><div class='body'><div class='err'>"
+            "Chưa chọn được câu nào. Điền số câu <b>NB / TH / VD / VDC</b> theo từng bài rồi bấm "
+            "<b>Tạo đề</b>, <b>Trộn đề</b> hoặc <b>In đề</b>.</div>"
+            f"<p><a class='btn' href='{_esc(back)}'>← Về ma trận</a></p></div></div></div>",
+        )
+    title = " · ".join(x for x in (mon, ("Lớp " + lop) if lop else "", chuong) if x)
+    _save_exam(
+        rows[0][1],
+        merged,
+        [q["idx"] for q in merged],
+        copies_n,
+        shuffle=bool(shuffle or copies_n > 1),
+        title=title,
+        back=back,
+        qmap=picked,
+        ruled=ruled,
+    )
+    return render_exam(auto_print=auto_print)
+
+
+def chapter_matrix_html(mon, lop, chuong):
+    rows = _chapter_rows(mon, lop, chuong)
+    if not rows:
+        return ""
+    body_rows = []
+    total = 0
+    for i, (title, _path, qs) in enumerate(rows):
+        total += len(qs)
+        kind_cells = []
+        for kind, label in _MX_KINDS:
+            picks = []
+            for z, lab in _MX_LEVELS:
+                n = sum(1 for q in qs if q.get("kind") == kind and q.get("level") == z)
+                off = " off" if n <= 0 else ""
+                dis = " disabled" if n <= 0 else ""
+                picks.append(
+                    f"<span class='mxpick{off}' title='{html.escape(label)} · {html.escape(lab)} · kho {n}'>"
+                    f"<b>{n}</b>"
+                    f"<input class='n' type='number' min='0' max='{n}' value='0' "
+                    f"name='cpick:{i}:{kind}:{z}' aria-label='{html.escape(title)} {html.escape(label)} {html.escape(lab)}'{dis}>"
+                    f"</span>"
+                )
+            kind_cells.append("<td class='mxkind'><div class='mxline'>" + "".join(picks) + "</div></td>")
+        body_rows.append(
+            f"<tr><td class='mxname'>{i + 1}. {html.escape(title)} <span class='tag'>{len(qs)}</span></td>"
+            + "".join(kind_cells)
+            + "</tr>"
+        )
+    back = "/member/chapter?" + _chapter_query(mon, lop, chuong)
+    heading = " · ".join(x for x in (mon, ("Lớp " + lop) if lop else "", chuong) if x)
+    levlab = dict(_MX_LEVELS)
+    short_kind = {"TN": "TN", "DS": "ĐS", "TLN": "TLN", "TL": "TL"}
+    kc = {k: 0 for k, _lab in _MX_KINDS}
+    pick_blocks = []
+    for i, (title, _path, qs) in enumerate(rows):
+        lines = []
+        for q in qs:
+            k = str(q.get("kind") or "")
+            if k in kc:
+                kc[k] += 1
+            try:
+                idx = int(q.get("idx"))
+            except (TypeError, ValueError):
+                continue
+            lab = levlab.get(str(q.get("level") or ""), str(q.get("level") or ""))
+            lines.append(
+                "<label class='qselrow'>"
+                f"<input type='checkbox' name='qsel' value='{i}:{idx}' data-k='{html.escape(k, quote=True)}'>"
+                f"<b>{html.escape(short_kind.get(k, k))}</b>"
+                f"<span class='tag'>{html.escape(lab)}</span>"
+                f"<span class='qid'>{html.escape(str(q.get('id') or ''))}</span>"
+                f"{html.escape(_plain_snip(q.get('text') or ''))}"
+                "</label>"
+            )
+        pick_blocks.append(
+            f"<details class='chpick'><summary>{i + 1}. {html.escape(title)}"
+            f" <span class='tag'>{len(qs)} câu</span></summary>"
+            + "".join(lines)
+            + "</details>"
+        )
+    kind_inputs = "".join(
+        f"<label>{html.escape(label)} <input class='kpick' data-k='{kind}' name='kpick:{kind}' "
+        f"type='number' min='0' max='{kc[kind]}' value='0'> / {kc[kind]}</label>"
+        for kind, label in _MX_KINDS
+        if kc[kind]
+    )
+    pick_bar = (
+        "<div class='kindbar'><b>Tạo / trộn đề theo số câu, từ câu được chọn</b>"
+        + kind_inputs
+        + "<button type='button' class='btn primary' id='applyKpick'>Áp dụng số câu</button></div>"
+        "<p class='muted'>Điền số câu mỗi loại rồi bấm <b>Tạo đề</b> hoặc <b>Trộn đề</b>. "
+        "Muốn đúng từng câu thì mở bài bên dưới, tick câu, rồi bấm tạo đề. "
+        "<b>Áp dụng số câu</b> tick sẵn bấy nhiêu câu mỗi loại.</p>"
+        + "".join(pick_blocks)
+    )
+    controls = (
+        "<label class='examcopies'>Số bản trộn <input name='exam_copies' type='number' min='1' max='20' value='1'></label>"
+        "<label class='examcopies'>Ghi bài <select name='exam_ruled'>"
+        "<option value='0'>Không dòng kẻ</option><option value='1'>Có dòng kẻ</option></select></label>"
+    )
+    submits = (
+        "<button class='btn green' type='submit' name='exam_action' value='create'>📝 Tạo đề</button>"
+        "<button class='btn' type='submit' name='exam_action' value='shuffle'>🔀 Trộn đề</button>"
+        "<button class='btn' type='submit' name='exam_action' value='print'>🖨 In đề</button>"
+    )
+    return (
+        "<form method='post' action='/member/exam' id='examMatrix' class='exammatrix'>"
+        "<input type='hidden' name='chapter' value='1'>"
+        f"<input type='hidden' name='mon' value='{_esc(mon)}'>"
+        f"<input type='hidden' name='lop' value='{_esc(lop)}'>"
+        f"<input type='hidden' name='chuong' value='{_esc(chuong)}'>"
+        "<div class='notice'>📝 <b>Ma trận cả chương</b> — mỗi dòng là một bài. Số xanh là số câu đang có, ô là số câu lấy. "
+        f"Kho cả chương: <b>{total}</b> câu. "
+        "Ngay dưới là <b>tạo / trộn theo số câu từ câu được chọn</b>. "
+        "Bảng tiếp theo là ma trận từng bài. <b>Trộn đề</b> và <b>In đề</b> xáo câu trong từng phần, đảo A–D và a)–d).</div>"
+        + "<div class='modebar'>" + controls + submits + "</div>"
+        + pick_bar
+        + "<div class='selectwrap'><table class='selectgrid mxone'><tr><th>Bài</th>"
+        + "".join(
+            "<th>"
+            + html.escape(label)
+            + "<div class='mxlabs'><span title='Nhận biết'>NB</span><span title='Thông hiểu'>TH</span>"
+            "<span title='Vận dụng'>VD</span><span title='Vận dụng cao'>VDC</span></div></th>"
+            for _kind, label in _MX_KINDS
+        )
+        + "</tr>"
+        + "".join(body_rows)
+        + "</table></div>"
+        "<div id='examSum' class='notice' style='margin-top:10px'>TỔNG CHỌN: 0 câu</div>"
+        + "<div class='modebar'>" + submits + f"<a class='btn' href='{_esc(back)}'>← Cả chương</a></div>"
+        + "</form>"
+        "<p class='muted' style='margin-top:8px'>" + html.escape(heading) + "</p>"
+        "<style>.exammatrix .modebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}"
+        ".exammatrix .examcopies{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}"
+        ".exammatrix .examcopies input,.exammatrix .examcopies select{padding:6px;border:1px solid #cbd8e6;border-radius:6px;background:#fff}"
+        ".exammatrix .examcopies input{width:64px;text-align:center}"
+        ".exammatrix table.mxone{width:max-content}"
+        ".exammatrix .mxone th,.exammatrix .mxone td{padding:3px 5px;vertical-align:middle}"
+        ".exammatrix .mxname{text-align:left;font-weight:700;line-height:1.25;white-space:nowrap}"
+        ".exammatrix .mxlabs,.exammatrix .mxline{display:grid;grid-template-columns:repeat(4,48px);gap:2px;justify-content:center;align-items:center}"
+        ".exammatrix .mxlabs span{font-size:10px;font-weight:800;color:#334155;text-align:center}"
+        ".exammatrix td.mxkind{background:#f0fdf4}"
+        ".exammatrix .mxpick{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2px}"
+        ".exammatrix .mxpick b{font-size:11px;line-height:1;font-weight:800;color:#166534;min-width:1.1em;text-align:right}"
+        ".exammatrix .mxpick .n{width:26px;padding:1px 0;font-size:12px;font-weight:800}"
+        ".exammatrix .mxpick.off{opacity:.38}"
+        ".exammatrix .kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;padding:10px;border:2px solid #15803d;border-radius:10px;background:#f0fdf4}"
+        ".exammatrix .kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}"
+        ".exammatrix .kindbar input{width:58px;padding:6px;border:1px solid #86efac;border-radius:6px;text-align:center}"
+        ".exammatrix .chpick{margin:6px 0;border:1px solid #d7e2ee;border-radius:8px;background:#fff;padding:6px 10px}"
+        ".exammatrix .chpick summary{cursor:pointer;font-weight:800}"
+        ".exammatrix .qselrow{display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-top:1px dashed #e5edf5;font-size:13px;line-height:1.35}"
+        ".exammatrix .qselrow input{margin-top:3px}</style>"
+        "<script>(function(){var f=document.getElementById('examMatrix');if(!f)return;"
+        "function clamp(x){var m=Number(x.max)||0,v=Math.max(0,Math.min(m,Number(x.value)||0));x.value=v;return v;}"
+        "function countAll(){var m=0,k=0;f.querySelectorAll('.n').forEach(function(x){m+=clamp(x)});f.querySelectorAll('.kpick').forEach(function(x){k+=clamp(x)});return {m:m,k:k,s:f.querySelectorAll('input[name=qsel]:checked').length};}"
+        "function upd(){var c=countAll();var s=document.getElementById('examSum');if(s)s.textContent='Theo loại: '+c.k+' câu · Đã tick: '+c.s+' câu · Ma trận: '+c.m+' câu';}"
+        "var apply=document.getElementById('applyKpick');if(apply)apply.addEventListener('click',function(){"
+        "f.querySelectorAll('input[name=qsel]').forEach(function(x){x.checked=false});"
+        "f.querySelectorAll('.kpick').forEach(function(inp){var k=inp.getAttribute('data-k');var want=clamp(inp);var boxes=f.querySelectorAll('input[name=qsel][data-k=\"'+k+'\"]');for(var i=0;i<boxes.length&&i<want;i++)boxes[i].checked=true;});"
+        "upd();});"
+        "f.querySelectorAll('.n,.kpick').forEach(function(x){x.addEventListener('input',upd)});"
+        "f.querySelectorAll('input[name=qsel]').forEach(function(x){x.addEventListener('change',upd)});"
+        "upd();"
+        "f.addEventListener('submit',function(e){var c=countAll();"
+        "if(c.m+c.k+c.s<=0){e.preventDefault();alert('Điền số câu theo loại, tick câu trong bài, hoặc điền ô ma trận, rồi bấm Tạo đề, Trộn đề hoặc In đề.');}});"
+        "})();</script>"
+    )
+
+
+@app.get("/member/chapter/matrix")
+def member_chapter_matrix():
+    if not can_manage_bank():
+        return redirect("/member/login")
+    mon = str(request.args.get("mon") or "").strip()
+    lop = str(request.args.get("lop") or "").strip()
+    chuong = str(request.args.get("chuong") or "").strip()
+    if not mon or not chuong:
+        return redirect("/member")
+    grid = chapter_matrix_html(mon, lop, chuong)
+    back = "/member/chapter?" + _chapter_query(mon, lop, chuong)
+    if not grid:
+        return page(
+            "Ma trận",
+            "<div class='wrap'><div class='panel'><div class='body'><div class='err'>Không thấy bài trong chương này.</div>"
+            f"<p><a class='btn' href='{_esc(back)}'>← Cả chương</a></p></div></div></div>",
+        )
+    title = " · ".join(x for x in (mon, ("Lớp " + lop) if lop else "", chuong) if x)
+    body = (
+        "<div class='wrap'><div class='panel'><div class='head'>📝 Tạo đề theo ma trận · "
+        + html.escape(title)
+        + "</div><div class='body'>"
+        + grid
+        + "</div></div></div>"
+    )
+    return page("Tạo đề theo ma trận", body)
 
 
 def exam_buttons_html(admin=True):
