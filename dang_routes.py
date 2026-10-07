@@ -386,7 +386,6 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             f"<button type='button' class='btn mini rwedit' data-drop='{drop_key}'>✏️ Sửa đề / lời giải</button>"
             f"<button type='button' class='btn mini rwimgs' data-drop='{drop_key}'>🖼 Ảnh thư mục</button>"
             f"<button type='button' class='btn mini rwtikzbtn' data-drop='{drop_key}'>📐 Mã TikZ</button>"
-            f"<button type='button' class='btn mini rwnbprompt' data-drop='{drop_key}'>✨ Prompt ảnh vở + Phiếu</button>"
             f"<button form='qdel' class='btn mini red' type='submit' name='drop' value='{drop_key}' onclick=\"return confirm('Xóa vĩnh viễn câu này khỏi file TEX? Không hoàn tác trên trang này.')\">🗑 Xóa câu</button>"
             "<span class='muted'>Sửa / xóa trực tiếp trên file TEX, không cần GitHub.</span><div class='rwout'></div></div>")
     dcls=' dupcard' if dup.get('label') else ''
@@ -407,7 +406,6 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"{tex_badge}{gh}{nguon_html(q)}<span class='level muc-{muc}'>Mức {html.escape(muc_label(muc))}</span>"
             + (f"<button type='button' class='btn mini presentQ' data-idx='{n}'>📺 Chiếu câu</button>" if can_manage_bank() else "")
-            + (f"<button type='button' class='btn mini aiPhotoBtn' data-drop='{drop_key}'>📷 Chụp ảnh → prompt</button>" if can_manage_bank() else "")
             + (f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại</button>" if can_manage_bank() else "")
             + "</div>"
             f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text, src)}</div></div>{options}{develop_reference_html(q, src)}{rw}{sol_html}</article>")
@@ -540,8 +538,7 @@ def member_dang():
     elif admin_view:
         guest_note="<div class='notice'>🔐 ADMIN · xem đáp án và lời giải ngay trên từng thẻ, không cần làm bài.</div>"
         tools=(kindbar+
-          "<div class='toolbar'><button type='button' class='btn aiPhotoBtn'>📷 Chụp ảnh → prompt</button>"
-          "<button type='button' class='btn primary' id='qPresentBtn'>📺 Chiếu câu đã chọn</button>"
+          "<div class='toolbar'><button type='button' class='btn primary' id='qPresentBtn'>📺 Chiếu câu đã chọn</button>"
           "<button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
           + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if can_manage_bank() and (dao_n or cung_n) else "")
@@ -2586,7 +2583,6 @@ def member_chapter():
             "<strong>Nhận đề cả chương</strong>"
             "<span class='ai-hint'>Nhiều file · Word · PDF · TEX</span>"
             "<label class='btn'>Ảnh<input id='aiImgFile' type='file' accept='image/png,image/jpeg,image/webp,image/gif' multiple></label>"
-            "<button type='button' class='btn aiPhotoBtn'>📷 Chụp ảnh → prompt</button>"
             "<label class='btn'>Word / PDF / TEX<input id='aiSrcFile' type='file' multiple accept='.doc,.docx,.pdf,.tex,.ltx,.txt,text/plain,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'></label>"
             "<button type='button' class='btn green' id='aiImport'>AI phân tích → tách bài / dạng</button>"
             "</div><div id='aiStatus' class='ai-status' hidden></div><div class='ai-shots' id='aiShots'></div>"
@@ -2601,17 +2597,6 @@ def member_chapter():
         + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong)
         + " <span class='tag'>" + str(len(sibs)) + " bài · " + str(total) + " câu</span></div><div class='body'>"
         + "<p class='muted'>Bấm tên chương ở menu là vào đây. Thả đề, AI tách vào từng bài và từng dạng đang có. Bấm một dạng nếu chỉ muốn mở riêng chỗ đó.</p>"
-        + (
-            "<p><a class='btn green' href='"
-            + html.escape(
-                "/member/chapter/matrix?mon=" + urllib.parse.quote(mon, safe="")
-                + "&lop=" + urllib.parse.quote(lop, safe="")
-                + "&chuong=" + urllib.parse.quote(chuong, safe=""),
-                quote=True,
-            )
-            + "'>📝 Tạo đề theo ma trận</a></p>"
-            if can_manage_bank() else ""
-        )
         + admin
         + "<div class='drawbais'>" + ''.join(blocks) + "</div>"
         + "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
