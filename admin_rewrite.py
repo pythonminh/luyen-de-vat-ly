@@ -1799,7 +1799,7 @@ Không được thay đổi dữ kiện toán học, vật lý, hóa học hoặ
 II. PHONG CÁCH TRANG VỞ — BẮT BUỘC GIỐNG MẪU KHỐI
 =============================
 
-Thiết kế thành MỘT TRANG DỌC TỈ LỆ A4 (khoảng 1240×1754 px hoặc 1480×2100 px), độ nét cao, như tài liệu in màu của trung tâm luyện thi.
+Thiết kế thành MỘT TRANG  TỈ LỆ A4 nằm ngang vừa màn hình di động (khoảng 1240×1754 px hoặc 1480×2100 px), độ nét cao, như tài liệu in màu của trung tâm luyện thi.
 
 Mẫu bố cục chuyên nghiệp (bắt buộc dùng KHỐI / CARD, không để chữ trôi tự do trên giấy):
 
@@ -2016,7 +2016,7 @@ Hàng giữa 2 cột:
 ↓
 [NHẬN XÉT – GHI NHỚ — khung full đáy trang]
 
-Tự điều chỉnh để toàn bộ nằm gọn một trang A4, nét, đều, chuyên nghiệp.
+Tự điều chỉnh để toàn bộ nằm gọn một trang A4 nằm ngang, nét, đều, chuyên nghiệp.
 
 NỘI DUNG TRANG — mỗi dòng dưới đây là một dòng trên trang, giữ nguyên thứ tự, không gộp, không cắt giữa dòng:
 --------------------------------
