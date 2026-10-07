@@ -2501,7 +2501,7 @@ def _tikz_html_from_tex(tex, src):
     return "".join(htmls)
 
 
-_PHIEU_A4_HEAD = """Xuất ra ẢNH một trang A4 dọc (khoảng 1240×1754 px). Không viết lại prompt. Không giải thích. Hãy vẽ luôn.
+_PHIEU_A4_HEAD = """Xuất ra ẢNH một trang A4 ngang vừa màn hình điện thoại (khoảng 1240×1754 px). Không viết lại prompt. Không giải thích. Hãy vẽ luôn.
 
 Thanh thương hiệu TRÊN CÙNG, chữ vừa (12 pt), không chiếm quá 8% chiều cao trang:
 Lớp Học Thầy Minh    ·    Zalo 0946111107
