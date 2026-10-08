@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 182,
+  "total_files": 183,
   "total_questions": 12236,
   "lessons": [
     {
@@ -1317,6 +1317,20 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương II/L10C2 Bài 7. Đồ thị dịch chuyển thời gian/de.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương II/L10C2 Bài 7. Đồ thị dịch chuyển thời gian/de.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương II/L10C2 Bài 7. Đồ thị dịch chuyển thời gian/de.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương II",
+      "BaiHoc": "L10C2 Bài 7. Đồ thị dịch chuyển thời gian",
+      "De": "L10C2 Bài 7. Đồ thị dịch chuyển thời gian",
+      "questions": 0,
+      "count": 0,
+      "dang": {},
+      "dang_kinds": {}
     },
     {
       "id": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 13. Tổng hợp và phân tích lực. Cân bằng lực/de.tex",
