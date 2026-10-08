@@ -1799,7 +1799,9 @@ Không được thay đổi dữ kiện toán học, vật lý, hóa học hoặ
 II. PHONG CÁCH TRANG VỞ — BẮT BUỘC GIỐNG MẪU KHỐI
 =============================
 
-Thiết kế thành MỘT TRANG  TỈ LỆ A4 nằm ngang vừa màn hình di động (khoảng 1240×1754 px hoặc 1480×2100 px), độ nét cao, như tài liệu in màu của trung tâm luyện thi.
+Thiết kế thành MỘT TRANG  TỈ LỆ A4 NẰM NGANG.
+Ưu tiên khung hình 1.414:1.
+Kích thước tham chiếu: khoảng 1754×1240 px hoặc 2100×1480 px. độ nét cao, như tài liệu in màu của trung tâm luyện thi.
 
 Mẫu bố cục chuyên nghiệp (bắt buộc dùng KHỐI / CARD, không để chữ trôi tự do trên giấy):
 
@@ -1824,12 +1826,22 @@ Không làm ảnh chụp vở bút bi lem, không giấy nhàu, không sticker l
 II.b THƯƠNG HIỆU (KHÔNG ĐƯỢC THIẾU)
 =============================
 
-Dòng đầu tiên của trang, trên tiêu đề dạng bài:
+=============================
+II.b THƯƠNG HIỆU — BẮT BUỘC
+=============================
 
-Lớp Học Thầy Minh
-Zalo: 0946111107
+Thanh thương hiệu phải nằm ở MÉP TRÊN CÙNG, phía trên tiêu đề bài.
 
-Viết đúng chính tả và đúng số 0946111107. Có thể thêm dòng phụ nhỏ: lophocthayminh.onrender.com
+Nội dung chính xác:
+
+Lớp Học Thầy Minh · Zalo 0946111107
+
+Không được viết sai chính tả.
+Không được thay đổi số 0946111107.
+Không được bỏ thanh thương hiệu.
+
+Có thể thêm dòng phụ nhỏ:
+lophocthayminh.onrender.com
 
 =============================
 III. BỐ CỤC TỰ ĐỘNG
@@ -1932,8 +1944,10 @@ VI. CHỮ, CÔNG THỨC, XUỐNG DÒNG — QUAN TRỌNG NHẤT
 
 Phần NỘI DUNG ở cuối prompt đã được xuống dòng sẵn. Mỗi dòng là một dòng trên trang.
 
-- Xuống dòng đúng như bản chữ. Không gộp nhiều dòng thành một dòng.
-- Không cắt một dòng ra hai dòng ở giữa một từ hoặc giữa một công thức.
+- Giữ nguyên thứ tự và nội dung từng dòng nguồn.
+- Ưu tiên giữ mỗi dòng nguồn thành một dòng riêng.
+- Nếu một dòng quá dài không thể vừa trong khung, được phép xuống dòng phụ tại khoảng trắng.
+- Tuyệt đối không tách giữa một từ, số liệu, đơn vị, ký hiệu hoặc công thức.
 - Trong mỗi khung: chữ căn trái, dãn dòng đều (khoảng 1,4), chừa lề trong khung khoảng 12 px. Hết chiều ngang khung thì xuống dòng tại khoảng trắng.
 - Không để chữ tràn khỏi khung, không chồng dòng, không dính chữ vào viền. Thiếu chỗ thì thu nhỏ chữ, không cắt mất chữ.
 - Dòng là công thức (chỉ số, số mũ, phân số, ≈ × °): đặt một dòng riêng, căn giữa, viết như sách giáo khoa. Không in dấu $, không in gạch chéo ngược, không in lệnh TeX.
@@ -2026,11 +2040,17 @@ NỘI DUNG TRANG — mỗi dòng dưới đây là một dòng trên trang, gi�
 Hãy trực tiếp vẽ trang. Chữ phải thẳng hàng, xuống dòng đúng bản trên, công thức căn giữa, không in mã TeX.
 """
 
+
 _NOTEBOOK_MOTION = (
-    "Trang tĩnh đã xong. Nếu bài có quá trình theo thời gian, hãy tạo thêm animation "
-    "hoặc chuỗi 4–8 khung theo mục V. Không đổi số liệu, công thức, đáp án. "
-    "Xuất ra ẢNH/GIF, không viết lại prompt."
+    "Trang tĩnh đã xong. Nếu bài có quá trình theo thời gian, "
+    "hãy tạo thêm minh họa chuyển động bằng chuỗi 4–8 khung liên tiếp "
+    "theo mục V, có mũi tên hoặc thanh thời gian. "
+    "Không đổi số liệu, công thức, đáp án. "
+    "Nếu hệ thống hỗ trợ GIF/animation thì có thể tạo animation; "
+    "nếu không thì xuất chuỗi khung hình trên ảnh. "
+    "Không viết lại prompt."
 )
+
 
 
 def _notebook_latex(q, tex, fi):
