@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12236,
+  "total_questions": 12242,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1315,6 +1315,29 @@
           "DS": 0,
           "TLN": 0,
           "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 10/Chương II/L10C2 Bài 4/de.tex",
+      "file": "ngan-hang/Vật lý/Lớp 10/Chương II/L10C2 Bài 4/de.tex",
+      "path": "ngan-hang/Vật lý/Lớp 10/Chương II/L10C2 Bài 4/de.tex",
+      "Mon": "Vật lý",
+      "Lop": "10",
+      "Chuong": "Chương II",
+      "BaiHoc": "L10C2 Bài 4",
+      "De": "L10C2 Bài 4",
+      "questions": 1,
+      "count": 1,
+      "dang": {
+        "Chưa phân dạng": 1
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 0,
+          "TL": 1
         }
       }
     },
@@ -6309,19 +6332,6 @@
           "TL": 6
         }
       }
-    },
-    {
-      "id": "ngan-hang/Vật lý/Lớp 10/Chương II/L10C2 Bài 4/de.tex",
-      "file": "ngan-hang/Vật lý/Lớp 10/Chương II/L10C2 Bài 4/de.tex",
-      "path": "ngan-hang/Vật lý/Lớp 10/Chương II/L10C2 Bài 4/de.tex",
-      "Mon": "Vật lý",
-      "Lop": "10",
-      "Chuong": "Chương II",
-      "BaiHoc": "L10C2 Bài 4",
-      "De": "L10C2 Bài 4",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
     }
   ]
 }
