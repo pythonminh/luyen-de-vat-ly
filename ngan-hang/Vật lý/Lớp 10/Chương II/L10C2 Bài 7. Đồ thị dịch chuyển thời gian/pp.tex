@@ -1,1 +1,217 @@
+% Môn: Vật lý
+% Lớp: 10
+% Chương: Chương II
+% Bài: L10C2 Bài 7. Đồ thị dịch chuyển thời gian
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
+\input{../../../../_lenh/lythuyet.tex}
 
+\subsection{Dạng bài tập mẫu}
+
+\subsubsection{Dạng: Đọc thông tin từ đồ thị dịch chuyển - thời gian}
+\begin{phuongphap}
+Để đọc thông tin từ đồ thị dịch chuyển - thời gian ($d-t$), ta thực hiện các bước sau:
+\begin{enumerate}
+    \item \textbf{Xác định trục tọa độ:} Trục hoành biểu diễn thời gian $t$ (thường là giây hoặc giờ), trục tung biểu diễn dịch chuyển $d$ (thường là mét hoặc kilômét).
+    \item \textbf{Xác định vị trí ban đầu:} Vị trí của vật tại thời điểm $t=0$ chính là giá trị $d$ mà đồ thị cắt trục tung.
+    \item \textbf{Xác định dịch chuyển tại một thời điểm cụ thể:} Từ giá trị thời gian $t_1$ trên trục hoành, kẻ đường thẳng vuông góc với trục hoành, cắt đồ thị tại một điểm. Từ điểm đó, kẻ đường thẳng vuông góc với trục tung, giá trị $d_1$ trên trục tung chính là dịch chuyển của vật tại thời điểm $t_1$.
+    \item \textbf{Xác định thời điểm vật đạt dịch chuyển cụ thể:} Từ giá trị dịch chuyển $d_1$ trên trục tung, kẻ đường thẳng vuông góc với trục tung, cắt đồ thị tại một hoặc nhiều điểm. Từ các điểm đó, kẻ đường thẳng vuông góc với trục hoành, các giá trị $t_1$ trên trục hoành chính là các thời điểm vật đạt dịch chuyển $d_1$.
+    \item \textbf{Xác định quãng đường đi được hoặc độ dịch chuyển trong một khoảng thời gian:}
+    \begin{itemize}
+        \item \textbf{Độ dịch chuyển:} Là sự thay đổi vị trí của vật. Để tìm độ dịch chuyển từ thời điểm $t_1$ đến $t_2$, ta xác định dịch chuyển $d_1$ tại $t_1$ và $d_2$ tại $t_2$. Độ dịch chuyển là $\Delta d = d_2 - d_1$. Chú ý dấu của $\Delta d$ cho biết chiều dịch chuyển.
+        \item \textbf{Quãng đường đi được:} Là tổng chiều dài quỹ đạo mà vật đi được. Để tìm quãng đường đi được, ta cần xem xét các đoạn đồ thị. Nếu đồ thị đi lên (dịch chuyển tăng) hoặc đi xuống (dịch chuyển giảm), quãng đường đi được là trị tuyệt đối của sự thay đổi dịch chuyển trên đoạn đó. Tổng quãng đường đi được là tổng các trị tuyệt đối này.
+    \end{itemize}
+    \item \textbf{Xác định trạng thái chuyển động:}
+    \begin{itemize}
+        \item Đồ thị là đường thẳng nằm ngang: Vật đứng yên (dịch chuyển không đổi).
+        \item Đồ thị là đường thẳng xiên lên (dốc dương): Vật chuyển động thẳng đều theo chiều dương.
+        \item Đồ thị là đường thẳng xiên xuống (dốc âm): Vật chuyển động thẳng đều theo chiều âm.
+        \item Đồ thị là đường cong: Vật chuyển động không đều (có gia tốc).
+    \end{itemize}
+\end{enumerate}
+\end{phuongphap}
+
+\begin{vidumau}
+Đồ thị dịch chuyển - thời gian của một vật chuyển động được cho như hình vẽ.
+\begin{center}
+    % Giả sử có hình ảnh đồ thị ở đây, ví dụ:
+    % \includegraphics[width=0.6\textwidth]{do_thi_dt_vidu.png}
+    % Mô tả đồ thị:
+    % Trục hoành: t (s) từ 0 đến 10
+    % Trục tung: d (m) từ 0 đến 10
+    % Điểm (0,0) -> (2,4) -> (6,4) -> (10,0)
+    \begin{tikzpicture}
+        \draw[->] (0,0) -- (11,0) node[right] {$t$ (s)};
+        \draw[->] (0,0) -- (0,5) node[above] {$d$ (m)};
+        \foreach \x in {2,4,6,8,10} \draw (\x,0.1) -- (\x,-0.1) node[below] {\x};
+        \foreach \y in {1,2,3,4} \draw (0.1,\y) -- (-0.1,\y) node[left] {\y};
+        \draw[thick,blue] (0,0) -- (2,4) -- (6,4) -- (10,0);
+        \node at (0,-0.5) {0};
+    \end{tikzpicture}
+\end{center}
+Xác định độ dịch chuyển của vật trong khoảng thời gian từ $t=2$ s đến $t=6$ s.
+\choice
+    \choiceitem{A. 4 m}
+    \choiceitem{B. 0 m}
+    \choiceitem{C. -4 m}
+    \choiceitem{D. 8 m}
+\loigiai{
+Từ đồ thị, ta xác định dịch chuyển của vật tại các thời điểm:
+\begin{itemize}
+    \item Tại $t=2$ s, dịch chuyển của vật là $d_1 = 4$ m.
+    \item Tại $t=6$ s, dịch chuyển của vật là $d_2 = 4$ m.
+\end{itemize}
+Độ dịch chuyển của vật trong khoảng thời gian từ $t=2$ s đến $t=6$ s là:
+$\Delta d = d_2 - d_1 = 4 \text{ m} - 4 \text{ m} = 0 \text{ m}$.
+Vậy, đáp án đúng là B.
+}
+\end{vidumau}
+
+\subsubsection{Dạng: Tính vận tốc từ đồ thị dịch chuyển - thời gian}
+\begin{phuongphap}
+Để tính vận tốc từ đồ thị dịch chuyển - thời gian ($d-t$), ta thực hiện các bước sau:
+\begin{enumerate}
+    \item \textbf{Xác định loại chuyển động:}
+    \begin{itemize}
+        \item Nếu đồ thị là đường thẳng, vật chuyển động thẳng đều. Vận tốc là hằng số.
+        \item Nếu đồ thị là đường cong, vật chuyển động không đều. Ta có thể tính vận tốc trung bình hoặc vận tốc tức thời (độ dốc tiếp tuyến). Trong chương trình THPT, thường xét chuyển động thẳng đều.
+    \end{itemize}
+    \item \textbf{Chọn một đoạn đồ thị thẳng:} Đối với chuyển động thẳng đều, chọn hai điểm bất kỳ $(t_1, d_1)$ và $(t_2, d_2)$ trên đoạn đồ thị thẳng đó.
+    \item \textbf{Tính độ dốc của đường thẳng:} Vận tốc $v$ của vật trong đoạn thời gian đó chính là độ dốc của đường thẳng:
+    $v = \frac{\Delta d}{\Delta t} = \frac{d_2 - d_1}{t_2 - t_1}$.
+    \item \textbf{Chú ý dấu của vận tốc:}
+    \begin{itemize}
+        \item Nếu $v > 0$, vật chuyển động theo chiều dương. Đồ thị dốc lên.
+        \item Nếu $v < 0$, vật chuyển động theo chiều âm. Đồ thị dốc xuống.
+        \item Nếu $v = 0$, vật đứng yên. Đồ thị nằm ngang.
+    \end{itemize}
+    \item \textbf{Đổi đơn vị (nếu cần):} Đảm bảo đơn vị của dịch chuyển và thời gian phù hợp để vận tốc có đơn vị chuẩn (ví dụ: m/s, km/h).
+\end{enumerate}
+\end{phuongphap}
+
+\begin{vidumau}
+Một vật chuyển động có đồ thị dịch chuyển - thời gian như hình vẽ.
+\begin{center}
+    % Giả sử có hình ảnh đồ thị ở đây, ví dụ:
+    % \includegraphics[width=0.6\textwidth]{do_thi_dt_vidu2.png}
+    % Mô tả đồ thị:
+    % Trục hoành: t (s) từ 0 đến 8
+    % Trục tung: d (m) từ 0 đến 10
+    % Điểm (0,2) -> (4,8) -> (8,2)
+    \begin{tikzpicture}
+        \draw[->] (0,0) -- (9,0) node[right] {$t$ (s)};
+        \draw[->] (0,0) -- (0,9) node[above] {$d$ (m)};
+        \foreach \x in {2,4,6,8} \draw (\x,0.1) -- (\x,-0.1) node[below] {\x};
+        \foreach \y in {2,4,6,8} \draw (0.1,\y) -- (-0.1,\y) node[left] {\y};
+        \draw[thick,red] (0,2) -- (4,8) -- (8,2);
+        \node at (0,-0.5) {0};
+    \end{tikzpicture}
+\end{center}
+Tính vận tốc của vật trong khoảng thời gian từ $t=0$ s đến $t=4$ s.
+\choice
+    \choiceitem{A. 1.5 m/s}
+    \choiceitem{B. 2 m/s}
+    \choiceitem{C. -1.5 m/s}
+    \choiceitem{D. 0.5 m/s}
+\loigiai{
+Trong khoảng thời gian từ $t=0$ s đến $t=4$ s, đồ thị là một đoạn thẳng. Ta chọn hai điểm trên đoạn này:
+\begin{itemize}
+    \item Tại $t_1=0$ s, dịch chuyển của vật là $d_1 = 2$ m.
+    \item Tại $t_2=4$ s, dịch chuyển của vật là $d_2 = 8$ m.
+\end{itemize}
+Vận tốc của vật trong khoảng thời gian này là độ dốc của đoạn thẳng:
+$v = \frac{d_2 - d_1}{t_2 - t_1} = \frac{8 \text{ m} - 2 \text{ m}}{4 \text{ s} - 0 \text{ s}} = \frac{6 \text{ m}}{4 \text{ s}} = 1.5 \text{ m/s}$.
+Vậy, đáp án đúng là A.
+}
+\end{vidumau}
+
+\subsubsection{Dạng: So sánh chuyển động của các vật từ đồ thị dịch chuyển - thời gian}
+\begin{phuongphap}
+Để so sánh chuyển động của các vật từ đồ thị dịch chuyển - thời gian, ta thực hiện các bước sau:
+\begin{enumerate}
+    \item \textbf{Xác định vị trí ban đầu:} So sánh giá trị $d$ tại $t=0$ của các đồ thị để biết vật nào xuất phát từ vị trí nào.
+    \item \textbf{Xác định vận tốc của mỗi vật:} Tính độ dốc của từng đồ thị (hoặc từng đoạn đồ thị) để tìm vận tốc của mỗi vật.
+    \item \textbf{So sánh độ lớn vận tốc:} Vật nào có độ dốc (trị tuyệt đối) lớn hơn thì chuyển động nhanh hơn.
+    \item \textbf{So sánh chiều chuyển động:}
+    \begin{itemize}
+        \item Đồ thị dốc lên (độ dốc dương): Chuyển động theo chiều dương.
+        \item Đồ thị dốc xuống (độ dốc âm): Chuyển động theo chiều âm.
+        \item Đồ thị nằm ngang (độ dốc bằng 0): Đứng yên.
+    \end{itemize}
+    \item \textbf{Xác định thời điểm và vị trí gặp nhau:} Các điểm giao nhau của các đồ thị biểu thị thời điểm và vị trí mà các vật gặp nhau.
+    \item \textbf{Xác định khoảng cách giữa các vật:} Tại một thời điểm $t$ bất kỳ, khoảng cách giữa hai vật là trị tuyệt đối hiệu các dịch chuyển của chúng tại thời điểm đó: $|d_A(t) - d_B(t)|$.
+\end{enumerate}
+\end{phuongphap}
+
+\begin{vidumau}
+Hai vật A và B chuyển động có đồ thị dịch chuyển - thời gian như hình vẽ.
+\begin{center}
+    % Giả sử có hình ảnh đồ thị ở đây, ví dụ:
+    % \includegraphics[width=0.6\textwidth]{do_thi_dt_vidu3.png}
+    % Mô tả đồ thị:
+    % Trục hoành: t (s) từ 0 đến 10
+    % Trục tung: d (m) từ 0 đến 10
+    % Vật A: (0,0) -> (5,10)
+    % Vật B: (0,8) -> (10,0)
+    \begin{tikzpicture}
+        \draw[->] (0,0) -- (11,0) node[right] {$t$ (s)};
+        \draw[->] (0,0) -- (0,11) node[above] {$d$ (m)};
+        \foreach \x in {2,4,6,8,10} \draw (\x,0.1) -- (\x,-0.1) node[below] {\x};
+        \foreach \y in {2,4,6,8,10} \draw (0.1,\y) -- (-0.1,\y) node[left] {\y};
+        \draw[thick,blue] (0,0) -- (5,10) node[above right] {A};
+        \draw[thick,red] (0,8) -- (10,0) node[below right] {B};
+        \node at (0,-0.5) {0};
+    \end{tikzpicture}
+\end{center}
+Nhận định nào sau đây là đúng về chuyển động của hai vật?
+\choice
+    \choiceitem{A. Vật A và vật B chuyển động cùng chiều.}
+    \choiceitem{B. Vật A chuyển động nhanh hơn vật B.}
+    \choiceitem{C. Hai vật gặp nhau tại $t=4$ s.}
+    \choiceitem{D. Tại $t=0$ s, vật A cách vật B 8 m.}
+\loigiai{
+Phân tích từng nhận định:
+\begin{itemize}
+    \item \textbf{Vận tốc của vật A:} $v_A = \frac{10 - 0}{5 - 0} = 2$ m/s. (Đồ thị dốc lên, chuyển động theo chiều dương)
+    \item \textbf{Vận tốc của vật B:} $v_B = \frac{0 - 8}{10 - 0} = -0.8$ m/s. (Đồ thị dốc xuống, chuyển động theo chiều âm)
+\end{itemize}
+\begin{itemize}
+    \item \textbf{A. Vật A và vật B chuyển động cùng chiều.} Sai. Vật A chuyển động theo chiều dương ($v_A > 0$), vật B chuyển động theo chiều âm ($v_B < 0$).
+    \item \textbf{B. Vật A chuyển động nhanh hơn vật B.} Đúng. Độ lớn vận tốc của A là $|v_A| = 2$ m/s. Độ lớn vận tốc của B là $|v_B| = |-0.8|$ m/s $= 0.8$ m/s. Vì $2 > 0.8$, nên vật A chuyển động nhanh hơn vật B.
+    \item \textbf{C. Hai vật gặp nhau tại $t=4$ s.} Để tìm thời điểm gặp nhau, ta tìm giao điểm của hai đồ thị.
+    Phương trình chuyển động của A: $d_A = 2t$.
+    Phương trình chuyển động của B: $d_B = 8 - 0.8t$.
+    Khi gặp nhau: $d_A = d_B \Rightarrow 2t = 8 - 0.8t \Rightarrow 2.8t = 8 \Rightarrow t = \frac{8}{2.8} \approx 2.86$ s.
+    Vậy, nhận định C là sai.
+    \item \textbf{D. Tại $t=0$ s, vật A cách vật B 8 m.} Tại $t=0$ s, $d_A(0) = 0$ m và $d_B(0) = 8$ m. Khoảng cách giữa hai vật là $|d_B(0) - d_A(0)| = |8 - 0| = 8$ m. Nhận định D là đúng.
+\end{itemize}
+Có hai đáp án đúng (B và D). Trong trường hợp câu hỏi trắc nghiệm chỉ có một đáp án đúng, cần xem xét lại đề bài hoặc các lựa chọn. Tuy nhiên, nếu đây là câu hỏi chọn tất cả các đáp án đúng, thì B và D đều đúng. Nếu chỉ chọn một đáp án đúng nhất, thường câu hỏi sẽ tập trung vào một khía cạnh cụ thể. Giả sử đây là câu hỏi chọn một đáp án đúng, và đáp án B là nhận định về tốc độ, thường được ưu tiên hơn trong các bài so sánh chuyển động.
+Tuy nhiên, để tránh nhầm lẫn trong ví dụ mẫu, ta sẽ sửa lại một lựa chọn để chỉ có một đáp án đúng.
+Giả sử lựa chọn D được sửa thành: "Tại $t=0$ s, vật A và vật B ở cùng một vị trí." thì nó sẽ sai.
+Với các lựa chọn ban đầu, cả B và D đều đúng. Ta chọn B vì nó so sánh tốc độ chuyển động.
+
+\textbf{Sửa lại lựa chọn D để chỉ có một đáp án đúng:}
+\choice
+    \choiceitem{A. Vật A và vật B chuyển động cùng chiều.}
+    \choiceitem{B. Vật A chuyển động nhanh hơn vật B.}
+    \choiceitem{C. Hai vật gặp nhau tại $t=4$ s.}
+    \choiceitem{D. Tại $t=0$ s, vật A và vật B ở cùng một vị trí.}
+\loigiai{
+Phân tích từng nhận định:
+\begin{itemize}
+    \item \textbf{Vận tốc của vật A:} $v_A = \frac{10 - 0}{5 - 0} = 2$ m/s. (Đồ thị dốc lên, chuyển động theo chiều dương)
+    \item \textbf{Vận tốc của vật B:} $v_B = \frac{0 - 8}{10 - 0} = -0.8$ m/s. (Đồ thị dốc xuống, chuyển động theo chiều âm)
+\end{itemize}
+\begin{itemize}
+    \item \textbf{A. Vật A và vật B chuyển động cùng chiều.} Sai. Vật A chuyển động theo chiều dương ($v_A > 0$), vật B chuyển động theo chiều âm ($v_B < 0$).
+    \item \textbf{B. Vật A chuyển động nhanh hơn vật B.} Đúng. Độ lớn vận tốc của A là $|v_A| = 2$ m/s. Độ lớn vận tốc của B là $|v_B| = |-0.8|$ m/s $= 0.8$ m/s. Vì $2 > 0.8$, nên vật A chuyển động nhanh hơn vật B.
+    \item \textbf{C. Hai vật gặp nhau tại $t=4$ s.} Để tìm thời điểm gặp nhau, ta tìm giao điểm của hai đồ thị.
+    Phương trình chuyển động của A: $d_A = 2t$.
+    Phương trình chuyển động của B: $d_B = 8 - 0.8t$.
+    Khi gặp nhau: $d_A = d_B \Rightarrow 2t = 8 - 0.8t \Rightarrow 2.8t = 8 \Rightarrow t = \frac{8}{2.8} \approx 2.86$ s.
+    Vậy, nhận định C là sai.
+    \item \textbf{D. Tại $t=0$ s, vật A và vật B ở cùng một vị trí.} Sai. Tại $t=0$ s, $d_A(0) = 0$ m và $d_B(0) = 8$ m. Hai vật không ở cùng một vị trí.
+\end{itemize}
+Vậy, đáp án đúng là B.
+}
+\end{vidumau}
