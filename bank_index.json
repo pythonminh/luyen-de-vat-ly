@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 184,
-  "total_questions": 12578,
+  "total_files": 185,
+  "total_questions": 12584,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -2565,6 +2565,29 @@
           "TN": 9,
           "DS": 4,
           "TLN": 6,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/baitapdecuong.tex",
+      "file": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/baitapdecuong.tex",
+      "path": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/baitapdecuong.tex",
+      "Mon": "Vật lý",
+      "Lop": "11",
+      "Chuong": "Chương I. Dao động",
+      "BaiHoc": "L11C1 Bài 2. Mô tả dao động điều hòa",
+      "De": "L11C1 Bài 2. Mô tả dao động điều hòa",
+      "questions": 6,
+      "count": 6,
+      "dang": {
+        "Chưa phân dạng": 6
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 6,
+          "DS": 0,
+          "TLN": 0,
           "TL": 0
         }
       }
