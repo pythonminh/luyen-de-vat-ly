@@ -1327,10 +1327,19 @@
       "Chuong": "Chương II",
       "BaiHoc": "L10C2 Bài 7. Đồ thị dịch chuyển thời gian",
       "De": "L10C2 Bài 7. Đồ thị dịch chuyển thời gian",
-      "questions": 0,
-      "count": 0,
-      "dang": {},
-      "dang_kinds": {}
+      "questions": 5,
+      "count": 5,
+      "dang": {
+        "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": 5
+      },
+      "dang_kinds": {
+        "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": {
+          "TN": 3,
+          "DS": 2,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     },
     {
       "id": "ngan-hang/Vật lý/Lớp 10/Chương III. Động lực học/L10C3 Bài 13. Tổng hợp và phân tích lực. Cân bằng lực/de.tex",
