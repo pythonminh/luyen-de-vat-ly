@@ -666,6 +666,23 @@ body.cinema .qbox{padding-right:12px}
 .vip-practice-wrap .vip-inline-nav .practice-filters[open],.vip-practice-wrap .vip-inline-nav .practice-questions[open]{position:static}
  .vip-practice-wrap .vip-inline-nav .practice-filters[open]>.vip-filter-panel,.vip-practice-wrap .vip-inline-nav .practice-questions[open]>.palette{position:absolute;z-index:100;left:10px;right:10px;top:100%;background:white;border:1px solid #d6e3f0;border-radius:9px;box-shadow:0 12px 24px #102b4c25;padding:8px;max-height:55vh;overflow:auto}
 @media(max-width:700px){.vip-practice-wrap .quiztop{gap:4px!important}.vip-practice-wrap .vip-inline-nav{width:auto;gap:3px}.vip-practice-wrap .vip-inline-nav summary{font-size:11px!important;padding:5px!important}.vip-practice-wrap .quizstat{display:none!important}}
+
+.vip-practice-wrap .quiztop{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:6px;flex-wrap:nowrap!important}
+.vip-practice-wrap .quiztop>span:first-child{grid-column:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vip-practice-wrap .quiztop>.qzoombar{grid-column:2;margin:0!important;display:flex!important;flex-wrap:nowrap!important}
+.vip-practice-wrap .quiztop>.quizstat{grid-column:3;margin:0!important;white-space:nowrap}
+.vip-practice-wrap .quiztop>.vip-inline-nav{grid-column:4;margin:0!important;justify-self:end;display:flex!important;flex-wrap:nowrap!important}
+.vip-practice-wrap .vip-inline-nav summary{white-space:nowrap;min-width:105px;text-align:center}
+@media(max-width:760px){
+.vip-practice-wrap .quiztop{grid-template-columns:minmax(0,1fr) auto auto;gap:4px}
+.vip-practice-wrap .quiztop>.quizstat{display:none!important}
+.vip-practice-wrap .quiztop>.vip-inline-nav{grid-column:3}
+.vip-practice-wrap .vip-inline-nav summary{min-width:0;max-width:80px;overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:420px){
+.vip-practice-wrap .quiztop{grid-template-columns:minmax(0,1fr) auto}
+.vip-practice-wrap .quiztop>.vip-inline-nav{grid-column:1/-1;justify-self:end}
+}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
