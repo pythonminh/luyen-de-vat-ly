@@ -4299,12 +4299,22 @@ setInterval(tick,900);
     try{
       const r=await fetch('/api/practice/reshuffle',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
         body:JSON.stringify({src:src,file_idx:fi,api_keys:keys,code:p.code,token:p.token,present:true})});
-      const d=await r.json().catch(function(){return {}});
-      if(!d||!d.ok){alert((d&&d.error)||'Chưa đổi được số.');return;}
+      let d=await r.json().catch(function(){return {}});
+      if(d&&d.ok&&d.job){
+        const job=d.job;
+        d=null;
+        for(let i=0;i<140;i++){
+          await new Promise(function(res){setTimeout(res,2000)});
+          const pr=await fetch('/api/practice/reshuffle?job='+encodeURIComponent(job),{credentials:'same-origin',cache:'no-store'});
+          d=await pr.json().catch(function(){return {}});
+          if(!(d&&d.state==='run')) break;
+        }
+      }
+      if(!d||!d.ok||!d.q&&d.state!=='done'){alert((d&&d.error)||(d&&d.state==='run'?'Đổi số hơi lâu. Bấm lại.':'Chưa đổi được số.'));return;}
       lastVer=-1;
       await tick();
     }catch(e){
-      alert('Không gọi được máy chủ.');
+      alert('Chưa đổi được số. '+(e&&e.message?e.message:'Bấm lại.'));
     }finally{
       delete reshuf.dataset.busy;
       reshuf.disabled=false;

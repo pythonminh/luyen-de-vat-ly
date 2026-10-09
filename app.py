@@ -16,6 +16,7 @@ import random
 import re
 import secrets
 import shutil
+import time
 import subprocess
 import tempfile
 import threading
@@ -4670,6 +4671,20 @@ function verdictHtml(q, student, ok){
   }
   return head;
 }
+async function ldvlReshuffleWait(body){
+  const r=await fetch('/api/practice/reshuffle',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
+  let d=await r.json().catch(function(){return {}});
+  if(!d||!d.ok||!d.job) return d||{ok:false,error:'Chưa đổi được số.'};
+  const job=d.job;
+  for(let i=0;i<140;i++){
+    await new Promise(function(res){setTimeout(res,2000)});
+    const pr=await fetch('/api/practice/reshuffle?job='+encodeURIComponent(job),{credentials:'same-origin',cache:'no-store'});
+    d=await pr.json().catch(function(){return {}});
+    if(d&&d.state==='run') continue;
+    return d||{ok:false,error:'Chưa đổi được số.'};
+  }
+  return {ok:false,error:'Đổi số hơi lâu. Bấm lại.'};
+}
 async function reshuffleQ(){
   if(!Q||Q.file_idx==null||!Q.src){alert('Câu này không đổi số được.');return;}
   const btn=document.getElementById('reshuf');
@@ -4679,16 +4694,14 @@ async function reshuffleQ(){
   try{present=JSON.parse(localStorage.getItem('ldvlPresent')||'null')}catch(e){}
   const keys=(window.ldvlFilledKeys&&ldvlFilledKeys())||[];
   try{
-    const r=await fetch('/api/practice/reshuffle',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({src:Q.src,file_idx:Q.file_idx,api_keys:keys,code:present&&present.code,token:present&&present.token,pos:window.practicePos,path:window.practicePath})});
-    const d=await r.json().catch(function(){return {}});
+    const d=await ldvlReshuffleWait({src:Q.src,file_idx:Q.file_idx,api_keys:keys,code:present&&present.code,token:present&&present.token,pos:window.practicePos,path:window.practicePath});
     if(!d.ok||!d.q){alert((d&&d.error)||'Chưa đổi được số. Bấm lại.');if(btn){btn.disabled=false;btn.textContent='🎲 Đổi đề bài mới';}return;}
     checked=false;
     Q=d.q;
     const praise=document.getElementById('praise'); if(praise) praise.innerHTML='';
     draw();
   }catch(e){
-    alert('Không gọi được máy chủ.');
+    alert('Chưa đổi được số. '+(e&&e.message?e.message:'Bấm lại.'));
     if(btn){btn.disabled=false;btn.textContent='🎲 Đổi đề bài mới';}
   }finally{window.__ldvlReshuffling=false;}
 }
@@ -4709,12 +4722,92 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
         extra=REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
     return page('Làm bài',body+js+extra)
 
-@app.post('/api/practice/reshuffle')
+_RESHUFFLE_JOBS = {}
+_RESHUFFLE_LOCK = threading.Lock()
+
+
+def _reshuffle_who(m):
+    return str((m or {}).get('username') or (m or {}).get('name') or '')
+
+
+def _reshuffle_put(job, **fields):
+    with _RESHUFFLE_LOCK:
+        rec = dict(_RESHUFFLE_JOBS.get(job) or {})
+        rec.update(fields)
+        rec['ts'] = time.time()
+        _RESHUFFLE_JOBS[job] = rec
+        now = rec['ts']
+        for key, val in list(_RESHUFFLE_JOBS.items()):
+            if now - float(val.get('ts') or now) > 900:
+                _RESHUFFLE_JOBS.pop(key, None)
+
+
+def _reshuffle_payload(src, fi, keys, code, token, pub_path, pub_pos):
+    from admin_rewrite import live_number_variant
+    from live_present import publish_number_variant
+
+    got, err = live_number_variant(src, fi, keys)
+    if not got:
+        return None, err or 'Chưa đổi được số.'
+    orig = got['orig']
+    kind = str(got.get('kind') or 'TL')
+    payload = {
+        'kind': kind,
+        'id': orig.get('id') or '',
+        'cau': orig.get('cau') or '',
+        'nguon': 'Đã đổi số — cùng câu, đáp án tính lại',
+        'text': html_question(got.get('stem') or '', src),
+        'solution': html_question(got.get('solution') or '', src),
+        'dang': orig.get('dang') or '',
+        'level': orig.get('level') or '',
+        'src': src,
+        'file_idx': fi,
+        'line': int(orig.get('line') or 0),
+        'develop_html': '',
+        'reshuffle': True,
+    }
+    opts = got.get('options') or []
+    if kind == 'TN':
+        payload['options'] = [{'text': html_question(o.get('text') or '', src), 'correct': bool(o.get('correct'))} for o in opts]
+    elif kind == 'DS':
+        payload['statements'] = [{'text': html_question(o.get('text') or '', src), 'correct': bool(o.get('correct'))} for o in opts]
+    elif kind == 'TLN':
+        payload['answer'] = got.get('answer') or ''
+    if code and token and pub_path:
+        publish_number_variant(code, token, payload, pub_path, pub_pos)
+    return payload, ''
+
+
+def _reshuffle_work(job, src, fi, keys, code, token, pub_path, pub_pos):
+    try:
+        with app.app_context():
+            payload, err = _reshuffle_payload(src, fi, keys, code, token, pub_path, pub_pos)
+        if not payload:
+            _reshuffle_put(job, state='error', error=err or 'Chưa đổi được số.', q=None)
+            return
+        _reshuffle_put(job, state='done', error='', q=payload)
+    except Exception as exc:
+        _reshuffle_put(job, state='error', error=str(exc)[:240] or 'Chưa đổi được số.', q=None)
+
+
+@app.route('/api/practice/reshuffle', methods=['GET', 'POST'])
 def practice_reshuffle():
-    """Đổi số câu đang làm hoặc đang chiếu. Không ghi ngân hàng."""
+    """Đổi số câu đang làm hoặc đang chiếu. Trả về ngay, tính đáp án ở nền để Render không cắt kết nối."""
     m = member_current()
     if not m:
         return jsonify(ok=False, error='Hãy đăng nhập.'), 401
+    if request.method == 'GET':
+        job = str(request.args.get('job') or '').strip()
+        with _RESHUFFLE_LOCK:
+            rec = dict(_RESHUFFLE_JOBS.get(job) or {})
+        if not rec or rec.get('who') != _reshuffle_who(m):
+            return jsonify(ok=False, error='Không thấy lượt đổi số này.'), 404
+        state = str(rec.get('state') or 'run')
+        if state == 'run':
+            return jsonify(ok=True, state='run', job=job)
+        if state == 'done' and rec.get('q'):
+            return jsonify(ok=True, state='done', job=job, q=rec.get('q'))
+        return jsonify(ok=False, state='error', error=rec.get('error') or 'Chưa đổi được số.')
     if not (can_practice(m, str(session.get('practice_path') or '') or None) or has_full_bank_access(m)):
         return jsonify(ok=False, error='Cần VIP để đổi số luyện tập.'), 403
     data = request.get_json(silent=True) or {}
@@ -4726,12 +4819,13 @@ def practice_reshuffle():
     if not src.startswith('ngan-hang/'):
         return jsonify(ok=False, error='File không hợp lệ.'), 400
     from student_gemini import _keys_from_payload
-    from admin_rewrite import live_number_variant
-    from live_present import publish_number_variant, room_matches_question
+    from live_present import room_matches_question
 
     keys = _keys_from_payload(data)
     if GEMINI_KEY and GEMINI_KEY not in keys:
         keys.append(GEMINI_KEY)
+    if not keys:
+        return jsonify(ok=False, error='Chưa có key Gemini. Nạp key ở mục Gemini, hoặc đặt GEMINI_API_KEY trên máy chủ.'), 400
     code = str(data.get('code') or session.get('present_code') or '')
     token = str(data.get('token') or session.get('present_token') or '')
     pub_path = ''
@@ -4763,37 +4857,14 @@ def practice_reshuffle():
         pub_path, pub_pos = room_hit['path'], room_hit['pos']
     if not allowed:
         return jsonify(ok=False, error='Chỉ đổi số câu đang làm hoặc câu đang chiếu.'), 403
-    got, err = live_number_variant(src, fi, keys)
-    if not got:
-        return jsonify(ok=False, error=err or 'Chưa đổi được số.'), 400
-    orig = got['orig']
-    kind = str(got.get('kind') or 'TL')
-    payload = {
-        'kind': kind,
-        'id': orig.get('id') or '',
-        'cau': orig.get('cau') or '',
-        'nguon': 'Đã đổi số — cùng câu, đáp án tính lại',
-        'text': html_question(got.get('stem') or '', src),
-        'solution': html_question(got.get('solution') or '', src),
-        'dang': orig.get('dang') or '',
-        'level': orig.get('level') or '',
-        'src': src,
-        'file_idx': fi,
-        'line': int(orig.get('line') or 0),
-        'develop_html': '',
-        'reshuffle': True,
-    }
-    opts = got.get('options') or []
-    if kind == 'TN':
-        payload['options'] = [{'text': html_question(o.get('text') or '', src), 'correct': bool(o.get('correct'))} for o in opts]
-    elif kind == 'DS':
-        payload['statements'] = [{'text': html_question(o.get('text') or '', src), 'correct': bool(o.get('correct'))} for o in opts]
-    elif kind == 'TLN':
-        payload['answer'] = got.get('answer') or ''
-    published = False
-    if code and token and pub_path:
-        published = bool(publish_number_variant(code, token, payload, pub_path, pub_pos))
-    return jsonify(ok=True, q=payload, published=published)
+    job = secrets.token_hex(8)
+    _reshuffle_put(job, state='run', who=_reshuffle_who(m), error='', q=None)
+    threading.Thread(
+        target=_reshuffle_work,
+        args=(job, src, fi, keys, code, token, pub_path, pub_pos),
+        daemon=True,
+    ).start()
+    return jsonify(ok=True, job=job, state='run')
 
 
 @app.post('/member/answer')
