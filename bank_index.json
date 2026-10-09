@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 184,
-  "total_questions": 12242,
+  "total_questions": 12248,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -1350,17 +1350,17 @@
       "Chuong": "Chương II",
       "BaiHoc": "L10C2 Bài 7. Đồ thị dịch chuyển thời gian",
       "De": "L10C2 Bài 7. Đồ thị dịch chuyển thời gian",
-      "questions": 5,
-      "count": 5,
+      "questions": 11,
+      "count": 11,
       "dang": {
-        "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": 5
+        "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": 11
       },
       "dang_kinds": {
         "Vận dụng đồ thị độ dịch chuyển -- thời gian của một vật": {
           "TN": 3,
           "DS": 2,
-          "TLN": 0,
-          "TL": 0
+          "TLN": 2,
+          "TL": 4
         }
       }
     },
