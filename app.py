@@ -590,6 +590,16 @@ body.cinema .qbox{padding-right:12px}
 .drawer-search-wrap input{width:100%;min-height:44px;border:1px solid #cbdbe9;border-radius:9px;padding:9px 12px;font:16px/1.35 inherit;color:#163b61;background:#f8fbff}
 .drawer-tree .drawer-filter-hidden{display:none!important}
 @media(max-width:600px){.drawer-panel{width:min(100vw,410px)}.drawer-tree{padding:8px}.drawer-tree .drawdang{min-height:44px}.drawer-hint{padding:7px 12px}}
+
+/* Simplified main header; secondary actions in an accessible dropdown. */
+.topin .clock{display:none!important}
+.topin .brand{font-size:16px!important}
+.topin .top-tools{position:relative;display:inline-block;flex:0 0 auto}
+.topin .top-tools>summary{display:inline-flex;align-items:center;list-style:none;cursor:pointer;color:#fff;background:#ffffff19;border:1px solid #ffffff66;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;min-height:38px}
+.topin .top-tools>summary::-webkit-details-marker{display:none}
+.topin .top-tools-list{position:fixed;right:12px;top:48px;z-index:2147483650;display:flex;flex-direction:column;gap:5px;min-width:210px;max-width:90vw;background:#fff;padding:9px;border:1px solid #cfdbeb;border-radius:12px;box-shadow:0 12px 30px #071f3860}
+.topin .top-tools-list a,.topin .top-tools-list button{display:flex!important;align-items:center;text-align:left;min-height:42px;width:100%;border:0!important;border-radius:8px!important;background:#f4f8fd!important;color:#184572!important;padding:10px 12px!important;font:700 13px/1.4 Arial,sans-serif!important}
+@media(max-width:760px){.topin .top-tools-list{top:95px;right:8px}.topin .brand{font-size:14px!important}}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
@@ -739,13 +749,15 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         )
         out_href = "/admin/logout" if role == "admin" else "/member/logout"
         nav += [
-            "<a href='/member/ai' title='Gemini'>🤖</a>",
-            "<a href='/xem' title='Xem chiếu'>📺 Chiếu</a>",
-            "<button type='button' class='aiPhotoBtn' title='Chụp hình, nhận dạng chữ, viết lại prompt'>📷 Chụp</button>",
-            "<a href='/admin' title='ngan-hang'>📂</a>",
-            f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener' title='GitHub'>🐙</a>",
-            "<a href='/admin/ly-thuyet' title='Duyệt lý thuyết'>📖 LT</a>",
-            f"<a href='{out_href}' title='Thoát'>🚪</a>",
+            "<a href='/admin' title='Quản trị'>🏠 Quản trị</a>",
+            "<details class='top-tools'><summary>☰ Công cụ</summary><div class='top-tools-list'>",
+            "<a href='/member/ai'>🤖 Gemini</a>",
+            "<a href='/xem'>📺 Chiếu</a>",
+            "<button type='button' class='aiPhotoBtn'>📷 Chụp</button>",
+            f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
+            "<a href='/admin/ly-thuyet'>📖 Lý thuyết</a>",
+            f"<a href='{out_href}'>🚪 Đăng xuất</a>",
+            "</div></details>",
         ]
     elif role == "member":
         m = member_current()
