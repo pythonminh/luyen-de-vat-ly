@@ -2607,7 +2607,7 @@ def member_chapter():
             )
         bai_href = dang_view_url(path, '')
         blocks.append(
-            "<details class='drawbaiwrap' open><summary class='drawbai'><a href='"
+            "<details class='drawbaiwrap'><summary class='drawbai'><a href='"
             + html.escape(bai_href, quote=True) + "' onclick='event.stopPropagation()'>"
             + html.escape(title) + "</a> <span class='drawn'>" + str(n) + "</span></summary><div class='drawdangs'>"
             + (''.join(dlinks) or "<p class='muted'>Chưa có dạng</p>")
@@ -2618,7 +2618,7 @@ def member_chapter():
     extra = ''
     if can_manage_bank():
         admin = (
-            "<details class='admindang-fold' open><summary class='admindang-sum'>▸ Lọc đề vào các bài và dạng của chương</summary>"
+            "<details class='admindang-fold'><summary class='admindang-sum'>▸ Lọc đề vào các bài và dạng của chương</summary>"
             "<div class='admindang' data-chapter='1' data-path='" + html.escape(first, quote=True) + "' data-dang=''"
             " data-mon='" + html.escape(mon, quote=True) + "' data-lop='" + html.escape(lop, quote=True) + "' data-chuong='" + html.escape(chuong, quote=True) + "'>"
             "<div class='ai-intake' id='aiIntake' tabindex='0'><div class='ai-intake-bar'>"
@@ -2636,10 +2636,10 @@ def member_chapter():
         from admin_rewrite import REWRITE_CLIENT_JS
         extra = REWRITE_CLIENT_JS
     body = (
-        "<div class='wrap'><div class='panel'><div class='head'>📚 "
+        "<div class='wrap chapter-ui'><div class='panel'><div class='head'>📚 "
         + html.escape(mon) + " · Lớp " + html.escape(lop) + " · " + html.escape(chuong)
         + " <span class='tag'>" + str(len(sibs)) + " bài · " + str(total) + " câu</span></div><div class='body'>"
-        + "<p class='muted'>Bấm tên chương ở menu là vào đây. Thả đề, AI tách vào từng bài và từng dạng đang có. Bấm một dạng nếu chỉ muốn mở riêng chỗ đó.</p>"
+        + "<p class='chapter-tip'>Chọn một bài để xem các dạng bài tập. Bấm tên bài để mở toàn bộ câu hỏi.</p>"
         + (
             "<p><a class='btn green' href='"
             + html.escape(
@@ -2655,7 +2655,7 @@ def member_chapter():
         + "<div class='drawbais'>" + ''.join(blocks) + "</div>"
         + "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
     )
-    return page('Cả chương', body + extra)
+    return page('Cả chương', "<style id=\"chapter-refresh\">\n.chapter-ui{--chapter-blue:#1e5caa;max-width:1120px!important;margin:0 auto!important;padding:16px!important}\n.chapter-ui .panel{border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}\n.chapter-ui .head{background:linear-gradient(110deg,#15385c,#2369b8)!important;color:white!important;border-radius:13px;padding:17px 20px!important;font-size:17px!important;font-weight:800!important}\n.chapter-ui .head .tag{background:#ffffff28!important;color:white!important;border:1px solid #ffffff50!important}\n.chapter-ui .body{padding:12px 0!important}\n.chapter-ui .drawbais{display:grid;gap:12px;margin:12px 0 20px}\n.chapter-ui .drawbaiwrap{border:1px solid #d4e0ec!important;border-radius:12px!important;background:white!important;overflow:hidden;box-shadow:0 2px 8px #122c4a08}\n.chapter-ui .drawbai{list-style:none!important;min-height:60px;display:flex!important;align-items:center;gap:10px;padding:13px 16px!important;background:#fff!important;color:#163958!important;font-size:15px!important;font-weight:750!important;cursor:pointer}\n.chapter-ui .drawbai::-webkit-details-marker{display:none}\n.chapter-ui .drawbai:before{content:\"▸\";color:#2a6fbd;font-size:14px;flex:0 0 auto}\n.chapter-ui .drawbaiwrap[open]>.drawbai:before{content:\"▾\"}\n.chapter-ui .drawbai a{color:#163958!important;text-decoration:none!important;flex:1;min-width:0;overflow-wrap:anywhere}\n.chapter-ui .drawbai .drawn{margin-left:auto;border:1px solid #c5daef;background:#edf6ff;border-radius:999px;padding:4px 10px!important;white-space:nowrap;font-size:12px;color:#215b93!important}\n.chapter-ui .drawdangs{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px!important;padding:13px!important;background:#f6f9fd!important;border-top:1px solid #e4ecf4}\n.chapter-ui .drawdang{display:flex!important;align-items:center;gap:10px;border:1px solid #dce6ef!important;background:white!important;color:#254765!important;border-radius:9px!important;padding:12px!important;font-size:13px!important;line-height:1.45!important;min-height:52px;text-decoration:none!important;transition:border-color .12s}\n.chapter-ui .drawdang:hover{border-color:#4484c5!important;background:#f0f7ff!important}\n.chapter-ui .drawdang .drawname{flex:1;min-width:0;white-space:normal!important;overflow-wrap:anywhere}\n.chapter-ui .drawdang .drawn{margin-left:auto;flex:0 0 auto;background:#eaf2fb;border-radius:999px;padding:3px 9px!important;color:#215c99!important;font-weight:750}\n.chapter-ui .admindang-fold{border-radius:12px;border:1px solid #d5e2ef;background:white;margin:12px 0;overflow:hidden}\n.chapter-ui .admindang-sum{padding:13px!important;background:#eff6ff!important;color:#175b9d!important;font-weight:800!important;cursor:pointer}\n.chapter-ui .chapter-tip{margin:10px 0!important;font-size:13px;line-height:1.5;color:#62778c}\n@media(max-width:740px){\n .chapter-ui{padding:8px!important}\n .chapter-ui .head{padding:13px!important;font-size:14px!important;line-height:1.5}\n .chapter-ui .drawbais{gap:8px}\n .chapter-ui .drawbai{padding:12px!important;min-height:56px;font-size:13px!important}\n .chapter-ui .drawdangs{grid-template-columns:1fr;gap:7px!important;padding:9px!important}\n .chapter-ui .drawdang{min-height:46px;padding:10px!important;font-size:12px!important}\n .chapter-ui .body{padding:8px 0!important}\n}\n</style>" + body + extra)
 
 
 @app.post('/api/admin/dang-fill-save')
