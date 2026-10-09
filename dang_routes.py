@@ -402,7 +402,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     drop_key=_esc(src+'||'+str(fi))
     rw=''
     if manage:
-        rw=(f"<div class='rwbar'><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
+        rw=(f"<details class='qtools-fold'><summary>🛠 Công cụ chỉnh sửa câu hỏi</summary><div class='rwbar'><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
             f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại đề + lời giải</button>"
             f"<button type='button' class='btn mini rwedit' data-drop='{drop_key}'>✏️ Sửa đề / lời giải</button>"
             f"<button type='button' class='btn mini rwimgs' data-drop='{drop_key}'>🖼 Ảnh thư mục</button>"
@@ -410,7 +410,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             f"<button type='button' class='btn mini rwnbprompt' data-drop='{drop_key}'>✨ Prompt ảnh vở + Phiếu</button>"
             f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎲 Luyện đổi số</button>"
             f"<button form='qdel' class='btn mini red' type='submit' name='drop' value='{drop_key}' onclick=\"return confirm('Xóa vĩnh viễn câu này khỏi file TEX? Không hoàn tác trên trang này.')\">🗑 Xóa câu</button>"
-            "<span class='muted'>Sửa / xóa trực tiếp trên file TEX, không cần GitHub.</span><div class='rwout'></div></div>")
+            "<div class='rwout'></div></div></details>")
     dcls=' dupcard' if dup.get('label') else ''
     if hid and qid.lower()==hid:
         dcls+=' qhit'
@@ -433,12 +433,23 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-idx='{fi}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'>{qlab}"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"{tex_badge}{gh}{nguon_html(q)}<span class='level muc-{muc}'>Mức {html.escape(muc_label(muc))}</span>"
-            + (f"<button type='button' class='btn aiPhotoBtn' data-drop='{drop_key}'>📷 Chụp hình</button>" if manage else "")
-            + (f"<button type='button' class='btn mini presentQ' data-idx='{n}'>📺 Chiếu câu</button>" if manage else "")
-            + (f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại</button>" if manage else "")
-            + (f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎲 Luyện đổi số</button>" if manage else "")
             + "</div>"
             f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text, src)}</div></div>{options}{develop_reference_html(q, src)}{rw}{sol_html}</article>")
+
+
+@app.after_request
+def _question_card_clean_styles(response):
+    if request.method != 'GET' or request.path != '/member/dang' or response.status_code != 200 or response.mimetype != 'text/html':
+        return response
+    try:
+        body=response.get_data(as_text=True)
+        if '</head>' in body and 'question-card-clean-css' not in body:
+            body=body.replace('</head>', "<style id=\"question-card-clean-css\">\n.qcard{padding:14px!important;border-radius:13px!important;margin:12px 0!important;max-width:100%;overflow-wrap:anywhere}\n.qcard .qhead{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid #e1e8f0}\n.qcard .qhead .btn{padding:6px 9px;font-size:12px}\n.qcard .qhead .metafile{max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.qcard .qheadline{margin:14px 0 12px}\n.qcard .qheadline .qbadge{display:none}\n.qcard .qstem{font-size:17px!important;line-height:1.65!important}\n.qcard .qtools-fold{margin-top:14px;border:1px solid #d2e1ef;border-radius:10px;background:#f7fbff;overflow:hidden}\n.qcard .qtools-fold>summary{padding:12px 14px;cursor:pointer;color:#175a9d;font-weight:800;font-size:13px;list-style:none;min-height:44px}\n.qcard .qtools-fold>summary:before{content:'▸ ';margin-right:5px}\n.qcard .qtools-fold[open]>summary:before{content:'▾ '}\n.qcard .qtools-fold>summary::-webkit-details-marker{display:none}\n.qcard .qtools-fold .rwbar{border:0!important;margin:0!important;padding:10px!important;background:transparent!important;display:flex;gap:7px;flex-wrap:wrap}\n.qcard .qtools-fold .rwbar>.btn{font-size:12px;min-height:38px}\n.qcard .qtools-fold .rwout{width:100%;flex-basis:100%}\n@media(max-width:700px){.qcard{padding:10px!important}.qcard .qhead .qid,.qcard .qhead .level{font-size:11px}.qcard .qhead .metafile{max-width:140px}.qcard .qstem{font-size:16px!important}.qcard .qtools-fold .rwbar{display:grid;grid-template-columns:1fr 1fr;gap:6px}.qcard .qtools-fold .rwbar>.btn{white-space:normal;min-height:44px}.qcard .qtools-fold .rwout{grid-column:1/-1}}\n</style>"+'</head>', 1)
+            response.set_data(body)
+            response.headers.pop('Content-Length',None)
+    except Exception:
+        pass
+    return response
 
 @app.get('/member/dang')
 def member_dang():
