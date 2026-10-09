@@ -459,3 +459,106 @@ try:
     access_control.student_can_access = base.can_access
 except Exception:
     pass
+
+
+# Mobile-only enhancement: leaves desktop/admin business logic unchanged.
+_ADMIN_MOBILE_CSS = r"""
+<style id="admin-mobile-ux">
+@media (max-width: 700px) {
+  html,body { max-width:100%; overflow-x:hidden; }
+  .adminmembers,.wrap { width:100%; max-width:100%; padding:8px!important; }
+  .adminmembers .hero { gap:8px; align-items:stretch; }
+  .adminmembers .hero > div { min-width:0; }
+  .adminmembers .hero > div:last-child { display:flex; overflow-x:auto; flex-wrap:nowrap; gap:6px; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+  .adminmembers .hero > div:last-child .btn { flex:0 0 auto; white-space:nowrap; }
+  .adminmembers .stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+  .adminmembers .stat { padding:8px; }
+  .adminmembers .stat b { font-size:18px; }
+  .adminmembers .toolbar { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-items:end; }
+  .adminmembers .toolbar .field { min-width:0; }
+  .adminmembers .toolbar > :first-child { grid-column:1/-1; }
+  .adminmembers .toolbar input,.adminmembers .toolbar select { width:100%; min-width:0; min-height:44px; font-size:16px; }
+  .adminmembers .toolbar .btn { min-height:44px; text-align:center; }
+  .adminmembers .memcard { padding:9px; }
+  .adminmembers .memtop { align-items:flex-start; justify-content:flex-start; gap:6px; }
+  .adminmembers .memtop .ck { flex-basis:100%; overflow-wrap:anywhere; }
+  .adminmembers .memacts { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:7px; }
+  .adminmembers .memacts > select,.adminmembers .memacts > .passrow { grid-column:1/-1; width:100%; }
+  .adminmembers .passrow input { flex:1; min-width:0; width:100%; font-size:16px; }
+  .adminmembers .passrow .eye { min-width:44px; min-height:44px; }
+  .adminmembers .memacts .btn { min-height:44px; white-space:normal; }
+  .adminmembers .bulk { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .adminmembers .bulk .btn { min-height:42px; flex:1 1 40%; }
+  .adminmembers .createbox summary,.adminmembers .memcard .mobile-member-toggle { min-height:44px; cursor:pointer; }
+  .adminmembers .memcard .mobile-member-toggle { display:flex; align-items:center; justify-content:space-between; width:100%; background:#eef5ff; color:#145bb0; border:1px solid #c7ddf6; border-radius:8px; padding:10px 12px; font:700 13px/1.3 inherit; margin:8px 0 0; }
+  .adminmembers .memcard.mobile-collapsed .memform { display:none; }
+  .adminmembers .memcard .pendcard { overflow-wrap:anywhere; }
+  .adminmembers .note { font-size:12px; }
+  .adminmembers .cgrid { grid-template-columns:1fr; }
+  .adminmembers input,.adminmembers select,.adminmembers button { max-width:100%; }
+  .adminmembers .pkgopt,.adminmembers .pkg-picker { max-width:100%; }
+  .adminmembers .stats .stat:last-child { grid-column:auto; }
+  .panel,.bankwrap,.selectgrid { max-width:100%; }
+  .bankwrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  textarea,input[type="text"],input[type="search"],input[type="number"],input[type="password"],select { font-size:16px; }
+  button,a.btn,button.btn { touch-action:manipulation; }
+}
+@media (min-width:701px) { .mobile-member-toggle { display:none!important; } }
+</style>
+"""
+_ADMIN_MOBILE_JS = r"""
+<script id="admin-mobile-controls">
+(function(){
+  function setup(){
+    if (!window.matchMedia || !window.matchMedia('(max-width:700px)').matches) return;
+    document.querySelectorAll('.adminmembers .memcard').forEach(function(card,idx){
+      if(card.querySelector('.mobile-member-toggle')) return;
+      var form=card.querySelector('.memform');
+      if(!form) return;
+      if(!form.id) form.id='mobile-member-form-'+idx;
+      var btn=document.createElement('button');
+      btn.type='button';
+      btn.className='mobile-member-toggle';
+      btn.setAttribute('aria-controls',form.id);
+      var open=card.classList.contains('wait');
+      function render(){
+        card.classList.toggle('mobile-collapsed',!open);
+        btn.setAttribute('aria-expanded',String(open));
+        btn.textContent=open?'Thu gọn chỉnh sửa ▲':'Chỉnh sửa / cấp quyền ▼';
+      }
+      btn.addEventListener('click',function(){open=!open;render();});
+      form.parentNode.insertBefore(btn,form);
+      render();
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup);
+  else setup();
+})();
+</script>
+"""
+
+@app.after_request
+def _admin_mobile_response(response):
+    """Add small-screen layout enhancements only to authenticated admin HTML views."""
+    if not request.path.startswith("/admin"):
+        return response
+    if response.status_code != 200 or not response.mimetype == "text/html":
+        return response
+    if not _is_admin_session():
+        return response
+    try:
+        body = response.get_data(as_text=True)
+        if 'id="admin-mobile-ux"' in body:
+            return response
+        if "</head>" in body:
+            body = body.replace("</head>", _ADMIN_MOBILE_CSS + "</head>", 1)
+        elif "</body>" in body:
+            body = body.replace("</body>", _ADMIN_MOBILE_CSS + "</body>", 1)
+        else:
+            return response
+        body = body.replace("</body>", _ADMIN_MOBILE_JS + "</body>", 1)
+        response.set_data(body)
+        response.headers.pop("Content-Length", None)
+    except Exception:
+        pass
+    return response
