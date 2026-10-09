@@ -633,6 +633,26 @@ body.cinema .qbox{padding-right:12px}
  .vip-practice-wrap .opt{min-height:48px;margin:6px 0!important}
  .vip-practice-wrap .quizacts .btn{min-height:46px}
 }
+
+.vip-practice-wrap .quiztop{display:flex!important;flex-wrap:nowrap!important;gap:8px!important;min-height:54px;align-items:center;padding:7px 12px!important}
+.vip-practice-wrap .quiztop>span:first-child{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.vip-practice-wrap .quiztop>span:first-child .quizdang{display:none!important}
+.vip-practice-wrap .quiztop .qzoombar{display:inline-flex;flex:0 0 auto;gap:3px;align-items:center}
+.vip-practice-wrap .quiztop .qzoombar .btn{padding:5px 8px!important}
+.vip-practice-wrap .quiztop .qzoombar #qZmFit{font-size:11px}
+.vip-practice-wrap .quiztop .quizstat{margin-left:0!important;flex:0 0 auto;white-space:nowrap;font-size:12px}
+.vip-practice-wrap .body>.practice-filters,.vip-practice-wrap .body>.practice-questions{display:inline-block;vertical-align:top;width:calc(50% - 4px);margin:0 4px 9px 0!important}
+.vip-practice-wrap .body>.practice-filters>summary,.vip-practice-wrap .body>.practice-questions>summary{font-size:12px;padding:8px 10px;min-height:40px}
+.vip-practice-wrap .body>.practice-filters[open],.vip-practice-wrap .body>.practice-questions[open]{display:block;width:100%}
+@media(max-width:700px){
+.vip-practice-wrap .quiztop{gap:4px!important;padding:6px!important}
+.vip-practice-wrap .quiztop>span:first-child{font-size:12px;max-width:100%}
+.vip-practice-wrap .quiztop .qid{display:none}
+.vip-practice-wrap .quiztop .qzoombar #qZmFit,.vip-practice-wrap .quiztop .qzoombar #qzoomlab{display:none}
+.vip-practice-wrap .quiztop .qzoombar .btn{min-width:32px;padding:5px!important}
+.vip-practice-wrap .quiztop .quizstat{font-size:11px}
+.vip-practice-wrap .body>.practice-filters,.vip-practice-wrap .body>.practice-questions{width:calc(50% - 4px)}
+}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
@@ -4411,12 +4431,12 @@ def practice():
     dang=str(session.get('practice_dang') or '')
     muc_now=muc_label(q.get('level'))
     tabs=lesson_switch_html(p, list(allq.values()), dang=dang, kind=session.get('practice_kind') or '', guest=False, muc=session.get('practice_muc') or '')
-    body=(f"<div class='wrap vip-practice-wrap'><details class='practice-filters'><summary>☰ Chọn dạng bài, loại câu và mức độ</summary>{tabs}</details><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']} · Mức {html.escape(muc_now)}</span></span>"
+    body=(f"<div class='wrap vip-practice-wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']} · Mức {html.escape(muc_now)}</span></span>"
           f"<span class='qzoombar'><button type='button' class='btn' id='qZmOut' title='Thu nhỏ chữ'>A−</button>"
           f"<button type='button' class='btn' id='qZmFit' title='Chữ to tối đa, vẫn vừa màn hình'>Vừa màn</button>"
           f"<b id='qzoomlab'>100%</b>"
           f"<button type='button' class='btn' id='qZmIn' title='Phóng to chữ'>A+</button></span>"
-          f"<span class='quizstat'>Đúng {right} · Chuỗi {streak}<span class='quizdang'> · {html.escape(mode_tag)}</span></span></div><div class='body'><details class='practice-questions'><summary>☷ Danh sách câu · Câu {pos+1}/{len(ids)} · {len(done)} đã làm</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details><div id='praise'></div>"
+          f"<span class='quizstat'>✓ {right} · 🔥 {streak}</span></div><div class='body'><details class='practice-filters'><summary>☰ Chọn dạng / độ khó</summary>{tabs}</details><details class='practice-questions'><summary>☷ Chọn câu · {len(done)}/{len(ids)} đã làm</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details><div id='praise'></div>"
           f"<div class='practice-split' id='psplit'><div class='practice-q'><div id='q' class='qbox'></div></div><aside class='practice-ai' id='aipane' hidden></aside></div></div></div></div>")
     js=r'''<script>
 const Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;
