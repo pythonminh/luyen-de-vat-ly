@@ -225,22 +225,47 @@ def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float,
     return text, finish
 
 
+def _gemini_fast_one(key: str, model: str, prompt: str, max_tokens: int):
+    try:
+        return _gemini_call(key, prompt, max_tokens, 0.2, True, model, timeout=20)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 400:
+            return _gemini_call(key, prompt, max_tokens, 0.2, False, model, timeout=20)
+        raise
+
+
 def gemini_fast(keys, prompt: str, max_tokens: int = 1400):
-    """Một lần gọi ngắn cho nút đổi số. Không thử hết model, không chờ 3 phút."""
+    """Đổi số: bỏ model 404 ngay, chỉ chờ model key thực sự gọi được."""
     usable = [str(k).strip() for k in (keys or []) if str(k or "").strip()]
     if not usable:
         return "", "Chưa có key Gemini."
-    key = usable[0]
-    last = "Gemini chưa trả lời kịp."
-    for model, wait in (("gemini-2.5-flash", 22), ("gemini-2.0-flash", 16)):
-        try:
-            text, _finish = _gemini_call(key, prompt, max_tokens, 0.2, True, model, timeout=wait)
+    missed = 0
+    waited = 0
+    for key in usable[:2]:
+        for model in GEMINI_MODELS:
+            try:
+                text, _finish = _gemini_fast_one(key, model, prompt, max_tokens)
+            except urllib.error.HTTPError as exc:
+                if exc.code == 404:
+                    missed += 1
+                    continue
+                waited += 1
+                if waited >= 2:
+                    return "", "Gemini chưa trả lời kịp. Bấm lại."
+                continue
+            except Exception:
+                waited += 1
+                if waited >= 2:
+                    return "", "Gemini chưa trả lời kịp. Bấm lại."
+                continue
             if text:
                 return text, ""
-            last = "Gemini trả về trống."
-        except Exception as exc:
-            last = str(exc)[:160] or last
-    return "", "Gemini chưa trả lời kịp. " + last
+            waited += 1
+            if waited >= 2:
+                return "", "Gemini trả về trống. Bấm lại."
+    if missed and not waited:
+        return "", "Key Gemini không gọi được model. Vào mục Gemini, dán key khác rồi bấm lại."
+    return "", "Gemini chưa trả lời kịp. Bấm lại."
 
 
 def _http_busy(exc: urllib.error.HTTPError) -> bool:
