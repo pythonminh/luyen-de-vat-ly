@@ -683,6 +683,17 @@ body.cinema .qbox{padding-right:12px}
 .vip-practice-wrap .quiztop{grid-template-columns:minmax(0,1fr) auto}
 .vip-practice-wrap .quiztop>.vip-inline-nav{grid-column:1/-1;justify-self:end}
 }
+
+/* Prevent opened question selector from expanding the VIP header grid. */
+.vip-practice-wrap .quiztop{align-items:center!important;align-content:center!important}
+.vip-practice-wrap .quiztop>.vip-inline-nav{align-self:center!important;min-width:0;align-items:center!important}
+.vip-practice-wrap .vip-inline-nav details,.vip-practice-wrap .vip-inline-nav details[open],.vip-practice-wrap .vip-inline-nav .practice-filters[open],.vip-practice-wrap .vip-inline-nav .practice-questions[open]{position:relative!important;display:block!important;width:auto!important;height:auto!important;min-height:0!important;align-self:center!important;background:transparent!important}
+.vip-practice-wrap .vip-inline-nav .practice-questions>.palette,.vip-practice-wrap .vip-inline-nav .practice-filters>.vip-filter-panel{display:none!important}
+.vip-practice-wrap .vip-inline-nav .practice-questions[open]>.palette,.vip-practice-wrap .vip-inline-nav .practice-filters[open]>.vip-filter-panel{display:block!important;position:absolute!important;z-index:250!important;top:calc(100% + 7px)!important;right:0!important;left:auto!important;width:min(440px,calc(100vw - 32px))!important;min-width:280px!important;max-height:min(56vh,460px)!important;overflow-y:auto!important;overflow-x:hidden!important;margin:0!important;padding:12px!important;border:1px solid #ccdced!important;border-radius:11px!important;box-shadow:0 14px 30px #142f4c30!important;background:white!important;box-sizing:border-box!important}
+.vip-practice-wrap .vip-inline-nav .practice-questions .pitems{display:flex!important;flex-wrap:wrap!important;gap:6px!important;max-width:100%!important}
+.vip-practice-wrap .vip-inline-nav .practice-questions .pdang{overflow-wrap:anywhere!important}
+.vip-practice-wrap .quiztop .vip-inline-nav summary{height:38px!important;display:flex!important;justify-content:center!important;align-items:center!important}
+@media(max-width:520px){.vip-practice-wrap .vip-inline-nav .practice-questions[open]>.palette,.vip-practice-wrap .vip-inline-nav .practice-filters[open]>.vip-filter-panel{width:min(320px,calc(100vw - 20px))!important;min-width:0!important}}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
