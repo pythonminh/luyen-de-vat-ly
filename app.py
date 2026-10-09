@@ -559,6 +559,37 @@ body.cinema .qbox{padding-right:12px}
 .aiphotobox .rwta{width:100%;min-height:88px;font:12px/1.4 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #cbd5e1;border-radius:8px;box-sizing:border-box}
 .aiphotobox .success{color:#0d7b35;font-weight:800}
 .aiphotobox .err{color:#b42318;font-weight:800}
+
+/* Chọn bài: visual hierarchy and compact neutral mobile presentation */
+.drawer-panel{width:min(94vw,410px);background:#f7f9fc}
+.drawer-head{background:#fff;padding:14px 15px;border-bottom:1px solid #e0e8f0}
+.drawer-head b{font-size:16px;font-weight:800;color:#173b60}
+.drawer-hint{background:#fff;padding:9px 14px;font-size:11px;line-height:1.45;color:#63778b;margin:0}
+.drawer-tree{padding:10px 10px 24px}
+.drawer-tree details{border-bottom:0}
+.drawer-tree>details{background:#fff;border:1px solid #e1e8f0;border-radius:10px;margin:0 0 9px;overflow:hidden}
+.drawer-tree summary{font-size:13px;color:#284763;padding:11px 10px;font-weight:650;line-height:1.4}
+.drawer-tree summary::before{color:#2d6db5}
+.drawer-tree .drawnest{padding:0 7px 8px}
+.drawer-tree .drawchuong{border:1px solid #e0e8f0;border-radius:9px;margin:7px 0;background:#fff;overflow:hidden}
+.drawer-tree .drawchuong>summary{background:#eef5fc;font-weight:800;color:#194d82;padding:11px 9px}
+.drawer-tree .drawchlink{text-decoration:none!important}
+.drawer-tree .drawbais{gap:6px;padding:6px 0}
+.drawer-tree .drawbaiwrap{border:1px solid #dbe6f1;border-radius:9px;overflow:hidden;background:#fff;margin:0}
+.drawer-tree .drawbaiwrap>summary.drawbai{padding:11px 10px;min-height:45px;line-height:1.35;font-weight:750;background:#fff;color:#26496b;border:0;border-radius:0;font-size:12px}
+.drawer-tree .drawbaiwrap[open]>summary.drawbai{background:#eaf3fe;color:#164f91}
+.drawer-tree .drawbaiwrap>summary.drawbai.on{background:#176bd3;color:#fff}
+.drawer-tree .drawdangs{padding:6px;gap:5px;background:#fafcff}
+.drawer-tree .drawdang{background:#fff;border:1px solid #dce6ef;color:#3d5368;border-radius:8px;min-height:40px;padding:8px 9px;font-size:12px;line-height:1.35}
+.drawer-tree .drawdang.on{background:#e6f1ff;color:#135ba9;border-color:#7eb5ec;font-weight:800}
+.drawer-tree .drawdang .drawn{color:#627990;font-size:11px;white-space:nowrap}
+.drawer-tree .drawdang.on .drawn{color:#135ba9}
+.drawer-tree .drawdang .drawname{white-space:normal;overflow-wrap:anywhere}
+.drawer-tree .drawdang .kindcounts,.drawer-tree .drawdang .kindchips{font-size:10px}
+.drawer-search-wrap{background:#fff;padding:10px 12px 5px}
+.drawer-search-wrap input{width:100%;min-height:44px;border:1px solid #cbdbe9;border-radius:9px;padding:9px 12px;font:16px/1.35 inherit;color:#163b61;background:#f8fbff}
+.drawer-tree .drawer-filter-hidden{display:none!important}
+@media(max-width:600px){.drawer-panel{width:min(100vw,410px)}.drawer-tree{padding:8px}.drawer-tree .drawdang{min-height:44px}.drawer-hint{padding:7px 12px}}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
@@ -1947,7 +1978,22 @@ def lesson_drawer_html(m=None, current_path="", current_dang=""):
         "<button type='button' class='btn' id='ldvlDrawerClose'>✕</button></div>"
         "<p class='drawer-hint'>Bấm tên chương để lọc cả chương vào các bài và dạng. Bấm bài → dạng để mở một chỗ.</p>"
         "<style>.drawchlink{color:inherit;font-weight:800;text-decoration:underline;text-underline-offset:2px}.drawchuong>summary{display:flex;justify-content:space-between;gap:8px;align-items:center}</style>"
+        "<div class='drawer-search-wrap'><input id='ldvlDrawerSearch' type='search' placeholder='🔎 Tìm bài hoặc dạng bài...' aria-label='Tìm trong danh sách bài' autocomplete='off'></div>"
         f"<div class='drawer-tree'>{inner}</div></aside></div>"
+        "<script>(function(){const input=document.getElementById('ldvlDrawerSearch');if(!input)return;"
+        "const tree=document.querySelector('.drawer-tree');if(!tree)return;"
+        "input.addEventListener('input',function(){const q=this.value.trim().toLocaleLowerCase('vi');"
+        "tree.querySelectorAll('.drawdang').forEach(el=>el.classList.toggle('drawer-filter-hidden',!!q&&!el.textContent.toLocaleLowerCase('vi').includes(q)));"
+        "tree.querySelectorAll('.drawbaiwrap').forEach(el=>{const own=(el.querySelector('summary')||el).textContent.toLocaleLowerCase('vi').includes(q);"
+        "const hits=el.querySelectorAll('.drawdang:not(.drawer-filter-hidden)').length;"
+        "el.classList.toggle('drawer-filter-hidden',!!q&&!own&&!hits);if(q&&(own||hits))el.open=true;"
+        "if(q&&own)el.querySelectorAll('.drawdang').forEach(d=>d.classList.remove('drawer-filter-hidden'));});"
+        "tree.querySelectorAll('.drawchuong').forEach(el=>{const own=(el.querySelector('summary')||el).textContent.toLocaleLowerCase('vi').includes(q);"
+        "const hits=el.querySelectorAll('.drawbaiwrap:not(.drawer-filter-hidden)').length;"
+        "el.classList.toggle('drawer-filter-hidden',!!q&&!own&&!hits);if(q&&(own||hits))el.open=true;});"
+        "tree.querySelectorAll(':scope > details').forEach(el=>{const hits=el.querySelectorAll('.drawbaiwrap:not(.drawer-filter-hidden)').length;"
+        "el.classList.toggle('drawer-filter-hidden',!!q&&!hits);if(q&&hits)el.open=true;});"
+        "});})();</script>"
     )
 
 
