@@ -694,6 +694,29 @@ body.cinema .qbox{padding-right:12px}
 .vip-practice-wrap .vip-inline-nav .practice-questions .pdang{overflow-wrap:anywhere!important}
 .vip-practice-wrap .quiztop .vip-inline-nav summary{height:38px!important;display:flex!important;justify-content:center!important;align-items:center!important}
 @media(max-width:520px){.vip-practice-wrap .vip-inline-nav .practice-questions[open]>.palette,.vip-practice-wrap .vip-inline-nav .practice-filters[open]>.vip-filter-panel{width:min(320px,calc(100vw - 20px))!important;min-width:0!important}}
+
+/* Compact chooser: hierarchy without nested bulky cards */
+.drawer-panel{width:min(94vw,390px)!important}
+.drawer-head{padding:10px 12px!important}
+.drawer-hint{display:none!important}
+.drawer-search-wrap{padding:8px 10px!important}
+.drawer-search-wrap input{min-height:40px!important}
+.drawer-tree{padding:5px 8px 18px!important}
+.drawer-tree>details{border:0!important;border-bottom:1px solid #e3eaf2!important;border-radius:0!important;margin:0!important;background:transparent!important;overflow:visible!important}
+.drawer-tree>details>summary{padding:9px 8px!important;font-size:13px!important}
+.drawer-tree .drawnest{padding:0 0 3px 9px!important}
+.drawer-tree .drawchuong{margin:2px 0!important;border:0!important;border-radius:0!important;background:transparent!important;overflow:visible!important}
+.drawer-tree .drawchuong>summary{background:transparent!important;color:#194a79!important;font-size:12px!important;padding:8px 6px!important;border-bottom:1px solid #e5ecf3!important}
+.drawer-tree .drawbais{padding:2px 0 6px!important;gap:0!important}
+.drawer-tree .drawbaiwrap{border:0!important;border-bottom:1px solid #e7edf4!important;border-radius:0!important;overflow:visible!important;margin:0!important;box-shadow:none!important}
+.drawer-tree .drawbaiwrap>summary.drawbai{min-height:40px!important;padding:8px 7px!important;border:0!important;border-radius:5px!important;background:transparent!important;color:#264b6c!important;font-size:12px!important;line-height:1.35!important}
+.drawer-tree .drawbaiwrap[open]>summary.drawbai{background:#edf5ff!important;color:#115a9d!important}
+.drawer-tree .drawbaiwrap>summary.drawbai.on{background:#dfedff!important;color:#1158a0!important}
+.drawer-tree .drawdangs{background:transparent!important;padding:3px 0 7px 7px!important;gap:2px!important}
+.drawer-tree .drawdang{border:0!important;border-left:2px solid #e0e8f1!important;border-radius:0!important;background:transparent!important;padding:6px 8px!important;min-height:36px!important;font-size:11px!important;line-height:1.35!important;color:#526578!important}
+.drawer-tree .drawdang.on{border-left-color:#176bd3!important;background:#edf5ff!important;color:#145aa5!important}
+.drawer-tree .drawdang .drawn{font-size:10px!important}
+.drawer-tree .drawbai .drawn{font-weight:700!important;font-size:11px!important}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
