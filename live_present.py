@@ -113,6 +113,92 @@ def _public_q(q, show_sol):
     return p
 
 
+def _public_from_full(full, show_sol):
+    """Bản chiếu của câu đã đổi số. Máy lớp không nhận đáp án khi chưa mở lời giải."""
+    p = json.loads(json.dumps(full or {}, ensure_ascii=False))
+    if not show_sol:
+        p["solution"] = ""
+        p.pop("answer", None)
+        for o in p.get("options") or []:
+            if isinstance(o, dict):
+                o["correct"] = False
+        for o in p.get("statements") or []:
+            if isinstance(o, dict):
+                o["correct"] = False
+    p.pop("src", None)
+    p.pop("file_idx", None)
+    p.pop("line", None)
+    return p
+
+
+def _apply_room_variant(room):
+    """Giữ bộ số đã đổi khi nhịp chiếu ghi đè bằng câu gốc trong ngân hàng."""
+    v = room.get("variant") if isinstance(room.get("variant"), dict) else None
+    if not v:
+        return
+    qk = str((room.get("q") or {}).get("kind") or "")
+    if qk in {"LT", "PP"}:
+        room.pop("variant", None)
+        return
+    try:
+        same = str(v.get("path") or "") == str(room.get("path") or "") and int(v.get("pos")) == int(room.get("pos") or 0)
+    except (TypeError, ValueError):
+        same = False
+    if not same:
+        room.pop("variant", None)
+        return
+    full = v.get("full") if isinstance(v.get("full"), dict) else None
+    if not full:
+        room.pop("variant", None)
+        return
+    room["q"] = _public_from_full(full, bool(room.get("show_sol")))
+
+
+def room_matches_question(code, token, src, fi):
+    """Máy chiếu chỉ được đổi đúng câu đang chiếu."""
+    code = _norm_code(code)
+    token = str(token or "")
+    if not code or not token:
+        return None
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token:
+            return None
+        try:
+            if str(room.get("q_src") or "") != str(src or "") or int(room.get("q_fi") or 0) != int(fi):
+                return None
+            return {"path": str(room.get("path") or ""), "pos": int(room.get("pos") or 0)}
+        except (TypeError, ValueError):
+            return None
+
+
+def publish_number_variant(code, token, full, path, pos):
+    """Đưa bộ số mới lên phòng chiếu. Trả về True nếu đúng câu lớp đang xem."""
+    code = _norm_code(code)
+    token = str(token or "")
+    if not code or not token or not isinstance(full, dict):
+        return False
+    with _LOCK:
+        room = _ROOMS.get(code)
+        if not room or str(room.get("token") or "") != token:
+            return False
+        try:
+            same = str(room.get("path") or "") == str(path or "") and int(room.get("pos") or 0) == int(pos)
+        except (TypeError, ValueError):
+            same = False
+        if not same:
+            return False
+        room["variant"] = {"path": str(path or ""), "pos": int(pos), "full": full}
+        room["show_sol"] = False
+        room["live"] = {"tn": None, "ds": [], "text": "", "checked": False, "ok": None}
+        room["q"] = _public_from_full(full, False)
+        room["votes"] = {}
+        room["ver"] = int(room.get("ver") or 0) + 1
+        room["updated"] = _now()
+        _rooms_dump()
+    return True
+
+
 def _want_sol(data, live, room):
     """Heartbeat ADMIN không gửi show_sol thì giữ trạng thái đã chiếu đáp án."""
     data = data if isinstance(data, dict) else {}
@@ -134,6 +220,35 @@ def _merge_push_live(room, incoming):
         # ADMIN vừa Xác nhận trên trang làm bài → mở đáp án/lời giải cho lớp
         open_sol = True
     return incoming, open_sol
+
+
+def _peek_from_full(full):
+    """Gợi ý của bộ số đang chiếu, không phải đáp án câu gốc."""
+    if not isinstance(full, dict):
+        return None
+    kind = str(full.get("kind") or "").upper()
+    labs = "ABCDEFGH"
+    hint = ""
+    if kind == "TN":
+        hint = "".join(
+            labs[i]
+            for i, o in enumerate(full.get("options") or [])
+            if isinstance(o, dict) and o.get("correct") and i < len(labs)
+        )
+    elif kind == "DS":
+        parts = []
+        for i, s in enumerate(full.get("statements") or []):
+            if not isinstance(s, dict):
+                continue
+            lab = labs[i] if i < len(labs) else str(i + 1)
+            parts.append(lab + ("Đ" if s.get("correct") else "S"))
+        hint = " ".join(parts)
+    elif kind == "TLN":
+        hint = str(full.get("answer") or "").strip()
+    else:
+        raw = re.sub(r"<[^>]+>", " ", str(full.get("solution") or ""))
+        hint = re.sub(r"\s+", " ", raw).strip()[:180]
+    return {"hint": hint or "—", "solution": full.get("solution") or "", "kind": kind}
 
 
 def _teacher_peek_payload(q):
@@ -669,6 +784,8 @@ def _snapshot(show_sol=None, zoom=None, reveal=False, data=None):
         "show_sol": show,
         "zoom": _zoom(zoom),
         "q": _public_q(q, keys),
+        "q_src": str(q.get("src") or ""),
+        "q_fi": int(q.get("file_idx") if q.get("file_idx") is not None else q.get("idx") or 0),
         "updated": _now(),
     }, ""
 
@@ -1056,6 +1173,11 @@ def _room_out(room, include_q=True, host=False):
     }
     if host:
         d["roster"] = _vote_roster(room)
+        d["q_src"] = str(room.get("q_src") or "")
+        try:
+            d["q_fi"] = int(room.get("q_fi") or 0)
+        except (TypeError, ValueError):
+            d["q_fi"] = 0
     if include_q:
         d["q"] = room.get("q") or {}
     return d
@@ -1102,7 +1224,8 @@ def _put_room(hid, code, token, snap, live, force_kind=False):
             json.dumps(room.get("live") or {}, sort_keys=True, ensure_ascii=False),
         )
         room.update(snap)
-        qk = str((snap.get("q") or {}).get("kind") or "")
+        _apply_room_variant(room)
+        qk = str((room.get("q") or {}).get("kind") or "")
         if qk in {"LT", "PP"}:
             room["ids"] = []
             room["dang_nav"] = []
@@ -1330,9 +1453,17 @@ def api_present_peek():
         qk = str((room.get("q") or {}).get("kind") or "")
         pos = int(room.get("pos") or 0)
         raw = _raw_q_from_room(room) if qk not in {"LT", "PP"} else None
+        variant_full = None
+        v = room.get("variant") if isinstance(room.get("variant"), dict) else None
+        if v:
+            try:
+                if str(v.get("path") or "") == str(room.get("path") or "") and int(v.get("pos")) == pos:
+                    variant_full = v.get("full") if isinstance(v.get("full"), dict) else None
+            except (TypeError, ValueError):
+                variant_full = None
     if qk in {"LT", "PP"}:
         return jsonify(ok=True, kind=qk, hint="", solution="", pos=pos)
-    peek = _teacher_peek_payload(raw)
+    peek = _peek_from_full(variant_full) if variant_full else _teacher_peek_payload(raw)
     if not peek:
         return jsonify(ok=False, error="Không tải được đáp án."), 400
     peek.update(ok=True, pos=pos)
@@ -1821,6 +1952,7 @@ def present_watch(code=""):
         "<select id='secJump' aria-label='Chọn câu trong dạng'></select>"
         "<button type='button' class='cinema-tool' id='qNext' title='Câu sau cùng dạng'>▶</button>"
         "</div>"
+        "<button type='button' class='cinema-tool' id='reshufCinema' hidden>🎲 Đổi đề bài mới</button>"
         "<button type='button' class='cinema-tool' id='chkToggle' hidden>✅ Xác nhận + lời giải</button>"
         "<button type='button' class='cinema-tool' id='peekToggle' hidden>💡 Gợi ý</button>"
         "<button type='button' class='cinema-tool' id='inkToggle' hidden>✏️ Bút</button>"
@@ -2989,6 +3121,12 @@ function paintHostTools(){
   const done=!!(lastLive&&lastLive.checked);
   document.body.classList.toggle('is-host', on);
   document.body.classList.toggle('sol-on', !!lastShowSol);
+  const reshuf=document.getElementById('reshufCinema');
+  if(reshuf){
+    reshuf.hidden=!quiz;
+    reshuf.disabled=!!reshuf.dataset.busy;
+    reshuf.title='Đổi số liệu câu này. Lớp thấy cùng đề mới, đáp án tính lại.';
+  }
   const chk=document.getElementById('chkToggle');
   const peek=document.getElementById('peekToggle');
   const sol=document.getElementById('solToggle');
@@ -3985,6 +4123,8 @@ async function tick(){
     }
     lastVer=d.ver;
     lastQ=d.q||null;
+    if(d.q_src) window.__ldvlQSrc=d.q_src;
+    if(d.q_fi!=null) window.__ldvlQFi=d.q_fi;
     lastLive=d.live||{};
     lastVotes=d.votes||{};
     window.lastLeaves=d.leaves||{};
@@ -4146,6 +4286,32 @@ setInterval(tick,900);
   };
   const sol=document.getElementById('solToggle');
   if(sol) sol.onclick=async function(){ await presentReveal(!lastShowSol); };
+  const reshuf=document.getElementById('reshufCinema');
+  if(reshuf) reshuf.onclick=async function(){
+    const p=hostTok(); if(!p) return;
+    const src=window.__ldvlQSrc||'';
+    const fi=window.__ldvlQFi;
+    if(!src||fi==null){alert('Chưa biết câu đang chiếu.');return;}
+    reshuf.dataset.busy='1';
+    reshuf.disabled=true;
+    reshuf.textContent='Đang đổi số…';
+    const keys=(window.ldvlFilledKeys&&ldvlFilledKeys())||[];
+    try{
+      const r=await fetch('/api/practice/reshuffle',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+        body:JSON.stringify({src:src,file_idx:fi,api_keys:keys,code:p.code,token:p.token,present:true})});
+      const d=await r.json().catch(function(){return {}});
+      if(!d||!d.ok){alert((d&&d.error)||'Chưa đổi được số.');return;}
+      lastVer=-1;
+      await tick();
+    }catch(e){
+      alert('Không gọi được máy chủ.');
+    }finally{
+      delete reshuf.dataset.busy;
+      reshuf.disabled=false;
+      reshuf.textContent='🎲 Đổi đề bài mới';
+      paintHostTools();
+    }
+  };
   const chk=document.getElementById('chkToggle');
   if(chk) chk.onclick=async function(){
     const ok=await presentLive(null, true);
@@ -4326,7 +4492,9 @@ async function followPresentRoom(){
 }
 function collectLive(){
   const q=window.Q||{};
-  const live={tn:null,ds:[],text:'',checked:!!window.checked,ok:null};
+  const live=window.__ldvlReshuffling
+    ? {tn:null,ds:[],text:'',checked:false,ok:null}
+    : {tn:null,ds:[],text:'',checked:!!window.checked,ok:null};
   if(q.kind==='TN'){
     const z=document.querySelector('#q input[name=a]:checked');
     live.tn=z?+z.value:null;

@@ -4600,7 +4600,7 @@ else if(q.kind==='DS'){h+='<div class="qbody ds"><div class="qfig" hidden></div>
 else if(q.kind==='TLN')h+='<input id="ans" class="answerbox" style="width:100%;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập đáp án rồi bấm Xác nhận (hoặc Enter)">';
 else h+='<textarea id="ans" class="answerbox" style="width:100%;height:190px;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập bài làm"></textarea>';
 h+=(q.develop_html||'');
-h+='<div class="quizacts"><button class="btn primary" id="chkbtn" onclick="check()" disabled>✅ Xác nhận</button>'+(IS_ADMIN?'<button type="button" class="btn" id="hintbtn" onclick="toggleHint()">💡 Gợi ý đáp án</button>':'')+'<button id="solbtn" class="btn" style="display:'+(IS_ADMIN?'inline-block':'none')+'" onclick="openSolution()">📖 '+(IS_ADMIN?'Lời giải':'Xem lời giải')+'</button>'+(IS_ADMIN?'<button type="button" class="btn aiPhotoBtn">📷 Chụp ảnh → prompt</button>':'')+'<button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="hint" class="hintline">'+(IS_ADMIN?'ADMIN: gợi ý/lời giải chỉ trên máy này — bấm 📖 Đáp án trên màn chiếu mới cho lớp xem.':'Chọn đáp án rồi bấm <b>Xác nhận</b> — lời giải chỉ mở sau khi xác nhận.')+'</div><div id="r">'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>':'')+'</div>';document.getElementById('q').innerHTML=h;ldvlPlaceFigs();ldvlBindQZoom();ldvlApplyQZoom();bind();if(IS_ADMIN)ldvlMountPracticeRewrite();typeset(document.getElementById('q'))}
+h+='<div class="quizacts"><button type="button" class="btn" id="reshuf" onclick="reshuffleQ()">🎲 Đổi đề bài mới</button><button class="btn primary" id="chkbtn" onclick="check()" disabled>✅ Xác nhận</button>'+(IS_ADMIN?'<button type="button" class="btn" id="hintbtn" onclick="toggleHint()">💡 Gợi ý đáp án</button>':'')+'<button id="solbtn" class="btn" style="display:'+(IS_ADMIN?'inline-block':'none')+'" onclick="openSolution()">📖 '+(IS_ADMIN?'Lời giải':'Xem lời giải')+'</button>'+(IS_ADMIN?'<button type="button" class="btn aiPhotoBtn">📷 Chụp ảnh → prompt</button>':'')+'<button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="hint" class="hintline">'+(IS_ADMIN?'ADMIN: gợi ý/lời giải chỉ trên máy này — bấm 📖 Đáp án trên màn chiếu mới cho lớp xem.':'Chọn đáp án rồi bấm <b>Xác nhận</b> — lời giải chỉ mở sau khi xác nhận.')+'</div><div id="r">'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>':'')+'</div>';document.getElementById('q').innerHTML=h;ldvlPlaceFigs();ldvlBindQZoom();ldvlApplyQZoom();bind();if(IS_ADMIN)ldvlMountPracticeRewrite();typeset(document.getElementById('q'))}
 function bind(){let q=Q;
 if(q.kind==='TN')document.querySelectorAll('input[name=a]').forEach(function(el){el.addEventListener('change',syncReady)});
 else if(q.kind==='DS')document.querySelectorAll('.tf input[type=radio]').forEach(function(el){el.addEventListener('change',syncReady)});
@@ -4670,13 +4670,35 @@ function verdictHtml(q, student, ok){
   }
   return head;
 }
+async function reshuffleQ(){
+  if(!Q||Q.file_idx==null||!Q.src){alert('Câu này không đổi số được.');return;}
+  const btn=document.getElementById('reshuf');
+  if(btn){btn.disabled=true;btn.textContent='Đang đổi số…';}
+  window.__ldvlReshuffling=true;
+  let present=null;
+  try{present=JSON.parse(localStorage.getItem('ldvlPresent')||'null')}catch(e){}
+  const keys=(window.ldvlFilledKeys&&ldvlFilledKeys())||[];
+  try{
+    const r=await fetch('/api/practice/reshuffle',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({src:Q.src,file_idx:Q.file_idx,api_keys:keys,code:present&&present.code,token:present&&present.token,pos:window.practicePos,path:window.practicePath})});
+    const d=await r.json().catch(function(){return {}});
+    if(!d.ok||!d.q){alert((d&&d.error)||'Chưa đổi được số. Bấm lại.');if(btn){btn.disabled=false;btn.textContent='🎲 Đổi đề bài mới';}return;}
+    checked=false;
+    Q=d.q;
+    const praise=document.getElementById('praise'); if(praise) praise.innerHTML='';
+    draw();
+  }catch(e){
+    alert('Không gọi được máy chủ.');
+    if(btn){btn.disabled=false;btn.textContent='🎲 Đổi đề bài mới';}
+  }finally{window.__ldvlReshuffling=false;}
+}
 function check(){if(checked)return;let q=Q,ok=false,student='';
 if(q.kind==='TN'){let z=document.querySelector('input[name=a]:checked');if(!z)return alert('Hãy chọn đáp án.');let i=+z.value;student=String.fromCharCode(65+i);q.options.forEach((o,j)=>{if(o.correct)document.getElementById('o'+j).classList.add('correct');if(j===i&&!o.correct)document.getElementById('o'+j).classList.add('wrong')});ok=!!q.options[i].correct}
 else if(q.kind==='DS'){ok=true;let a=[];for(let i=0;i<q.statements.length;i++){let z=document.querySelector('input[name=t'+i+']:checked');if(!z)return alert('Chọn đủ Đúng/Sai.');let v=z.value==='1';a.push(v?'Đ':'S');document.getElementById('t'+i).classList.add(v===q.statements[i].correct?'correct':'wrong');if(v!==q.statements[i].correct)ok=false}student=a.join('')}
 else{let z=document.getElementById('ans');if(!z||!z.value.trim())return alert('Hãy nhập câu trả lời.');student=z.value.trim();ok=q.kind==='TLN'&&norm(student)===norm(q.answer);}
 let note=verdictHtml(q,student,ok);let sol=q.solution||'Chưa có lời giải trong file TEX.';document.getElementById('r').innerHTML='<div class="result '+(ok?'good':'bad')+'">'+note+'</div>'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div>':'')+'<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+sol+'</div></div>';typeset(document.getElementById('q'));checked=true;lockInputs();document.getElementById('next').style.display='inline-block';window.LAST_REVIEW=Object.assign({},q,{student:student,ok:ok});
 let sb=document.getElementById('solbtn');if(sb)sb.style.display='inline-block';
-fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>'})}
+if(!window.__slotPosted){window.__slotPosted=true;fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>'})}}
 function reviewNow(){ldvlGeminiReview(window.LAST_REVIEW,document.getElementById('aiout'))}
 function norm(s){return String(s??'').replace(/\$+/g,'').replace(/\s+/g,'').replace(/,/g,'.').toLowerCase()}
 draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__PATH__',json.dumps(p,ensure_ascii=False)).replace('__IDS__',json.dumps(ids)).replace('__QPOS__',str(int(pos))).replace('__POS__',str(pos+1)).replace('__AI__','true').replace('__ADMIN__','true' if is_admin else 'false')
@@ -4686,6 +4708,93 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
         from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
         extra=REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
     return page('Làm bài',body+js+extra)
+
+@app.post('/api/practice/reshuffle')
+def practice_reshuffle():
+    """Đổi số câu đang làm hoặc đang chiếu. Không ghi ngân hàng."""
+    m = member_current()
+    if not m:
+        return jsonify(ok=False, error='Hãy đăng nhập.'), 401
+    if not (can_practice(m, str(session.get('practice_path') or '') or None) or has_full_bank_access(m)):
+        return jsonify(ok=False, error='Cần VIP để đổi số luyện tập.'), 403
+    data = request.get_json(silent=True) or {}
+    src = str(data.get('src') or '').replace('\\', '/').strip()
+    try:
+        fi = int(data.get('file_idx'))
+    except (TypeError, ValueError):
+        return jsonify(ok=False, error='Thiếu câu.'), 400
+    if not src.startswith('ngan-hang/'):
+        return jsonify(ok=False, error='File không hợp lệ.'), 400
+    from student_gemini import _keys_from_payload
+    from admin_rewrite import live_number_variant
+    from live_present import publish_number_variant, room_matches_question
+
+    keys = _keys_from_payload(data)
+    if GEMINI_KEY and GEMINI_KEY not in keys:
+        keys.append(GEMINI_KEY)
+    code = str(data.get('code') or session.get('present_code') or '')
+    token = str(data.get('token') or session.get('present_token') or '')
+    pub_path = ''
+    pub_pos = 0
+    allowed = False
+    path = str(session.get('practice_path') or '')
+    ids = list(session.get('practice_ids') or [])
+    try:
+        pos = int(data.get('pos') if data.get('pos') is not None else session.get('practice_pos') or 0)
+    except (TypeError, ValueError):
+        pos = 0
+    if path and ids and 0 <= pos < len(ids):
+        try:
+            qs = {q['idx']: q for q in parse_lesson_questions(path)}
+        except Exception:
+            qs = {}
+        q0 = qs.get(ids[pos]) if qs else None
+        if q0:
+            try:
+                qfi = int(q0.get('file_idx') if q0.get('file_idx') is not None else q0.get('idx') or 0)
+            except (TypeError, ValueError):
+                qfi = -1
+            if str(q0.get('src') or '') == src and qfi == fi:
+                allowed = True
+                pub_path, pub_pos = path, pos
+    room_hit = room_matches_question(code, token, src, fi) if code and token and has_full_bank_access(m) else None
+    if room_hit:
+        allowed = True
+        pub_path, pub_pos = room_hit['path'], room_hit['pos']
+    if not allowed:
+        return jsonify(ok=False, error='Chỉ đổi số câu đang làm hoặc câu đang chiếu.'), 403
+    got, err = live_number_variant(src, fi, keys)
+    if not got:
+        return jsonify(ok=False, error=err or 'Chưa đổi được số.'), 400
+    orig = got['orig']
+    kind = str(got.get('kind') or 'TL')
+    payload = {
+        'kind': kind,
+        'id': orig.get('id') or '',
+        'cau': orig.get('cau') or '',
+        'nguon': 'Đã đổi số — cùng câu, đáp án tính lại',
+        'text': html_question(got.get('stem') or '', src),
+        'solution': html_question(got.get('solution') or '', src),
+        'dang': orig.get('dang') or '',
+        'level': orig.get('level') or '',
+        'src': src,
+        'file_idx': fi,
+        'line': int(orig.get('line') or 0),
+        'develop_html': '',
+        'reshuffle': True,
+    }
+    opts = got.get('options') or []
+    if kind == 'TN':
+        payload['options'] = [{'text': html_question(o.get('text') or '', src), 'correct': bool(o.get('correct'))} for o in opts]
+    elif kind == 'DS':
+        payload['statements'] = [{'text': html_question(o.get('text') or '', src), 'correct': bool(o.get('correct'))} for o in opts]
+    elif kind == 'TLN':
+        payload['answer'] = got.get('answer') or ''
+    published = False
+    if code and token and pub_path:
+        published = bool(publish_number_variant(code, token, payload, pub_path, pub_pos))
+    return jsonify(ok=True, q=payload, published=published)
+
 
 @app.post('/member/answer')
 def answer():

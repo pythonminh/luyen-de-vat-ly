@@ -668,6 +668,100 @@ def _prompt_similar(pack):
     )
 
 
+def _prompt_live_numbers(pack):
+    """Đổi số ngay trên trang làm bài / màn chiếu. Giữ nguyên câu, chỉ số liệu và đáp án đổi."""
+    letters = "ABCD"
+    kind = str(pack.get("kind") or "TL").upper()
+    opt_lines = []
+    for i, o in enumerate(pack.get("options") or []):
+        mark = " [ĐÚNG]" if o.get("correct") else ""
+        lab = letters[i] if kind == "TN" else str(i + 1)
+        opt_lines.append(f"{lab}.{mark} {o.get('text') or ''}")
+    return (
+        "ĐỔI SỐ LIỆU để học sinh luyện ngay trên trang làm bài và màn chiếu. Không viết file HTML. Không vẽ Canva.\n"
+        f"Giữ đúng loại {kind}. Giữ nguyên hiện tượng, tên chất, câu chữ, đơn vị và hình (TikZ, bảng).\n"
+        "Chỉ thay các số liệu bằng số mới hợp lí, khác rõ số cũ. Số trong bảng và trong mã TikZ phải đổi theo.\n"
+        "Tính lại lời giải từ đầu. Đáp án đúng phải là kết quả của số mới. Cấm giữ đáp án cũ.\n"
+        + kind_structure_text(kind)
+        + "CẤM dòng comment %, \\begin{ex}, \\end{ex}, \\loigiai, \\True trong stem/options/solution.\n"
+        "JSON một object: "
+        '{"stem":"...","options":[{"text":"...","correct":true}],"answer":"...","solution":"...","note":""}\n'
+        "TN: đúng 4 phương án, một ý correct true theo kết quả mới. "
+        "DS: đúng 4 mệnh đề, mỗi ý correct true/false theo số mới. "
+        "TLN: options=[], answer chỉ là số mới. TL: options=[].\n"
+        "Trong JSON mỗi backslash LaTeX viết hai lần. Xuống dòng bằng \\n.\n"
+        "Lặp lại giữa các mốc ===STEM=== ===SOLUTION=== ===ANSWER=== ===NOTE===\n\n"
+        f"Loại: {kind}\n"
+        f"Câu gốc:\n{pack.get('text') or ''}\n"
+        + ("Phương án gốc:\n" + "\n".join(opt_lines) + "\n" if opt_lines else "")
+        + (f"Đáp án số cũ (phải đổi): {pack.get('answer')}\n" if pack.get("answer") else "")
+        + f"Lời giải cũ (phải tính lại):\n{pack.get('solution') or ''}\n"
+    )
+
+
+def _variant_fields(pack, raw):
+    obj = _extract_ai_fields(raw)
+    stem = _clean_tex(obj.get("stem") or "")
+    solution = _clean_tex(obj.get("solution") or "")
+    answer = _clean_tex(obj.get("answer") or "")
+    raw_opts = obj.get("options") if isinstance(obj.get("options"), list) else []
+    new_opts = []
+    kind = pack["kind"]
+    if kind == "DS" and len(raw_opts) != 4:
+        rec = base.ds_statements_from_solution(solution)
+        if len(rec) == 4:
+            raw_opts = rec
+    if kind in ("TN", "DS") and len(raw_opts) == 4:
+        for item in raw_opts:
+            txt = item.get("text") if isinstance(item, dict) else item
+            correct = bool(item.get("correct")) if isinstance(item, dict) and "correct" in item else False
+            new_opts.append({"text": _clean_tex(txt), "correct": correct})
+    if kind == "TN" and new_opts and not any(o.get("correct") for o in new_opts):
+        hit = re.search(r"\b([A-D])\b", answer or "", re.I)
+        if hit:
+            ix = ord(hit.group(1).upper()) - 65
+            if 0 <= ix < len(new_opts):
+                new_opts[ix]["correct"] = True
+    if kind == "TLN":
+        answer, solution = _coerce_tln(answer, solution)
+    return stem, solution, answer, new_opts
+
+
+def live_number_variant(src, fi, keys):
+    """Cùng câu, bộ số mới, đáp án tính lại. Không ghi vào ngân hàng."""
+    q, _tex = _load_q(src, fi)
+    if not q:
+        return None, "Không tìm thấy câu."
+    if not keys:
+        return None, "Chưa có key Gemini. Nạp key ở mục Gemini, hoặc đặt GEMINI_API_KEY trên máy chủ."
+    pack = _q_plain_pack(q)
+    prompt = _prompt_live_numbers(pack)
+    from admin_classify import _gemini_once
+
+    raw, err = _gemini_once(keys, prompt, 6000)
+    if not raw:
+        return None, err or "Gemini không trả lời."
+    stem, solution, answer, new_opts = _variant_fields(pack, raw)
+    if stem_incomplete(stem) or not solution or _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution):
+        raw2, err2 = _gemini_once(keys, prompt + "\nLẦN 2: bản trước thiếu đề, thiếu lời giải hoặc sai đáp án. Tính lại cho khớp số mới.\n", 6000)
+        if raw2:
+            stem, solution, answer, new_opts = _variant_fields(pack, raw2)
+        elif not solution:
+            return None, err2 or "Chưa tính lại được lời giải."
+    if stem_incomplete(stem) or not solution:
+        return None, "Chưa ra đủ đề và lời giải khớp số mới. Bấm lại."
+    if pack["kind"] in ("TN", "DS") and _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution):
+        return None, "Đáp án mới chưa đủ 4 ý hoặc chưa có ý đúng. Bấm lại."
+    return {
+        "orig": q,
+        "kind": pack["kind"],
+        "stem": stem,
+        "solution": solution,
+        "answer": answer,
+        "options": new_opts,
+    }, ""
+
+
 def _prompt_recalc(pack, data):
     letters = "ABCD"
     kind = str(pack.get("kind") or "TL").upper()
