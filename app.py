@@ -603,7 +603,7 @@ body.cinema .qbox{padding-right:12px}
 @media(max-width:760px){.topin .top-tools-list{top:95px;right:8px}.topin .brand{font-size:14px!important}}
 
 /* VIP question workspace: progressive disclosure, readable measure */
-.vip-practice-wrap{max-width:1080px!important;margin:0 auto!important;padding:10px 14px!important}
+.vip-practice-wrap{max-width:none!important;width:100%!important;margin:0!important;padding:8px 12px 16px!important}
 .vip-practice-wrap>.panel{border:1px solid #d8e3f0!important;border-radius:13px!important;overflow:visible!important;box-shadow:0 3px 16px #153c6810;background:#fff}
 .vip-practice-wrap .practice-filters{border:1px solid #d5e3f0;border-radius:10px;margin-bottom:10px;background:#fff}
 .vip-practice-wrap .practice-filters>summary,.vip-practice-wrap .practice-questions>summary{list-style:none;cursor:pointer;padding:10px 14px;font:750 13px/1.45 Segoe UI,Arial,sans-serif;color:#1c5a99;min-height:43px}
@@ -4532,7 +4532,7 @@ window.practicePath=__PATH__;window.practiceIds=__IDS__;window.practicePos=__QPO
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||document.getElementById('q'));el=el||document.getElementById('q');if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}MathJax.typesetPromise([el]).catch(function(){});}}
 const QZKEY='ldvlQZoom';
-let qZoom=(function(){try{var v=parseFloat(localStorage.getItem(QZKEY)||'1');return (v>=0.8&&v<=2.6)?v:1}catch(e){return 1}})();
+let qZoom=(function(){try{var v=parseFloat(localStorage.getItem(QZKEY)||'1');return (v>=0.8&&v<=3.4)?v:1}catch(e){return 1}})();
 function ldvlApplyQZoom(){
   const box=document.getElementById('q');
   if(box) box.style.setProperty('--qzoom', String(qZoom));
@@ -4543,7 +4543,7 @@ function ldvlApplyQZoom(){
 }
 function ldvlQZoom(dir){
   qZoom=Math.round((qZoom+dir*0.1)*10)/10;
-  qZoom=Math.max(0.8,Math.min(2.6,qZoom));
+  qZoom=Math.max(0.8,Math.min(3.4,qZoom));
   ldvlApplyQZoom();
 }
 function ldvlQFit(){
@@ -4553,7 +4553,7 @@ function ldvlQFit(){
   const availH=Math.max(180, window.innerHeight-top-18);
   const host=document.querySelector('.practice-q')||box.parentElement;
   const availW=Math.max(280,(host&&host.clientWidth)||box.clientWidth);
-  let lo=0.8, hi=2.6, best=0.8;
+  let lo=0.8, hi=3.4, best=0.8;
   for(let i=0;i<14;i++){
     const mid=(lo+hi)/2;
     box.style.setProperty('--qzoom', String(mid));
@@ -4561,7 +4561,7 @@ function ldvlQFit(){
     if(box.scrollHeight<=availH+2 && box.scrollWidth<=availW+2){best=mid;lo=mid;}
     else hi=mid;
   }
-  qZoom=Math.max(0.8, Math.min(2.6, Math.round(best*0.97*10)/10));
+  qZoom=Math.max(0.8, Math.min(3.4, Math.round(best*0.97*10)/10));
   ldvlApplyQZoom();
 }
 function ldvlBindQZoom(){
@@ -4601,7 +4601,7 @@ else if(q.kind==='DS'){h+='<div class="qbody ds"><div class="qfig" hidden></div>
 else if(q.kind==='TLN')h+='<input id="ans" class="answerbox" style="width:100%;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập đáp án rồi bấm Xác nhận (hoặc Enter)">';
 else h+='<textarea id="ans" class="answerbox" style="width:100%;height:190px;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập bài làm"></textarea>';
 h+=(q.develop_html||'');
-h+='<div class="quizacts"><button type="button" class="btn" id="reshuf" onclick="reshuffleQ()">🎲 Đổi đề bài mới</button><button class="btn primary" id="chkbtn" onclick="check()" disabled>✅ Xác nhận</button>'+(IS_ADMIN?'<button type="button" class="btn" id="hintbtn" onclick="toggleHint()">💡 Gợi ý đáp án</button>':'')+'<button id="solbtn" class="btn" style="display:'+(IS_ADMIN?'inline-block':'none')+'" onclick="openSolution()">📖 '+(IS_ADMIN?'Lời giải':'Xem lời giải')+'</button>'+(IS_ADMIN?'<button type="button" class="btn aiPhotoBtn">📷 Chụp ảnh → prompt</button>':'')+'<button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="hint" class="hintline">'+(IS_ADMIN?'ADMIN: gợi ý/lời giải chỉ trên máy này — bấm 📖 Đáp án trên màn chiếu mới cho lớp xem.':'Chọn đáp án rồi bấm <b>Xác nhận</b> — lời giải chỉ mở sau khi xác nhận.')+'</div><div id="r">'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>':'')+'</div>';document.getElementById('q').innerHTML=h;ldvlPlaceFigs();ldvlBindQZoom();ldvlApplyQZoom();bind();if(IS_ADMIN)ldvlMountPracticeRewrite();typeset(document.getElementById('q'))}
+h+='<div class="quizacts"><button type="button" class="btn" id="reshuf" onclick="reshuffleQ()">🎲 Đổi đề bài mới</button><button class="btn primary" id="chkbtn" onclick="check()" disabled>✅ Xác nhận</button>'+(IS_ADMIN?'<button type="button" class="btn" id="hintbtn" onclick="toggleHint()">💡 Gợi ý đáp án</button>':'')+'<button id="solbtn" class="btn" style="display:'+(IS_ADMIN?'inline-block':'none')+'" onclick="openSolution()">📖 '+(IS_ADMIN?'Lời giải':'Xem lời giải')+'</button>'+(IS_ADMIN?'<button type="button" class="btn aiPhotoBtn">📷 Chụp ảnh → prompt</button>':'')+'<button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="hint" class="hintline">'+(IS_ADMIN?'ADMIN: gợi ý/lời giải chỉ trên máy này — bấm 📖 Đáp án trên màn chiếu mới cho lớp xem.':'Chọn đáp án rồi bấm <b>Xác nhận</b> — lời giải chỉ mở sau khi xác nhận.')+'</div><div id="r">'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>':'')+'</div>';document.getElementById('q').innerHTML=h;ldvlPlaceFigs();ldvlBindQZoom();ldvlApplyQZoom();bind();if(IS_ADMIN)ldvlMountPracticeRewrite();typeset(document.getElementById('q'));setTimeout(ldvlQFit,180);setTimeout(ldvlQFit,700)}
 function bind(){let q=Q;
 if(q.kind==='TN')document.querySelectorAll('input[name=a]').forEach(function(el){el.addEventListener('change',syncReady)});
 else if(q.kind==='DS')document.querySelectorAll('.tf input[type=radio]').forEach(function(el){el.addEventListener('change',syncReady)});
