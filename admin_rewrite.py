@@ -4298,6 +4298,66 @@ document.addEventListener('click',function(e){
     }, function(){prompt('Copy prompt', cta?cta.value:'');});
     return;
   }
+  const reshufBtn=e.target.closest&&e.target.closest('.rwreshuf');
+  if(reshufBtn){
+    e.preventDefault();
+    const card=reshufBtn.closest('.qcard');
+    const p=dropOf(reshufBtn);
+    if(!card||!p) return;
+    const label=reshufBtn.textContent;
+    card.querySelectorAll('.rwreshuf').forEach(function(b){b.disabled=true;b.textContent='Đang đổi số…';});
+    const keys=(window.ldvlFilledKeys&&ldvlFilledKeys())||[];
+    let present=null;
+    try{present=JSON.parse(localStorage.getItem('ldvlPresent')||'null')}catch(err){}
+    (async function(){
+      try{
+        const r=await fetch('/api/practice/reshuffle',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+          body:JSON.stringify({src:p.src,file_idx:p.fi,api_keys:keys,code:present&&present.code,token:present&&present.token})});
+        let d=await r.json().catch(function(){return {}});
+        if(d&&d.ok&&d.job){
+          const job=d.job;
+          for(let i=0;i<140;i++){
+            await new Promise(function(res){setTimeout(res,2000)});
+            const pr=await fetch('/api/practice/reshuffle?job='+encodeURIComponent(job),{credentials:'same-origin',cache:'no-store'});
+            d=await pr.json().catch(function(){return {}});
+            if(!(d&&d.state==='run')) break;
+          }
+        }
+        if(!d||!d.ok||!d.q){alert((d&&d.error)||'Chưa đổi được số. Bấm lại.');return;}
+        const q=d.q;
+        const stem=card.querySelector('.qstem');
+        if(stem) stem.innerHTML=q.text||'';
+        card.querySelectorAll('.opts,.qbody.ds,.answerline').forEach(function(el){el.remove();});
+        const head=card.querySelector('.qheadline');
+        let html='';
+        if(q.kind==='TN'){
+          html='<div class="opts">'+(q.options||[]).map(function(o,i){
+            const ok=!!o.correct;
+            return '<div class="opt'+(ok?' ok':'')+'"><b>'+'ABCD'.charAt(i)+'.</b> '+(o.text||'')+(ok?' <span class="okmark">Đáp án đúng</span>':'')+'</div>';
+          }).join('')+'</div>';
+        }else if(q.kind==='DS'){
+          const bits=(q.statements||[]).map(function(s,i){
+            const yes=!!s.correct;
+            const lab='ABCD'.charAt(i)||(i+1);
+            return '<div class="tf'+(yes?' ok':' noans')+'"><span class="tflab">'+lab+'</span><div class="tf-text">'+(s.text||'')+'</div><span class="tf-box yes'+(yes?' on':'')+'"></span><span class="tf-box no'+(!yes?' on':'')+'"></span></div>';
+          }).join('');
+          html='<div class="qbody ds"><div class="tfgrid"><div class="tf-colhead"><span></span><span></span><span class="tf-h yes">Đúng</span><span class="tf-h no">Sai</span></div>'+bits+'</div></div>';
+        }else if(q.kind==='TLN'){
+          html='<div class="answerline"><b>Đáp án:</b> '+(q.answer||'—')+'</div>';
+        }
+        if(head&&html) head.insertAdjacentHTML('afterend', html);
+        const sol=card.querySelector('.solution');
+        if(sol) sol.innerHTML='<b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải.')+'</div>';
+        if(window.ldvlTypeset) window.ldvlTypeset(card);
+        else if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([card]).catch(function(){});
+      }catch(err){
+        alert('Chưa đổi được số. '+(err&&err.message?err.message:'Bấm lại.'));
+      }finally{
+        card.querySelectorAll('.rwreshuf').forEach(function(b){b.disabled=false;b.textContent=label||'🎲 Đổi đề bài mới';});
+      }
+    })();
+    return;
+  }
   const canvaBtn=e.target.closest&&e.target.closest('.rwcanva');
   if(canvaBtn){
     e.preventDefault();

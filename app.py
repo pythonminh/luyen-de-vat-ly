@@ -4855,6 +4855,8 @@ def practice_reshuffle():
     if room_hit:
         allowed = True
         pub_path, pub_pos = room_hit['path'], room_hit['pos']
+    if has_full_bank_access(m):
+        allowed = True
     if not allowed:
         return jsonify(ok=False, error='Chỉ đổi số câu đang làm hoặc câu đang chiếu.'), 403
     job = secrets.token_hex(8)

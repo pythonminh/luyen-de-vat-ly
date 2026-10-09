@@ -402,7 +402,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     drop_key=_esc(src+'||'+str(fi))
     rw=''
     if manage:
-        rw=(f"<details class='qtools-fold'><summary>🛠 Công cụ chỉnh sửa câu hỏi</summary><div class='rwbar'><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
+        rw=(f"<details class='qtools-fold'><summary>🛠 Công cụ chỉnh sửa câu hỏi</summary><div class='rwbar'><button type='button' class='btn mini primary rwreshuf' data-drop='{drop_key}'>🎲 Đổi đề bài mới</button><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
             f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại đề + lời giải</button>"
             f"<button type='button' class='btn mini rwedit' data-drop='{drop_key}'>✏️ Sửa đề / lời giải</button>"
             f"<button type='button' class='btn mini rwimgs' data-drop='{drop_key}'>🖼 Ảnh thư mục</button>"
@@ -433,6 +433,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-idx='{fi}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'>{qlab}"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"{tex_badge}{gh}{nguon_html(q)}<span class='level muc-{muc}'>Mức {html.escape(muc_label(muc))}</span>"
+            + (f"<button type='button' class='btn mini primary rwreshuf' data-drop='{drop_key}'>🎲 Đổi đề bài mới</button>" if manage else "")
             + "</div>"
             f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text, src)}</div></div>{options}{develop_reference_html(q, src)}{rw}{sol_html}</article>")
 
