@@ -562,3 +562,95 @@ def _admin_mobile_response(response):
     except Exception:
         pass
     return response
+
+
+# Six-tile mobile ADMIN home. Desktop retains the existing bank interface.
+@app.after_request
+def mobile_admin_dashboard(response):
+    if request.path != "/admin" or request.method != "GET":
+        return response
+    if response.status_code != 200 or response.mimetype != "text/html" or not _is_admin_session():
+        return response
+    try:
+        import json
+        records=[]
+        for x in base.list_bank_tex():
+            records.append([
+                str(x.get("Mon") or ""),
+                str(x.get("Lop") or ""),
+                str(x.get("Chuong") or ""),
+                str(x.get("BaiHoc") or x.get("De") or ""),
+                str(x.get("path") or "")
+            ])
+        ui = """
+<style id="mobile-home-style">
+.mhome{display:none}
+@media(max-width:760px){
+ .mhome{display:block;max-width:480px;margin:auto;padding:12px 12px 90px;font-family:Arial,sans-serif;color:#18344e}
+ body:has(.mhome:not(.showbank)) .wrap{display:none!important}
+ .mhome.showbank{display:none}
+ .mhome *{box-sizing:border-box}
+ .mhead{background:#132f4c;color:white;border-radius:10px;padding:14px}
+ .mhead b{font-size:15px}.mhead small{display:block;margin:4px 0 9px}
+ .mhead form{display:flex;align-items:center;background:white;border-radius:8px;padding:0 8px}
+ .mhead input{width:100%;border:0;outline:0;min-height:44px;font-size:16px}
+ .mhead button{border:0;background:none;font-size:20px;min-width:35px}
+ .mhome h3{font-size:14px;margin:15px 0 9px}
+ .mtiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .mtiles a{min-height:78px;border:1px solid #d7dfe8;border-radius:10px;background:#fff;color:#193955;text-decoration:none;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:7px;font-size:12px;font-weight:650;padding:8px}
+ .mtiles strong{font-size:22px;font-weight:400}
+ .mfilt{background:#f3f5f8;border:1px solid #d8dfe7;border-radius:11px;padding:12px;margin-top:12px}
+ .mfilt h3{margin:0 0 9px}
+ .mselects{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .mselects select{width:100%;min-width:0;border:1px solid #dce3ea;background:white;border-radius:8px;padding:10px 8px;min-height:44px;font-size:14px}
+ .mselects .wide{grid-column:1/-1}
+ .mgo{display:block;margin-top:9px;background:#176bd3;color:white;text-decoration:none;text-align:center;padding:12px;border-radius:8px;font-weight:700;font-size:13px}
+ .mnav{position:fixed;bottom:0;left:0;right:0;z-index:2000;background:white;border-top:1px solid #d5dee8;display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
+ .mnav a{text-align:center;color:#38516e;text-decoration:none;font-size:11px;min-width:65px}
+ .mnav span{display:block;font-size:19px;margin-bottom:3px}
+}
+</style>
+<section class="mhome __STATE__" aria-label="Quản trị điện thoại">
+ <div class="mhead"><b>Lớp Học Thầy Minh</b><small>Quản trị hệ thống</small>
+  <form action="/admin"><input type="hidden" name="view" value="bank"><input type="search" name="q" placeholder="⌕ Tìm học sinh, bài tập, đề thi..." aria-label="Tìm file"><button aria-label="Tìm">→</button></form>
+ </div>
+ <h3>Truy cập nhanh</h3>
+ <nav class="mtiles">
+  <a href="/admin/members"><strong>♙</strong>Học sinh</a>
+  <a href="/admin?view=bank"><strong>▣</strong>Ngân hàng câu hỏi</a>
+  <a href="/admin?view=bank"><strong>▤</strong>Quản lý đề thi</a>
+  <a href="/admin/results"><strong>▥</strong>Kết quả học tập</a>
+  <a href="/admin/members?type=pending"><strong>♧</strong>Duyệt tài khoản</a>
+  <a href="/admin/password"><strong>⚙</strong>Cài đặt</a>
+ </nav>
+ <div class="mfilt"><h3>Bộ lọc nhanh</h3><div class="mselects">
+  <select id="msub" aria-label="Môn"></select><select id="mgrade" aria-label="Lớp"></select>
+  <select id="mchapter" class="wide" aria-label="Chương"></select>
+  <select id="mlesson" class="wide" aria-label="Bài"></select>
+ </div><a class="mgo" id="mgo" href="/admin?view=bank">Mở bài đã chọn →</a></div>
+ <nav class="mnav"><a href="/admin"><span>⌂</span>Trang chủ</a><a href="/admin?view=bank"><span>▣</span>Bài tập</a><a href="/admin/members"><span>♙</span>Học sinh</a><a href="/admin/ly-thuyet"><span>☷</span>Thêm</a></nav>
+</section>
+<script id="mobile-home-script">
+(function(){
+const rows=__ROWS__;
+const nodes=['msub','mgrade','mchapter','mlesson'].map(id=>document.getElementById(id));
+const go=document.getElementById('mgo');
+if(nodes.some(x=>!x))return;
+function fill(i){const el=nodes[i],old=el.value;el.replaceChildren(new Option(['Tất cả môn','Tất cả lớp','Tất cả chương','Tất cả bài'][i],''));const set=new Set(rows.filter(row=>nodes.every((node,j)=>j>=i||!node.value||row[j]===node.value)).map(row=>row[i]));Array.from(set).filter(Boolean).sort((a,b)=>a.localeCompare(b,'vi')).forEach(v=>el.add(new Option(v,v)));if(Array.from(el.options).some(o=>o.value===old))el.value=old;}
+function change(i){for(let j=i+1;j<4;j++)fill(j);const match=rows.find(row=>nodes.every((el,k)=>!el.value||row[k]===el.value));const key=nodes[3].value&&match?match[4]:nodes.slice().reverse().find(el=>el.value)?.value||'';go.href='/admin?view=bank&q='+encodeURIComponent(key);}
+nodes.forEach((el,i)=>el.addEventListener('change',()=>change(i)));
+fill(0);change(0);
+})();
+</script>
+"""
+        state = "showbank" if request.args.get("view") == "bank" else ""
+        ui = ui.replace("__STATE__", state).replace("__ROWS__", json.dumps(records, ensure_ascii=False).replace("<", "\\u003c").replace(">", "\\u003e"))
+        body=response.get_data(as_text=True)
+        if "</body>" not in body:
+            return response
+        body=body.replace("</body>", ui+"</body>", 1)
+        response.set_data(body)
+        response.headers.pop("Content-Length",None)
+    except Exception:
+        pass
+    return response
