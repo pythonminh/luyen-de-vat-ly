@@ -211,7 +211,8 @@ def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float,
         headers={"Content-Type": "application/json", "User-Agent": "luyen-de-vat-ly-student-gemini"},
     )
     # File .tex lớn / dang-fill cần thời gian sinh dài; gunicorn timeout phải cao hơn.
-    with urllib.request.urlopen(req, timeout=180) as r:
+    wait = 240 if (images or max_tokens >= 8000 or len(prompt) > 12000) else 180
+    with urllib.request.urlopen(req, timeout=wait) as r:
         obj = json.loads(r.read().decode("utf-8"))
     cands = obj.get("candidates") or []
     text = "".join(

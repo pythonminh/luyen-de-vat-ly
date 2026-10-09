@@ -5,3 +5,4 @@ __pycache__/
 data/tikz-cache/*.tex
 data/tikz-cache/*.svg
 data/fill-jobs/
+data/present-rooms.json

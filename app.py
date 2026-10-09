@@ -390,7 +390,10 @@ body.cinema .cinema-votes .vn{color:#b91c1c}
 body.cinema .cinema-votes .vleave{margin-top:8px;padding-top:8px;border-top:1px dashed #93c5fd;color:#9a3412;font-weight:700}
 body.cinema .cinema-votes .vroster{margin-top:10px;padding-top:8px;border-top:1px dashed #93c5fd;max-height:32vh;overflow:auto}
 body.cinema .cinema-votes .vroster b.head{display:block;margin-bottom:6px;color:#1e3a8a}
-body.cinema .cinema-votes .vwho{display:grid;grid-template-columns:3.6em minmax(0,1.1fr) 2.8em minmax(0,1.3fr);gap:8px;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid #dbeafe}
+body.cinema .cinema-votes .vwho{display:grid;grid-template-columns:3.4em minmax(0,1fr) 2.6em minmax(5.5em,.9fr) minmax(0,.8fr);gap:6px;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid #dbeafe}
+body.cinema .cinema-votes .vwho.hit{background:#ecfdf3}
+body.cinema .cinema-votes .vwho.miss{background:#fef2f2}
+body.cinema .cinema-votes .vsc{font-weight:800;white-space:nowrap}
 body.cinema .cinema-votes .vwho.bad{background:#fff7ed}
 body.cinema .cinema-votes .vwho .vto{font-weight:800;color:#1e3a8a;white-space:nowrap}
 body.cinema .cinema-votes .vwho .vnm{font-weight:800;color:#0f172a;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -541,6 +544,21 @@ body.cinema .qbox{padding-right:12px}
 @media(max-width:1024px){
 .field input,.field select,.catsearch input,.catsearch select,.answerbox,input[name=code],.gkey-input{font-size:16px}
 }
+#ldvlPhotoDock.aiphotobox{position:sticky;top:calc(var(--header-h,56px) + 6px);z-index:40;max-height:calc(100vh - var(--header-h,56px) - 12px);overflow:auto;margin:8px 12px;padding:10px;border:1px solid #93c5fd;border-radius:12px;background:#fff;color:#19324d;box-shadow:0 10px 28px #0f172a22}
+.aiphoto-bar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 0 8px;background:#fff;border-bottom:1px solid #e2e8f0;margin-bottom:8px}
+.aiphoto-bar .btn{font-size:12px;padding:5px 8px}
+.aiphoto-dest{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;font-size:12px;font-weight:700;color:#334155}
+.aiphoto-path,.aiphoto-dang{font:12px/1.3 Consolas,ui-monospace,monospace;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;color:#0f172a;background:#f8fafc}
+.aiphoto-path{flex:1 1 220px;min-width:140px}
+.aiphoto-dang{flex:0 1 180px}
+.aiphoto-look{border:1px solid #e2e8f0;border-radius:10px;background:#f8fbff;padding:8px}
+.aiphoto-look .qcard{margin:8px 0}
+.aiphoto-look .rwbar{display:none}
+.aiphotobox details{margin-top:8px;border:1px solid #e2e8f0;border-radius:8px;padding:6px 8px;background:#f8fafc}
+.aiphotobox summary{cursor:pointer;font-weight:800;color:#0f3d7a}
+.aiphotobox .rwta{width:100%;min-height:88px;font:12px/1.4 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #cbd5e1;border-radius:8px;box-sizing:border-box}
+.aiphotobox .success{color:#0d7b35;font-weight:800}
+.aiphotobox .err{color:#b42318;font-weight:800}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
@@ -815,15 +833,73 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "else document.body.insertBefore(box,document.body.firstChild);"
         "return box;"
         "}"
+        "function bankHere(){"
+        "var bar=document.querySelector('.admindang');"
+        "if(bar&&bar.getAttribute('data-path')) return {path:bar.getAttribute('data-path')||'', dang:bar.getAttribute('data-dang')||''};"
+        "try{ if(window.Q&&Q.src) return {path:Q.src||'', dang:Q.dang||''}; }catch(e){}"
+        "var card=document.querySelector('.qcard[data-drop]');"
+        "if(card){var drop=card.getAttribute('data-drop')||'';var cut=drop.lastIndexOf('||');if(cut>0) return {path:drop.slice(0,cut), dang:''};}"
+        "var q=new URLSearchParams(location.search);"
+        "return {path:q.get('path')||q.get('src')||'', dang:q.get('dang')||''};"
+        "}"
+        "function fillDest(box){"
+        "var here=bankHere();"
+        "var p=box.querySelector('.aiphoto-path'), d=box.querySelector('.aiphoto-dang');"
+        "if(p&&!p.value) p.value=here.path||'';"
+        "if(d&&!d.value) d.value=here.dang||'';"
+        "}"
+        "async function previewLatex(box){"
+        "var look=box.querySelector('.aiphoto-look');"
+        "var ta=box.querySelector('.aiphoto-text');"
+        "if(!look) return;"
+        "look.innerHTML='<div class=\"muted\">Đang xem trước…</div>';"
+        "try{"
+        "var r=await fetch('/api/admin/latex-cards',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({latex:(ta&&ta.value)||''})});"
+        "var d=await r.json();"
+        "if(!d.ok){look.innerHTML='<div class=\"err\">'+esc(d.error||'Không xem trước được')+'</div>';return;}"
+        "look.innerHTML=d.html||'';"
+        "if(window.ldvlArmTikz) ldvlArmTikz(look);"
+        "if(window.ldvlTypeset) ldvlTypeset(look);"
+        "if(window.ldvlSplitPics) ldvlSplitPics(look);"
+        "}catch(err){look.innerHTML='<div class=\"err\">'+esc(err&&err.message||err)+'</div>';}"
+        "}"
+        "window.ldvlPhotoPreview=previewLatex;"
+        "async function saveBank(box){"
+        "var ta=box.querySelector('.aiphoto-text');"
+        "var path=String((box.querySelector('.aiphoto-path')||{}).value||'').trim();"
+        "var dang=String((box.querySelector('.aiphoto-dang')||{}).value||'').trim();"
+        "if(!path){alert('Điền đường dẫn bài (ngan-hang/...) hoặc mở một bài rồi bấm lưu.');return;}"
+        "if(!confirm('Lưu các câu LaTeX này vào ngân hàng? '+path+(dang?(' · '+dang):''))) return;"
+        "var note=box.querySelector('.aiphoto-note');"
+        "if(note) note.textContent='Đang lưu…';"
+        "try{"
+        "var r=await fetch('/api/admin/bank-append',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({path:path,dang:dang,latex:(ta&&ta.value)||''})});"
+        "var d=await r.json();"
+        "if(!d.ok){alert(d.error||'Không lưu được');if(note) note.textContent='';return;}"
+        "if(note) note.textContent='Đã lưu '+(d.n||'')+' câu vào '+(d.src||path)+'.';"
+        "}catch(err){alert(String(err&&err.message||err));}"
+        "}"
         "function paint(box,d){"
-        "box.innerHTML='<div class=\"success\">Đã nhận dạng chữ và viết lại prompt. Sửa chữ nếu máy đọc sai, rồi bấm Viết lại prompt.</div>'"
-        "+'<label><b>LaTeX câu hỏi (TN / ĐS / TLN / TL, có \\\\True và lời giải)</b></label><textarea class=\"rwta aiphoto-text\" spellcheck=\"false\">'+esc(d.text||'')+'</textarea>'"
-        "+'<p><button type=\"button\" class=\"btn aiphoto-copy\" data-which=\"text\">📋 Copy LaTeX</button> <button type=\"button\" class=\"btn aiphoto-redo\">↻ Viết lại prompt từ LaTeX này</button> <button type=\"button\" class=\"btn aiPhotoBtn\" data-force=\"1\">📷 Chụp lại</button></p>'"
-        "+'<label><b>Prompt đã viết lại</b></label><textarea class=\"rwta aiphoto-prompt\" style=\"min-height:220px\" spellcheck=\"false\">'+esc(d.prompt||'')+'</textarea>'"
-        "+'<p><button type=\"button\" class=\"btn primary aiphoto-copy\" data-which=\"prompt\">📋 Copy prompt</button> '"
-        "+'<a class=\"btn\" href=\"'+esc(d.gemini||'https://gemini.google.com/app')+'\" target=\"_blank\" rel=\"noopener\">↗ Mở Gemini</a></p>'"
-        "+'<label><b>Lệnh phụ — animation</b></label><textarea class=\"rwta aiphoto-motion\" spellcheck=\"false\">'+esc(d.motion||'')+'</textarea>'"
-        "+'<p><button type=\"button\" class=\"btn aiphoto-copy\" data-which=\"motion\">📋 Copy lệnh động</button></p>';"
+        "box.innerHTML='<div class=\"aiphoto-bar\"><b>Xem trước như câu hỏi</b>'"
+        "+'<button type=\"button\" class=\"btn aiphoto-prev\">Xem trước</button>'"
+        "+'<button type=\"button\" class=\"btn green aiphoto-save\">Lưu vào ngân hàng</button>'"
+        "+'<button type=\"button\" class=\"btn aiphoto-copy\" data-which=\"text\">Copy LaTeX</button>'"
+        "+'<button type=\"button\" class=\"btn aiphoto-copy\" data-which=\"prompt\">Copy lệnh ảnh</button>'"
+        "+'<a class=\"btn\" href=\"'+esc(d.gemini||'https://gemini.google.com/app')+'\" target=\"_blank\" rel=\"noopener\">Mở Gemini</a>'"
+        "+'<button type=\"button\" class=\"btn aiPhotoBtn\" data-force=\"1\">Chụp lại</button>'"
+        "+'<span class=\"muted aiphoto-note\"></span>'"
+        "+'<label class=\"aiphoto-dest\">File <input class=\"aiphoto-path\" spellcheck=\"false\" placeholder=\"ngan-hang/...\">'"
+        "+'<input class=\"aiphoto-dang\" spellcheck=\"false\" placeholder=\"Tên dạng, nếu có\"></label></div>'"
+        "+'<div class=\"aiphoto-look\"></div>'"
+        "+'<details><summary>Sửa LaTeX rồi xem trước lại</summary>'"
+        "+'<textarea class=\"rwta aiphoto-text\" spellcheck=\"false\">'+esc(d.text||'')+'</textarea>'"
+        "+'<p><button type=\"button\" class=\"btn aiphoto-redo\">Viết lại lệnh ảnh từ LaTeX này</button></p></details>'"
+        "+'<details><summary>Lệnh Gemini — ảnh A4 (để copy, không chiếm trang)</summary>'"
+        "+'<textarea class=\"rwta aiphoto-prompt\" spellcheck=\"false\">'+esc(d.prompt||'')+'</textarea>'"
+        "+'<p class=\"muted\">Lệnh phụ — animation</p>'"
+        "+'<textarea class=\"rwta aiphoto-motion\" spellcheck=\"false\">'+esc(d.motion||'')+'</textarea>'"
+        "+'<p><button type=\"button\" class=\"btn aiphoto-copy\" data-which=\"motion\">Copy lệnh động</button></p></details>';"
+        "fillDest(box); previewLatex(box);"
         "}"
         "function shrink(file){return new Promise(function(ok,bad){"
         "if(!file){bad(new Error('Chưa chọn ảnh.'));return;}"
@@ -870,6 +946,10 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "host.innerHTML='<div class=\"muted\">Chọn hoặc chụp ảnh đề. Máy nhận dạng chữ rồi viết lại prompt.</div>';"
         "window.scrollTo({top:0,behavior:'smooth'});"
         "window._aiPhotoHost=host;cam().click();return;}"
+        "var prev=e.target.closest&&e.target.closest('.aiphoto-prev');"
+        "if(prev){e.preventDefault();var pv=prev.closest('.aiphotobox');if(pv)previewLatex(pv);return;}"
+        "var sav=e.target.closest&&e.target.closest('.aiphoto-save');"
+        "if(sav){e.preventDefault();var sb=sav.closest('.aiphotobox');if(sb)saveBank(sb);return;}"
         "var redo=e.target.closest&&e.target.closest('.aiphoto-redo');"
         "if(redo){e.preventDefault();var pbox=redo.closest('.aiphotobox');var pta=pbox&&pbox.querySelector('.aiphoto-text');if(pbox)run(pbox,{text:(pta&&pta.value)||''});return;}"
         "var cp=e.target.closest&&e.target.closest('.aiphoto-copy');"
@@ -4357,7 +4437,7 @@ function toggleHint(){
   typeset(box);
 }
 function openSolution(){if(!IS_ADMIN && !checked)return alert('Hãy chọn đáp án và bấm Xác nhận trước.');let box=document.getElementById('solbox');if(!box){let r=document.getElementById('r');if(!r)return;r.insertAdjacentHTML('beforeend','<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>');box=document.getElementById('solbox')}box.style.display=box.style.display==='block'?'none':'block';if(box.style.display==='block') typeset(box);let b=document.getElementById('solbtn');if(b&&!IS_ADMIN)b.style.display='none';if(IS_ADMIN)ldvlMountPracticeRewrite();ldvlRemountSpeak()}
-function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');if(location.pathname.indexOf('/member/')===0)texHref+='&back='+encodeURIComponent(location.pathname+location.search);r.insertAdjacentHTML('afterend','<details class="rwfold" id="rwPractice"><summary>▸ Công cụ câu này · TEX / AI / sửa</summary><div class="rwbar"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrSim">🔁 Phát triển từ câu</button> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button> <button type="button" class="btn mini rwimgs" data-drop="'+Q.src+'||'+Q.file_idx+'">🖼 Ảnh thư mục</button> <button type="button" class="btn mini rwtikzbtn" data-drop="'+Q.src+'||'+Q.file_idx+'">📐 Mã TikZ</button> <button type="button" class="btn mini rwnbprompt" data-drop="'+Q.src+'||'+Q.file_idx+'">✨ Prompt ảnh vở + Phiếu</button><div class="rwout" id="rwPrOut"></div></div></details>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrSim').onclick=function(){if(window.ldvlAdminSimilar)ldvlAdminSimilar(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
+function ldvlMountPracticeRewrite(){if(!IS_ADMIN||!Q.src||Q.file_idx==null)return;if(document.getElementById('rwPractice'))return;let r=document.getElementById('r');if(!r)return;let texHref='/admin/edit?path='+encodeURIComponent(Q.src)+(Q.line?('&line='+Q.line):'');if(location.pathname.indexOf('/member/')===0)texHref+='&back='+encodeURIComponent(location.pathname+location.search);r.insertAdjacentHTML('afterend','<details class="rwfold" id="rwPractice"><summary>▸ Công cụ câu này · TEX / AI / sửa</summary><div class="rwbar"><a class="btn mini" href="'+texHref+'">✏️ TEX câu này</a> <button type="button" class="btn mini" id="rwPrSim">🔁 Phát triển từ câu</button> <button type="button" class="btn mini" id="rwPrGo">✍️ AI viết lại đề + lời giải</button> <button type="button" class="btn mini" id="rwPrEdit">✏️ Sửa đề / lời giải</button> <button type="button" class="btn mini rwimgs" data-drop="'+Q.src+'||'+Q.file_idx+'">🖼 Ảnh thư mục</button> <button type="button" class="btn mini rwtikzbtn" data-drop="'+Q.src+'||'+Q.file_idx+'">📐 Mã TikZ</button> <button type="button" class="btn mini rwnbprompt" data-drop="'+Q.src+'||'+Q.file_idx+'">✨ Prompt ảnh vở + Phiếu</button> <button type="button" class="btn mini rwcanva" data-drop="'+Q.src+'||'+Q.file_idx+'">🎨 Prompt Canva</button><div class="rwout" id="rwPrOut"></div></div></details>');document.getElementById('rwPrGo').onclick=function(){if(window.ldvlAdminRewrite)ldvlAdminRewrite(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrSim').onclick=function(){if(window.ldvlAdminSimilar)ldvlAdminSimilar(Q.src,Q.file_idx,document.getElementById('rwPrOut'))};document.getElementById('rwPrEdit').onclick=function(){if(window.ldvlAdminEdit)ldvlAdminEdit(Q.src,Q.file_idx,document.getElementById('rwPrOut'))}}
 function showAiPane(){let pane=document.getElementById('aipane'),split=document.getElementById('psplit');if(!pane||!split)return;split.classList.add('is-ai');pane.hidden=false;
 pane.innerHTML=ldvlGeminiMiniHtml('🤖 Phản biện AI')+'<div class="aispeak"><button type="button" class="btn spk-f">Nữ</button><button type="button" class="btn spk-m">Nam</button><button type="button" class="btn primary spk-play">▶ Đọc</button><button type="button" class="btn spk-pause">⏸ Dừng</button><span class="spkmsg">Bấm mục cần đọc</span></div><p style="margin-top:8px"><button type="button" class="btn primary" onclick="reviewNow()">🤖 Phản biện câu này</button></p><div id="aiout" class="reviewout"></div>';
 if(window.ldvlFillGeminiInputs)ldvlFillGeminiInputs();if(window.ldvlSpeak&&window.ldvlSpeak.bind)window.ldvlSpeak.bind();pane.scrollTop=0;if(window.LAST_REVIEW&&typeof ldvlFilledKeys==='function'&&ldvlFilledKeys().length)reviewNow()}

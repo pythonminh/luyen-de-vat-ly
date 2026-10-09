@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+import os
 import random
 import re
 import secrets
@@ -22,10 +23,36 @@ _ROOMS: dict = {}
 _QS_CACHE: dict = {}
 _ALPH = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 _TTL = 6 * 3600
+_ROOM_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "present-rooms.json")
 
 
 def _now():
     return time.time()
+
+
+def _rooms_dump():
+    try:
+        os.makedirs(os.path.dirname(_ROOM_FILE), exist_ok=True)
+        tmp = _ROOM_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"rooms": _ROOMS}, f, ensure_ascii=False)
+        os.replace(tmp, _ROOM_FILE)
+    except Exception:
+        pass
+
+
+def _rooms_load():
+    try:
+        with open(_ROOM_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        rooms = (data or {}).get("rooms")
+        if isinstance(rooms, dict):
+            _ROOMS.update(rooms)
+    except Exception:
+        pass
+
+
+_rooms_load()
 
 
 def _prune():
@@ -33,6 +60,8 @@ def _prune():
     dead = [c for c, r in _ROOMS.items() if t - float(r.get("updated") or 0) > _TTL]
     for c in dead:
         _ROOMS.pop(c, None)
+    if dead:
+        _rooms_dump()
 
 
 def _norm_code(raw):
@@ -285,6 +314,52 @@ def _score_live(q, live):
     else:
         live["ok"] = None
     return live, ""
+
+
+def _tally_scores(room):
+    """Khi thầy khóa phiếu / mở đáp án: cộng đúng-sai từng máy, không đếm hai lần cùng câu."""
+    live = (room or {}).get("live") if isinstance((room or {}).get("live"), dict) else {}
+    if not (room.get("show_sol") or live.get("checked")):
+        return
+    fp = str(room.get("_vote_fp") or _vote_fp(room) or "")
+    if not fp:
+        return
+    raw = _raw_q_from_room(room)
+    kind = str((raw or room.get("q") or {}).get("kind") or "").upper()
+    if kind not in {"TN", "DS", "TLN"}:
+        return
+    votes = room.get("votes") if isinstance(room.get("votes"), dict) else {}
+    names = room.get("names") if isinstance(room.get("names"), dict) else {}
+    scores = room.setdefault("scores", {})
+    for vid in set(names.keys()) | set(votes.keys()):
+        rec = scores.get(vid)
+        if not isinstance(rec, dict):
+            rec = {"ok": 0, "bad": 0, "skip": 0, "done": {}}
+            scores[vid] = rec
+        done = rec.setdefault("done", {})
+        if fp in done:
+            continue
+        vote = votes.get(vid) if isinstance(votes.get(vid), dict) else None
+        if not vote:
+            rec["skip"] = int(rec.get("skip") or 0) + 1
+            done[fp] = "skip"
+            continue
+        ok = None
+        if raw:
+            scored, _err = _score_live(raw, {"tn": vote.get("tn"), "ds": list(vote.get("ds") or []), "text": str(vote.get("text") or "")})
+            ok = scored.get("ok")
+        if ok is True:
+            rec["ok"] = int(rec.get("ok") or 0) + 1
+            done[fp] = True
+        elif ok is False:
+            rec["bad"] = int(rec.get("bad") or 0) + 1
+            done[fp] = False
+        else:
+            rec["skip"] = int(rec.get("skip") or 0) + 1
+            done[fp] = "skip"
+        if len(done) > 80:
+            for k in list(done.keys())[: len(done) - 80]:
+                done.pop(k, None)
 
 
 def _lesson_qs(path):
@@ -812,6 +887,16 @@ def _vote_roster(room):
             nm = "Máy " + str(vid)[-4:]
         vote = votes.get(vid) if isinstance(votes.get(vid), dict) else None
         pick = _format_pick_label(kind, vote) if vote else ""
+        sc = (room or {}).get("scores") or {}
+        rec = sc.get(vid) if isinstance(sc.get(vid), dict) else {}
+        ok_n = int(rec.get("ok") or 0)
+        bad_n = int(rec.get("bad") or 0)
+        skip_n = int(rec.get("skip") or 0)
+        cur_mark = ""
+        fp = str((room or {}).get("_vote_fp") or "")
+        done = rec.get("done") if isinstance(rec.get("done"), dict) else {}
+        if fp and fp in done:
+            cur_mark = done.get(fp)
         leave_n = len(arr)
         on_this = 0
         last_reason = ""
@@ -842,11 +927,15 @@ def _vote_roster(room):
             "on_this": on_this,
             "last_reason": last_reason,
             "vote": vote or {},
+            "ok_n": ok_n,
+            "bad_n": bad_n,
+            "skip_n": skip_n,
+            "cur": cur_mark,
         })
     rows.sort(key=lambda r: (
+        -int(r.get("ok_n") or 0),
+        int(r.get("bad_n") or 0),
         _team_sort_key(r.get("team")),
-        0 if int(r.get("leave_n") or 0) else 1,
-        0 if r.get("voted") else 1,
         str(r.get("name") or "").casefold(),
     ))
     groups = []
@@ -928,6 +1017,8 @@ def _leave_stats(room):
 
 def _room_out(room, include_q=True, host=False):
     _reset_votes_if_needed(room)
+    if host:
+        _tally_scores(room)
     leaves = _leave_stats(room)
     if not host:
         leaves = {
@@ -1028,6 +1119,7 @@ def _put_room(hid, code, token, snap, live, force_kind=False):
             room["ink"] = []
             room["_ink_q"] = ink_q
         _reset_votes_if_needed(room)
+        _tally_scores(room)
         new_fp = (
             room.get("pos"),
             room.get("total"),
@@ -1041,6 +1133,7 @@ def _put_room(hid, code, token, snap, live, force_kind=False):
         room["updated"] = _now()
         session["present_code"] = room["code"]
         session["present_token"] = room["token"]
+        _rooms_dump()
         return room, ""
 
 
@@ -1106,6 +1199,7 @@ def api_present_start():
             _ROOMS[code] = room
             session["present_code"] = code
             session["present_token"] = tok
+        _rooms_dump()
     origin = base.public_origin()
     url = origin + "/xem/" + room["code"]
     return jsonify(ok=True, code=room["code"], url=url, token=session.get("present_token") or room["token"], ver=room["ver"])
@@ -1156,6 +1250,7 @@ def api_present_stop():
         room = _ROOMS.get(code)
         if room and room.get("token") == token:
             _ROOMS.pop(code, None)
+            _rooms_dump()
     session.pop("present_code", None)
     session.pop("present_token", None)
     return jsonify(ok=True)
@@ -1577,6 +1672,7 @@ def api_present_vote():
         room["updated"] = _now()
         stats = _vote_stats(room)
         ver = int(room.get("ver") or 0)
+        _rooms_dump()
     return jsonify(ok=True, ver=ver, votes=stats, mine=vote, name=show_name)
 
 
@@ -1699,13 +1795,13 @@ def present_watch(code=""):
     if not code:
         body = (
             "<div class='wrap'><div class='panel' style='max-width:480px;margin:40px auto'><div class='head'>📺 Vào chiếu chung</div><div class='body'>"
-            "<p class='muted'>Gõ đúng mã thầy đưa sau khi bấm <b>Chiếu chung</b> (4 ký tự, đổi mỗi buổi). Không dùng mã buổi trước — phòng cũ đã tắt.</p>"
+            "<p class='muted'>Gõ mã thầy đưa (3–6 ký tự, không phân biệt hoa thường, bỏ dấu cách). Có thể dùng mã quen nếu thầy đã đặt.</p>"
             "<form method='get' action='/xem' style='display:flex;gap:8px;flex-wrap:wrap'>"
-            "<input name='code' maxlength='8' inputmode='text' autocomplete='off' placeholder='Mã thầy đưa' style='flex:1;min-width:140px;padding:12px;font-size:16px;letter-spacing:.2em;text-transform:uppercase;text-align:center;border:1px solid #cbd8e6;border-radius:8px'>"
+            "<input name='code' maxlength='8' inputmode='text' autocomplete='off' placeholder='VD: DEA2' style='flex:1;min-width:140px;padding:12px;font-size:16px;letter-spacing:.2em;text-transform:uppercase;text-align:center;border:1px solid #cbd8e6;border-radius:8px'>"
             "<button class='btn primary' type='submit'>Vào xem</button></form>"
-            "<p class='muted'>Không cần đăng nhập. Vào mã rồi <b>đặt tên</b> để tham gia — thầy xem được đáp án theo tên. Trang tự theo câu thầy đang chiếu.</p>"
+            "<p class='muted'>Không cần đăng nhập. Vào mã rồi <b>đặt tên</b> để tham gia — thầy xem được đúng/sai từng bạn trong buổi chiếu.</p>"
             "</div></div></div>"
-            "<script>document.querySelector('form').addEventListener('submit',function(e){e.preventDefault();var c=(this.code.value||'').trim().toUpperCase();if(c)location.href='/xem/'+encodeURIComponent(c)})</script>"
+            "<script>document.querySelector('form').addEventListener('submit',function(e){e.preventDefault();var c=(this.code.value||'').toUpperCase().replace(/[^A-Z0-9]/g,'');if(c.length<3){alert('Mã 3–6 ký tự, ví dụ DEA2.');return;}location.href='/xem/'+encodeURIComponent(c)})</script>"
         )
         return base.page("Vào chiếu chung", body)
     js = FOLLOW_JS.replace("__CODE__", json.dumps(code))
@@ -3105,19 +3201,25 @@ function paintVotes(votes){
     :'';
   const reasonLab={button:'bấm thoát',pagehide:'đóng trang',hidden:'thu nhỏ / đổi tab',blur:'rời cửa sổ'};
   const rows=Array.isArray(roster.rows)?roster.rows:[];
+  const totOk=rows.reduce(function(s,r){return s+Number(r.ok_n||0);},0);
+  const totBad=rows.reduce(function(s,r){return s+Number(r.bad_n||0);},0);
   const joinedN=Number(roster.joined_n||0);
   const rosterHtml=rows.length
-    ?('<div class="vroster"><b class="head">Tổ · tên · đáp án · vi phạm</b>'
+    ?('<div class="vroster"><b class="head">Tổ · tên · phiếu · đúng/sai buổi này · vi phạm</b>'
       +rows.map(function(r){
         const leaveN=Number(r.leave_n||0);
         const onQ=Number(r.on_this||0);
         const leaveTxt=leaveN
           ?('⚠ '+leaveN+' lần'+(onQ?(' · câu này '+onQ):'')+(r.last_reason?(' · '+(reasonLab[r.last_reason]||r.last_reason)):''))
           :'ổn';
-        return '<div class="vwho'+(leaveN?' bad':'')+'">'
+        const okN=Number(r.ok_n||0), badN=Number(r.bad_n||0);
+        const cur=r.cur;
+        const curTxt=cur===true?' · câu này đúng':(cur===false?' · câu này sai':'');
+        return '<div class="vwho'+(leaveN?' bad':'')+(cur===false?' miss':'')+(cur===true?' hit':'')+'">'
           +'<span class="vto">'+E(r.team||'—')+'</span>'
           +'<span class="vnm">'+E(r.name||'—')+'</span>'
           +'<span class="vpk">'+E(r.pick||'—')+'</span>'
+          +'<span class="vsc"><b class="vy">Đ '+okN+'</b> · <b class="vn">S '+badN+'</b>'+E(curTxt)+'</span>'
           +'<span class="vlc">'+E(leaveTxt)+'</span>'
           +'</div>';
       }).join('')
@@ -3136,7 +3238,9 @@ function paintVotes(votes){
     :'';
   const groups=Array.isArray(roster.groups)?roster.groups:[];
   const joinedLine=joinedN
-    ?('<div class="vjoined">Đã vào: <b>'+joinedN+'</b></div>'
+    ?('<div class="vjoined">Đã vào: <b>'+joinedN+'</b>'
+      +(totOk||totBad?(' · buổi này <b class="vy">đúng '+totOk+'</b> / <b class="vn">sai '+totBad+'</b> lượt'):'')
+      +'</div>'
       +(groups.length?('<div class="vgroups">'+groups.map(function(g){
           const lab=g.team?g.team:'Chưa ghi tổ';
           const names=Array.isArray(g.names)?g.names:[];
@@ -4427,14 +4531,18 @@ function showBar(p){
   const url=p.url||(location.origin+'/xem/'+p.code);
   const qr='/xem/'+encodeURIComponent(p.code)+'/qr.svg';
   el.innerHTML='<span class="present-qr"><img src="'+qr+'" width="88" height="88" alt="QR vào chiếu"></span>'
-    +'<b>📺 Chiếu chung</b> · mã <code style="font-size:22px;letter-spacing:.12em">'+p.code+'</code> '
+    +'<b>📺 Chiếu chung</b> · mã '
+    +'<input id="pCodeIn" maxlength="6" spellcheck="false" autocomplete="off" value="'+(p.code||'')+'" '
+    +'title="Gõ mã 3–6 ký tự rồi bấm Dùng mã. Học sinh nhập đúng mã này." '
+    +'style="width:6.2em;font:800 20px/1.2 ui-monospace,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase;text-align:center;padding:4px 6px;border:1px solid #93c5fd;border-radius:8px">'
+    +' <button type="button" class="btn primary" id="pset">Dùng mã</button> '
     +'<a class="btn primary" href="'+url+'" target="_blank" rel="noopener">🖥 Mở màn chiếu</a> '
     +'<button type="button" class="btn" id="pPrev">◀ Câu trước</button> '
     +'<button type="button" class="btn" id="pNext">Câu sau ▶</button> '
     +'<button type="button" class="btn" id="pcopy">📋 Copy link</button> '
     +'<button type="button" class="btn" id="prefresh">🔄 Mã mới</button> '
     +'<button type="button" class="btn red" id="pstop">Tắt chiếu</button> '
-    +'<div class="muted">Mã và QR đổi mỗi lần bấm Chiếu. Học sinh phải quét QR buổi này — mã buổi trước không vào được.</div>';
+    +'<div class="muted">Gõ mã quen (vd DEA2) rồi <b>Dùng mã</b> — học sinh vào /xem và nhập đúng mã đó. <b>Mã mới</b> chỉ khi muốn đổi. Trên màn chiếu, bảng lớp đếm đúng/sai từng bạn sau khi thầy xác nhận.</div>';
   const c=document.getElementById('pcopy');
   if(c) c.onclick=function(){navigator.clipboard.writeText(url).then(function(){c.textContent='✅ Đã copy'},function(){prompt('Copy link',url)})};
   const pv=document.getElementById('pPrev');
@@ -4442,7 +4550,20 @@ function showBar(p){
   const nx=document.getElementById('pNext');
   if(nx) nx.onclick=function(){presentStep(1)};
   const rf=document.getElementById('prefresh');
-  if(rf) rf.onclick=function(){ presentStart(); };
+  if(rf) rf.onclick=function(){ presentStart({fresh:true}); };
+  const setBtn=document.getElementById('pset');
+  const codeIn=document.getElementById('pCodeIn');
+  function readTypedCode(){
+    return String((codeIn&&codeIn.value)||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  }
+  if(setBtn) setBtn.onclick=function(){
+    const c=readTypedCode();
+    if(c.length<3||c.length>6){alert('Mã 3–6 ký tự chữ hoặc số, ví dụ DEA2.');return;}
+    presentStart({code:c, open:false});
+  };
+  if(codeIn) codeIn.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){e.preventDefault(); if(setBtn) setBtn.click();}
+  });
   const s=document.getElementById('pstop');
   if(s) s.onclick=async function(){
     await fetch('/api/present/stop',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({code:p.code,token:p.token})});
@@ -4491,16 +4612,24 @@ async function presentResume(){
   }catch(e){}
   finally{if(P)P._busy=false}
 }
-async function presentStart(){
+async function presentStart(opts){
+  opts=opts||{};
+  const body=Object.assign(payload({force:true}),{force_kind:true, fresh:!!opts.fresh});
+  if(!opts.fresh){
+    const typed=String(opts.code||(P&&P.code)||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(typed) body.code=typed;
+  }
   const r=await fetch('/api/present/start',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-    body:JSON.stringify(Object.assign(payload({force:true}),{force_kind:true,fresh:true}))});
+    body:JSON.stringify(body)});
   const d=await r.json();
   if(!d.ok){alert(d.error||'Không mở được phòng chiếu');return;}
   P={code:d.code,token:d.token,url:d.url};
   try{localStorage.setItem('ldvlPresent',JSON.stringify(P))}catch(e){}
   window.__ldvlPresentFp='';
   showBar(P);
-  try{ if(d.url) window.open(d.url,'_blank','noopener'); }catch(e){}
+  if(opts.open!==false){
+    try{ if(d.url) window.open(d.url,'_blank','noopener'); }catch(e){}
+  }
 }
 let pushTimer=0;
 function presentPushSoon(){

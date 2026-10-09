@@ -80,11 +80,28 @@ def _fill_job_gc():
             pass
 
 
+def _fill_progress(job, note):
+    if not job:
+        return
+    now = time.time()
+    with _FILL_LOCK:
+        rec = dict(_FILL_JOBS.get(job) or {})
+        started = float(rec.get('started') or rec.get('ts') or now)
+        rec.update(state='run', ts=now, started=started, note=str(note or '')[:240], result=None)
+        _FILL_JOBS[job] = rec
+    try:
+        _fill_write_json(_fill_status_path(job), rec)
+    except Exception:
+        pass
+
+
 def _start_fill_thread(job, payload):
     def work():
         try:
             with app.app_context():
-                resp = _dang_fill_work(payload)
+                body_in = dict(payload or {})
+                body_in['_job'] = job
+                resp = _dang_fill_work(body_in)
                 if isinstance(resp, tuple):
                     resp = resp[0]
                 body = resp.get_json(silent=True) if resp is not None else None
@@ -133,10 +150,11 @@ def _spawn_dang_fill(data):
         running = sum(1 for v in _FILL_JOBS.values() if v.get('state') == 'run')
         if running >= 2:
             return jsonify(ok=False, error='Đang có phiên AI chạy. Đợi xong rồi bấm lại.'), 429
-        _FILL_JOBS[job] = {'state': 'run', 'ts': time.time(), 'result': None}
+        now = time.time()
+        _FILL_JOBS[job] = {'state': 'run', 'ts': now, 'started': now, 'note': 'Đang đọc nguồn…', 'result': None}
     try:
         _fill_write_json(_fill_payload_path(job), payload)
-        _fill_write_json(_fill_status_path(job), {'state': 'run', 'ts': time.time(), 'result': None})
+        _fill_write_json(_fill_status_path(job), {'state': 'run', 'ts': now, 'started': now, 'note': 'Đang đọc nguồn…', 'result': None})
     except Exception as e:
         return jsonify(ok=False, error='Không mở được phiên: ' + str(e)), 500
     _ensure_fill(job)
@@ -319,7 +337,7 @@ def _study_cards(selected, path, dmap, show_solution, highlight_id):
     return ''.join(bits)
 
 
-def _question_card(q, seq, total, path='', dup=None, show_solution=False, highlight_id=''):
+def _question_card(q, seq, total, path='', dup=None, show_solution=False, highlight_id='', preview_only=False):
     n=q.get('idx',0); kind=q.get('kind','TL'); level=q.get('level','H'); text=q.get('text','')
     qid=str(q.get('id') or '').strip() or '—'
     cau=q.get('cau') or (n+1); line=int(q.get('line') or 0)
@@ -360,7 +378,10 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
         sol_html=_sol_block(q)
     gh=''
     tex_badge=f"<span class='metafile'>TEX Câu {html.escape(str(cau))} · STT file {n+1}</span>"
-    if can_manage_bank() and src:
+    manage = can_manage_bank() and not preview_only
+    if preview_only:
+        tex_badge="<span class='badge'>Xem trước</span>"
+    elif manage and src:
         try:
             q_idx=int(q.get('file_idx') if q.get('file_idx') is not None else n)
         except (TypeError, ValueError):
@@ -380,13 +401,14 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     except (TypeError, ValueError): fi=int(n or 0)
     drop_key=_esc(src+'||'+str(fi))
     rw=''
-    if can_manage_bank():
+    if manage:
         rw=(f"<div class='rwbar'><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
             f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại đề + lời giải</button>"
             f"<button type='button' class='btn mini rwedit' data-drop='{drop_key}'>✏️ Sửa đề / lời giải</button>"
             f"<button type='button' class='btn mini rwimgs' data-drop='{drop_key}'>🖼 Ảnh thư mục</button>"
             f"<button type='button' class='btn mini rwtikzbtn' data-drop='{drop_key}'>📐 Mã TikZ</button>"
             f"<button type='button' class='btn mini rwnbprompt' data-drop='{drop_key}'>✨ Prompt ảnh vở + Phiếu</button>"
+            f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎨 Prompt Canva</button>"
             f"<button form='qdel' class='btn mini red' type='submit' name='drop' value='{drop_key}' onclick=\"return confirm('Xóa vĩnh viễn câu này khỏi file TEX? Không hoàn tác trên trang này.')\">🗑 Xóa câu</button>"
             "<span class='muted'>Sửa / xóa trực tiếp trên file TEX, không cần GitHub.</span><div class='rwout'></div></div>")
     dcls=' dupcard' if dup.get('label') else ''
@@ -403,12 +425,18 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
         else:
             xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{drop_key}' data-cung='1'> Xóa bản cùng đề này</label>"
     find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
-    return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-idx='{fi}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'><label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
+    qlab = (
+        f"<span class='qbadge'>Câu {seq}/{total}</span>"
+        if preview_only
+        else f"<label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
+    )
+    return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-idx='{fi}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'>{qlab}"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"{tex_badge}{gh}{nguon_html(q)}<span class='level muc-{muc}'>Mức {html.escape(muc_label(muc))}</span>"
-            + (f"<button type='button' class='btn mini presentQ' data-idx='{n}'>📺 Chiếu câu</button>" if can_manage_bank() else "")
-            + (f"<button type='button' class='btn mini aiPhotoBtn' data-drop='{drop_key}'>📷 Chụp ảnh → prompt</button>" if can_manage_bank() else "")
-            + (f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại</button>" if can_manage_bank() else "")
+            + (f"<button type='button' class='btn aiPhotoBtn' data-drop='{drop_key}'>📷 Chụp hình</button>" if manage else "")
+            + (f"<button type='button' class='btn mini presentQ' data-idx='{n}'>📺 Chiếu câu</button>" if manage else "")
+            + (f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại</button>" if manage else "")
+            + (f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎨 Prompt Canva</button>" if manage else "")
             + "</div>"
             f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text, src)}</div></div>{options}{develop_reference_html(q, src)}{rw}{sol_html}</article>")
 
@@ -540,7 +568,8 @@ def member_dang():
     elif admin_view:
         guest_note="<div class='notice'>🔐 ADMIN · xem đáp án và lời giải ngay trên từng thẻ, không cần làm bài.</div>"
         tools=(kindbar+
-          "<div class='toolbar'><button type='button' class='btn aiPhotoBtn'>📷 Chụp ảnh → prompt</button>"
+          "<div class='photobar'><button type='button' class='btn aiPhotoBtn'>📷 Chụp hình</button><span>Chụp hoặc chọn ảnh đề — máy nhận dạng chữ rồi viết lại prompt.</span></div>"
+          "<div class='toolbar'>"
           "<button type='button' class='btn primary' id='qPresentBtn'>📺 Chiếu câu đã chọn</button>"
           "<button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
@@ -601,7 +630,7 @@ def member_dang():
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
           "</div></div></div>"
-          "<style>.kindpart{margin:14px 0 2px;padding:8px 12px;border-radius:9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.kindpart .tag{background:#fff;color:#1e3a8a}.kindpart.k-DS{background:#f0fdf4;border-color:#bbf7d0;color:#166534}.kindpart.k-DS .tag{color:#166534}.kindpart.k-TLN{background:#fffbeb;border-color:#fde68a;color:#92400e}.kindpart.k-TLN .tag{color:#92400e}.kindpart.k-TL{background:#fdf2f8;border-color:#fbcfe8;color:#9d174d}.kindpart.k-TL .tag{color:#9d174d}.dangpart{margin:18px 0 0;padding:8px 2px 0;font-size:15px;color:#0f172a;border-top:1px solid #dbe4ee}.questions>.dangpart:first-child{border-top:0;margin-top:4px}.guestview .qcheck{display:none}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.qhit{border:2px solid #176bd3;box-shadow:0 0 0 3px #176bd322}.slimhit{border-color:#c2410c;background:#fff7ed}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.slimbar{margin:10px 0;padding:12px;border:1px solid #fdba74;border-radius:10px;background:#fff7ed;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.slimbar input[type=number]{width:64px;padding:6px;border:1px solid #fdba74;border-radius:6px;text-align:center}.slimform{margin:8px 0 12px}.slimgrp{border:1px solid #fed7aa;border-radius:9px;padding:8px;margin:8px 0;background:#fff}.slimh{font-weight:800;margin-bottom:6px}.slimrow{padding:6px 0;border-top:1px dashed #fed7aa;font-size:14px;line-height:1.45}.slimrow.keep{background:#f0fdf4}.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.qtext{font-size:16px;line-height:1.7;padding:10px 2px;font-family:'Times New Roman',Times,serif;font-weight:400}.opts{display:grid;gap:7px}.opt{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff;display:flex;align-items:center;gap:10px}.opt.ok{background:#e8f8ee;border-color:#42ae6b}.okmark{display:inline-block;min-width:4.6em;text-align:center;margin-left:0;padding:3px 10px;border-radius:999px;background:#15803d;color:#fff;font-size:11px;font-weight:800}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92;margin-top:6px}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
+          "<style>.kindpart{margin:14px 0 2px;padding:8px 12px;border-radius:9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.kindpart .tag{background:#fff;color:#1e3a8a}.kindpart.k-DS{background:#f0fdf4;border-color:#bbf7d0;color:#166534}.kindpart.k-DS .tag{color:#166534}.kindpart.k-TLN{background:#fffbeb;border-color:#fde68a;color:#92400e}.kindpart.k-TLN .tag{color:#92400e}.kindpart.k-TL{background:#fdf2f8;border-color:#fbcfe8;color:#9d174d}.kindpart.k-TL .tag{color:#9d174d}.dangpart{margin:18px 0 0;padding:8px 2px 0;font-size:15px;color:#0f172a;border-top:1px solid #dbe4ee}.questions>.dangpart:first-child{border-top:0;margin-top:4px}.guestview .qcheck{display:none}.photobar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:12px;border:2px solid #b45309;border-radius:10px;background:#fef3c7;font-weight:800}.photobar .btn{font-size:18px;padding:12px 18px}.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}.kindbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;padding:10px;border:1px solid #d9e5f0;border-radius:9px;background:#f8fbff}.kindbar label{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px}.kindbar input{width:58px;padding:6px;border:1px solid #cbd8e6;border-radius:6px;text-align:center}.mini{padding:7px 10px}.questions{display:grid;gap:10px}.qcard{border:1px solid #cfddeb;border-radius:11px;background:#fff;padding:12px}.qhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #e7eef5;padding-bottom:8px}.qcheck{font-weight:900;color:#145bb0;cursor:pointer}.qcheck input{width:17px;height:17px;vertical-align:middle;margin-right:5px}.badge,.level,.qid,.metafile,.dupbadge{border:1px solid #cbd9e7;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:#f8fbff}.qid{background:#fff7dc;border-color:#efca73;color:#7a5300;font-family:Consolas,monospace}.dupbadge{background:#ffe4e6;border-color:#fb7185;color:#9f1239}.dupcard{border-color:#fb7185;background:#fff7f7}.qhit{border:2px solid #176bd3;box-shadow:0 0 0 3px #176bd322}.slimhit{border-color:#c2410c;background:#fff7ed}.metafile{color:#4a6278}.level{margin-left:auto}.dupbar{margin:10px 0;padding:12px;border:2px solid #e11d48;border-radius:10px;background:#fff1f2;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.dupx{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#9f1239;color:#fff;font-weight:800;font-size:12px;cursor:pointer}.dupx input{width:16px;height:16px}.dupok{font-weight:800}.slimbar{margin:10px 0;padding:12px;border:1px solid #fdba74;border-radius:10px;background:#fff7ed;display:flex;flex-wrap:wrap;gap:10px;align-items:center}.slimbar input[type=number]{width:64px;padding:6px;border:1px solid #fdba74;border-radius:6px;text-align:center}.slimform{margin:8px 0 12px}.slimgrp{border:1px solid #fed7aa;border-radius:9px;padding:8px;margin:8px 0;background:#fff}.slimh{font-weight:800;margin-bottom:6px}.slimrow{padding:6px 0;border-top:1px dashed #fed7aa;font-size:14px;line-height:1.45}.slimrow.keep{background:#f0fdf4}.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.qtext{font-size:16px;line-height:1.7;padding:10px 2px;font-family:'Times New Roman',Times,serif;font-weight:400}.opts{display:grid;gap:7px}.opt{border:1px solid #d7e3ee;border-radius:8px;padding:9px;background:#fbfdff;display:flex;align-items:center;gap:10px}.opt.ok{background:#e8f8ee;border-color:#42ae6b}.okmark{display:inline-block;min-width:4.6em;text-align:center;margin-left:0;padding:3px 10px;border-radius:999px;background:#15803d;color:#fff;font-size:11px;font-weight:800}.answerline{border:1px dashed #b8cde2;border-radius:8px;padding:9px;color:#687d92;margin-top:6px}.solution{margin-top:11px;padding:12px;border:1px solid #bad5f2;border-radius:9px;background:#f7fbff}.qcard:has(input:checked){border:2px solid #176bd3;background:#fafdff}.qcard.hideq{display:none}.bottom{border-top:1px solid #e5edf5;padding-top:12px}@media(max-width:700px){.qtext{font-size:14px}}</style>"
           + find_js + rw_js
           )
     return page('Chọn câu' if can_do else 'Xem đề',body)
@@ -2089,39 +2118,23 @@ def _chapter_brief(sibs):
     from app import dang_pairs_of
     lines = []
     packs = []
-    for item in sibs[:10]:
+    for item in sibs[:12]:
         title = _lesson_title(item)
         path = str(item.get('path') or item.get('file') or '').replace('\\', '/')
         if not title or not path.startswith('ngan-hang/'):
             continue
-        try:
-            qs = parse_lesson_questions(path)
-        except Exception:
-            qs = []
-        from app import dang_names_of
-        names, counts = dang_names_of(qs) if qs else ([n for n, _c in dang_pairs_of(item)], {})
+        pairs = dang_pairs_of(item)
+        names = [n for n, _c in pairs if n]
         dang_lines = []
-        for name in names:
+        for name, cnt in pairs:
             if not name or name == 'Chưa phân dạng':
                 continue
-            sn = ''
-            kind = ''
-            for q in qs:
-                if str(q.get('dang') or '').strip() != name:
-                    continue
-                sn = _stem_snip(q, 110)
-                kind = str(q.get('kind') or '')
-                if sn:
-                    break
-            bit = '- «' + name + '» (' + str(counts.get(name) or 0) + ' câu)'
-            if sn:
-                bit += '. Mẫu [' + kind + ']: ' + sn
-            dang_lines.append(bit)
-            if len(dang_lines) >= 12:
+            dang_lines.append('- «' + name + '» (' + str(cnt) + ' câu)')
+            if len(dang_lines) >= 14:
                 break
-        lines.append('## Bài: ' + title + '\n' + ('\n'.join(dang_lines) or '- (chưa có dạng)'))
-        packs.append({'title': title, 'path': path, 'names': [n for n in names if n], 'qs': qs})
-    return '\n'.join(lines)[:14000], packs
+        lines.append('## Bài: ' + title + '\n' + ('\n'.join(dang_lines) or '- (chưa có dạng — tự đặt tên ngắn)'))
+        packs.append({'title': title, 'path': path, 'names': names, 'qs': None})
+    return '\n'.join(lines)[:8000], packs
 
 
 def _triples_from_import(text):
@@ -2143,6 +2156,7 @@ def _triples_from_import(text):
 
 def _fill_chapter_work(data, page_text, images, source_url, n_files):
     from app import dang_tex_anchor
+    job = str((data or {}).get('_job') or '')
     mon = str(data.get('mon') or '').strip()
     lop = str(data.get('lop') or '').strip()
     chuong = str(data.get('chuong') or '').strip()
@@ -2151,30 +2165,49 @@ def _fill_chapter_work(data, page_text, images, source_url, n_files):
         return jsonify(ok=False, error='Không thấy bài nào trong chương này.'), 400
     if not str(page_text or '').strip() and not images:
         return jsonify(ok=False, error='Thả file Word, PDF, TEX hoặc dán chữ của cả chương, rồi bấm AI phân tích.'), 400
+    _fill_progress(job, 'Đang đối chiếu bài và dạng trong chương…')
     brief, packs = _chapter_brief(sibs)
     if not packs:
         return jsonify(ok=False, error='Chương chưa có bài để lọc vào.'), 400
     titles = [p['title'] for p in packs]
     by_title = {p['title']: p for p in packs}
-    kind_rules = _kind_rules_all() + 'Mỗi câu có \\loigiai{...}. Không % ID.\n'
-    prompt = (
-        'Bạn là giáo viên ra đề thi THPT. Nguồn có thể là cả chương, nhiều bài, file Word/PDF/TEX hoặc link.\n'
-        'Tách từng câu rồi lọc vào ĐÚNG BÀI và ĐÚNG DẠNG đã có trong chương «' + chuong + '».\n'
-        'So với câu mẫu, không gán chỉ vì tên na ná. Bỏ câu thuộc chương khác.\n'
-        'Với MỖI câu, đúng thứ tự:\n'
-        '\\baibt{Tên bài chép đúng một bài dưới đây}\n'
-        '\\dangbt{Tên dạng chép đúng một dạng của bài đó}\n'
-        '\\begin{ex}...\\end{ex}\n'
-        'Không bịa bài mới. Chỉ đặt dạng mới khi không dạng nào trong bài đó cùng việc phải làm.\n'
-        'Không markdown, không lời dẫn.\n'
-        + kind_rules
-        + 'Các bài và dạng đang có:\n' + brief + '\n\nNguồn:\n' + str(page_text or '')[:80000]
+    keys = _keys_from_payload_safe(data)
+    kind_rules = (
+        'Mỗi câu một khối \\begin{ex}...\\end{ex}. Công thức $...$. Có \\loigiai. Không markdown, không % ID.\n'
+        'TN: \\choice 4 ý, một \\True. ĐS: \\choiceTF đúng 4 mệnh đề. TLN: \\shortans{chỉ số}.\n'
     )
-    raw, err = _gemini_fill_raw(data and _keys_from_payload_safe(data), prompt, 16000, 0.25, images)
-    if not raw:
-        return jsonify(ok=False, error='AI không viết được: ' + (err or 'trống')), 400
-    raw = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', raw.strip(), flags=re.I)
-    triples = _triples_from_import(raw)
+    src_all = str(page_text or '')[:54000]
+    step = 18000
+    parts = [src_all[i:i + step] for i in range(0, len(src_all), step)][:4]
+    if not parts:
+        parts = ['']
+    use_images = images if (images and len(src_all) < 4000) else None
+    raw_all = []
+    last_err = ''
+    for i, piece in enumerate(parts, 1):
+        _fill_progress(job, 'AI đang tách lô ' + str(i) + '/' + str(len(parts)) + ' — cứ để trang mở.')
+        prompt = (
+            'Bạn là giáo viên ra đề thi THPT. Nguồn có thể là cả chương (Word/PDF/TEX/link).\n'
+            'Tách TỪNG CÂU rồi lọc vào ĐÚNG BÀI và ĐÚNG DẠNG đã có trong chương «' + chuong + '».\n'
+            'Bỏ câu thuộc chương khác. Không bịa đề không có trong nguồn.\n'
+            'Với MỖI câu, đúng thứ tự:\n'
+            '\\baibt{Tên bài chép đúng một bài dưới đây}\n'
+            '\\dangbt{Tên dạng chép đúng một dạng của bài đó}\n'
+            '\\begin{ex}...\\end{ex}\n'
+            'Chỉ đặt dạng mới khi bài đó chưa có dạng cùng kỹ năng. Không markdown.\n'
+            + kind_rules
+            + 'Các bài và dạng đang có:\n' + brief
+            + '\n\nNguồn (lô ' + str(i) + '/' + str(len(parts)) + '):\n' + piece
+        )
+        raw, err = _gemini_fill_raw(keys, prompt, 8000, 0.2, use_images if i == 1 else None)
+        last_err = err or last_err
+        if raw:
+            raw = re.sub(r'^```(?:latex|tex)?\s*|\s*```$', '', raw.strip(), flags=re.I)
+            raw_all.append(raw)
+    if not raw_all:
+        return jsonify(ok=False, error='AI không viết được: ' + (last_err or 'trống')), 400
+    _fill_progress(job, 'Đang lọc trùng và gán vào bài…')
+    triples = _triples_from_import('\n\n'.join(raw_all))
     if not triples:
         return jsonify(ok=False, error='AI không ra khối \\begin{ex}. Thử lại.'), 400
     grouped = {}
@@ -2195,6 +2228,11 @@ def _fill_chapter_work(data, page_text, images, source_url, n_files):
         if not rows:
             continue
         pack = by_title[title]
+        if pack.get('qs') is None:
+            try:
+                pack['qs'] = parse_lesson_questions(pack['path'])
+            except Exception:
+                pack['qs'] = []
         kept, skipped = _filter_import_rows(rows, pack['qs'], '', relax=False)
         n_dup += sum(1 for s in skipped if ('trùng' in s or 'cùng ý' in s or 'trần' in s))
         n_bad += sum(1 for s in skipped if 'sai cấu trúc' in s)
@@ -2224,7 +2262,7 @@ def _fill_chapter_work(data, page_text, images, source_url, n_files):
         + str(len(per_bai)) + ' bài. ' + ' · '.join(per_bai) + '.' + skip_txt
         + ' Xem ô LaTeX rồi bấm Chấp nhận ghi TEX.'
     )
-    src, _line = dang_tex_anchor(packs[0]['path'], '', qs=packs[0]['qs'])
+    src, _line = dang_tex_anchor(packs[0]['path'], '', qs=packs[0].get('qs') or [])
     return jsonify(ok=True, src=src, latex=latex, n=n_keep, summary=summary, chapter=True)
 
 
@@ -2469,8 +2507,9 @@ def api_admin_dang_fill_job():
         return jsonify(ok=False, error='Không thấy phiên đang chạy. Bấm lại.'), 404
     if rec.get('state') != 'done':
         _ensure_fill(job)
-        elapsed = max(0, int(time.time() - float(rec.get('ts') or time.time())))
-        return jsonify(ok=True, pending=True, job=job, elapsed=elapsed)
+        started = float(rec.get('started') or rec.get('ts') or time.time())
+        elapsed = max(0, int(time.time() - started))
+        return jsonify(ok=True, pending=True, job=job, elapsed=elapsed, note=rec.get('note') or '')
     result = rec.get('result')
     if not isinstance(result, dict):
         disk = _fill_read_json(_fill_status_path(job)) or {}

@@ -937,7 +937,7 @@ def api_tex_preview():
         return jsonify(ok=False, error="Chỉ ADMIN."), 403
     data = request.get_json(silent=True) or {}
     tex = str(data.get("tex") or data.get("latex") or "")
-    if data.get("phieu") or data.get("raw"):
+    if data.get("formula"):
         tex = _formulas_to_tex(tex)
     else:
         tex = _clean_tex(tex)
@@ -1763,12 +1763,20 @@ def api_suggest_tikz():
     return jsonify(ok=True, code=code, hid=hid, html=html, url="/tikz/" + hid + ".png")
 
 
-_NOTEBOOK_GEMINI = """Xuất ra ẢNH một trang A4. Không viết lại prompt. Không giải thích cách làm. Hãy trực tiếp tạo sản phẩm trực quan.
+_NOTEBOOK_GEMINI = """Xuất ra ẢNH một trang A4 nằm ngang (khoảng 1754×1240 px). Không viết lại prompt. Không giải thích. Hãy vẽ luôn.
+
+Đây là PHIẾU ẢNH VỞ (trang học infographic), không phải phiếu học tập 4 ô để học sinh viết bài.
+
+KHỔ GIẤY — KHÓA CỨNG:
+- A4 NẰM NGANG: rộng 297 mm, cao 210 mm. Rộng hơn cao.
+- Tỉ lệ rộng/cao = 1,414. Ảnh 1754×1240 px hoặc 3508×2480 px.
+- CẤM trang dọc 210×297. CẤM khổ 1240×1754. CẤM A5. CẤM A4 đứng. CẤM trang 2.
+Không viết lại prompt. Không giải thích cách làm. Hãy trực tiếp vẽ ảnh.
 
 Bạn là chuyên gia thiết kế tài liệu học tập trực quan cho học sinh THPT.
 
 NHIỆM VỤ:
-Từ nội dung LaTeX tôi cung cấp, hãy chuyển nó thành MỘT TRANG VỞ HỌC TẬP HOÀN CHỈNH, trực quan, đẹp, khoa học và dễ học — trình độ infographic giáo khoa, không phải ảnh chụp vở viết tay cẩu thả.
+Từ nội dung LaTeX tôi cung cấp, hãy vẽ MỘT TRANG VỞ A4 NẰM NGANG, đúng các ô đã khóa bên dưới — trình độ infographic giáo khoa, không phải ảnh chụp vở viết tay.
 
 BẮT BUỘC có thanh thương hiệu ở MÉP TRÊN CÙNG (trên cả tiêu đề bài), không được quên, không được viết sai số:
 
@@ -1799,28 +1807,31 @@ Không được thay đổi dữ kiện toán học, vật lý, hóa học hoặ
 II. PHONG CÁCH TRANG VỞ — BẮT BUỘC GIỐNG MẪU KHỐI
 =============================
 
-Thiết kế thành MỘT TRANG  TỈ LỆ A4 NẰM NGANG.
+Thiết kế thành MỘT TRANG TỈ LỆ A4 NẰM NGANG.
 Ưu tiên khung hình 1.414:1.
-Kích thước tham chiếu: khoảng 1754×1240 px hoặc 2100×1480 px. độ nét cao, như tài liệu in màu của trung tâm luyện thi.
+Kích thước tham chiếu: khoảng 1754×1240 px hoặc 2100×1480 px. Độ nét cao, như tài liệu in màu của trung tâm luyện thi. Không xoay dọc.
 
-Mẫu bố cục chuyên nghiệp (bắt buộc dùng KHỐI / CARD, không để chữ trôi tự do trên giấy):
+BỐ CỤC KHÓA — đếm từ mép trên, không đổi chỗ các ô:
 
-- Nền giấy vở kẻ ô rất nhạt + gáy lò xo bên trái.
-- Mỗi phần là một KHUNG BO GÓC lớn, viền 2–3 px, nền pastel riêng, bóng nhẹ.
-- Tiêu đề mỗi khung: viên thuốc (pill) góc trên-trái, chữ trắng đậm, có icon.
-  • Bài toán → pill xanh lá.
-  • Hướng dẫn giải → pill tím.
-  • Minh họa → pill xanh dương.
-  • Đồ thị / chuỗi thời gian → pill vàng/cam.
-  • Nhận xét – Ghi nhớ → pill hồng, khung full-width đáy trang.
-- Chữ trong khung: font sans-serif giáo khoa (kiểu Nunito / Quicksand / Be Vietnam), không scribble, không chữ máy tính pixel.
-- Công thức: rendered đẹp như sách giáo khoa (x = 1,25 cos(2πt − π/12)), căn giữa khi là công thức chính.
-- Phương án A B C D nằm một hàng hoặc lưới gọn; đáp án đúng là viên thuốc xanh lá đậm, chữ trắng; phương án sai nền trắng viền xám.
-- Hai cột khi có hình: trái = đề + lời giải; phải = hình minh họa xếp chồng.
-- Lề đều, khoảng cách giữa các khối 10–14 px, không chồng chữ, không cắt công thức.
-- Màu pastel đồng bộ (xanh mint, xanh baby, vàng kem, hồng nhạt) — sạch, trung tâm gia sư, không neon, không poster quảng cáo lòe.
+Lề ngoài 8 mm. Vùng trong 281×194 mm.
 
-Không làm ảnh chụp vở bút bi lem, không giấy nhàu, không sticker lung tung.
+1) Thanh thương hiệu — cao 10 mm, trọn chiều ngang, nền navy, chữ trắng. Nằm trên cả tiêu đề.
+2) Dải dạng bài — cao 12 mm, trọn chiều ngang: tên dạng / chủ đề, chữ đậm.
+3) Thân trang — cao khoảng 148 mm, HAI CỘT, khe 4 mm:
+   - Cột trái 58% rộng, hai khung chồng:
+     trên = BÀI TOÁN (pill xanh lá), chiếm khoảng 40% thân;
+     dưới = HƯỚNG DẪN GIẢI (pill tím), chiếm khoảng 60% thân.
+   - Cột phải 42% rộng, hai khung chồng:
+     trên = HÌNH MINH HỌA (pill xanh dương), chiếm khoảng 70% thân;
+     dưới = ĐÁP ÁN (pill cam), chiếm khoảng 30% thân, một ô nổi bật.
+4) Đáy trang — cao 24 mm, trọn chiều ngang: NHẬN XÉT – GHI NHỚ (pill hồng).
+
+Mỗi khung: bo góc, viền 2–3 px, nền pastel riêng, pill chữ trắng góc trên-trái.
+Chữ sans-serif giáo khoa (Nunito / Be Vietnam), không scribble.
+Công thức như sách giáo khoa, căn giữa khi là công thức chính.
+A B C D một hàng; đáp án đúng là viên thuốc xanh lá, chữ trắng; phương án sai nền trắng viền xám.
+Khe giữa các khung 8–12 px. Không chồng chữ, không cắt công thức, không thêm khung ngoài sơ đồ trên.
+Nền giấy kẻ ô rất nhạt. Không gáy lò xo. Không giấy nhàu, không sticker, không poster.
 
 =============================
 II.b THƯƠNG HIỆU (KHÔNG ĐƯỢC THIẾU)
@@ -1844,38 +1855,19 @@ Có thể thêm dòng phụ nhỏ:
 lophocthayminh.onrender.com
 
 =============================
-III. BỐ CỤC TỰ ĐỘNG
+III. NỘI DUNG ĐI VÀO ĐÚNG Ô — KHÔNG ĐỔI VỊ TRÍ Ô
 =============================
 
-Tùy nội dung, tự lựa chọn bố cục phù hợp.
+Giữ nguyên 6 vùng ở mục II. Chỉ đổi chữ bên trong.
 
-Có thể gồm:
+- Dải dạng bài: tên dạng / chủ đề, một dòng.
+- BÀI TOÁN: nguyên đề và phương án. Không bỏ dữ kiện.
+- HƯỚNG DẪN GIẢI: từng bước, mỗi bước một dòng — công thức, thay số, biến đổi, kết quả.
+- HÌNH MINH HỌA: một sơ đồ hoặc đồ thị đúng bài. Nếu bài không cần hình, ô này ghi "Không cần hình" và để nền trống, không bịa hình.
+- ĐÁP ÁN: một kết quả nổi bật (chữ cái, Đúng/Sai, hoặc số).
+- NHẬN XÉT – GHI NHỚ: một hoặc hai câu mẹo. Không viết bài mới.
 
-1. DẠNG BÀI / CHỦ ĐỀ
-
-2. BÀI TOÁN
-   Đưa nguyên nội dung câu hỏi vào.
-
-3. KIẾN THỨC CẦN NHỚ
-   Chỉ đưa những kiến thức thực sự cần cho bài.
-
-4. PHÂN TÍCH / Ý TƯỞNG GIẢI
-
-5. HƯỚNG DẪN GIẢI
-   Trình bày từng bước:
-   - Công thức
-   - Thay số
-   - Biến đổi
-   - Kết quả
-
-6. HÌNH MINH HỌA
-   Chỉ tạo khi hình giúp học sinh hiểu bài.
-
-7. NHẬN XÉT – GHI NHỚ
-   Tóm tắt mẹo hoặc kết luận quan trọng.
-
-Không bắt buộc phải sử dụng tất cả các khung.
-Tự bỏ những phần không cần thiết để trang không bị chật.
+Không thêm cột thứ ba. Không xếp các ô thành một cột dọc. Không chuyển trang.
 
 =============================
 IV. QUY TẮC MINH HỌA
@@ -2016,20 +2008,15 @@ Nội dung khoa học phải chính xác trước khi đẹp.
 XI. KẾT QUẢ CUỐI
 =============================
 
-Tạo một trang học tập hoàn chỉnh, các khối bo góc như infographic giáo khoa:
+Vẽ đúng sơ đồ A4 NẰM NGANG (rộng 297 mm, cao 210 mm):
 
-[THANH THƯƠNG HIỆU: Lớp Học Thầy Minh · Zalo 0946111107]
-↓
-[DẠNG BÀI — pill + tiêu đề chủ đề]
-↓
-Hàng giữa 2 cột:
-  trái: [BÀI TOÁN] rồi [HƯỚNG DẪN GIẢI]
-  phải: [HÌNH MINH HỌA] / [CHUỖI THỜI GIAN nếu có quá trình động]
-↓
-[ĐÁP ÁN nổi bật]
-↓
-[NHẬN XÉT – GHI NHỚ — khung full đáy trang]
+[Thanh thương hiệu — full ngang]
+[Dạng bài — full ngang]
+[Bài toán | Hình minh họa]
+[Hướng dẫn giải | Đáp án]
+[Nhận xét – ghi nhớ — full ngang]
 
+Nếu ảnh ra trang dọc, vẽ lại cho đến khi rộng hơn cao.
 Tự điều chỉnh để toàn bộ nằm gọn một trang A4 nằm ngang, nét, đều, chuyên nghiệp.
 
 NỘI DUNG TRANG — mỗi dòng dưới đây là một dòng trên trang, giữ nguyên thứ tự, không gộp, không cắt giữa dòng:
@@ -2037,19 +2024,57 @@ NỘI DUNG TRANG — mỗi dòng dưới đây là một dòng trên trang, gi�
 [DÁN LATEX VÀO ĐÂY]
 --------------------------------
 
-Hãy trực tiếp vẽ trang. Chữ phải thẳng hàng, xuống dòng đúng bản trên, công thức căn giữa, không in mã TeX.
+Hãy trực tiếp vẽ trang A4 nằm ngang. Chữ phải thẳng hàng, xuống dòng đúng bản trên, công thức căn giữa, không in mã TeX.
 """
 
 
 _NOTEBOOK_MOTION = (
-    "Trang tĩnh đã xong. Nếu bài có quá trình theo thời gian, "
+    "Trang tĩnh A4 nằm ngang đã xong. Nếu bài có quá trình theo thời gian, "
     "hãy tạo thêm minh họa chuyển động bằng chuỗi 4–8 khung liên tiếp "
-    "theo mục V, có mũi tên hoặc thanh thời gian. "
-    "Không đổi số liệu, công thức, đáp án. "
+    "theo mục V, có mũi tên hoặc thanh thời gian, vẫn khổ A4 ngang. "
+    "Không đổi số liệu, công thức, đáp án. Không xoay dọc. "
     "Nếu hệ thống hỗ trợ GIF/animation thì có thể tạo animation; "
     "nếu không thì xuất chuỗi khung hình trên ảnh. "
     "Không viết lại prompt."
 )
+
+_CANVA_PRACTICE = """Tạo MỘT thiết kế Canva để học sinh luyện tập. Không viết lại prompt. Không giải thích. Hãy dựng trang.
+
+Đây là FILE CANVA chỉnh sửa được (mỗi dòng chữ là text box), không phải ảnh chụp vở, không flatten, không xuất một ảnh chết chữ.
+
+KHỔ: trang Canva A4 nằm ngang, rộng 297 mm, cao 210 mm. Rộng hơn cao.
+
+THƯƠNG HIỆU ở mép trên, nền navy, chữ trắng, trọn chiều ngang. Viết đúng từng chữ:
+Lớp Học Thầy Minh · Zalo 0946111107
+Dòng phụ nhỏ: lophocthayminh.onrender.com
+
+MỤC ĐÍCH: giáo viên mở file trong Canva, ĐỔI SỐ LIỆU trong các ô vàng, rồi đưa học sinh luyện cùng một dạng. Cấu trúc câu, tên chất, ký hiệu và đơn vị giữ nguyên. Chỉ số liệu được sửa.
+
+CÁCH ĐẶT SỐ LIỆU — bắt buộc:
+- Mỗi số, hệ số, số mũ của dạng 10^n là MỘT text box riêng.
+- Ô số: nền vàng nhạt, viền vàng, bo góc, chữ đậm. Trong Canva bấm vào ô là sửa được số, không phải sửa cả câu.
+- Đơn vị đứng ngay sau ô, là chữ cố định. Không nhét đơn vị vào trong ô số.
+- Giữ đúng số liệu gốc của đề trong các ô. Không bịa bộ số mới. Không đổi đáp án của bộ số gốc.
+- Chữ đề, tên chất, nhãn A B C D nằm ngoài ô vàng.
+- Không tách một số ra nhiều ô. Không dính hai số vào một ô.
+
+BỐ CỤC, các khối bo góc, pastel:
+1) Thanh thương hiệu.
+2) Dải tiêu đề: «Luyện tập · đổi số liệu» và tên dạng, một dòng.
+3) Hai cột:
+   Trái — BÀI CHO HỌC SINH: đề với ô số vàng, phương án nếu có, khoảng trắng để trình bày, ô đáp án trống (khoanh hoặc điền). Không in lời giải. Không tô sẵn đáp án đúng.
+   Phải — KHUNG GIÁO VIÊN, nền kem, chữ nhỏ hơn: từng ô số (ký hiệu và giá trị gốc), công thức giữ nguyên khi đổi số, đáp án của bộ số gốc, một câu «Khi đổi số trong ô vàng thì làm lại bước tính, đáp án có thể đổi».
+4) Đáy trang: một dòng công thức cần nhớ. Không viết lại đề.
+
+Font: Be Vietnam Pro hoặc Nunito. Không neon, không giấy nhàu, không sticker, không chữ scribble.
+
+NỘI DUNG GỐC — giữ nguyên dữ kiện, chỉ tách số liệu vào ô vàng:
+--------------------------------
+[DÁN LATEX VÀO ĐÂY]
+--------------------------------
+
+Dựng trang Canva. Ô vàng chứa đúng số gốc. Học sinh không thấy lời giải.
+"""
 
 
 
@@ -2280,8 +2305,10 @@ def _page_lines_for_gemini(latex):
 
 
 def _notebook_image_prompt(latex):
-    body = _NOTEBOOK_GEMINI.replace("[DÁN LATEX VÀO ĐÂY]", _page_lines_for_gemini(latex))
-    return body.strip(), _NOTEBOOK_MOTION
+    page = _page_lines_for_gemini(latex)
+    body = _NOTEBOOK_GEMINI.replace("[DÁN LATEX VÀO ĐÂY]", page)
+    canva = _CANVA_PRACTICE.replace("[DÁN LATEX VÀO ĐÂY]", page)
+    return body.strip(), _NOTEBOOK_MOTION, canva.strip()
 
 
 @base.app.post("/api/admin/notebook-prompt")
@@ -2301,10 +2328,18 @@ def api_notebook_prompt():
         return jsonify(ok=False, error="Không tìm thấy câu trong file."), 400
     try:
         latex = _notebook_latex(q, tex, fi)
-        still, motion = _notebook_image_prompt(latex)
+        still, motion, canva = _notebook_image_prompt(latex)
     except ValueError as e:
         return jsonify(ok=False, error=str(e)), 400
-    return jsonify(ok=True, prompt=still, motion=motion, latex=latex, gemini="https://gemini.google.com/app")
+    return jsonify(
+        ok=True,
+        prompt=still,
+        motion=motion,
+        canva=canva,
+        latex=latex,
+        gemini="https://gemini.google.com/app",
+        canva_url="https://www.canva.com/",
+    )
 
 
 _OCR_PHOTO = """Bạn là giáo viên THPT (Vật lý / Toán / Hóa). Đọc đề trong ảnh, chuyển thành LaTeX gói ex_test.
@@ -2377,7 +2412,7 @@ def _prompt_from_ocr(text):
         raise ValueError("Chưa có chữ để viết prompt.")
     if not re.search(r"\\begin\s*\{\s*(?:ex|bt)\s*\}", text, re.I):
         text = "\\begin{ex}\n" + text + "\n\\end{ex}"
-    still, motion = _notebook_image_prompt(text)
+    still, motion, _canva = _notebook_image_prompt(text)
     return text, still, motion
 
 
@@ -2419,6 +2454,81 @@ def api_photo_prompt():
     )
 
 
+def _ex_blocks(latex):
+    return re.findall(r"\\begin\s*\{\s*ex\s*\}.*?\\end\s*\{\s*ex\s*\}", str(latex or ""), re.I | re.S)
+
+
+@base.app.post("/api/admin/latex-cards")
+def api_latex_cards():
+    """Xem trước LaTeX thành thẻ câu, cùng kiểu trang ngân hàng."""
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    blocks = _ex_blocks(data.get("latex") or data.get("text") or "")
+    if not blocks:
+        return jsonify(ok=False, error="Chưa có khối \\begin{ex} để xem trước."), 400
+    qs = base.parse_questions("\n\n".join(blocks))
+    if not qs:
+        return jsonify(ok=False, error="Không đọc được câu từ LaTeX."), 400
+    from dang_routes import _question_card
+
+    bits = []
+    n = len(qs)
+    for i, q in enumerate(qs, 1):
+        q["src"] = ""
+        q["file_idx"] = i - 1
+        bits.append(_question_card(q, i, n, "", show_solution=True, preview_only=True))
+    return jsonify(ok=True, html="".join(bits), n=n)
+
+
+@base.app.post("/api/admin/bank-append")
+def api_bank_append():
+    """Thêm các khối \\begin{ex} vào cuối file TEX của bài đang mở."""
+    if not base.can_manage_bank():
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
+    data = request.get_json(silent=True) or {}
+    path = str(data.get("path") or data.get("src") or "").replace("\\", "/").strip()
+    dang = str(data.get("dang") or "").strip()
+    latex = str(data.get("latex") or "")
+    from dang_routes import _STATS_CACHE, _QID_CACHE, _chunks_from_import, _import_tex_chunk
+
+    rows = _chunks_from_import(latex, dang)
+    if not rows:
+        return jsonify(ok=False, error="Chưa có \\begin{ex} để lưu."), 400
+    if not path.startswith("ngan-hang/"):
+        return jsonify(ok=False, error="Mở một bài trong ngân hàng, hoặc điền đường dẫn bắt đầu bằng ngan-hang/."), 400
+    if path.lower().endswith(".tex"):
+        src = path
+    else:
+        try:
+            qs = base.load_lesson_questions(path)
+        except Exception:
+            qs = []
+        src, _line = base.dang_tex_anchor(path, dang, qs=qs)
+    if not str(src).startswith("ngan-hang/") or not str(src).lower().endswith(".tex"):
+        return jsonify(ok=False, error="Không tìm thấy file TEX của bài này."), 400
+    if dang or re.search(r"\\dang(?:bt)?\s*\{", latex):
+        chunk = _import_tex_chunk(latex, dang)
+    else:
+        chunk = "\n\n".join(block for _name, block in rows).strip() + "\n"
+    try:
+        sha, tex = base.read_tex(src, need_sha=True)
+        new = (tex or "").rstrip() + "\n\n" + chunk
+        from admin_classify import _refresh_index, _write_tex
+
+        note = _write_tex(src, new, "ADMIN lưu câu vào " + src, sha)
+        _STATS_CACHE.clear()
+        _QID_CACHE.clear()
+        try:
+            lesson = path if not path.lower().endswith(".tex") else src
+            _refresh_index(lesson, base.load_lesson_questions(lesson))
+        except Exception:
+            pass
+    except Exception as e:
+        return jsonify(ok=False, error=str(e)), 500
+    return jsonify(ok=True, n=len(rows), src=src, note=note or "")
+
+
 def _path_meta(src):
     parts = [p for p in str(src or "").replace("\\", "/").split("/") if p]
     mon = parts[1] if len(parts) > 1 else ""
@@ -2439,7 +2549,7 @@ def _worksheet_short(pack):
     if kind == "DS":
         bits = []
         for i, o in enumerate(opts):
-            lab = chr(65 + i) if i < 4 else str(i + 1)
+            lab = chr(97 + i) if i < 4 else str(i + 1)
             bits.append(lab + ("-Đ" if o.get("correct") else "-S"))
         return " ".join(bits)
     return str((pack or {}).get("answer") or "").strip()
@@ -2456,9 +2566,16 @@ def _worksheet_problem_tex(pack):
             lines.append(lab + ". " + _clean_tex(o.get("text") or ""))
     elif kind == "DS":
         for i, o in enumerate(opts):
-            lab = chr(65 + i) if i < 4 else str(i + 1)
+            lab = chr(97 + i) if i < 4 else str(i + 1)
             lines.append(lab + ") " + _clean_tex(o.get("text") or ""))
     return "\n\n".join(lines).strip()
+
+
+def _drop_figures(tex):
+    s = base.TIKZ_RE.sub("", str(tex or ""))
+    s = re.sub(r"\\begin\s*\{\s*(center|figure)\s*\}\s*(?:\\centering\s*)?\\end\s*\{\s*\1\s*\}", "", s)
+    s = re.sub(r"\\immini(?:\[[^\]]*\])?\s*\{\s*\}\s*\{\s*\}", "", s)
+    return re.sub(r"\n{3,}", "\n\n", s).strip()
 
 
 def _formulas_to_tex(raw):
@@ -2521,67 +2638,87 @@ def _tikz_html_from_tex(tex, src):
     return "".join(htmls)
 
 
-_PHIEU_A4_HEAD = """Xuất ra ẢNH một trang A4 ngang vừa màn hình điện thoại (khoảng 1240×1754 px). Không viết lại prompt. Không giải thích. Hãy vẽ luôn.
+_PHIEU_A4_HEAD = """Xuất ra ẢNH một trang A4 nằm ngang (khoảng 1754×1240 px). Không viết lại prompt. Không giải thích. Hãy vẽ luôn.
 
-Thanh thương hiệu TRÊN CÙNG, chữ vừa (12 pt), không chiếm quá 8% chiều cao trang:
-Lớp Học Thầy Minh    ·    Zalo 0946111107
-Có thể thêm dòng nhỏ: lophocthayminh.onrender.com
+Đây là PHIẾU HỌC TẬP 4 KHỐI để học sinh làm bài, không phải trang vở infographic.
 
-CHỮ NHỎ — DỄ ĐỌC (BẮT BUỘC, hay bị vẽ quá TO):
-- Chữ đề bài / lời giải: 10–11 pt, line-height 1.35, như đề thi in A4.
-- Tiêu đề phiếu: tối đa 13–14 pt, không banner khổ lớn.
-- Pill tên khối: 9–10 pt.
-- Công thức: 10–11 pt, sắc nét như sách giáo khoa, không phóng to giữa trang.
-- Không dùng chữ display khổ poster. Không để một dòng công thức chiếm 1/5 trang.
-- Lề 8–10 mm. Khối sát nhau (cách 6–8 px). Gọn MỘT trang, chữ đều, dễ đọc từ khoảng cách đọc giấy.
+KHỔ GIẤY — KHÓA CỨNG:
+- A4 NẰM NGANG: rộng 297 mm, cao 210 mm. Rộng hơn cao.
+- Tỉ lệ rộng/cao = 1,414. Ảnh 1754×1240 px hoặc 3508×2480 px.
+- CẤM trang dọc 210×297. CẤM khổ 1240×1754. CẤM A5. CẤM A4 đứng. CẤM trang 2. CẤM viết lại prompt.
 
-Bố cục phiếu 4 khối pastel bo góc: 1 đề (xanh dương) · 2 công thức (cam) · 3 hình (tím) · 4 giải/kẻ vở (xanh ngọc).
-Nền giấy vở kẻ nhẹ, gáy lò xo trái. Không poster quảng cáo, không chữ viết tay lem.
+Lề 6 mm. Mọi khối nằm trong vùng 285×198 mm. Không cắt chữ, không để trống một góc.
+
+TỪ TRÊN XUỐNG, ĐÚNG SỐ ĐO:
+
+1) Thanh thương hiệu — cao 11 mm, nền #0f3d7a, chữ trắng 11 pt, một dòng, trọn chiều ngang.
+   Trái: Lớp Học Thầy Minh · Zalo 0946111107
+   Phải: bộ môn · tiêu đề bài
+
+2) Dòng thông tin — cao 9 mm, khung đen 1 px, đúng 5 ô một hàng, chữ 9 pt:
+   Họ và tên: …… | Lớp: …… | Điểm: …/10 | Ngày: …… | Lời phê: ……
+
+3) Bảng 2×2 — cao khoảng 168 mm. Hai hàng bằng nhau. Cột trái 58%, cột phải 42%. Khe 3 mm.
+   Mỗi ô: viền 2 px, bo góc 8 px, pill chữ trắng 8 pt ở góc trên-trái.
+   Chữ trong ô 10–11 pt, dãn dòng 1,3, lề trong ô 3 mm.
+   - Trái trên, viền #2563eb, nền #eff6ff, pill "1. ĐỀ BÀI": đủ đề và phương án. Không nhét lời giải vào ô này.
+   - Phải trên, viền #d97706, nền #fffbeb, pill "2. CÔNG THỨC": mỗi công thức một dòng, căn giữa, như sách. Không viết đoạn văn.
+   - Trái dưới, viền #7c3aed, nền #f5f3ff, pill "3. HÌNH MINH HỌA": một sơ đồ hoặc đồ thị đúng bài, căn giữa ô, nhãn ngắn. Không poster.
+   - Phải dưới, viền #059669, nền #ecfdf5, pill "4. BÀI LÀM": theo chế độ bên dưới.
+
+4) Chân trang — cao 6 mm, chữ 8 pt, màu #64748b: Lớp Học Thầy Minh · A4 ngang · 1/1
+
+Nền giấy kẻ rất nhạt. Không gáy lò xo. Không banner. Không một công thức chiếm quá một phần tư ô.
 """
 
 _PHIEU_A4_YES = """
-CHẾ ĐỘ PHIẾU: CÓ ĐÁP ÁN (bản giáo viên)
-- Làm nổi bật phương án / kết quả đúng (viên thuốc xanh).
-- Khối 4 hiện đủ lời giải từng bước và đáp số.
-- Không che đáp án.
+CHẾ ĐỘ: BẢN GIÁO VIÊN — CÓ ĐÁP ÁN
+- Ô 1: khoanh hoặc tô xanh đúng một phương án đúng. Phương án sai để nền trắng.
+- Ô 4: in đủ lời giải từng bước (công thức, thay số, kết quả) và đáp số. Không kẻ dòng trống.
 """
 
 _PHIEU_A4_NO = """
-CHẾ ĐỘ PHIẾU: KHÔNG ĐÁP ÁN (bản học sinh làm bài)
-- KHÔNG khoanh, KHÔNG tô, KHÔNG ghi phương án đúng.
-- Các lựa chọn A B C D (hoặc đúng/sai) trông giống nhau.
-- Khối 4: ô kẻ vở trống để học sinh viết; ô đáp số để trống / nét đứt.
-- KHÔNG in lời giải, KHÔNG in đáp số, KHÔNG gợi ý đáp án trong hình.
+CHẾ ĐỘ: BẢN HỌC SINH — KHÔNG ĐÁP ÁN
+- Ô 1: A B C D hoặc Đúng/Sai trông giống nhau. Không khoanh, không tô, không gợi ý chữ cái đúng.
+- Ô 4: chỉ giấy kẻ ngang (dòng cách khoảng 7 mm, lề đỏ bên trái) để học sinh viết. Ô đáp số để trống, nét đứt.
+- Không in lời giải, không in đáp số, không giấu đáp án trong hình.
 """
 
 
 def _phieu_a4_prompt(title, subject, problem, formulas, solution, short, with_answer):
     mode = _PHIEU_A4_YES if with_answer else _PHIEU_A4_NO
+    problem = _page_lines_for_gemini(problem) if problem else ""
+    formulas = _page_lines_for_gemini(formulas) if formulas else ""
+    solution = _page_lines_for_gemini(solution) if solution else ""
     body = (
         "TIÊU ĐỀ: " + str(title or "") + "\nBỘ MÔN: " + str(subject or "") + "\n"
-        "KHỐI 1 — ĐỀ BÀI:\n" + str(problem or "") + "\n\n"
-        "KHỐI 2 — CÔNG THỨC:\n" + str(formulas or "") + "\n\n"
+        "KHỐI 1 — ĐỀ BÀI (ô trái trên):\n" + str(problem or "") + "\n\n"
+        "KHỐI 2 — CÔNG THỨC (ô phải trên):\n" + str(formulas or "") + "\n\n"
+        "KHỐI 3 — HÌNH (ô trái dưới): một sơ đồ hoặc đồ thị đúng bài này, không chép đề vào ô hình.\n\n"
     )
     if with_answer:
         body += (
-            "KHỐI 4 — LỜI GIẢI (in ra):\n" + str(solution or "")[:1800] + "\n\n"
+            "KHỐI 4 — LỜI GIẢI (ô phải dưới, in ra):\n" + str(solution or "")[:1800] + "\n\n"
             "ĐÁP ÁN NGẮN: " + str(short or "") + "\n"
         )
     else:
         body += (
-            "KHỐI 4: chỉ dòng kẻ trống. Có lời giải dưới đây CHỈ để vẽ đúng hình minh họa, "
+            "KHỐI 4 (ô phải dưới): chỉ dòng kẻ trống. Có lời giải dưới đây CHỈ để vẽ đúng hình minh họa, "
             "KHÔNG chép lời giải hay đáp án lên phiếu:\n"
             + str(solution or "")[:800]
             + "\n"
         )
-    return (_PHIEU_A4_HEAD + mode + "\n" + body + "\nXuất ra ẢNH trang A4. Không viết lại prompt.").strip()
+    return (
+        _PHIEU_A4_HEAD + mode + "\n" + body
+        + "\nVẽ đúng một ảnh A4 nằm ngang 297×210 mm, bốn ô đúng vị trí trên. Nếu ra trang dọc thì vẽ lại. Không viết lại prompt."
+    ).strip()
 
 
 def _worksheet_seed(q, src, fi, tex):
     pack = _q_plain_pack(q)
     title, subject = _path_meta(src)
     problem = _worksheet_problem_tex(pack)
-    sol = _clean_tex(pack.get("solution") or "")
+    sol = _drop_figures(_clean_tex(pack.get("solution") or ""))
     latex = ""
     try:
         latex = _notebook_latex(q, tex, fi)
@@ -2739,7 +2876,7 @@ def api_worksheet():
             short = str(obj.get("short_answer") or "").strip()
             if formulas:
                 seed["formulas"] = formulas
-            if short:
+            if short and str(seed.get("kind") or "").upper() not in ("TN", "DS"):
                 seed["short_answer"] = short
         elif err:
             seed["ai_note"] = err
@@ -2814,58 +2951,70 @@ def admin_phieu():
     body = (
         "<style>"
         "body.phieu-on .regline{display:none}"
-        "@media print{body{background:#fff!important}.top,.ldvl-drawer,.no-print{display:none!important}"
-        ".wrap{max-width:none;margin:0;padding:0}.phieu-sheet{box-shadow:none!important;border:none!important}"
+        "@page{size:A4 landscape;margin:0}"
+        "@media print{body{background:#fff!important;margin:0}.top,.ldvl-drawer,.no-print{display:none!important}"
+        ".wrap{max-width:none;margin:0;padding:0}.phieu-grid{display:block}"
+        ".phieu-stage{width:297mm!important;height:210mm!important;overflow:visible!important}"
+        ".phieu-sheet{width:297mm!important;height:210mm!important;max-height:210mm!important;margin:0!important;"
+        "transform:none!important;box-shadow:none!important;border:none!important;border-radius:0!important}"
         "*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}"
         ".phieu-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 12px;padding:10px;"
         "border:1px solid #cbd5e1;border-radius:12px;background:#0f172a;color:#e2e8f0}"
         ".phieu-tools .btn{font-size:12px}.phieu-tools label{font-size:12px;display:flex;gap:6px;align-items:center}"
-        ".phieu-grid{display:grid;grid-template-columns:minmax(280px,1fr) minmax(320px,1.15fr);gap:14px;align-items:start}"
+        ".phieu-grid{display:grid;grid-template-columns:minmax(240px,320px) minmax(0,1fr);gap:14px;align-items:start}"
         "@media(max-width:980px){.phieu-grid{grid-template-columns:1fr}}"
         ".phieu-ed textarea{width:100%;min-height:72px;font:12px/1.4 Consolas,ui-monospace,monospace;padding:8px;"
         "border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e2e8f0}"
         ".phieu-ed label{display:block;font-size:11px;font-weight:800;margin:8px 0 4px}"
-        ".phieu-sheet{background:#fff;color:#0f172a;padding:16px 18px;border:1px solid #cbd5e1;border-radius:12px;"
-        "min-height:297mm;box-shadow:0 12px 40px #0f172a22;font-size:12px;line-height:1.35}"
-        ".phieu-sheet mjx-container,.phieu-sheet .MathJax{font-size:95%!important}"
-        ".phieu-brand{background:#0f3d7a;color:#fff;padding:6px 10px;border-radius:8px;display:flex;justify-content:space-between;"
-        "align-items:center;gap:8px;font-weight:800;margin:0 0 8px;font-size:12px}"
-        ".phieu-k{border:2px solid;border-radius:10px;padding:8px;margin:0 0 8px;font-size:12px}"
-        ".phieu-k .pill{display:inline-block;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;margin:0 0 5px;text-transform:uppercase}"
-        ".phieu-head{border-bottom:2px solid #0f172a;padding-bottom:8px;margin-bottom:10px}"
-        ".phieu-head .row{display:flex;justify-content:space-between;gap:12px;font-size:12px;font-weight:800;text-transform:uppercase}"
-        ".phieu-info{margin-top:8px;padding:8px;border:1px solid #0f172a;display:grid;grid-template-columns:1.4fr .8fr .8fr;gap:6px;font-size:12px;background:#f8fafc}"
+        ".phieu-stage{width:100%;min-width:0;overflow:hidden}"
+        ".phieu-sheet{background:#fff;color:#0f172a;box-sizing:border-box;width:297mm;height:210mm;max-height:210mm;"
+        "aspect-ratio:297/210;padding:5mm 6mm;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;"
+        "box-shadow:0 12px 40px #0f172a22;font-size:12px;line-height:1.3;"
+        "display:flex;flex-direction:column;gap:2mm;transform-origin:top left}"
+        ".phieu-sheet mjx-container,.phieu-sheet .MathJax{font-size:100%!important}"
+        ".phieu-sheet p{margin:0 0 2px}.phieu-k .qstem,.phieu-k .tex-body{font-size:12px}"
+        ".phieu-choice{display:flex;gap:4px;align-items:center;flex-wrap:wrap;font-weight:800;font-size:9px;margin:0 0 3px}"
+        ".phieu-choice i{font-style:normal;min-width:16px;height:16px;border:1.5px solid #059669;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#fff;color:#065f46;font-size:9px}"
+        ".phieu-choice i.on{background:#059669;color:#fff}"
+        ".phieu-tf{border-collapse:collapse;font-size:9px;margin:0 0 3px}.phieu-tf td,.phieu-tf th{border:1px solid #059669;padding:1px 6px;text-align:center;background:#fff}"
+        ".phieu-brand{background:#0f3d7a;color:#fff;padding:2px 8px;border-radius:6px;display:flex;justify-content:space-between;"
+        "align-items:center;gap:8px;font-weight:800;margin:0;font-size:9px;flex:0 0 auto}"
+        ".phieu-k{border:1.5px solid;border-radius:7px;padding:4px 7px;margin:0;font-size:12px;min-height:0;overflow:hidden;display:flex;flex-direction:column}"
+        ".phieu-k .pill{display:inline-block;color:#fff;font-size:8px;font-weight:800;padding:1px 6px;border-radius:5px;margin:0 0 2px;text-transform:uppercase;flex:0 0 auto}"
+        ".phieu-k .slot{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}"
+        ".phieu-info{margin:0;padding:2px 6px;border:1px solid #0f172a;display:grid;grid-template-columns:1.7fr .7fr .65fr .85fr 1.1fr;gap:4px;font-size:8px;background:#f8fafc;flex:0 0 auto}"
         ".k1{border-color:#2563eb;background:#eff6ff}.k1 .pill{background:#2563eb}"
         ".k2{border-color:#d97706;background:#fffbeb}.k2 .pill{background:#d97706}"
         ".k3{border-color:#7c3aed;background:#f5f3ff}.k3 .pill{background:#7c3aed}"
         ".k4{border-color:#059669;background:#ecfdf5}.k4 .pill{background:#059669}"
-        ".phieu-mid{display:grid;grid-template-columns:1fr 1fr;gap:10px}"
-        "@media(max-width:700px){.phieu-mid{grid-template-columns:1fr}}"
-        ".phieu-lined{min-height:220px;border:1px solid #cbd5e1;border-radius:6px;"
-        "background-color:#fff;background-image:linear-gradient(90deg,transparent 28px,#fca5a5 28px,#fca5a5 30px,transparent 30px),"
-        "linear-gradient(#e2e8f0 1px,transparent 1px);background-size:100% 100%,100% 26px;padding:8px;color:#94a3b8;font-size:11px}"
-        ".phieu-digits{display:flex;gap:4px;align-items:center;flex-wrap:wrap}"
-        ".phieu-digits b{min-width:22px;height:26px;border:2px dashed #059669;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;background:#fff}"
+        ".phieu-board{flex:1;min-height:0;display:grid;grid-template-columns:1.15fr .85fr;grid-template-rows:1fr 1fr;gap:1.8mm}"
+        ".phieu-lined{flex:1;min-height:0;height:100%;border:1px solid #cbd5e1;border-radius:4px;"
+        "background-color:#fff;background-image:linear-gradient(90deg,transparent 16px,#fca5a5 16px,#fca5a5 17px,transparent 17px),"
+        "linear-gradient(#e2e8f0 1px,transparent 1px);background-size:100% 100%,100% 14px;padding:3px 4px;color:#94a3b8;font-size:8px}"
+        ".phieu-digits{display:flex;gap:2px;align-items:center;flex-wrap:wrap}"
+        ".phieu-digits b{min-width:14px;height:16px;border:1.5px dashed #059669;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;background:#fff;font-size:9px}"
         ".phieu-digits b.full{border-style:solid;font-weight:800;color:#065f46}"
-        ".phieu-foot{display:flex;justify-content:space-between;font-size:10px;color:#64748b;border-top:1px solid #e2e8f0;margin-top:10px;padding-top:6px}"
-        ".badge-hs{border:1px solid #2563eb;background:#dbeafe;color:#1d4ed8;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:800}"
-        ".badge-gv{border:1px solid #059669;background:#d1fae5;color:#047857;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:800}"
+        ".phieu-sheet img{max-height:68mm!important;max-width:100%!important;height:auto}"
+        ".phieu-foot{display:flex;justify-content:space-between;font-size:7.5px;color:#64748b;border-top:1px solid #e2e8f0;margin:0;padding-top:1px;flex:0 0 auto}"
+        ".badge-hs{border:1px solid #93c5fd;background:#dbeafe;color:#1d4ed8;font-size:8px;padding:0 4px;border-radius:3px;font-weight:800}"
+        ".badge-gv{border:1px solid #6ee7b7;background:#d1fae5;color:#047857;font-size:8px;padding:0 4px;border-radius:3px;font-weight:800}"
+        ".phieu-ansbig{font-size:15px;font-weight:900;color:#047857;background:#d1fae5;border:1.5px solid #059669;border-radius:6px;padding:2px 8px;margin:0 0 4px;display:inline-block}"
         "</style>"
         "<div class='wrap phieu-page'><script type='application/json' id='phieuSeed'>"
         + blob
         + "</script>"
         "<div class='phieu-tools no-print'>"
-        "<b>📝 Phiếu 4 khối</b>"
+        "<b>📝 Phiếu A4 ngang</b>"
         "<button type='button' class='btn primary' id='phieuHs'>🎓 Bản học sinh</button>"
         "<button type='button' class='btn' id='phieuGv'>👨‍🏫 Bản giáo viên</button>"
         "<label><input type='checkbox' id='phieuBlank'> Điền khuyết công thức</label>"
         "<label><input type='checkbox' id='phieuEmpty' checked> Ô đáp án trống (HS)</label>"
-        "<label><input type='checkbox' id='phieuPromptAns'> Lệnh A4 <b>có đáp án</b></label>"
+        "<label><input type='checkbox' id='phieuPromptAns'> <b>Hiện đáp án</b> trên phiếu</label>"
         "<button type='button' class='btn' id='phieuAi'>✨ AI điền công thức + hình</button>"
         "<button type='button' class='btn' id='phieuImg'>🖼️ AI hình minh họa</button>"
-        "<button type='button' class='btn' id='phieuCopyA4'>📋 Copy lệnh ảnh A4</button>"
+        "<button type='button' class='btn' id='phieuCopyA4'>📋 Copy lệnh ảnh A4 ngang</button>"
         "<a class='btn' id='phieuOpenG' href='https://gemini.google.com/app' target='_blank' rel='noopener'>↗ Mở Gemini</a>"
-        "<button type='button' class='btn green' id='phieuPrint'>🖨️ In A4 / PDF</button>"
+        "<button type='button' class='btn green' id='phieuPrint'>🖨️ In A4 ngang</button>"
         "<span class='muted' id='phieuNote' style='color:#94a3b8'></span></div>"
         "<div class='phieu-grid'><div class='phieu-ed no-print'>"
         "<label>Tiêu đề phiếu</label><textarea id='phieuTitle' class='sm'></textarea>"
@@ -2874,10 +3023,10 @@ def admin_phieu():
         "<label>Khối 2 — Công thức</label><textarea id='phieuB2'></textarea>"
         "<label>Khối 4 — Lời giải</label><textarea id='phieuB4'></textarea>"
         "<label>Đáp số ngắn</label><textarea id='phieuAns' class='sm'></textarea>"
-        "<label>Lệnh copy sang Gemini — tạo ẢNH trang A4</label>"
+        "<label>Lệnh copy sang Gemini — PHIẾU HỌC TẬP, ảnh A4 nằm ngang 297×210 mm</label>"
         "<textarea id='phieuA4' style='min-height:160px'></textarea>"
-        "<p class='muted' style='color:#94a3b8;font-size:12px'>Tick <b>có đáp án</b> = bản GV. Bỏ tick = bản HS (không lộ đáp án). Chữ trong lệnh bắt Gemini vẽ 10–11 pt, không phóng to. Copy → Mở Gemini (bật tạo ảnh) → dán.</p>"
-        "</div><div class='phieu-sheet' id='phieuSheet'></div></div></div>"
+        "<p class='muted' style='color:#94a3b8;font-size:12px'>Trang in là A4 nằm ngang (297×210 mm), không phải A4 dọc. Bốn ô: trái trên đề, phải trên công thức, trái dưới hình, phải dưới bài làm. Tick <b>có đáp án</b> = bản giáo viên. Copy → Mở Gemini (bật tạo ảnh) → dán.</p>"
+        "</div><div class='phieu-stage' id='phieuStage'><div class='phieu-sheet' id='phieuSheet'></div></div></div></div>"
         "<script>(function(){"
         "document.body.classList.add('phieu-on');"
         "var S={};try{S=JSON.parse(document.getElementById('phieuSeed').textContent||'{}')}catch(e){S={}}"
@@ -2891,7 +3040,36 @@ def admin_phieu():
         "}"
         "function rebuildA4(){"
         " var yes=!!($('phieuPromptAns')&&$('phieuPromptAns').checked);"
-        " $('phieuA4').value=yes?(S.a4_prompt_yes||S.a4_prompt||''):(S.a4_prompt_no||S.a4_prompt||'');"
+        " var src=yes?(S.a4_prompt_yes||S.a4_prompt||''):(S.a4_prompt_no||S.a4_prompt||'');"
+        " var mark='\\nTIÊU ĐỀ:';"
+        " var i=src.indexOf(mark);"
+        " var head=i>=0?src.slice(0,i):src;"
+        " var t=$('phieuTitle').value||'', sub=$('phieuSubject').value||'';"
+        " var p=$('phieuB1').value||'', f=$('phieuB2').value||'';"
+        " var sol=$('phieuB4').value||'', ans=$('phieuAns').value||'';"
+        " var body='\\nTIÊU ĐỀ: '+t+'\\nBỘ MÔN: '+sub+'\\nKHỐI 1 — ĐỀ BÀI (ô trái trên):\\n'+p+'\\n\\nKHỐI 2 — CÔNG THỨC (ô phải trên):\\n'+f+'\\n\\nKHỐI 3 — HÌNH (ô trái dưới): một sơ đồ hoặc đồ thị đúng bài này, không chép đề vào ô hình.\\n\\n';"
+        " if(yes) body+='KHỐI 4 — LỜI GIẢI (ô phải dưới, in ra):\\n'+sol.slice(0,1800)+'\\n\\nĐÁP ÁN NGẮN: '+ans+'\\n';"
+        " else body+='KHỐI 4 (ô phải dưới): chỉ dòng kẻ trống. Có lời giải dưới đây CHỈ để vẽ đúng hình minh họa, KHÔNG chép lời giải hay đáp án lên phiếu:\\n'+sol.slice(0,800)+'\\n';"
+        " body+='\\nVẽ đúng một ảnh A4 nằm ngang 297×210 mm, bốn ô đúng vị trí trên. Nếu ra trang dọc thì vẽ lại. Không viết lại prompt.';"
+        " $('phieuA4').value=(head+body).trim();"
+        "}"
+        "function setMode(m){"
+        " mode=m==='teacher'?'teacher':'student';"
+        " var yes=mode==='teacher';"
+        " if($('phieuPromptAns')) $('phieuPromptAns').checked=yes;"
+        " if($('phieuHs')) $('phieuHs').classList.toggle('primary', !yes);"
+        " if($('phieuGv')) $('phieuGv').classList.toggle('primary', yes);"
+        " rebuildA4(); paint();"
+        "}"
+        "function fitSheet(){"
+        " var sheet=$('phieuSheet'), stage=$('phieuStage');"
+        " if(!sheet||!stage) return;"
+        " sheet.style.transform='none';"
+        " var w=sheet.offsetWidth||1, h=sheet.offsetHeight||1;"
+        " var sc=Math.min(1, (stage.clientWidth||w)/w);"
+        " sheet.style.transformOrigin='top left';"
+        " sheet.style.transform='scale('+sc+')';"
+        " stage.style.height=Math.ceil(h*sc+2)+'px';"
         "}"
         "function digits(s,empty){s=String(s||'');if(!s)return '';"
         "return s.split('').map(function(ch){if(ch===' '||ch==='\\t')return '';"
@@ -2908,43 +3086,49 @@ def admin_phieu():
         "var fig=S.fig_html||'<div class=\"muted\">Bấm AI hình minh họa</div>';"
         "var b4=hs?'':('<div id=\"phieuSol\"></div>');"
         "var lined=hs?'<div class=\"phieu-lined\">Học sinh trình bày các bước tính vào phần này</div>':'';"
-        "var box=''; if(ans && (hs?$('phieuEmpty').checked:true)){"
-        "box='<div class=\"phieu-digits\"><span style=\"font-size:11px;font-weight:800\">'+(hs?'ĐIỀN ĐÁP ÁN:':'ĐÁP ÁN:')+'</span>'+digits(ans,hs)+'</div>';}"
+        "var kind=String(S.kind||'').toUpperCase(), box='';"
+        "if(kind==='TN'){var pick=hs?'':ans.toUpperCase().charAt(0);"
+        "box='<div class=\"phieu-choice\">'+(hs?'KHOANH ĐÁP ÁN:':'ĐÁP ÁN:')+['A','B','C','D'].map(function(l){return '<i class=\"'+(l===pick?'on':'')+'\">'+l+'</i>';}).join('')+'</div>';}"
+        "else if(kind==='DS'){var tf={};String(ans||'').split(/\\s+/).forEach(function(x){var m=x.match(/^([a-dA-D])-(Đ|S)/);if(m)tf[m[1].toLowerCase()]=m[2];});"
+        "box='<table class=\"phieu-tf\"><tr><th></th><th>a)</th><th>b)</th><th>c)</th><th>d)</th></tr><tr><th>Đúng / Sai</th>'+['a','b','c','d'].map(function(l){return '<td>'+(hs?'Đ ☐ &nbsp; S ☐':(tf[l]==='Đ'?'<b>Đúng</b>':(tf[l]==='S'?'Sai':'')))+'</td>';}).join('')+'</tr></table>';}"
+        "else if(ans && (hs?$('phieuEmpty').checked:true)){"
+        "box='<div class=\"phieu-digits\"><span style=\"font-size:12px;font-weight:800\">'+(hs?'ĐIỀN ĐÁP ÁN:':'ĐÁP ÁN:')+'</span>'+digits(ans,hs)+'</div>';}"
         "$('phieuSheet').innerHTML="
-        "'<div class=\"phieu-brand\"><span>'+escHtml(S.brand||'Lớp Học Thầy Minh')+'</span><span>Zalo '+escHtml(S.zalo||'0946111107')+'</span></div>'"
-        "+'<div class=\"phieu-head\"><div class=\"row\"><div>TRƯỜNG / TRUNG TÂM: Lớp Học Thầy Minh<br><span style=\"color:#1d4ed8\">BỘ MÔN: '+escHtml(sub)+'</span></div>'"
-        "+'<div style=\"text-align:right\">'+escHtml(t)+' <span class=\"'+(hs?'badge-hs':'badge-gv')+'\">'+(hs?'BẢN HỌC SINH':'BẢN GIÁO VIÊN')+'</span><br><span style=\"color:#64748b;font-weight:600\">NĂM HỌC: '+(S.year||'')+'</span></div></div>'"
-        "+'<div class=\"phieu-info\"><div>Họ và tên học sinh: ................................................................</div><div>'+escHtml(S.class_line||'')+'</div><div>Điểm: ...../10</div>'"
-        "+'<div>Ngày: ..../..../2026</div><div>Lời phê: ................................</div><div></div></div></div>'"
-        "+'<div class=\"phieu-k k1\"><div class=\"pill\">Khối 1: Đề bài & dữ kiện</div><div id=\"phieuV1\"></div></div>'"
-        "+'<div class=\"phieu-mid\"><div class=\"phieu-k k2\"><div class=\"pill\">Khối 2: Công thức cần dùng</div><div id=\"phieuV2\"></div></div>'"
-        "+'<div class=\"phieu-k k3\"><div class=\"pill\">Khối 3: Sơ đồ / hình minh họa</div><div id=\"phieuV3\">'+fig+'</div></div></div>'"
-        "+'<div class=\"phieu-k k4\"><div class=\"pill\">Khối 4: Lời giải & kết luận</div>'+box+b4+lined+'</div>'"
-        "+'<div class=\"phieu-foot\"><span>Lớp Học Thầy Minh · Zalo 0946111107 · '+ (hs?'Dành cho học sinh làm bài':'Hướng dẫn giáo viên') +'</span><span>Trang 1/1</span></div>';"
-        "await Promise.all([previewTex('phieuV1', p), previewTex('phieuV2', f), hs?Promise.resolve():previewTex('phieuSol', sol)]);"
+        "'<div class=\"phieu-brand\"><span>'+escHtml(S.brand||'Lớp Học Thầy Minh')+' · Zalo '+escHtml(S.zalo||'0946111107')+'</span><span>'+escHtml(sub)+' · '+escHtml(t)+' <span class=\"'+(hs?'badge-hs':'badge-gv')+'\">'+(hs?'HS':'GV')+'</span></span></div>'"
+        "+'<div class=\"phieu-info\"><div>Họ và tên: ....................................</div><div>'+escHtml(S.class_line||'Lớp: .....')+'</div><div>Điểm: ..../10</div><div>Ngày: ..../..../2026</div><div>Lời phê: ............</div></div>'"
+        "+'<div class=\"phieu-board\">'"
+        "+'<div class=\"phieu-k k1\"><div class=\"pill\">1. Đề bài</div><div class=\"slot\" id=\"phieuV1\"></div></div>'"
+        "+'<div class=\"phieu-k k2\"><div class=\"pill\">2. Công thức</div><div class=\"slot\" id=\"phieuV2\"></div></div>'"
+        "+'<div class=\"phieu-k k3\"><div class=\"pill\">3. Hình minh họa</div><div class=\"slot\" id=\"phieuV3\">'+fig+'</div></div>'"
+        "+'<div class=\"phieu-k k4\"><div class=\"pill\">4. Bài làm</div><div class=\"slot\">'+(hs||!ans?'':('<div class=\"phieu-ansbig\">Đáp án: '+escHtml(ans)+'</div>'))+box+b4+lined+'</div></div>'"
+        "+'</div>'"
+        "+'<div class=\"phieu-foot\"><span>Lớp Học Thầy Minh · '+ (hs?'Học sinh làm bài':'Giáo viên') +' · '+(S.year||'')+'</span><span>A4 ngang · 297×210 mm · 1/1</span></div>';"
+        "await Promise.all([previewTex('phieuV1', p), previewTex('phieuV2', f, true), hs?Promise.resolve():previewTex('phieuSol', sol)]);"
         "if(n!==paintN) return;"
         "if(window.ldvlArmTikz) ldvlArmTikz($('phieuSheet'));"
         "if(window.ldvlTypeset) ldvlTypeset($('phieuSheet'));"
+        "fitSheet();"
         "}"
         "function escHtml(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}"
-        "async function previewTex(id, tex){ var el=$(id); if(!el) return;"
-        " try{ var r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:tex||'',src:S.src||'',phieu:true,raw:true})});"
+        "async function previewTex(id, tex, formula){ var el=$(id); if(!el) return;"
+        " try{ var r=await fetch('/api/admin/tex-preview',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tex:tex||'',src:S.src||'',formula:!!formula})});"
         " var d=await r.json(); if(d&&d.html) el.innerHTML=d.html;}catch(e){ if(el) el.textContent=String(tex||''); } }"
         "function keys(){return (window.ldvlFilledKeys&&ldvlFilledKeys())||[];}"
         "fill(); paintNow();"
         "['phieuTitle','phieuSubject','phieuB1','phieuB2','phieuB4','phieuAns','phieuBlank','phieuEmpty'].forEach(function(id){"
-        " var el=$(id); if(!el) return; el.addEventListener(el.type==='checkbox'?'change':'input', paint);});"
-        "if($('phieuPromptAns')) $('phieuPromptAns').onchange=function(){rebuildA4();};"
-        "$('phieuHs').onclick=function(){mode='student'; if($('phieuPromptAns')) $('phieuPromptAns').checked=false; rebuildA4(); paint()};"
-        "$('phieuGv').onclick=function(){mode='teacher'; if($('phieuPromptAns')) $('phieuPromptAns').checked=true; rebuildA4(); paint()};"
+        " var el=$(id); if(!el) return; el.addEventListener(el.type==='checkbox'?'change':'input', function(){rebuildA4(); paint();});});"
+        "window.addEventListener('resize', fitSheet);"
+        "if($('phieuPromptAns')) $('phieuPromptAns').onchange=function(){setMode($('phieuPromptAns').checked?'teacher':'student');};"
+        "$('phieuHs').onclick=function(){setMode('student');};"
+        "$('phieuGv').onclick=function(){setMode('teacher');};"
         "$('phieuPrint').onclick=function(){window.print()};"
         "function copyA4(){"
         " rebuildA4();"
         " var s=($('phieuA4')&&$('phieuA4').value)||S.a4_prompt||'';"
-        " if(!s){alert('Chưa có lệnh A4.');return;}"
-        " var done=function(){$('phieuNote').textContent='Đã copy lệnh ảnh A4. Dán vào Gemini.';};"
-        " if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s).then(done,function(){prompt('Copy lệnh A4',s);});"
-        " else {prompt('Copy lệnh A4',s); done();}"
+        " if(!s){alert('Chưa có lệnh A4 ngang.');return;}"
+        " var done=function(){$('phieuNote').textContent='Đã copy lệnh ảnh A4 ngang. Dán vào Gemini.';};"
+        " if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s).then(done,function(){prompt('Copy lệnh A4 ngang',s);});"
+        " else {prompt('Copy lệnh A4 ngang',s); done();}"
         "}"
         "$('phieuCopyA4').onclick=copyA4;"
         "$('phieuAi').onclick=async function(){"
@@ -2978,7 +3162,7 @@ def admin_phieu():
 
 
 REWRITE_CLIENT_JS = r"""
-<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox,.rwnbbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}.aiphotobox{flex:1 1 100%;margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.aiphotobox .rwta{min-height:140px}</style>
+<style>.rwbar{margin:10px 0 0;padding:8px 10px;border:1px dashed #7dd3fc;border-radius:9px;background:#f0f9ff;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rwout{width:100%}.rwprev{margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:9px;background:#fff}.rwprev label{display:flex;gap:8px;align-items:center;font-weight:800;margin:8px 0 4px}.rwta{width:100%;min-height:120px;font:13px/1.45 Consolas,ui-monospace,monospace;padding:8px;border:1px solid #7dd3fc;border-radius:8px;margin:4px 0 8px}.rwta.sm{min-height:72px}.rwlook{margin:8px 0;padding:10px;border:1px dashed #bae6fd;border-radius:8px;background:#f8fbff}.rwquick{position:sticky;top:6px;z-index:3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;margin:6px 0 8px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px}.rwquick .btn{padding:4px 8px;font-size:12px}.rwquick .muted{font-size:12px}.qcard.qhit{outline:3px solid #15803d;scroll-margin:88px}.rwimgsbox,.rwtikzbox,.rwnbbox{flex:1 1 100%;margin-top:8px;padding:8px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.rwimggrid{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.rwimgpick,.rwtikzpick{width:96px;border:2px solid #dbe7f3;border-radius:8px;background:#f8fbff;padding:4px;cursor:pointer;text-align:center}.rwimgpick img,.rwtikzpick img{width:88px;height:68px;object-fit:contain;display:block;background:#fff}.rwimgpick.on{border-color:#15803d;background:#f0fdf4}.rwimgpick small,.rwtikzpick small{display:block;font-size:10px;line-height:1.2;color:#475569;word-break:break-all;margin-top:3px}.rwtikzpick{width:128px}.rwtikzpick img{width:120px;height:84px}.aiphotobox{flex:1 1 100%;margin-top:8px;padding:10px;border:1px solid #bae6fd;border-radius:8px;background:#fff}.aiphotobox .rwta{min-height:88px}.rwcanva{background:#f59e0b!important;color:#1c1917!important;border:1px solid #b45309!important;font-weight:900!important}.aiphoto-bar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-bottom:8px;background:#fff}.aiphoto-look{border:1px solid #e2e8f0;border-radius:10px;background:#f8fbff;padding:8px;max-height:70vh;overflow:auto}.aiphoto-look .rwbar{display:none}.rwnbbox details,.aiphotobox details{margin-top:8px;border:1px solid #e2e8f0;border-radius:8px;padding:6px 8px;background:#f8fafc}.rwnbbox summary,.aiphotobox summary{cursor:pointer;font-weight:800;color:#0f3d7a}</style>
 <script>
 (function(){
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -3730,20 +3914,23 @@ function photoHost(btn){
 }
 function paintPhotoPrompt(box, d){
   box._photo=d||{};
-  box.innerHTML='<div class="success">Đã nhận dạng chữ trong ảnh và viết lại prompt trang vở. Sửa chữ nếu máy đọc sai, rồi bấm Viết lại prompt.</div>'
-    +'<p class="muted">Copy prompt → Mở Gemini (bật tạo ảnh) → dán. Gemini phải vẽ ảnh, không viết lại prompt.</p>'
-    +'<label><b>LaTeX câu hỏi (TN / ĐS / TLN / TL, có \\True và lời giải)</b></label>'
+  box.innerHTML='<div class="aiphoto-bar"><b>Xem trước như câu hỏi</b> '
+    +'<button type="button" class="btn aiphoto-prev">Xem trước</button> '
+    +'<button type="button" class="btn green aiphoto-save">Lưu vào ngân hàng</button> '
+    +'<button type="button" class="btn aiphoto-copy" data-which="text">Copy LaTeX</button> '
+    +'<button type="button" class="btn aiphoto-copy" data-which="prompt">Copy lệnh ảnh</button> '
+    +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">Mở Gemini</a> '
+    +'<button type="button" class="btn aiPhotoBtn" data-force="1">Chụp lại</button> '
+    +'<span class="muted aiphoto-note"></span></div>'
+    +'<div class="aiphoto-look"></div>'
+    +'<details open><summary>Sửa LaTeX rồi xem trước lại</summary>'
     +'<textarea class="rwta aiphoto-text" spellcheck="false">'+esc(d.text||'')+'</textarea>'
-    +'<p><button type="button" class="btn aiphoto-copy" data-which="text">📋 Copy LaTeX</button> '
-    +'<button type="button" class="btn aiphoto-redo">↻ Viết lại prompt từ LaTeX này</button> '
-    +'<button type="button" class="btn aiPhotoBtn" data-force="1">📷 Chụp ảnh khác</button></p>'
-    +'<label><b>Prompt đã viết lại</b></label>'
-    +'<textarea class="rwta aiphoto-prompt" style="min-height:220px" spellcheck="false">'+esc(d.prompt||'')+'</textarea>'
-    +'<p><button type="button" class="btn primary aiphoto-copy" data-which="prompt">📋 Copy prompt</button> '
-    +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">↗ Mở Gemini</a></p>'
-    +'<label><b>Lệnh phụ — animation / chuỗi khung</b></label>'
+    +'<p><button type="button" class="btn aiphoto-redo">Viết lại lệnh ảnh từ LaTeX này</button></p></details>'
+    +'<details><summary>Lệnh Gemini — ảnh A4 (để copy, không chiếm trang)</summary>'
+    +'<textarea class="rwta aiphoto-prompt" spellcheck="false">'+esc(d.prompt||'')+'</textarea>'
     +'<textarea class="rwta sm aiphoto-motion" spellcheck="false">'+esc(d.motion||'')+'</textarea>'
-    +'<p><button type="button" class="btn aiphoto-copy" data-which="motion">📋 Copy lệnh động</button></p>';
+    +'<p><button type="button" class="btn aiphoto-copy" data-which="motion">Copy lệnh động</button></p></details>';
+  if(window.ldvlPhotoPreview) ldvlPhotoPreview(box);
 }
 function shrinkPhoto(file){
   return new Promise(function(ok, bad){
@@ -3801,22 +3988,45 @@ function ensurePhotoInput(){
   return inp;
 }
 async function rwLoadNotebook(box){
-  box.innerHTML='<div class="muted">Đang soạn prompt trang vở từ đề LaTeX…</div>';
+  box.innerHTML='<div class="muted">'+(box.getAttribute('data-focus')==='canva'?'Đang soạn prompt Canva từ đề…':'Đang soạn prompt trang vở từ đề LaTeX…')+'</div>';
   try{
     const r=await fetch('/api/admin/notebook-prompt',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
       body:JSON.stringify({src:box.getAttribute('data-src')||'',file_idx:+(box.getAttribute('data-fi')||0)})});
     const d=await r.json();
     if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không tạo được prompt')+'</div>';return;}
     box._nb=d;
-    box.innerHTML='<div class="success">Đã gắn đề LaTeX vào lệnh trang vở. Copy rồi dán Gemini — Gemini phải <b>vẽ ảnh</b>, không viết lại prompt.</div>'
-      +'<p class="muted">1) Copy lệnh &nbsp; 2) Mở Gemini (bật tạo ảnh) &nbsp; 3) Dán cả khối. Nếu cần ảnh động: copy lệnh phụ.</p>'
-      +'<label><b>Lệnh tạo trang vở A4</b></label>'
-      +'<textarea class="rwta rwnbstill" style="min-height:220px">'+esc(d.prompt||'')+'</textarea>'
-      +'<p><button type="button" class="btn primary rwnbcopy" data-which="still">📋 Copy lệnh trang vở</button> '
-      +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">↗ Mở Gemini</a></p>'
-      +'<label><b>Lệnh phụ — animation / chuỗi khung</b></label>'
+    const focusCanva=box.getAttribute('data-focus')==='canva';
+    box.innerHTML='<div class="aiphoto-bar"><b>'+(focusCanva?'Prompt Canva · đổi số liệu':'Xem trước như câu hỏi')+'</b> '
+      +'<button type="button" class="btn green rwnbsave">Lưu thêm vào ngân hàng</button> '
+      +(focusCanva?'':'<button type="button" class="btn primary rwnbcopy" data-which="still">Copy lệnh trang vở</button> ')
+      +'<button type="button" class="btn primary rwnbcopy" data-which="canva">Copy prompt Canva</button> '
+      +(focusCanva?'<a class="btn" href="'+esc(d.canva_url||'https://www.canva.com/')+'" target="_blank" rel="noopener">Mở Canva</a> '
+        :'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">Mở Gemini</a> ')
+      +'<span class="muted rwnbnote"></span></div>'
+      +'<div class="aiphoto-look rwnb-look"></div>'
+      +'<details class="rwnbcanva-fold"'+(focusCanva?' open':'')+'><summary>Prompt Canva — luyện tập, đổi số liệu trong ô vàng</summary>'
+      +'<p class="muted">Dán vào Canva. Mỗi số liệu là một ô vàng sửa được. Học sinh làm bài, khung giáo viên giữ đáp án của bộ số gốc.</p>'
+      +'<textarea class="rwta rwnbcanva">'+esc(d.canva||'')+'</textarea></details>'
+      +'<details'+(focusCanva?'':'')+'><summary>Lệnh Gemini — ảnh A4 (để copy, không chiếm trang)</summary>'
+      +'<textarea class="rwta rwnbstill">'+esc(d.prompt||'')+'</textarea>'
+      +'<p class="muted">Lệnh phụ — animation / chuỗi khung</p>'
       +'<textarea class="rwta sm rwnbmotion">'+esc(d.motion||'')+'</textarea>'
-      +'<p><button type="button" class="btn rwnbcopy" data-which="motion">📋 Copy lệnh động</button></p>';
+      +'<p><button type="button" class="btn rwnbcopy" data-which="motion">Copy lệnh động</button></p></details>';
+    const look=box.querySelector('.rwnb-look');
+    if(look){
+      look.innerHTML='<div class="muted">Đang xem trước…</div>';
+      try{
+        const pr=await fetch('/api/admin/latex-cards',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({latex:d.latex||''})});
+        const pv=await pr.json();
+        if(!pv.ok) look.innerHTML='<div class="err">'+esc(pv.error||'Không xem trước được')+'</div>';
+        else{
+          look.innerHTML=pv.html||'';
+          if(window.ldvlArmTikz) ldvlArmTikz(look);
+          if(window.ldvlTypeset) ldvlTypeset(look);
+          if(window.ldvlSplitPics) ldvlSplitPics(look);
+        }
+      }catch(err2){look.innerHTML='<div class="err">'+esc(err2&&err2.message||err2)+'</div>';}
+    }
   }catch(err){box.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
 }
 async function rwLoadTikz(box){
@@ -4005,6 +4215,38 @@ document.addEventListener('click',function(e){
     }, function(){prompt('Copy prompt', cta?cta.value:'');});
     return;
   }
+  const canvaBtn=e.target.closest&&e.target.closest('.rwcanva');
+  if(canvaBtn){
+    e.preventDefault();
+    const card=canvaBtn.closest('.qcard')||canvaBtn.closest('#rwPractice');
+    const bar=canvaBtn.closest('.rwbar')||(card&&card.querySelector('.rwbar'));
+    if(!bar) return;
+    const old=bar.querySelector('.rwnbbox');
+    if(old&&old.getAttribute('data-focus')==='canva'){
+      old.remove();
+      const oldExtra=bar.querySelector('.rwnbextra');
+      if(oldExtra) oldExtra.remove();
+      return;
+    }
+    if(old){
+      old.setAttribute('data-focus','canva');
+      const fold=old.querySelector('.rwnbcanva-fold');
+      if(fold){fold.open=true; fold.scrollIntoView({block:'nearest'});}
+      return;
+    }
+    const p=dropOf(canvaBtn);
+    if(!p) return;
+    const box=document.createElement('div');
+    box.className='rwnbbox';
+    box.setAttribute('data-src', p.src);
+    box.setAttribute('data-fi', String(p.fi));
+    box.setAttribute('data-focus','canva');
+    const out=bar.querySelector('.rwout');
+    if(out) out.insertAdjacentElement('afterend', box);
+    else bar.appendChild(box);
+    rwLoadNotebook(box);
+    return;
+  }
   const nbBtn=e.target.closest&&e.target.closest('.rwnbprompt');
   if(nbBtn){
     e.preventDefault();
@@ -4037,13 +4279,39 @@ document.addEventListener('click',function(e){
     rwLoadNotebook(box);
     return;
   }
+  const nbSave=e.target.closest&&e.target.closest('.rwnbsave');
+  if(nbSave){
+    e.preventDefault();
+    const box=nbSave.closest('.rwnbbox');
+    if(!box) return;
+    const path=box.getAttribute('data-src')||'';
+    const bar=document.querySelector('.admindang');
+    const dang=(bar&&bar.getAttribute('data-dang'))||'';
+    const latex=(box._nb&&box._nb.latex)||'';
+    if(!path){alert('Không thấy file ngân hàng của câu này.');return;}
+    if(!confirm('Thêm bản LaTeX này vào cuối file?\n'+path)) return;
+    nbSave.disabled=true;
+    const note=box.querySelector('.rwnbnote');
+    if(note) note.textContent='Đang lưu…';
+    fetch('/api/admin/bank-append',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({path:path,dang:dang,latex:latex})})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        nbSave.disabled=false;
+        if(!d.ok){alert(d.error||'Không lưu được');if(note) note.textContent='';return;}
+        if(note) note.textContent='Đã thêm '+(d.n||'')+' câu vào '+(d.src||path)+'.';
+      })
+      .catch(function(err){nbSave.disabled=false;alert(String(err&&err.message||err));});
+    return;
+  }
   const nbCopy=e.target.closest&&e.target.closest('.rwnbcopy');
   if(nbCopy){
     e.preventDefault();
     const box=nbCopy.closest('.rwnbbox');
     const which=nbCopy.getAttribute('data-which')||'still';
-    const ta=box&&box.querySelector(which==='motion'?'.rwnbmotion':'.rwnbstill');
-    copyText(ta?ta.value:'').then(function(){nbCopy.textContent='✅ Đã copy'; setTimeout(function(){nbCopy.textContent=which==='motion'?'📋 Copy lệnh động':'📋 Copy lệnh trang vở';},1400);},function(){prompt('Copy lệnh', ta?ta.value:'');});
+    const sel=which==='motion'?'.rwnbmotion':(which==='canva'?'.rwnbcanva':'.rwnbstill');
+    const back=which==='motion'?'Copy lệnh động':(which==='canva'?'Copy prompt Canva':'Copy lệnh trang vở');
+    const ta=box&&box.querySelector(sel);
+    copyText(ta?ta.value:'').then(function(){nbCopy.textContent='✅ Đã copy'; setTimeout(function(){nbCopy.textContent=back;},1400);},function(){prompt('Copy lệnh', ta?ta.value:'');});
     return;
   }
   const openBtn=e.target.closest&&e.target.closest('.rwtikzbtn');
