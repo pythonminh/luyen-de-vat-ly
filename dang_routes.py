@@ -451,6 +451,42 @@ def _question_card_clean_styles(response):
         pass
     return response
 
+
+@app.after_request
+def _admin_ai_deep_link(response):
+    """Expose the existing AI gap/fill/rewrite tools from the VIP practice screen."""
+    if request.path != '/member/dang' or request.method != 'GET' or response.status_code != 200:
+        return response
+    if response.mimetype != 'text/html' or not can_manage_bank():
+        return response
+    action = str(request.args.get('admin_action') or '')
+    if action not in {'gap', 'fill', 'rewrite'}:
+        return response
+    script = """<script>
+document.addEventListener('DOMContentLoaded',function(){
+  const fold=document.querySelector('.admindang-fold');
+  if(fold)fold.open=true;
+  if(__ACTION__==='rewrite'){
+    const card=document.querySelector('.qcard');
+    const tools=card&&card.querySelector('.qtools-fold');
+    if(tools){tools.open=true;tools.scrollIntoView({block:'center'});}
+    else if(card)card.scrollIntoView({block:'center'});
+    return;
+  }
+  const id=__ACTION__==='gap'?'aiGap':'aiFill';
+  const b=document.getElementById(id);
+  if(b){b.scrollIntoView({block:'center'});b.focus();b.click();}
+});
+</script>""".replace('__ACTION__', json.dumps(action))
+    try:
+        body=response.get_data(as_text=True)
+        if '</body>' in body:
+            response.set_data(body.replace('</body>',script+'</body>',1))
+            response.headers.pop('Content-Length',None)
+    except Exception:
+        pass
+    return response
+
 @app.get('/member/dang')
 def member_dang():
     m=member_current()
