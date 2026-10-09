@@ -600,6 +600,39 @@ body.cinema .qbox{padding-right:12px}
 .topin .top-tools-list{position:fixed;right:12px;top:48px;z-index:2147483650;display:flex;flex-direction:column;gap:5px;min-width:210px;max-width:90vw;background:#fff;padding:9px;border:1px solid #cfdbeb;border-radius:12px;box-shadow:0 12px 30px #071f3860}
 .topin .top-tools-list a,.topin .top-tools-list button{display:flex!important;align-items:center;text-align:left;min-height:42px;width:100%;border:0!important;border-radius:8px!important;background:#f4f8fd!important;color:#184572!important;padding:10px 12px!important;font:700 13px/1.4 Arial,sans-serif!important}
 @media(max-width:760px){.topin .top-tools-list{top:95px;right:8px}.topin .brand{font-size:14px!important}}
+
+/* VIP question workspace: progressive disclosure, readable measure */
+.vip-practice-wrap{max-width:1080px!important;margin:0 auto!important;padding:10px 14px!important}
+.vip-practice-wrap>.panel{border:1px solid #d8e3f0!important;border-radius:13px!important;overflow:visible!important;box-shadow:0 3px 16px #153c6810;background:#fff}
+.vip-practice-wrap .practice-filters{border:1px solid #d5e3f0;border-radius:10px;margin-bottom:10px;background:#fff}
+.vip-practice-wrap .practice-filters>summary,.vip-practice-wrap .practice-questions>summary{list-style:none;cursor:pointer;padding:10px 14px;font:750 13px/1.45 Segoe UI,Arial,sans-serif;color:#1c5a99;min-height:43px}
+.vip-practice-wrap summary::-webkit-details-marker{display:none}
+.vip-practice-wrap .practice-filters>summary:before,.vip-practice-wrap .practice-questions>summary:before{content:'▸ ';font-weight:900}
+.vip-practice-wrap .practice-filters[open]>summary:before,.vip-practice-wrap .practice-questions[open]>summary:before{content:'▾ '}
+.vip-practice-wrap .practice-filters .subnav,.vip-practice-wrap .practice-filters .dangtabs,.vip-practice-wrap .practice-filters .kindtabs{position:static!important;margin:0 8px 7px!important;border-radius:8px}
+.vip-practice-wrap .practice-questions{border:1px solid #dbe7f2;background:#f8fbff;border-radius:9px;margin:0 0 12px}
+.vip-practice-wrap .practice-questions .palette{margin:0 7px 8px!important}
+.vip-practice-wrap .quiztop{display:flex!important;align-items:center;flex-wrap:wrap;gap:6px 14px;padding:10px 14px!important;border-radius:12px 12px 0 0;background:#f3f8fe!important;color:#204a72!important}
+.vip-practice-wrap .quiztop .quizstat{margin-left:auto;font-weight:700}
+.vip-practice-wrap .quiztop .qzoombar{margin-left:0}
+.vip-practice-wrap .body{padding:12px 14px!important}
+.vip-practice-wrap .qbox{padding:18px 20px!important;border:1px solid #dce6f0!important;border-radius:11px!important;background:#fff;line-height:1.55}
+.vip-practice-wrap .qtext{line-height:1.6!important}
+.vip-practice-wrap .opt{border:1px solid #d6e2ee!important;border-radius:9px!important;padding:.65em .9em!important;margin:.5em 0!important;line-height:1.5!important}
+.vip-practice-wrap .opt:has(input:checked){border-color:#166acc!important;background:#eef6ff!important}
+.vip-practice-wrap .quizacts{padding:12px 0 3px!important;gap:9px!important}
+.vip-practice-wrap .quizacts .btn{min-height:42px;padding:9px 16px!important}
+.vip-practice-wrap mjx-container[jax="CHTML"][display="true"]{max-width:100%;overflow-x:auto}
+@media(max-width:700px){
+ .vip-practice-wrap{padding:6px!important}
+ .vip-practice-wrap .quiztop{padding:8px 9px!important;gap:5px 8px!important}
+ .vip-practice-wrap .quiztop .quizstat{margin-left:0}
+ .vip-practice-wrap .body{padding:8px!important}
+ .vip-practice-wrap .qbox{padding:11px!important}
+ .vip-practice-wrap .qtext{line-height:1.55!important}
+ .vip-practice-wrap .opt{min-height:48px;margin:6px 0!important}
+ .vip-practice-wrap .quizacts .btn{min-height:46px}
+}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
@@ -4378,12 +4411,12 @@ def practice():
     dang=str(session.get('practice_dang') or '')
     muc_now=muc_label(q.get('level'))
     tabs=lesson_switch_html(p, list(allq.values()), dang=dang, kind=session.get('practice_kind') or '', guest=False, muc=session.get('practice_muc') or '')
-    body=(f"<div class='wrap'>{tabs}<div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']} · Mức {html.escape(muc_now)}</span></span>"
+    body=(f"<div class='wrap vip-practice-wrap'><details class='practice-filters'><summary>☰ Chọn dạng bài, loại câu và mức độ</summary>{tabs}</details><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']} · Mức {html.escape(muc_now)}</span></span>"
           f"<span class='qzoombar'><button type='button' class='btn' id='qZmOut' title='Thu nhỏ chữ'>A−</button>"
           f"<button type='button' class='btn' id='qZmFit' title='Chữ to tối đa, vẫn vừa màn hình'>Vừa màn</button>"
           f"<b id='qzoomlab'>100%</b>"
           f"<button type='button' class='btn' id='qZmIn' title='Phóng to chữ'>A+</button></span>"
-          f"<span class='quizstat'>Đúng {right} · Chuỗi {streak}<span class='quizdang'> · {html.escape(mode_tag)}</span></span></div><div class='body'><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div><div id='praise'></div>"
+          f"<span class='quizstat'>Đúng {right} · Chuỗi {streak}<span class='quizdang'> · {html.escape(mode_tag)}</span></span></div><div class='body'><details class='practice-questions'><summary>☷ Danh sách câu · Câu {pos+1}/{len(ids)} · {len(done)} đã làm</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details><div id='praise'></div>"
           f"<div class='practice-split' id='psplit'><div class='practice-q'><div id='q' class='qbox'></div></div><aside class='practice-ai' id='aipane' hidden></aside></div></div></div></div>")
     js=r'''<script>
 const Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;
