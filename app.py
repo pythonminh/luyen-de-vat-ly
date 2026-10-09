@@ -717,6 +717,11 @@ body.cinema .qbox{padding-right:12px}
 .drawer-tree .drawdang.on{border-left-color:#176bd3!important;background:#edf5ff!important;color:#145aa5!important}
 .drawer-tree .drawdang .drawn{font-size:10px!important}
 .drawer-tree .drawbai .drawn{font-weight:700!important;font-size:11px!important}
+
+.vip-practice-wrap .practice-admin-ai{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 10px;padding:0}
+.vip-practice-wrap .practice-admin-ai a{display:inline-flex;align-items:center;justify-content:center;padding:8px 11px;min-height:38px;border:1px solid #b9d5f4;border-radius:8px;background:#f1f7ff;color:#175b9b;font:700 12px/1.3 Segoe UI,Arial,sans-serif}
+.vip-practice-wrap .practice-admin-ai a:hover{background:#e2efff}
+@media(max-width:700px){.vip-practice-wrap .practice-admin-ai{display:grid;grid-template-columns:1fr 1fr;gap:5px}.vip-practice-wrap .practice-admin-ai a{padding:7px;font-size:11px}.vip-practice-wrap .practice-admin-ai a:first-child{grid-column:1/-1}}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
@@ -4495,12 +4500,23 @@ def practice():
     dang=str(session.get('practice_dang') or '')
     muc_now=muc_label(q.get('level'))
     tabs=lesson_switch_html(p, list(allq.values()), dang=dang, kind=session.get('practice_kind') or '', guest=False, muc=session.get('practice_muc') or '')
+    admin_ai_actions = ''
+    if can_manage_bank():
+        ai_back = '/member/dang?path=' + urllib.parse.quote(p, safe='') + '&dang=' + urllib.parse.quote(dang, safe='')
+        ai_back += '&kind=' + urllib.parse.quote(str(session.get('practice_kind') or ''), safe='')
+        admin_ai_actions = (
+            "<nav class='practice-admin-ai' aria-label='Công cụ soạn bài ADMIN'>"
+            "<a href='" + html.escape(ai_back + '&admin_action=gap', quote=True) + "'>🤖 AI cập nhật / soát dạng</a>"
+            "<a href='" + html.escape(ai_back + '&admin_action=fill', quote=True) + "'>➕ AI viết thêm câu trong dạng</a>"
+            "<a href='" + html.escape(ai_back + '&admin_action=rewrite', quote=True) + "'>✍️ AI viết lại câu trong dạng</a>"
+            "</nav>"
+        )
     body=(f"<div class='wrap vip-practice-wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']} · Mức {html.escape(muc_now)}</span></span>"
           f"<span class='qzoombar'><button type='button' class='btn' id='qZmOut' title='Thu nhỏ chữ'>A−</button>"
           f"<button type='button' class='btn' id='qZmFit' title='Chữ to tối đa, vẫn vừa màn hình'>Vừa màn</button>"
           f"<b id='qzoomlab'>100%</b>"
           f"<button type='button' class='btn' id='qZmIn' title='Phóng to chữ'>A+</button></span>"
-          f"<span class='quizstat'>✓ {right} · 🔥 {streak}</span><div class='vip-inline-nav'><details class='practice-filters'><summary>☰ Dạng / độ khó</summary><div class='vip-filter-panel'>{tabs}</div></details><details class='practice-questions'><summary>☷ Câu {pos+1}/{len(ids)}</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details></div></div><div class='body'><div id='praise'></div>"
+          f"<span class='quizstat'>✓ {right} · 🔥 {streak}</span><div class='vip-inline-nav'><details class='practice-filters'><summary>☰ Dạng / độ khó</summary><div class='vip-filter-panel'>{tabs}</div></details><details class='practice-questions'><summary>☷ Câu {pos+1}/{len(ids)}</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details></div></div><div class='body'>{admin_ai_actions}<div id='praise'></div>"
           f"<div class='practice-split' id='psplit'><div class='practice-q'><div id='q' class='qbox'></div></div><aside class='practice-ai' id='aipane' hidden></aside></div></div></div></div>")
     js=r'''<script>
 const Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;
