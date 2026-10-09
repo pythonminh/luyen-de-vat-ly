@@ -664,7 +664,7 @@ body.cinema .qbox{padding-right:12px}
 .vip-practice-wrap .vip-inline-nav details[open]>.subnav,.vip-practice-wrap .vip-inline-nav details[open]>.palette{background:#fff}
 .vip-practice-wrap .vip-inline-nav details[open]{background:#fff!important}
 .vip-practice-wrap .vip-inline-nav .practice-filters[open],.vip-practice-wrap .vip-inline-nav .practice-questions[open]{position:static}
-.vip-practice-wrap .vip-inline-nav .practice-filters[open]>*:not(summary),.vip-practice-wrap .vip-inline-nav .practice-questions[open]>*:not(summary){position:absolute;z-index:100;left:10px;right:10px;top:100%;background:white;border:1px solid #d6e3f0;border-radius:9px;box-shadow:0 12px 24px #102b4c25;padding:8px;max-height:55vh;overflow:auto}
+ .vip-practice-wrap .vip-inline-nav .practice-filters[open]>.vip-filter-panel,.vip-practice-wrap .vip-inline-nav .practice-questions[open]>.palette{position:absolute;z-index:100;left:10px;right:10px;top:100%;background:white;border:1px solid #d6e3f0;border-radius:9px;box-shadow:0 12px 24px #102b4c25;padding:8px;max-height:55vh;overflow:auto}
 @media(max-width:700px){.vip-practice-wrap .quiztop{gap:4px!important}.vip-practice-wrap .vip-inline-nav{width:auto;gap:3px}.vip-practice-wrap .vip-inline-nav summary{font-size:11px!important;padding:5px!important}.vip-practice-wrap .quizstat{display:none!important}}
 """
 
@@ -4449,7 +4449,7 @@ def practice():
           f"<button type='button' class='btn' id='qZmFit' title='Chữ to tối đa, vẫn vừa màn hình'>Vừa màn</button>"
           f"<b id='qzoomlab'>100%</b>"
           f"<button type='button' class='btn' id='qZmIn' title='Phóng to chữ'>A+</button></span>"
-          f"<span class='quizstat'>✓ {right} · 🔥 {streak}</span><div class='vip-inline-nav'><details class='practice-filters'><summary>☰ Chọn dạng / độ khó</summary>{tabs}</details><details class='practice-questions'><summary>☷ Chọn câu · {len(done)}/{len(ids)} đã làm</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details></div></div><div class='body'><div id='praise'></div>"
+          f"<span class='quizstat'>✓ {right} · 🔥 {streak}</span><div class='vip-inline-nav'><details class='practice-filters'><summary>☰ Dạng / độ khó</summary><div class='vip-filter-panel'>{tabs}</div></details><details class='practice-questions'><summary>☷ Câu {pos+1}/{len(ids)}</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details></div></div><div class='body'><div id='praise'></div>"
           f"<div class='practice-split' id='psplit'><div class='practice-q'><div id='q' class='qbox'></div></div><aside class='practice-ai' id='aipane' hidden></aside></div></div></div></div>")
     js=r'''<script>
 const Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;
