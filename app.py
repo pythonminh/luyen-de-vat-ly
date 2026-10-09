@@ -722,6 +722,13 @@ body.cinema .qbox{padding-right:12px}
 .vip-practice-wrap .practice-admin-ai a{display:inline-flex;align-items:center;justify-content:center;padding:8px 11px;min-height:38px;border:1px solid #b9d5f4;border-radius:8px;background:#f1f7ff;color:#175b9b;font:700 12px/1.3 Segoe UI,Arial,sans-serif}
 .vip-practice-wrap .practice-admin-ai a:hover{background:#e2efff}
 @media(max-width:700px){.vip-practice-wrap .practice-admin-ai{display:grid;grid-template-columns:1fr 1fr;gap:5px}.vip-practice-wrap .practice-admin-ai a{padding:7px;font-size:11px}.vip-practice-wrap .practice-admin-ai a:first-child{grid-column:1/-1}}
+
+/* Presentation controls must participate in document flow, never obscure editors. */
+.present-host,#presentHost{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;right:auto!important;z-index:2!important;max-width:100%;height:auto;max-height:none!important;overflow:visible!important;box-shadow:none!important;margin:8px 0!important}
+.present-host #presentBar{max-height:260px!important;overflow-y:auto!important;overflow-x:auto!important;flex:1 1 100%;overscroll-behavior:contain}
+.present-host.is-folded #presentBar{display:none!important}
+.present-host .present-details{position:static!important;transform:none!important}
+@media(max-width:760px){.present-host{gap:5px!important;padding:6px!important}.present-host .btn{white-space:normal!important;font-size:12px!important}.present-host #presentBar{max-height:40vh!important}}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
