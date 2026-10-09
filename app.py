@@ -626,7 +626,10 @@ body.cinema .qbox{padding-right:12px}
 .vip-practice-wrap mjx-container[jax="CHTML"][display="true"]{max-width:100%;overflow-x:auto}
 @media(max-width:700px){
  .wrap,.panel,.body,.questions,.qcard,.qheadline,.qstem,.opts,.opt{max-width:100%;min-width:0}
- .qstem,.opt,.qcard{overflow-wrap:anywhere;word-break:break-word;white-space:normal}
+ .qstem,.opt{overflow-wrap:anywhere;word-break:break-word;white-space:normal}
+ .qcard .solution,.solution{overflow-x:auto;word-break:normal;overflow-wrap:break-word}
+ mjx-container{word-break:normal!important;overflow-wrap:normal!important;white-space:nowrap!important}
+ mjx-container[display="true"]{display:block!important;max-width:100%;overflow-x:auto;overflow-y:hidden}
  .opt{display:block!important}
  .qhead{flex-wrap:wrap!important}
  .qhead>*{min-width:0;max-width:100%}
