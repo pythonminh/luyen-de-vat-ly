@@ -691,11 +691,12 @@ def _prompt_live_numbers(pack):
         "TLN: options=[], answer chỉ là số mới. TL: options=[].\n"
         "Trong JSON mỗi backslash LaTeX viết hai lần. Xuống dòng bằng \\n.\n"
         "Lặp lại giữa các mốc ===STEM=== ===SOLUTION=== ===ANSWER=== ===NOTE===\n\n"
+        "Lời giải tối đa 6 dòng.\n"
         f"Loại: {kind}\n"
-        f"Câu gốc:\n{pack.get('text') or ''}\n"
-        + ("Phương án gốc:\n" + "\n".join(opt_lines) + "\n" if opt_lines else "")
+        f"Câu gốc:\n{(pack.get('text') or '')[:1800]}\n"
+        + ("Phương án gốc:\n" + "\n".join(opt_lines)[:1200] + "\n" if opt_lines else "")
         + (f"Đáp án số cũ (phải đổi): {pack.get('answer')}\n" if pack.get("answer") else "")
-        + f"Lời giải cũ (phải tính lại):\n{pack.get('solution') or ''}\n"
+        + f"Lời giải cũ (phải tính lại):\n{(pack.get('solution') or '')[:900]}\n"
     )
 
 
@@ -736,18 +737,12 @@ def live_number_variant(src, fi, keys):
         return None, "Chưa có key Gemini. Nạp key ở mục Gemini, hoặc đặt GEMINI_API_KEY trên máy chủ."
     pack = _q_plain_pack(q)
     prompt = _prompt_live_numbers(pack)
-    from admin_classify import _gemini_once
+    from student_gemini import gemini_fast
 
-    raw, err = _gemini_once(keys, prompt, 6000)
+    raw, err = gemini_fast(keys, prompt, 1400)
     if not raw:
         return None, err or "Gemini không trả lời."
     stem, solution, answer, new_opts = _variant_fields(pack, raw)
-    if stem_incomplete(stem) or not solution or _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution):
-        raw2, err2 = _gemini_once(keys, prompt + "\nLẦN 2: bản trước thiếu đề, thiếu lời giải hoặc sai đáp án. Tính lại cho khớp số mới.\n", 6000)
-        if raw2:
-            stem, solution, answer, new_opts = _variant_fields(pack, raw2)
-        elif not solution:
-            return None, err2 or "Chưa tính lại được lời giải."
     if stem_incomplete(stem) or not solution:
         return None, "Chưa ra đủ đề và lời giải khớp số mới. Bấm lại."
     if pack["kind"] in ("TN", "DS") and _rewrite_bad_structure(pack["kind"], stem, new_opts, answer, solution):
@@ -4316,8 +4311,8 @@ document.addEventListener('click',function(e){
         let d=await r.json().catch(function(){return {}});
         if(d&&d.ok&&d.job){
           const job=d.job;
-          for(let i=0;i<140;i++){
-            await new Promise(function(res){setTimeout(res,2000)});
+          for(let i=0;i<40;i++){
+            await new Promise(function(res){setTimeout(res,1000)});
             const pr=await fetch('/api/practice/reshuffle?job='+encodeURIComponent(job),{credentials:'same-origin',cache:'no-store'});
             d=await pr.json().catch(function(){return {}});
             if(!(d&&d.state==='run')) break;

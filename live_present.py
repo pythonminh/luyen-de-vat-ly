@@ -4303,8 +4303,8 @@ setInterval(tick,900);
       if(d&&d.ok&&d.job){
         const job=d.job;
         d=null;
-        for(let i=0;i<140;i++){
-          await new Promise(function(res){setTimeout(res,2000)});
+        for(let i=0;i<40;i++){
+          await new Promise(function(res){setTimeout(res,1000)});
           const pr=await fetch('/api/practice/reshuffle?job='+encodeURIComponent(job),{credentials:'same-origin',cache:'no-store'});
           d=await pr.json().catch(function(){return {}});
           if(!(d&&d.state==='run')) break;

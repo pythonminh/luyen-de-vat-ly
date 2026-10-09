@@ -189,7 +189,7 @@ def _keys_from_payload(data: dict) -> list[str]:
     return keys
 
 
-def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float, no_thinking: bool, model: str | None = None, images=None):
+def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float, no_thinking: bool, model: str | None = None, images=None, timeout=None):
     model = _model_name(model or "gemini-2.5-flash")
     url = "https://generativelanguage.googleapis.com/v1beta/models/" + urllib.parse.quote(model, safe="-_.") + ":generateContent?key=" + urllib.parse.quote(api_key, safe="")
     cfg = {"temperature": temperature, "maxOutputTokens": max_tokens}
@@ -211,7 +211,7 @@ def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float,
         headers={"Content-Type": "application/json", "User-Agent": "luyen-de-vat-ly-student-gemini"},
     )
     # File .tex lớn / dang-fill cần thời gian sinh dài; gunicorn timeout phải cao hơn.
-    wait = 240 if (images or max_tokens >= 8000 or len(prompt) > 12000) else 180
+    wait = int(timeout) if timeout else (240 if (images or max_tokens >= 8000 or len(prompt) > 12000) else 180)
     with urllib.request.urlopen(req, timeout=wait) as r:
         obj = json.loads(r.read().decode("utf-8"))
     cands = obj.get("candidates") or []
@@ -223,6 +223,24 @@ def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float,
     ).strip()
     finish = str((cands[0].get("finishReason") if cands else "") or "")
     return text, finish
+
+
+def gemini_fast(keys, prompt: str, max_tokens: int = 1400):
+    """Một lần gọi ngắn cho nút đổi số. Không thử hết model, không chờ 3 phút."""
+    usable = [str(k).strip() for k in (keys or []) if str(k or "").strip()]
+    if not usable:
+        return "", "Chưa có key Gemini."
+    key = usable[0]
+    last = "Gemini chưa trả lời kịp."
+    for model, wait in (("gemini-2.5-flash", 22), ("gemini-2.0-flash", 16)):
+        try:
+            text, _finish = _gemini_call(key, prompt, max_tokens, 0.2, True, model, timeout=wait)
+            if text:
+                return text, ""
+            last = "Gemini trả về trống."
+        except Exception as exc:
+            last = str(exc)[:160] or last
+    return "", "Gemini chưa trả lời kịp. " + last
 
 
 def _http_busy(exc: urllib.error.HTTPError) -> bool:
