@@ -408,7 +408,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             f"<button type='button' class='btn mini rwimgs' data-drop='{drop_key}'>🖼 Ảnh thư mục</button>"
             f"<button type='button' class='btn mini rwtikzbtn' data-drop='{drop_key}'>📐 Mã TikZ</button>"
             f"<button type='button' class='btn mini rwnbprompt' data-drop='{drop_key}'>✨ Prompt ảnh vở + Phiếu</button>"
-            f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎨 Prompt Canva</button>"
+            f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎲 Luyện đổi số</button>"
             f"<button form='qdel' class='btn mini red' type='submit' name='drop' value='{drop_key}' onclick=\"return confirm('Xóa vĩnh viễn câu này khỏi file TEX? Không hoàn tác trên trang này.')\">🗑 Xóa câu</button>"
             "<span class='muted'>Sửa / xóa trực tiếp trên file TEX, không cần GitHub.</span><div class='rwout'></div></div>")
     dcls=' dupcard' if dup.get('label') else ''
@@ -436,7 +436,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             + (f"<button type='button' class='btn aiPhotoBtn' data-drop='{drop_key}'>📷 Chụp hình</button>" if manage else "")
             + (f"<button type='button' class='btn mini presentQ' data-idx='{n}'>📺 Chiếu câu</button>" if manage else "")
             + (f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại</button>" if manage else "")
-            + (f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎨 Prompt Canva</button>" if manage else "")
+            + (f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎲 Luyện đổi số</button>" if manage else "")
             + "</div>"
             f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text, src)}</div></div>{options}{develop_reference_html(q, src)}{rw}{sol_html}</article>")
 

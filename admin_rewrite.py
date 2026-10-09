@@ -2038,42 +2038,27 @@ _NOTEBOOK_MOTION = (
     "Không viết lại prompt."
 )
 
-_CANVA_PRACTICE = """Tạo MỘT thiết kế Canva để học sinh luyện tập. Không viết lại prompt. Không giải thích. Hãy dựng trang.
+_CANVA_PRACTICE = """Viết MỘT file HTML hoàn chỉnh để học sinh luyện tập. Không viết lại prompt. Không giải thích. Không vẽ Canva. Không xuất ảnh.
 
-Đây là FILE CANVA chỉnh sửa được (mỗi dòng chữ là text box), không phải ảnh chụp vở, không flatten, không xuất một ảnh chết chữ.
+Mở file bằng trình duyệt là chạy được. Một file, CSS và JavaScript nằm trong file. Không thư viện ngoài.
 
-KHỔ: trang Canva A4 nằm ngang, rộng 297 mm, cao 210 mm. Rộng hơn cao.
+Làm đúng kiểu chương trình luyện đổi số:
+- Thanh trên nền navy, chữ trắng, đúng từng chữ: Lớp Học Thầy Minh · Zalo 0946111107
+  Dòng phụ nhỏ: lophocthayminh.onrender.com
+- Trái: hình hoặc bảng công thức của đúng bài này. Số trên hình đổi theo đề đang hiện.
+- Phải: đề bài. Nút «Đổi đề bài mới» đổi các số liệu, giữ nguyên dạng câu, rồi tính lại đáp án bằng JavaScript.
+- Lần mở đầu dùng đúng số liệu gốc của đề bên dưới, đáp án khớp đề gốc.
+- Ô học sinh nhập đáp án, nút Kiểm tra. Đúng thì báo đúng, sai thì báo chưa đúng. Không hiện đáp án trước khi bấm xem lời giải.
+- Nút «Xem lời giải» viết các bước theo bộ số đang hiện, không phải bộ số cũ.
+- Trắc nghiệm: bốn phương án A B C D. Khi đổi số, phương án và đáp án đúng phải tính lại. Học sinh bấm phương án để kiểm tra.
+- Đơn vị giữ nguyên. Không đổi bản chất bài. Không bịa hiện tượng khác.
 
-THƯƠNG HIỆU ở mép trên, nền navy, chữ trắng, trọn chiều ngang. Viết đúng từng chữ:
-Lớp Học Thầy Minh · Zalo 0946111107
-Dòng phụ nhỏ: lophocthayminh.onrender.com
-
-MỤC ĐÍCH: giáo viên mở file trong Canva, ĐỔI SỐ LIỆU trong các ô vàng, rồi đưa học sinh luyện cùng một dạng. Cấu trúc câu, tên chất, ký hiệu và đơn vị giữ nguyên. Chỉ số liệu được sửa.
-
-CÁCH ĐẶT SỐ LIỆU — bắt buộc:
-- Mỗi số, hệ số, số mũ của dạng 10^n là MỘT text box riêng.
-- Ô số: nền vàng nhạt, viền vàng, bo góc, chữ đậm. Trong Canva bấm vào ô là sửa được số, không phải sửa cả câu.
-- Đơn vị đứng ngay sau ô, là chữ cố định. Không nhét đơn vị vào trong ô số.
-- Giữ đúng số liệu gốc của đề trong các ô. Không bịa bộ số mới. Không đổi đáp án của bộ số gốc.
-- Chữ đề, tên chất, nhãn A B C D nằm ngoài ô vàng.
-- Không tách một số ra nhiều ô. Không dính hai số vào một ô.
-
-BỐ CỤC, các khối bo góc, pastel:
-1) Thanh thương hiệu.
-2) Dải tiêu đề: «Luyện tập · đổi số liệu» và tên dạng, một dòng.
-3) Hai cột:
-   Trái — BÀI CHO HỌC SINH: đề với ô số vàng, phương án nếu có, khoảng trắng để trình bày, ô đáp án trống (khoanh hoặc điền). Không in lời giải. Không tô sẵn đáp án đúng.
-   Phải — KHUNG GIÁO VIÊN, nền kem, chữ nhỏ hơn: từng ô số (ký hiệu và giá trị gốc), công thức giữ nguyên khi đổi số, đáp án của bộ số gốc, một câu «Khi đổi số trong ô vàng thì làm lại bước tính, đáp án có thể đổi».
-4) Đáy trang: một dòng công thức cần nhớ. Không viết lại đề.
-
-Font: Be Vietnam Pro hoặc Nunito. Không neon, không giấy nhàu, không sticker, không chữ scribble.
-
-NỘI DUNG GỐC — giữ nguyên dữ kiện, chỉ tách số liệu vào ô vàng:
+NỘI DUNG GỐC:
 --------------------------------
 [DÁN LATEX VÀO ĐÂY]
 --------------------------------
 
-Dựng trang Canva. Ô vàng chứa đúng số gốc. Học sinh không thấy lời giải.
+Chỉ trả về file HTML. Đề gốc chạy đúng trước, nút đổi số chạy được sau.
 """
 
 
@@ -2338,7 +2323,7 @@ def api_notebook_prompt():
         canva=canva,
         latex=latex,
         gemini="https://gemini.google.com/app",
-        canva_url="https://www.canva.com/",
+        canva_url="https://gemini.google.com/app",
     )
 
 
@@ -3988,7 +3973,7 @@ function ensurePhotoInput(){
   return inp;
 }
 async function rwLoadNotebook(box){
-  box.innerHTML='<div class="muted">'+(box.getAttribute('data-focus')==='canva'?'Đang soạn prompt Canva từ đề…':'Đang soạn prompt trang vở từ đề LaTeX…')+'</div>';
+  box.innerHTML='<div class="muted">'+(box.getAttribute('data-focus')==='canva'?'Đang soạn prompt chương trình luyện đổi số…':'Đang soạn prompt trang vở từ đề LaTeX…')+'</div>';
   try{
     const r=await fetch('/api/admin/notebook-prompt',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
       body:JSON.stringify({src:box.getAttribute('data-src')||'',file_idx:+(box.getAttribute('data-fi')||0)})});
@@ -3996,16 +3981,15 @@ async function rwLoadNotebook(box){
     if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không tạo được prompt')+'</div>';return;}
     box._nb=d;
     const focusCanva=box.getAttribute('data-focus')==='canva';
-    box.innerHTML='<div class="aiphoto-bar"><b>'+(focusCanva?'Prompt Canva · đổi số liệu':'Xem trước như câu hỏi')+'</b> '
+    box.innerHTML='<div class="aiphoto-bar"><b>'+(focusCanva?'Chương trình luyện đổi số':'Xem trước như câu hỏi')+'</b> '
       +'<button type="button" class="btn green rwnbsave">Lưu thêm vào ngân hàng</button> '
       +(focusCanva?'':'<button type="button" class="btn primary rwnbcopy" data-which="still">Copy lệnh trang vở</button> ')
-      +'<button type="button" class="btn primary rwnbcopy" data-which="canva">Copy prompt Canva</button> '
-      +(focusCanva?'<a class="btn" href="'+esc(d.canva_url||'https://www.canva.com/')+'" target="_blank" rel="noopener">Mở Canva</a> '
-        :'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">Mở Gemini</a> ')
+      +'<button type="button" class="btn primary rwnbcopy" data-which="canva">Copy prompt luyện đổi số</button> '
+      +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">Mở Gemini</a> '
       +'<span class="muted rwnbnote"></span></div>'
       +'<div class="aiphoto-look rwnb-look"></div>'
-      +'<details class="rwnbcanva-fold"'+(focusCanva?' open':'')+'><summary>Prompt Canva — luyện tập, đổi số liệu trong ô vàng</summary>'
-      +'<p class="muted">Dán vào Canva. Mỗi số liệu là một ô vàng sửa được. Học sinh làm bài, khung giáo viên giữ đáp án của bộ số gốc.</p>'
+      +'<details class="rwnbcanva-fold"'+(focusCanva?' open':'')+'><summary>Prompt chương trình HTML — đổi số, kiểm tra đáp án</summary>'
+      +'<p class="muted">Dán vào Gemini. Gemini phải trả về một file HTML: nút Đổi đề bài mới, ô nhập đáp án, Kiểm tra, Xem lời giải. Không phải trang Canva.</p>'
       +'<textarea class="rwta rwnbcanva">'+esc(d.canva||'')+'</textarea></details>'
       +'<details'+(focusCanva?'':'')+'><summary>Lệnh Gemini — ảnh A4 (để copy, không chiếm trang)</summary>'
       +'<textarea class="rwta rwnbstill">'+esc(d.prompt||'')+'</textarea>'
@@ -4309,7 +4293,7 @@ document.addEventListener('click',function(e){
     const box=nbCopy.closest('.rwnbbox');
     const which=nbCopy.getAttribute('data-which')||'still';
     const sel=which==='motion'?'.rwnbmotion':(which==='canva'?'.rwnbcanva':'.rwnbstill');
-    const back=which==='motion'?'Copy lệnh động':(which==='canva'?'Copy prompt Canva':'Copy lệnh trang vở');
+    const back=which==='motion'?'Copy lệnh động':(which==='canva'?'Copy prompt luyện đổi số':'Copy lệnh trang vở');
     const ta=box&&box.querySelector(sel);
     copyText(ta?ta.value:'').then(function(){nbCopy.textContent='✅ Đã copy'; setTimeout(function(){nbCopy.textContent=back;},1400);},function(){prompt('Copy lệnh', ta?ta.value:'');});
     return;
