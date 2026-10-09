@@ -4557,20 +4557,21 @@ def admin_home():
             "<tr><td>"+html.escape(str(x.get('Mon') or ''))+"</td><td>"+html.escape(str(x.get('Lop') or ''))+"</td>"
             "<td>"+html.escape(str(x.get('Chuong') or ''))+"</td><td>"+html.escape(title)+"</td>"
             "<td><code>"+html.escape(p)+"</code></td><td style='white-space:nowrap'>"
-            "<a class='btn primary' href='/admin/edit?path="+qp+"'>✏️ Sửa trên web</a> "
+            "<a class='btn primary' href='/admin/edit?path="+qp+"'>✏️ Sửa</a> "
+            "<details class='bank-more'><summary>⋯ Thêm</summary><div class='bank-more-links'>"
             "<a class='btn' href='/admin/dups?path="+qp+"'>🔎 Trùng</a> "
             "<a class='btn' href='"+html.escape(github_web_edit_url(p),quote=True)+"' target='_blank' rel='noopener'>🐙 Sửa trên GitHub</a> "
             "<a class='btn' href='"+html.escape(github_blob_url(p),quote=True)+"' target='_blank' rel='noopener'>👁 Xem</a> "
             "<form method='post' action='/admin/bank/delete' style='display:inline' onsubmit=\"return confirm('Xóa vĩnh viễn file này trên GitHub?')\">"
             "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
             "<button class='btn red' type='submit'>🗑 Xóa</button></form>"
-            "</td></tr>"
+            "</div></details></td></tr>"
         )
     body=(
         "<div class='wrap'><div class='panel'><div class='head'>📂 ADMIN · Ngân hàng <code>ngan-hang</code></div><div class='body'>"
-        "<div class='notice'><b>Sửa TEX trên GitHub:</b> mở file → tab Edit → sửa → bấm nút xanh <b>Commit changes...</b> → Confirm. "
+        "<details class='bank-help'><summary>ℹ️ Hướng dẫn sửa và lưu file TEX</summary><div class='notice'><b>Sửa TEX trên GitHub:</b> mở file → tab Edit → sửa → bấm nút xanh <b>Commit changes...</b> → Confirm. "
         "Phải đăng nhập GitHub đúng tài khoản <b>pythonminh</b> (chủ repo). Chỉ mở Edit mà không Commit thì chưa lưu.<br>"
-        +html.escape(tok)+" Sau khi Commit, app trên Render đọc bản GitHub ngay (Ctrl+F5), không cần đợi deploy.</div>"
+        +html.escape(tok)+" Sau khi Commit, app trên Render đọc bản GitHub ngay (Ctrl+F5), không cần đợi deploy.</div></details>"
         +notice_extra+
         "<p style='margin:12px 0;display:flex;gap:8px;flex-wrap:wrap'>"
         "<a class='btn primary' href='"+html.escape(gh,quote=True)+"' target='_blank' rel='noopener'>🐙 Mở thư mục ngan-hang trên GitHub</a>"
@@ -4579,17 +4580,17 @@ def admin_home():
         "<a class='btn' href='/admin/ly-thuyet'>📖 Lý thuyết / dạng mẫu</a>"
         "<a class='btn' href='/member'>📚 Mục lục học viên</a>"
         "</p>"
-        "<h3>➕ Thêm bài (tạo file de.tex mới)</h3>"
+        "<details class='bank-create'><summary>➕ Tạo bài mới (file de.tex)</summary>"
         "<form method='post' action='/admin/bank/add' class='addbank'>"
         "<div class='field'><label>Môn</label><input name='mon' required placeholder='Toán hoặc Vật lý'></div>"
         "<div class='field'><label>Lớp</label><select name='lop'><option>10</option><option>11</option><option>12</option></select></div>"
         "<div class='field'><label>Chương</label><input name='chuong' required placeholder='Chương I. ...'></div>"
         "<div class='field'><label>Bài</label><input name='bai' required placeholder='Bài 1. ...'></div>"
-        "<button class='btn green' type='submit'>➕ Thêm hàng</button></form>"
-        "<h3>📚 File TEX trong ngan-hang ("+str(len(lrows))+")</h3>"
+        "<button class='btn green' type='submit'>➕ Thêm bài</button></form></details>"
+        "<div class='bank-list-head'><h3>📚 Danh sách file TEX ("+str(len(lrows))+")</h3><input id='bankSearch' type='search' aria-label='Tìm file' placeholder='🔎 Tìm môn, lớp, chương, bài...' autocomplete='off'></div><div id='bankCount' class='muted'></div>"
         "<div class='bankwrap'><table class='selectgrid'><thead><tr><th>Môn</th><th>Lớp</th><th>Chương</th><th>Bài</th><th>Đường dẫn</th><th>Sửa</th></tr></thead><tbody>"
         +(''.join(lrows) or "<tr><td colspan='6' class='muted'>Chưa thấy file .tex trong ngan-hang.</td></tr>")
-        +"</tbody></table></div></div></div></div>"
+        +"</tbody></table></div>"+"<style id='bank-admin-clean'>\n.bank-help,.bank-create{margin:9px 0;border:1px solid #d7e2ee;border-radius:10px;background:#fff;overflow:visible}\n.bank-help>summary,.bank-create>summary{cursor:pointer;list-style:none;padding:12px 14px;font-weight:750;color:#174675}\n.bank-help>summary::-webkit-details-marker,.bank-create>summary::-webkit-details-marker{display:none}\n.bank-help .notice{margin:0 9px 9px}.bank-create .addbank{margin:0 9px 9px}\n.bank-list-head{display:flex;gap:12px;justify-content:space-between;align-items:center;margin:16px 0 7px;flex-wrap:wrap}\n.bank-list-head h3{margin:0}.bank-list-head input{flex:1 1 240px;max-width:440px;min-height:42px;border-radius:10px;border:1px solid #b7c9dc;padding:8px 12px;font:16px/1.3 inherit}\n.bankwrap{max-height:none!important;border-radius:12px!important}\n.bankwrap .selectgrid{width:100%;table-layout:auto}\n.bankwrap .selectgrid th{position:sticky;top:0;background:#e9f1fb;z-index:1}\n.bankwrap .selectgrid td{vertical-align:middle;padding:9px 10px}\n.bankwrap .selectgrid td:nth-child(5) code{display:block;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}\n.bankwrap .selectgrid td:nth-child(6){white-space:normal!important;min-width:155px}\n.bank-more{display:inline-block;position:relative;vertical-align:middle}\n.bank-more summary{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;border:1px solid #bfd2e6;border-radius:8px;min-height:36px;padding:6px 10px;background:#f2f7fd;color:#174675;font-weight:700;list-style:none}\n.bank-more summary::-webkit-details-marker{display:none}\n.bank-more-links{display:flex;flex-wrap:wrap;gap:6px;padding:7px;background:white;border:1px solid #cbd8e6;border-radius:10px;box-shadow:0 4px 12px #0001;margin-top:5px}\n.bank-more-links form{display:inline-flex!important}\n.bank-more-links .btn{white-space:nowrap}\n.bankwrap tr[hidden]{display:none!important}\n#bankCount{font-size:12px;margin-bottom:7px}\n@media(max-width:760px){\n .bankwrap{border:none!important;overflow:visible!important}\n .bankwrap .selectgrid,.bankwrap tbody{display:block;width:100%}\n .bankwrap thead{display:none}\n .bankwrap tr{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;margin:8px 0;padding:11px;border:1px solid #d7e2ee;border-radius:12px;background:#fff;box-shadow:0 2px 6px #14304c0b}\n .bankwrap .selectgrid td{display:block;border:0!important;padding:1px 0!important;min-width:0!important;font-size:12px;overflow-wrap:anywhere}\n .bankwrap td:nth-child(1):before{content:'Môn: ';color:#64748b}\n .bankwrap td:nth-child(2):before{content:'Lớp: ';color:#64748b}\n .bankwrap td:nth-child(3){grid-column:1/-1;color:#64748b}\n .bankwrap td:nth-child(4){grid-column:1/-1;font-size:15px;font-weight:800;color:#133e6e}\n .bankwrap td:nth-child(5){grid-column:1/-1}\n .bankwrap td:nth-child(5) code{max-width:100%;font-size:10px}\n .bankwrap td:nth-child(6){grid-column:1/-1;padding-top:7px!important;display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start}\n .bankwrap td:nth-child(6)>a.btn{min-height:40px;display:inline-flex;align-items:center}\n .bank-more summary{min-height:40px}\n .bank-more-links{display:flex;flex-direction:column}\n .bank-more-links .btn{width:100%;text-align:center}\n .bank-list-head input{max-width:none;width:100%}\n .bank-create .addbank{display:grid;grid-template-columns:1fr 1fr}\n .bank-create .addbank .field{min-width:0}\n .bank-create .addbank .field:nth-child(n+3){grid-column:1/-1}\n .bank-create .addbank button{grid-column:1/-1;min-height:44px}\n}\n</style>"+"<script id='bank-admin-filter'>(function(){\nconst q=document.getElementById('bankSearch'),table=document.querySelector('.bankwrap tbody'),counter=document.getElementById('bankCount');\nif(!q||!table)return;\nconst rows=[...table.querySelectorAll('tr')];let limit=50;\nconst more=document.createElement('button');more.type='button';more.className='btn';more.textContent='Xem thêm 50 file';more.style.margin='10px 0';table.closest('.bankwrap').after(more);\nfunction update(){const term=q.value.trim().toLocaleLowerCase('vi');let matched=0,shown=0;rows.forEach(r=>{const ok=r.textContent.toLocaleLowerCase('vi').includes(term);if(ok)matched++;r.hidden=!ok||shown>=limit;if(ok&&shown<limit)shown++;});counter.textContent='Đang hiển thị '+shown+' / '+matched+' file phù hợp';more.hidden=shown>=matched;}\nq.addEventListener('input',()=>{limit=50;update()});more.addEventListener('click',()=>{limit+=50;update()});update();\ndocument.addEventListener('click',e=>{document.querySelectorAll('details.bank-more[open]').forEach(d=>{if(!d.contains(e.target))d.open=false})});\n})();</script>"+"</div></div></div>"
     )
     return page('ADMIN · ngan-hang',body)
 
