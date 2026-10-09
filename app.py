@@ -653,6 +653,19 @@ body.cinema .qbox{padding-right:12px}
 .vip-practice-wrap .quiztop .quizstat{font-size:11px}
 .vip-practice-wrap .body>.practice-filters,.vip-practice-wrap .body>.practice-questions{width:calc(50% - 4px)}
 }
+
+.vip-practice-wrap .quiztop{flex-wrap:wrap!important;position:relative;gap:6px 10px!important}
+.vip-practice-wrap .vip-inline-nav{display:flex;gap:5px;align-items:center;flex:0 0 auto;margin-left:auto}
+.vip-practice-wrap .vip-inline-nav details{display:block!important;width:auto!important;margin:0!important;position:relative;background:transparent!important;border:0!important}
+.vip-practice-wrap .vip-inline-nav summary{display:block;white-space:nowrap;list-style:none;padding:7px 9px!important;min-height:35px!important;border:1px solid #bfd3e7;border-radius:8px;background:#fff;font-size:12px!important;cursor:pointer;color:#155b9f}
+.vip-practice-wrap .vip-inline-nav summary::-webkit-details-marker{display:none}
+.vip-practice-wrap .vip-inline-nav .subnav,.vip-practice-wrap .vip-inline-nav .dangtabs,.vip-practice-wrap .vip-inline-nav .kindtabs,.vip-practice-wrap .vip-inline-nav .palette{position:relative!important;top:auto!important;margin:5px 0!important}
+.vip-practice-wrap .vip-inline-nav details[open]{z-index:90}
+.vip-practice-wrap .vip-inline-nav details[open]>.subnav,.vip-practice-wrap .vip-inline-nav details[open]>.palette{background:#fff}
+.vip-practice-wrap .vip-inline-nav details[open]{background:#fff!important}
+.vip-practice-wrap .vip-inline-nav .practice-filters[open],.vip-practice-wrap .vip-inline-nav .practice-questions[open]{position:static}
+.vip-practice-wrap .vip-inline-nav .practice-filters[open]>*:not(summary),.vip-practice-wrap .vip-inline-nav .practice-questions[open]>*:not(summary){position:absolute;z-index:100;left:10px;right:10px;top:100%;background:white;border:1px solid #d6e3f0;border-radius:9px;box-shadow:0 12px 24px #102b4c25;padding:8px;max-height:55vh;overflow:auto}
+@media(max-width:700px){.vip-practice-wrap .quiztop{gap:4px!important}.vip-practice-wrap .vip-inline-nav{width:auto;gap:3px}.vip-practice-wrap .vip-inline-nav summary{font-size:11px!important;padding:5px!important}.vip-practice-wrap .quizstat{display:none!important}}
 """
 
 GEMINI_CLIENT_JS = r"""<script>
@@ -4436,7 +4449,7 @@ def practice():
           f"<button type='button' class='btn' id='qZmFit' title='Chữ to tối đa, vẫn vừa màn hình'>Vừa màn</button>"
           f"<b id='qzoomlab'>100%</b>"
           f"<button type='button' class='btn' id='qZmIn' title='Phóng to chữ'>A+</button></span>"
-          f"<span class='quizstat'>✓ {right} · 🔥 {streak}</span></div><div class='body'><details class='practice-filters'><summary>☰ Chọn dạng / độ khó</summary>{tabs}</details><details class='practice-questions'><summary>☷ Chọn câu · {len(done)}/{len(ids)} đã làm</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details><div id='praise'></div>"
+          f"<span class='quizstat'>✓ {right} · 🔥 {streak}</span><div class='vip-inline-nav'><details class='practice-filters'><summary>☰ Chọn dạng / độ khó</summary>{tabs}</details><details class='practice-questions'><summary>☷ Chọn câu · {len(done)}/{len(ids)} đã làm</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details></div></div><div class='body'><div id='praise'></div>"
           f"<div class='practice-split' id='psplit'><div class='practice-q'><div id='q' class='qbox'></div></div><aside class='practice-ai' id='aipane' hidden></aside></div></div></div></div>")
     js=r'''<script>
 const Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;
