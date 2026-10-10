@@ -579,6 +579,13 @@ def exam_css():
 .ex-tf-circle{border-color:#111}
 .ex-tf-circle.is-marked{background:#111}
 }
+.ex-ai-progress{border:1px solid #93c5fd;border-radius:9px;background:#eff6ff;padding:12px;margin:8px 0;color:#174f8a}
+.ex-ai-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ex-ai-clock{font:700 18px/1.3 Consolas,monospace;font-variant-numeric:tabular-nums}
+.ex-ai-track{height:9px;border-radius:99px;background:#bfdbfe;overflow:hidden;margin:10px 0}
+.ex-ai-moving{height:100%;width:30%;border-radius:99px;background:#2563eb;animation:ex-ai-loading 1.3s ease-in-out infinite}
+@keyframes ex-ai-loading{from{transform:translateX(-110%)}to{transform:translateX(350%)}}
+@media(prefers-reduced-motion:reduce){.ex-ai-moving{animation:none;width:100%;opacity:.65}}
 .ex-direct-answers{margin:10px 0 14px;border:1px solid #93c5fd;border-radius:10px;padding:10px;background:#f8fbff}
 .ex-direct-answers summary{font-weight:800;cursor:pointer;color:#174f8a}
 .ex-key-code{border-top:1px solid #cbd5e1;margin-top:12px;padding-top:7px}
@@ -875,7 +882,10 @@ def render_exam(auto_print=False):
    if(!keys.length){state.textContent='Cần nạp Gemini API key trước khi đổi số.';return}
    working=true;gen.disabled=true;apply.disabled=true;review.hidden=true;candidate=null;
    const started=performance.now();
-   const timer=setInterval(()=>{state.textContent='⏳ AI đang tính lại đề và đáp án · '+Math.round((performance.now()-started)/1000)+' giây';},300);
+   state.innerHTML='<div class="ex-ai-progress" role="status"><div class="ex-ai-top"><b>⏳ AI đang tính lại đề và đáp án</b><strong class="ex-ai-clock">00:00</strong></div><div class="ex-ai-track" role="progressbar" aria-label="Đang chờ AI xử lý" aria-valuetext="Đang xử lý"><div class="ex-ai-moving"></div></div><small>Đang gửi yêu cầu và chờ kết quả từ AI. Thời gian hiển thị là thời gian thực, không phải phần trăm hoàn thành.</small></div>';
+   const clock=state.querySelector('.ex-ai-clock');
+   const fmt=function(ms){const n=Math.floor(ms/1000);return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0')};
+   const timer=setInterval(()=>{if(clock)clock.textContent=fmt(performance.now()-started);},250);
    try{
      const r=await fetch('/api/admin/rewrite-question',{
        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
