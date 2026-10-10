@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Luyện Tập Vật Lí - Thầy Minh</title>
+ <style>
+  :root {
+   --navy: #001f3f;
+   --white: #ffffff;
+   --bg: #f4f6f9;
+   --card-bg: #ffffff;
+   --border: #ddd;
+   --primary: #007bff;
+   --success: #28a745;
+   --danger: #dc3545;
+   --text: #333;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+  body { background-color: var(--bg); color: var(--text); line-height: 1.6; padding-bottom: 50px; }
+  header { background-color: var(--navy); color: var(--white); padding: 15px 20px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+  header h1 { font-size: 24px; margin-bottom: 5px; }
+  header p { font-size: 14px; opacity: 0.8; }
+  .container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+  .controls { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: opacity 0.2s; }
+  button:hover { opacity: 0.9; }
+  button:disabled { background-color: #ccc !important; cursor: not-allowed; color: #666 !important; }
+  .btn-primary { background-color: var(--primary); color: var(--white); }
+  .btn-success { background-color: var(--success); color: var(--white); }
+  .btn-danger { background-color: var(--danger); color: var(--white); }
+  .btn-navy { background-color: var(--navy); color: var(--white); }
+  
+  .question-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: none; }
+  .question-card.active { display: block; }
+  .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .q-title { font-size: 18px; font-weight: bold; color: var(--navy); }
+  .q-content { font-size: 16px; margin-bottom: 20px; }
+  
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option { padding: 10px 15px; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 10px; background: #fafafa; }
+  .option:hover { background: #f0f0f0; }
+  .option input[type="radio"] { cursor: pointer; transform: scale(1.2); }
+  
+  .tf-options { display: flex; flex-direction: column; gap: 15px; }
+  .tf-item { border: 1px solid var(--border); padding: 10px; border-radius: 5px; background: #fafafa; }
+  .tf-choices { display: flex; gap: 15px; margin-top: 10px; }
+  .tf-choices label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  
+  .short-answer { margin-top: 15px; }
+  .short-answer input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 16px; }
+  
+  .actions { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+  
+  .solution-area { margin-top: 20px; padding: 15px; background: #e9ecef; border-left: 4px solid var(--primary); border-radius: 4px; display: none; }
+  .solution-area h4 { margin-bottom: 10px; color: var(--navy); }
+  
+  .feedback { margin-top: 10px; font-weight: bold; padding: 10px; border-radius: 4px; display: none; }
+  .feedback.correct { background: #d4edda; color: #155724; display: block; }
+  .feedback.incorrect { background: #f8d7da; color: #721c24; display: block; }
+  
+  /* Math display simulation */
+  .math { font-family: 'Times New Roman', Times, serif; font-style: italic; white-space: nowrap; }
+  .math-block { display: block; text-align: center; margin: 10px 0; font-family: 'Times New Roman', Times, serif; font-style: italic; }
+  sup { font-size: 0.75em; vertical-align: super; }
+  sub { font-size: 0.75em; vertical-align: sub; }
+  .frac { display: inline-block; vertical-align: middle; text-align: center; font-size: 0.9em; margin: 0 2px; }
+  .frac > span { display: block; padding: 0 2px; }
+  .frac .num { border-bottom: 1px solid var(--text); }
+  .sqrt { display: inline-flex; align-items: center; }
+  .sqrt::before { content: '√'; font-family: serif; font-style: normal; font-size: 1.2em; margin-right: 1px; }
+  .sqrt-content { border-top: 1px solid var(--text); padding-top: 1px; }
+  
+  .nav-buttons { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+  .q-list-btn { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+  
+  #qListModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+  .modal-content { background: white; padding: 20px; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+  .modal-title { margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .q-list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; }
+  .q-grid-btn { padding: 10px; border: 1px solid var(--border); border-radius: 4px; background: white; cursor: pointer; text-align: center; }
+  .q-grid-btn:hover { background: var(--bg); }
+  .q-grid-btn.current { background: var(--navy); color: white; }
+  .close-modal { margin-top: 15px; width: 100%; }
+
+  .disabled-note { font-size: 12px; color: var(--danger); font-style: italic; margin-top: 5px; display: none; }
+
+  .upright{font-family:Arial,sans-serif;font-style:normal}
+  .math{font-family:"Cambria Math","Times New Roman",serif;font-style:italic;white-space:normal}
+  .math-block{white-space:normal}
+  .q-content,.option{overflow-wrap:anywhere}
+  .learning-panel{margin-top:16px;border-top:1px solid #cbd5e1;padding-top:14px}
+  .learning-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .learning-cell{border:1px solid #cbd5e1;background:#f8fbff;padding:12px;border-radius:9px;min-width:0;overflow-wrap:anywhere}
+  .learning-cell h4{color:#15539c;margin:0 0 8px}
+  .learning-cell p{margin:0 0 9px}
+  .learning-cell svg{max-width:100%;height:auto;display:block}
+  @media(max-width:650px){.learning-grid{grid-template-columns:1fr}.container{padding:0 8px}}
+ </style>
+</head>
+<body>
+ <header>
+  <h1>Lớp Học Thầy Minh · Zalo 0946111107</h1>
+  <p>lophocthayminh.onrender.com</p>
+ </header>
+
+ <div class="container">
+  <div class="controls">
+   <button class="q-list-btn" onclick="openQList()">☰ Danh sách câu</button>
+   <button class="btn-navy" onclick="toggleFullScreen()">⛶ Toàn màn hình</button>
+  </div>
+
+  <div id="quiz-container">
+   <!-- Questions will be injected here -->
+  </div>
+
+  <div class="nav-buttons">
+   <button class="btn-primary" onclick="prevQuestion()" id="btnPrev">❮ Câu trước</button>
+   <button class="btn-primary" onclick="nextQuestion()" id="btnNext">Câu tiếp ❯</button>
+  </div>
+ </div>
+
+ <div id="qListModal">
+  <div class="modal-content">
+   <div class="modal-title">
+    <h3>Danh sách câu hỏi</h3>
+   </div>
+   <div class="q-list-grid" id="qListGrid">
+    <!-- Grid buttons injected here -->
+   </div>
+   <button class="btn-primary close-modal" onclick="closeQList()">Đóng</button>
+  </div>
+ </div>
+
+ <script>
+  // Hiển thị công thức toán offline: đọc dấu ngoặc lồng nhau.
+  function mathHTML(src){
+    let s=String(src||'').replace(/\\left|\\right/g,'').replace(/\\!/g,'').replace(/\\[,;:]/g,' '), i=0;
+    const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function group(){if(s[i]!=='{')return atom();++i;let v=seq(true);if(s[i]==='}')++i;return v;}
+    function atom(){
+      if(i>=s.length)return '';
+      if(s[i]==='{')return group();
+      if(s[i]==='\\'){
+        i++;let name='';while(i<s.length&&/[a-zA-Z]/.test(s[i]))name+=s[i++];if(!name&&i<s.length)name=s[i++];
+        if(['frac','dfrac','tfrac'].includes(name)){let a=group(),b=group();return '<span class="frac"><span class="num">'+a+'</span><span class="den">'+b+'</span></span>';}
+        if(name==='sqrt')return '<span class="sqrt"><span class="sqrt-content">'+group()+'</span></span>';
+        if(['text','mathrm','operatorname','mathbf'].includes(name))return '<span class="upright">'+group()+'</span>';
+        const symbols={pi:'π',omega:'ω',varphi:'φ',theta:'θ',alpha:'α',Delta:'Δ',cdot:'·',times:'×',pm:'±',neq:'≠',le:'≤',ge:'≥',Rightarrow:'⇒',rightarrow:'→',approx:'≈',sin:'sin',cos:'cos',circ:'°',quad:' ',qquad:'  '};
+        return Object.prototype.hasOwnProperty.call(symbols,name)?symbols[name]:esc('\\'+name);
+      }
+      return esc(s[i++]);
+    }
+    function seq(nested){let out='';while(i<s.length&&(!nested||s[i]!=='}')){if(s[i]==='^'||s[i]==='_'){let tag=s[i++]==='^'?'sup':'sub';out+='<'+tag+'>'+group()+'</'+tag+'>';continue;}out+=atom();}return out;}
+    return seq(false);
+  }
+  function parseLaTeX(str){
+    if(!str)return '';
+    return String(str).replace(/\\\[([\s\S]*?)\\\]/g,(_,x)=>'<div class="math-block">'+mathHTML(x)+'</div>')
+     .replace(/\$\$([\s\S]*?)\$\$/g,(_,x)=>'<div class="math-block">'+mathHTML(x)+'</div>')
+     .replace(/\$([^$]*?)\$/g,(_,x)=>'<span class="math">'+mathHTML(x)+'</span>');
+  }
+
+  const originalData = [{"cau":1,"loai":"TN","ma":"L11C1B3-13-TN","de_html":"Gia tốc của vật dao động điều hòa có đặc điểm nào sau đây?","phuong_an":[{"nhan":"A","noi_dung_html":"Độ lớn gia tốc cực tiểu khi vật qua vị trí cân bằng.","dung":true},{"nhan":"B","noi_dung_html":"Khi đi qua vị trí cân bằng, gia tốc đạt giá trị cực tiểu.","dung":false},{"nhan":"C","noi_dung_html":"Khi đi qua vị trí biên, gia tốc luôn đạt giá trị cực tiểu.","dung":false},{"nhan":"D","noi_dung_html":"Độ lớn gia tốc cực tiểu khi vật qua vị trí biên.","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"Phương trình gia tốc của vật dao động điều hòa là $a = -\\omega^2 x$.<br>Độ lớn của gia tốc là $|a| = \\omega^2 |x|$. <br>Vì $x$ là li độ của vật, nên $|x|$ có giá trị từ $0$ (tại vị trí cân bằng) đến $A$ (tại vị trí biên). Do đó, độ lớn gia tốc $|a|$ sẽ cực tiểu khi $|x|$ cực tiểu, tức là khi $|x|=0$. Điều này xảy ra khi vật đi qua vị trí cân bằng. Vậy, độ lớn gia tốc cực tiểu khi vật qua vị trí cân bằng."},{"cau":2,"loai":"TN","ma":"L11C1B3-14-TN","de_html":"Khi một chất điểm dao động điều hòa trên quỹ đạo thẳng, vecto gia tốc luôn","phuong_an":[{"nhan":"A","noi_dung_html":"ngược chiều với vectơ vận tốc","dung":false},{"nhan":"B","noi_dung_html":"hướng về vị trí cân bằng","dung":true},{"nhan":"C","noi_dung_html":"cùng chiều vectơ vận tốc","dung":false},{"nhan":"D","noi_dung_html":"hướng về biên dương","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"Đặc điểm vectơ gia tốc trong DĐĐ $H$ với quỹ đạo thẳng luôn hướng về VTCB."},{"cau":3,"loai":"TN","ma":"L11C1B3-15-TN","de_html":"Gia tốc của một vật dao động điều hòa có giá trị bằng không khi nào?","phuong_an":[{"nhan":"A","noi_dung_html":"Vận tốc của vật bằng không.","dung":false},{"nhan":"B","noi_dung_html":"Vật ở vị trí có li độ cực đại.","dung":false},{"nhan":"C","noi_dung_html":"Vật ở vị trí có pha dao động cực đại.","dung":false},{"nhan":"D","noi_dung_html":"Vật ở vị trí cân bằng (li độ bằng không).","dung":true}],"dung_sai":[],"dap_an":"","loi_giai_html":"Gia tốc của vật dao động điều hòa được biểu diễn bởi công thức $a = -\\omega^2 x$, trong đó $a$ là gia tốc, $\\omega$ là tần số góc và $x$ là li độ của vật.<br>Để gia tốc $a$ có giá trị bằng không, ta có:<br>$a = 0 \\Rightarrow -\\omega^2 x = 0$<br>Vì $\\omega$ là tần số góc và $\\omega \\neq 0$, nên điều kiện để $a=0$ là $x=0$.<br>Li độ $x=0$ tương ứng với vị trí cân bằng của vật dao động điều hòa.<br>Xét các phương án:<br>A. Vận tốc của vật bằng không khi vật ở vị trí biên (li độ cực đại hoặc cực tiểu), lúc đó gia tốc có giá trị cực đại hoặc cực tiểu.<br>B. Vật ở vị trí có li độ cực đại (biên dương hoặc biên âm), lúc đó gia tốc có giá trị cực tiểu hoặc cực đại.<br>C. Pha dao động cực đại không phải là một khái niệm vật lý chuẩn trong dao động điều hòa để xác định vị trí cụ thể của vật.<br>D. Vật ở vị trí cân bằng (li độ bằng không), lúc đó gia tốc bằng không. Đây là đáp án đúng."},{"cau":4,"loai":"TN","ma":"L11C1B3-18-TN","de_html":"Một vật nhỏ dao động điều hòa trên trục Ox quanh vị trí cân bằng O. Đồ thị biểu diễn sự biến đổi của gia tốc theo li độ là","phuong_an":[{"nhan":"A","noi_dung_html":"đường elip","dung":false},{"nhan":"B","noi_dung_html":"đoạn thẳng","dung":true},{"nhan":"C","noi_dung_html":"hình sin","dung":false},{"nhan":"D","noi_dung_html":"đường parabol","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"Trong dao động điều hòa, gia tốc liên hệ với li độ theo công thức $a = -\\omega^2 x$. Đây là phương trình tuyến tính giữa $a$ và $x$, có dạng $a = kx$ với $k = -\\omega^2$ là hằng số âm. Do đó, đồ thị biểu diễn gia tốc theo li độ là một đoạn thẳng đi qua gốc tọa độ, có hệ số góc âm $-\\omega^2$, với $x$ biến thiên trong đoạn $[-A; A]$ nên đồ thị chỉ là một đoạn thẳng (không phải đường thẳng vô hạn)."},{"cau":5,"loai":"TN","ma":"L11C1B3-19-TN","de_html":"Một vật dao động điều hòa với chu kỳ $T$. Gọi $v_{\\max}$ và $a_{\\max}$ tương ứng là vận tốc cực đại và gia tốc cực đại của vật. Hệ thức liên hệ giữa $v_{\\max}$ và $a_{\\max}$ là","phuong_an":[{"nhan":"A","noi_dung_html":"$a_{\\max} = \\dfrac{T}{2\\pi} v_{\\max}$","dung":false},{"nhan":"B","noi_dung_html":"$a_{\\max} = \\dfrac{2\\pi}{T} v_{\\max}$","dung":true},{"nhan":"C","noi_dung_html":"$a_{\\max} = \\dfrac{T^2}{4\\pi^2} v_{\\max}$","dung":false},{"nhan":"D","noi_dung_html":"$a_{\\max} = \\dfrac{4\\pi^2}{T^2} v_{\\max}$","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"Trong dao động điều hòa, vận tốc cực đại $v_{\\max} = \\omega A$ và gia tốc cực đại $a_{\\max} = \\omega^2\\,\\mathrm{A}$. Do đó $a_{\\max} = \\omega \\cdot v_{\\max}$. Vì $\\omega = \\dfrac{2\\pi}{T}$ nên $a_{\\max} = \\dfrac{2\\pi}{T} v_{\\max}$."},{"cau":6,"loai":"TN","ma":"","de_html":"Trong dao động điều hòa với tần số góc $\\omega$ thì biểu thức liên hệ giữa gia tốc a và li độ x là","phuong_an":[{"nhan":"A","noi_dung_html":"$a = -\\omega^2 x$","dung":true},{"nhan":"B","noi_dung_html":"$a = m^2 x$","dung":false},{"nhan":"C","noi_dung_html":"$a = -\\omega x^2$","dung":false},{"nhan":"D","noi_dung_html":"$a = m^2 x^2$","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"Trong dao động điều hòa, gia tốc $a$ của vật được xác định bởi biểu thức $a = -\\omega^2 x$, trong đó $\\omega$ là tần số góc và $x$ là li độ của vật. Dấu trừ (-) cho biết gia tốc luôn ngược chiều với li độ."},{"cau":7,"loai":"TN","ma":"","de_html":"Cho một chất điểm dao động điều hòa với biên độ $10cm,$ gia tốc cực đại là $\\text{8}\\text{m/}{{\\text{s}}^{\\text{2}}}.$ Khi gia tốc là $-4m\\text{/}{{s}^{2}}$ thì li độ bằng","phuong_an":[{"nhan":"A","noi_dung_html":"$-5cm.$","dung":false},{"nhan":"B","noi_dung_html":"$5cm.$","dung":true},{"nhan":"C","noi_dung_html":"$5\\sqrt{3}cm.$","dung":false},{"nhan":"D","noi_dung_html":"$\\pm 5\\sqrt{3}cm.$","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"Khi $a=-\\text{4 m/}{{\\text{s}}^{2}}=-\\dfrac{a_{\\max}}{2}\\Rightarrow x=\\dfrac{A}{2}=5cm.$"},{"cau":8,"loai":"TN","ma":"","de_html":"Cho một chất điểm dao động điều hòa với biên độ $10cm,$ gia tốc cực đại là $\\text{8}\\text{m/}{{\\text{s}}^{\\text{2}}}.$ Khi gia tốc là $4\\sqrt{3}m\\text{/}s^{2}$ thì li độ của chất điểm bằng","phuong_an":[{"nhan":"A","noi_dung_html":"$-5cm.$","dung":false},{"nhan":"B","noi_dung_html":"$5cm.$","dung":false},{"nhan":"C","noi_dung_html":"$-5\\sqrt{3}cm.$","dung":true},{"nhan":"D","noi_dung_html":"$5\\sqrt{3}cm.$","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"NX khi $a=4\\sqrt{\\text{3}}\\text{ m/}{{\\text{s}}^{\\text{2}}}=\\dfrac{a_{\\max}\\sqrt{3}}{2}\\Rightarrow x=-\\dfrac{A\\sqrt{3}}{2}=-5\\sqrt{3}cm.$"},{"cau":9,"loai":"TN","ma":"L11C1B3-22-TN","de_html":"Một vật dao động điều hòa với phương trình $x = 5\\cos(2\\pi t + \\frac{\\pi}{3})\\,\\mathrm{cm}$. Tìm gia tốc cực đại của vật.","phuong_an":[{"nhan":"A","noi_dung_html":"20π² cm/s²","dung":true},{"nhan":"B","noi_dung_html":"10π² cm/s²","dung":false},{"nhan":"C","noi_dung_html":"5π² cm/s²","dung":false},{"nhan":"D","noi_dung_html":"15π² cm/s²","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"Gia tốc cực đại của vật dao động điều hòa được tính bằng $a_{max} = \\omega^2\\,\\mathrm{A}$, với $\\omega = 2\\pi$ rad/s và $A = 5\\,\\mathrm{cm}$. Do đó, $a_{max} = (2\\pi)^2 \\times 5 = 20\\pi^2\\,\\mathrm{cm}$/s². Vậy đáp án đúng là A."},{"cau":10,"loai":"TN","ma":"L11C1B3-25-TN","de_html":"Một vật dao động điều hòa với phương trình $x=4\\cos\\left( 8t-0{,}2 \\right)\\,\\mathrm{cm},\\ t$ tính bằng s. Gia tốc lớn nhất của vật trong quá trình dao động là","phuong_an":[{"nhan":"A","noi_dung_html":"$256\\,\\mathrm{cm/s^2}$","dung":true},{"nhan":"B","noi_dung_html":"$32\\,\\mathrm{cm/s^2}$","dung":false},{"nhan":"C","noi_dung_html":"$6{,}4\\,\\mathrm{cm/s^2}$","dung":false},{"nhan":"D","noi_dung_html":"$128\\,\\mathrm{cm/s^2}$","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"$a_{\\max} = \\omega^2 A = 8^2 \\cdot 4 = 256 \\, \\mathrm{cm/s^2}$."},{"cau":11,"loai":"TN","ma":"L11C1B3-28-TN","de_html":"Dao động điều hòa có phương trình $x = A \\cos (\\omega t + \\varphi)$. Nếu vật có vận tốc cực đại $v_{\\max} = 8\\pi \\, \\mathrm{cm/s}$ và gia tốc cực đại $a_{\\max} = 16\\pi^2 \\, \\mathrm{cm/s^2}$, thì biên độ dao động là","phuong_an":[{"nhan":"A","noi_dung_html":"$4\\text{cm}$","dung":true},{"nhan":"B","noi_dung_html":"$2\\text{cm}$","dung":false},{"nhan":"C","noi_dung_html":"$10\\text{cm}$","dung":false},{"nhan":"D","noi_dung_html":"$8\\text{cm}$","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"$\\omega = \\dfrac{a_{\\max}}{v_{\\max}} = \\dfrac{16\\pi^2}{8\\pi} = 2\\pi$ (rad/s), $A = \\dfrac{v_{\\max}}{\\omega} = \\dfrac{8\\pi}{2\\pi} = 4$ (cm)"},{"cau":12,"loai":"TN","ma":"L11C1B3-31-TN","de_html":"Một vật dao động điều hoà theo phương trình $x=5\\cos\\left( 2\\pi t-\\dfrac{\\pi}{2} \\right)\\text{ cm}$. Gia tốc của vật khi vật đi qua li độ $2{,}5\\sqrt{3}\\text{ cm}$ là","phuong_an":[{"nhan":"A","noi_dung_html":"$16\\pi^{2}\\sqrt{3}\\text{ cm/s}^{2}$","dung":false},{"nhan":"B","noi_dung_html":"$16\\pi^{2}\\text{ cm/s}^{2}$","dung":false},{"nhan":"C","noi_dung_html":"$-10\\pi^{2}\\sqrt{3}\\text{ cm/s}^{2}$","dung":true},{"nhan":"D","noi_dung_html":"$-6\\pi^{2}\\sqrt{3}\\text{ cm/s}^{2}$","dung":false}],"dung_sai":[],"dap_an":"","loi_giai_html":"Từ phương trình $x=5\\cos\\left(2\\pi t-\\dfrac{\\pi}{2}\\right)\\text{ cm}$, ta xác định được biên độ $A=5\\text{ cm}$ và tần số góc $\\omega=2\\pi\\text{ rad/s}$. Công thức gia tốc trong dao động điều hoà là $a=-\\omega^{2}x$. Thay $\\omega=2\\pi$ và $x=2{,}5\\sqrt{3}\\text{ cm}$ vào: $a=-(2\\pi)^{2}\\cdot 2{,}5\\sqrt{3}=-4\\pi^{2}\\cdot 2{,}5\\sqrt{3}=-10\\pi^{2}\\sqrt{3}\\text{ cm/s}^{2}$."},{"cau":13,"loai":"DS","ma":"L11C1B3-04-DS","de_html":"Một vật dao động điều hòa theo phương trình $x = 5\\cos\\!\\left(4\\pi t + \\dfrac{\\pi}{6}\\right)\\ (\\mathrm{cm})$. <br> Chọn Đúng hoặc Sai cho các phát biểu sau:","phuong_an":[],"dung_sai":[{"nhan":"a","noi_dung_html":"Tốc độ cực đại của vật là $20\\pi\\ \\mathrm{cm/s}$","dung":true},{"nhan":"b","noi_dung_html":"Gia tốc cực đại là $80\\pi^2\\ \\mathrm{cm/s^2}$","dung":true},{"nhan":"c","noi_dung_html":"Tốc độ cực đại bằng gia tốc cực đại","dung":false},{"nhan":"d","noi_dung_html":"Biên độ dao động của vật là $10\\ \\mathrm{cm}$","dung":false}],"dap_an":"","loi_giai_html":"<ul class=\"tex-list\"><li>(Đúng) Tốc độ cực đại của vật là $20\\pi\\ \\mathrm{cm/s}$. (Vì): Tốc độ cực đại: $v_{\\max} = A\\omega = 5 \\cdot 4\\pi = 20\\pi\\ \\mathrm{cm/s}$</li><li>(Đúng) Gia tốc cực đại là $80\\pi^2\\ \\mathrm{cm/s^2}$. (Vì): Gia tốc cực đại: $a_{\\max} = A\\omega^2 = 5 \\cdot (4\\pi)^2 = 5 \\cdot 16\\pi^2 = 80\\pi^2\\ \\mathrm{cm/s^2}$</li><li>(Sai) Tốc độ cực đại bằng gia tốc cực đại. (Vì): $v_{\\max} = 20\\pi\\ \\mathrm{cm/s}$ và $a_{\\max} = 80\\pi^2\\ \\mathrm{cm/s^2}$ khác nhau cả về giá trị lẫn đơn vị, không thể nói hai đại lượng này bằng nhau</li><li>(Sai) Biên độ dao động của vật là $10\\ \\mathrm{cm}$. (Vì): Biên độ dao động đọc trực tiếp từ phương trình là $A = 5\\ \\mathrm{cm}$, không phải $10\\ \\mathrm{cm}$</li></ul>"},{"cau":14,"loai":"DS","ma":"L11C1B3-05-DS","de_html":"[TTN] Pit-tông bên trong đông cơ ô tô dao động lên và xuống khi động cơ ô tô hoạt động như hình bên. Các dao động này được coi là dao động điều hòa với phương trình li độ của pit-tông là $x=12{,}5\\cos \\left( 60\\pi t \\right)\\left( cm,\\text{s} \\right).$","phuong_an":[],"dung_sai":[{"nhan":"a","noi_dung_html":"Vận tốc cực tiểu của pit-tông có giá trị cực tiểu bằng không.","dung":false},{"nhan":"b","noi_dung_html":"Gia tốc cực đại của pit-tông là $\\text{45000}{{\\text{ }\\!\\!\\pi\\!\\!\\text{ }}^{\\text{2}}}\\text{ cm/}{{\\text{s}}^{2}}.$","dung":true},{"nhan":"c","noi_dung_html":"Vận tốc của pit-tông tại thời điểm $t=1{,}25\\text{ s}$ là $-\\text{50 }\\!\\!\\pi\\!\\!\\text{ cm/s}\\text{.}$","dung":false},{"nhan":"d","noi_dung_html":"Gia tốc của pit-tông tại thời điểm $t=1\\text{ s}$ là $-\\text{500}{{\\text{ }\\!\\!\\pi\\!\\!\\text{ }}^{2}}\\text{ cm/s}\\text{.}$","dung":false}],"dap_an":"","loi_giai_html":"<ul class=\"tex-list\"><li>(Sai) Vận tốc cực tiểu của pit-tông có giá trị cực tiểu bằng không. (Vì): Phát biểu này sai. Từ phương trình ta có biên độ $A$ = $12{,}5\\,\\text{cm}$ và tần số góc  = 60 rad/s. Vận tốc cực tiểu của pit-tông có giá trị cực tiểu bằng ${{\\text{v}}_{\\text{mim }\\!\\!~\\!\\!\\text{ }}}\\text{= }-\\text{A}\\omega \\text{ = }-\\text{60 }\\!\\!\\pi\\!\\!\\text{ }\\text{.12,5 = }-\\text{750 }\\!\\!\\pi\\!\\!\\text{ cm/s}\\text{.}$</li><li>(Đúng) Gia tốc cực đại của pit-tông là $\\text{45000}{{\\text{ }\\!\\!\\pi\\!\\!\\text{ }}^{\\text{2}}}\\text{ cm/}{{\\text{s}}^{2}}.$. (Vì): Phát biểu này đúng. Gia tốc cực đại ${{\\text{a}}_{\\text{max}}}\\text{= }{{\\text{ }\\!\\!\\omega\\!\\!\\text{ }}^{\\text{2}}}\\text{A = 60}{{\\text{ }\\!\\!\\pi\\!\\!\\text{ }}^{\\text{2}}}\\text{.12,5 = 45000}{{\\text{ }\\!\\!\\pi\\!\\!\\text{ }}^{\\text{2}}}\\text{ cm/}{{\\text{s}}^{2}}.$</li><li>(Sai) Vận tốc của pit-tông tại thời điểm $t=1{,}25\\text{ s}$ là $-\\text{50 }\\!\\!\\pi\\!\\!\\text{ cm/s}\\text{.}$. (Vì): Phát biểu này sai. Tại $\\text{t = 1,25 s}\\Rightarrow x\\text{ }=\\text{ 12,5cos}\\left( \\text{60 }\\!\\!\\pi\\!\\!\\text{ }\\text{.1,25} \\right)\\text{ = }-\\text{12,5 cm}$ vị trí biên âm. Ở biên âm thì $\\text{v = 0 cm/s}\\text{.}$</li><li>(Sai) Gia tốc của pit-tông tại thời điểm $t=1\\text{ s}$ là $-\\text{500}{{\\text{ }\\!\\!\\pi\\!\\!\\text{ }}^{2}}\\text{ cm/s}\\text{.}$. (Vì): Phát biểu này sai. Gia tốc của pit-tông tại thời điểm $t=1\\text{ s}$là $a=-{{\\omega }^{2}}x=-{{\\left( 60\\pi \\right)}^{2}}.12{,}5\\cos \\left( 60\\pi \\right)=-750{{\\pi }^{2}}\\text{ cm/}{{\\text{s}}^{\\text{2}}}.$</li></ul>"},{"cau":15,"loai":"TLN","ma":"L11C1B3-04-TLN","de_html":"Trong dao động điều hòa, gia tốc của vật khi đi qua vị trí cân bằng có giá trị bằng bao nhiêu?","phuong_an":[],"dung_sai":[],"dap_an":"0","loi_giai_html":"Gia tốc $a=-\\omega^2x$. Tại vị trí cân bằng $x=0$ nên $a=0$."},{"cau":16,"loai":"TLN","ma":"L11C1B3-05-TLN","de_html":"Một vật dao động điều hòa có tần số góc 5 rad/s. Tại thời điểm vật có li độ $2\\,\\text{cm}$, gia tốc của vật theo đơn vị cm/s² bằng bao nhiêu?","phuong_an":[],"dung_sai":[],"dap_an":"-50","loi_giai_html":"a = -ω²x = -5²·2 = - $50\\,\\text{cm}$ /s²."},{"cau":17,"loai":"TLN","ma":"L11C1B3-08-TLN","de_html":"Vật dao động điều hòa với phương trình: $x=20\\cos (2\\pi t-\\pi /2) \\ \\mathrm{cm}$. Lấy $\\pi^2=10$. Độ lớn gia tốc của vật tại vị trí biên là (đơn vị $\\mathrm{cm/s^2}$)","phuong_an":[],"dung_sai":[],"dap_an":"800","loi_giai_html":"$a_{\\max } = \\omega^2 A = (2\\pi)^2 \\cdot 20 = 800 \\ \\mathrm{cm/s^2} = 8 \\ \\mathrm{m/s^2}.$"}];
+  let currentData = JSON.parse(JSON.stringify(originalData));
+  let currentIndex = 0;
+
+  function renderQuestion(index) {
+   const q = currentData[index];
+   const container = document.getElementById('quiz-container');
+   
+   let html = `<div class="question-card active" id="q-${q.cau}">
+    <div class="q-header">
+     <span class="q-title">Câu ${q.cau} ${q.ma ? '(' + q.ma + ')' : ''}</span>
+     <button class="btn-navy" onclick="changeNumbers(${index})" id="btn-change-${index}">Đổi số liệu 🔀</button>
+    </div>
+    <div class="disabled-note" id="note-${index}">Câu hỏi lý thuyết / không đủ dữ kiện đổi số, không thể đổi số.</div>
+    <div class="q-content">${parseLaTeX(q.de_html)}</div>
+   `;
+
+   if (q.loai === "TN") {
+    html += `<div class="options">`;
+    q.phuong_an.forEach((p, i) => {
+     html += `<label class="option">
+      <input type="radio" name="q${q.cau}" value="${p.nhan}">
+      <span style="font-weight:bold; width:25px;">${p.nhan}.</span>
+      <span>${parseLaTeX(p.noi_dung_html)}</span>
+     </label>`;
+    });
+    html += `</div>`;
+   } else if (q.loai === "DS") {
+    html += `<div class="tf-options">`;
+    q.dung_sai.forEach((p, i) => {
+     html += `<div class="tf-item">
+      <div><b>Ý ${p.nhan}:</b> ${parseLaTeX(p.noi_dung_html)}</div>
+      <div class="tf-choices">
+       <label><input type="radio" name="q${q.cau}_${p.nhan}" value="true"> Đúng</label>
+       <label><input type="radio" name="q${q.cau}_${p.nhan}" value="false"> Sai</label>
+      </div>
+     </div>`;
+    });
+    html += `</div>`;
+   } else if (q.loai === "TLN") {
+    html += `<div class="short-answer">
+     <input type="text" id="ans-${q.cau}" placeholder="Nhập câu trả lời...">
+    </div>`;
+   }
+
+   html += `<div class="actions">
+    <button class="btn-success" onclick="checkAnswer(${index})">Kiểm tra</button>
+    <button class="btn-primary" onclick="showSolution(${index})">Xem lời giải</button>
+   </div>
+   <div id="feedback-${index}" class="feedback"></div>
+   <div id="solution-${index}" class="solution-area">
+    <h4>Lời giải:</h4>
+    <div id="sol-content-${index}">${parseLaTeX(q.loi_giai_html)}</div>
+     <section class="learning-panel"><h3>📚 Kiến thức và minh họa</h3><div class="learning-grid">
+      <article class="learning-cell"><h4>📘 Công thức</h4><div id="formula-${index}"></div></article>
+      <article class="learning-cell"><h4>💡 Giải thích</h4><div id="explain-${index}"></div></article>
+      <article class="learning-cell"><h4>📝 Lời giải chi tiết</h4><div id="steps-${index}"></div></article>
+      <article class="learning-cell"><h4>🖼 Hình minh họa</h4><div id="figure-${index}"></div></article>
+     </div></section>
+   </div>
+   </div>`;
+
+   container.innerHTML = html;
+   
+   // Check if theoretically unchangeable
+   const nonChangeable = [0, 1, 2, 3, 4, 5, 14];
+   if (nonChangeable.includes(index)) {
+    document.getElementById(`btn-change-${index}`).disabled = true;
+    document.getElementById(`note-${index}`).style.display = "block";
+   }
+   
+   updateNavButtons();
+   updateGridHighlight();
+  }
+
+  function checkAnswer(index) {
+   const q = currentData[index];
+   const feedback = document.getElementById(`feedback-${index}`);
+   let isCorrect = false;
+   let msg = "";
+
+   if (q.loai === "TN") {
+    const selected = document.querySelector(`input[name="q${q.cau}"]:checked`);
+    if (!selected) {
+     msg = "Vui lòng chọn một đáp án.";
+     feedback.className = "feedback incorrect";
+     feedback.innerHTML = msg;
+     return;
+    }
+    const correctAns = q.phuong_an.find(p => p.dung).nhan;
+    isCorrect = selected.value === correctAns;
+    msg = isCorrect ? "Chính xác! 🎉" : `Sai rồi. Đáp án đúng là ${correctAns}.`;
+   } else if (q.loai === "DS") {
+    let allCorrect = true;
+    let answeredAll = true;
+    q.dung_sai.forEach(p => {
+     const sel = document.querySelector(`input[name="q${q.cau}_${p.nhan}"]:checked`);
+     if (!sel) answeredAll = false;
+     else if ((sel.value === "true") !== p.dung) allCorrect = false;
+    });
+    if (!answeredAll) {
+     msg = "Vui lòng chọn Đúng/Sai cho tất cả các ý.";
+     feedback.className = "feedback incorrect";
+     feedback.innerHTML = msg;
+     return;
+    }
+    isCorrect = allCorrect;
+    msg = isCorrect ? "Chính xác toàn bộ! 🎉" : "Có ý chưa đúng, hãy xem lại!";
+   } else if (q.loai === "TLN") {
+    const val = document.getElementById(`ans-${q.cau}`).value.trim();
+    if (!val) {
+     msg = "Vui lòng nhập câu trả lời.";
+     feedback.className = "feedback incorrect";
+     feedback.innerHTML = msg;
+     return;
+    }
+    // allow slight variations
+    isCorrect = val.toLowerCase() === String(q.dap_an).toLowerCase();
+    msg = isCorrect ? "Chính xác! 🎉" : `Sai rồi. Đáp án đúng là ${q.dap_an}.`;
+   }
+
+   feedback.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+   feedback.innerHTML = msg;
+  }
+
+  function renderLearning(index){
+   const q=currentData[index];
+   const formulas=['$a=-\\omega^2x$','$v_{\\max}=\\omega A$','$a_{\\max}=\\omega^2A$'];
+   document.getElementById('formula-'+index).innerHTML=formulas.map(f=>'<p>'+parseLaTeX(f)+'</p>').join('');
+   document.getElementById('explain-'+index).textContent='Trong dao động điều hòa, gia tốc ngược hướng với li độ và luôn hướng về vị trí cân bằng. Độ lớn gia tốc tỉ lệ với độ lớn li độ; tại vị trí cân bằng gia tốc bằng 0.';
+   document.getElementById('steps-'+index).innerHTML=parseLaTeX(q.loi_giai_html||'Ngân hàng chưa có lời giải chi tiết.');
+   document.getElementById('figure-'+index).innerHTML=`<svg viewBox="0 0 440 176" role="img" aria-label="Gia tốc luôn hướng về vị trí cân bằng">
+     <line x1="24" y1="90" x2="420" y2="90" stroke="#334155" stroke-width="2"/><path d="M408 82 L420 90 L408 98" stroke="#334155" stroke-width="2" fill="none"/>
+     <g fill="#334155" font-size="13"><text x="48" y="114">−A</text><text x="216" y="114">O</text><text x="390" y="114">+A</text><text x="426" y="94">x</text></g>
+     <line x1="220" y1="57" x2="220" y2="120" stroke="#64748b" stroke-dasharray="4 3"/><circle cx="345" cy="90" r="11" fill="#0ea5e9"/>
+     <line x1="336" y1="64" x2="251" y2="64" stroke="#dc2626" stroke-width="4"/><polygon points="251,64 265,56 265,72" fill="#dc2626"/>
+     <text x="286" y="49" font-size="15" fill="#b91c1c">a hướng về O</text><text x="19" y="153" font-size="13" fill="#475569">Sơ đồ nguyên lí, không theo tỉ lệ dữ kiện của câu.</text></svg>`;
+  }
+
+  function showSolution(index) {
+   document.getElementById(`solution-${index}`).style.display = "block";
+  }
+
+  function nextQuestion() {
+   if (currentIndex < currentData.length - 1) {
+    currentIndex++;
+    renderQuestion(currentIndex);
+   }
+  }
+
+  function prevQuestion() {
+   if (currentIndex > 0) {
+    currentIndex--;
+    renderQuestion(currentIndex);
+   }
+  }
+
+  function updateNavButtons() {
+   document.getElementById('btnPrev').disabled = currentIndex === 0;
+   document.getElementById('btnNext').disabled = currentIndex === currentData.length - 1;
+  }
+
+  function openQList() {
+   const grid = document.getElementById('qListGrid');
+   grid.innerHTML = '';
+   currentData.forEach((q, i) => {
+    const btn = document.createElement('div');
+    btn.className = `q-grid-btn ${i === currentIndex ? 'current' : ''}`;
+    btn.innerHTML = q.cau;
+    btn.onclick = () => {
+     currentIndex = i;
+     renderQuestion(i);
+     closeQList();
+    };
+    grid.appendChild(btn);
+   });
+   document.getElementById('qListModal').style.display = 'flex';
+  }
+
+  function closeQList() {
+   document.getElementById('qListModal').style.display = 'none';
+  }
+
+  function updateGridHighlight() {
+   const btns = document.querySelectorAll('.q-grid-btn');
+   btns.forEach((btn, i) => {
+    if (i === currentIndex) btn.classList.add('current');
+    else btn.classList.remove('current');
+   });
+  }
+
+  function toggleFullScreen() {
+   if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+     alert(`Error attempting to enable full-screen mode: ${err.message}`);
+    });
+   } else {
+    if (document.exitFullscreen) {
+     document.exitFullscreen();
+    }
+   }
+  }
+  
+  // Random helpers
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function randChoice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function simplifyFraction(num, den) {
+   let a = Math.abs(num), b = Math.abs(den);
+   while (b) { let t = b; b = a % b; a = t; }
+   return [(num/a) * (den < 0 ? -1 : 1), Math.abs(den/a)];
+  }
+  function formatFrac(num, den) {
+   let [n, d] = simplifyFraction(num, den);
+   if (d === 1) return `${n}`;
+   return `\\dfrac{${n}}{${d}}`;
+  }
+
+  // Logic to change numbers
+  function changeNumbers(index) {
+   const q = currentData[index];
+   const oldData = originalData[index];
+   
+   // Re-parse the old to start fresh template
+   let newQ = JSON.parse(JSON.stringify(oldData));
+   
+   if (index === 6 || index === 7) { 
+    // Q7 & Q8: a = k * a_max, x = -k * A
+    let A = randChoice([4, 5, 6, 8, 10, 12]);
+    let a_max = randChoice([4, 6, 8, 10, 12]);
+    let k_type = randChoice([1, 2, 3]); // 1: 1/2, 2: sqrt(2)/2, 3: sqrt(3)/2
+    let sign = randChoice([1, -1]);
+    let a_val, x_val, a_str, x_str;
+    
+    if (k_type === 1) { // a = +- a_max / 2
+     let a = sign * a_max / 2;
+     let x = -sign * A / 2;
+     a_str = a % 1 === 0 ? a.toString() : formatFrac(sign * a_max, 2);
+     x_str = x % 1 === 0 ? x.toString() : formatFrac(-sign * A, 2);
+     a_val = a; x_val = x;
+    } else if (k_type === 2) { // a = +- a_max * sqrt(2)/2
+     a_str = formatFrac(sign * a_max, 2) + "\\sqrt{2}";
+     if(sign*a_max/2 === 1) a_str = "\\sqrt{2}";
+     if(sign*a_max/2 === -1) a_str = "-\\sqrt{2}";
+     x_str = formatFrac(-sign * A, 2) + "\\sqrt{2}";
+     if(-sign*A/2 === 1) x_str = "\\sqrt{2}";
+     if(-sign*A/2 === -1) x_str = "-\\sqrt{2}";
+    } else { // sqrt(3)/2
+     a_str = formatFrac(sign * a_max, 2) + "\\sqrt{3}";
+     if(sign*a_max/2 === 1) a_str = "\\sqrt{3}";
+     if(sign*a_max/2 === -1) a_str = "-\\sqrt{3}";
+     x_str = formatFrac(-sign * A, 2) + "\\sqrt{3}";
+     if(-sign*A/2 === 1) x_str = "\\sqrt{3}";
+     if(-sign*A/2 === -1) x_str = "-\\sqrt{3}";
+    }
+    
+    newQ.de_html = `Cho một chất điểm dao động điều hòa với biên độ $${A}cm,$ gia tốc cực đại là $${a_max}\\text{m/}{{\\text{s}}^{\\text{2}}}.$ Khi gia tốc là $${a_str}m\\text{/}{{s}^{2}}$ thì li độ bằng`;
+    
+    // Distractors
+    let d1 = x_str;
+    let d2 = x_str.startsWith("-") ? x_str.substring(1) : "-" + x_str;
+    
+    let alt_x = formatFrac(-sign * A, 2) + (k_type===3 ? "" : "\\sqrt{3}");
+    if(-sign*A/2 === 1) alt_x = (k_type===3 ? "1" : "\\sqrt{3}");
+    if(-sign*A/2 === -1) alt_x = (k_type===3 ? "-1" : "-\\sqrt{3}");
+    
+    let d3 = alt_x;
+    let d4 = alt_x.startsWith("-") ? alt_x.substring(1) : "-" + alt_x;
+    if(d3 === d1 || d3 === d2) { d3 = "0"; d4 = `\\pm ${A}`; }
+    
+    let choices = [
+     {n: d1, d: true}, {n: d2, d: false}, {n: d3, d: false}, {n: d4, d: false}
+    ].sort(() => Math.random() - 0.5);
+    
+    newQ.phuong_an = choices.map((c, i) => ({
+     nhan: String.fromCharCode(65+i),
+     noi_dung_html: `$${c.n}cm.$`,
+     dung: c.d
+    }));
+    
+    newQ.loi_giai_html = `Ta có $a = -\\omega^2 x = -\\frac{a_{\\max}}{A} x$.<br>Thay số: $${a_str} = -\\frac{${a_max}}{${A}} x \\Rightarrow x = ${x_str}cm.$`;
+   }
+   
+   else if (index === 8) { // Q9: x = A cos(omega t + phi). a_max = ?
+    let A = randInt(2, 10);
+    let w = randInt(2, 10);
+    let phi_n = randChoice([1, -1]) * randInt(1, 5);
+    let phi_d = randChoice([2, 3, 4, 6]);
+    let phi = formatFrac(phi_n, phi_d) + "\\pi";
+    
+    let ans = w * w * A; // * pi^2
+    newQ.de_html = `Một vật dao động điều hòa với phương trình $x = ${A}\\cos(${w}\\pi t + ${phi})\\,\\mathrm{cm}$. Tìm gia tốc cực đại của vật.`;
+    
+    let d1 = `${ans}\\pi^2 \\text{ cm/s}^2`;
+    let d2 = `${w * A}\\pi^2 \\text{ cm/s}^2`;
+    let d3 = `${ans/2}\\pi^2 \\text{ cm/s}^2`;
+    let d4 = `${ans * 2}\\pi^2 \\text{ cm/s}^2`;
+    
+    let choices = [
+     {n: d1, d: true}, {n: d2, d: false}, {n: d3, d: false}, {n: d4, d: false}
+    ].sort(() => Math.random() - 0.5);
+    
+    newQ.phuong_an = choices.map((c, i) => ({
+     nhan: String.fromCharCode(65+i),
+     noi_dung_html: c.n,
+     dung: c.d
+    }));
+    
+    newQ.loi_giai_html = `Gia tốc cực đại $a_{\\max} = \\omega^2 A$.<br>Với $\\omega = ${w}\\pi$ rad/s, $A = ${A}\\,\\mathrm{cm}$.<br>$a_{\\max} = (${w}\\pi)^2 \\cdot ${A} = ${ans}\\pi^2 \\text{ cm/s}^2.$`;
+   }
+   else if (index === 9) { // Q10: x = A cos(w t - 0.2). a_max = ?
+    let A = randInt(2, 10);
+    let w = randInt(2, 12);
+    let ans = w * w * A;
+    
+    newQ.de_html = `Một vật dao động điều hòa với phương trình $x=${A}\\cos\\left( ${w}t-0{,}2 \\right)\\text{cm},\\text{t}$ tính bằng s. Gia tốc lớn nhất của vật trong quá trình giao động là`;
+    
+    let choices = [
+     {n: `${ans}\\,\\mathrm{cm/s^2}`, d: true},
+     {n: `${w * A}\\,\\mathrm{cm/s^2}`, d: false},
+     {n: `${ans/2}\\,\\mathrm{cm/s^2}`, d: false},
+     {n: `${ans*2}\\,\\mathrm{cm/s^2}`, d: false}
+    ].sort(() => Math.random() - 0.5);
+    
+    newQ.phuong_an = choices.map((c, i) => ({
+     nhan: String.fromCharCode(65+i),
+     noi_dung_html: `$${c.n}$`,
+     dung: c.d
+    }));
+    
+    newQ.loi_giai_html = `$a_{\\max} = \\omega^2 A = ${w}^2 \\cdot ${A} = ${ans} \\, \\mathrm{cm/s^2}$.`;
+   }
+   else if (index === 10) { // Q11: v_max = w*A, a_max = w^2*A -> A
+    let A = randInt(2, 8);
+    let w = randInt(2, 10);
+    let v = w * A; // * pi
+    let a = w * w * A; // * pi^2
+    
+    newQ.de_html = `Dao động điều hòa có phương trình $x = A \\cos (\\omega t + \\varphi)$. Nếu vật có vận tốc cực đại $v_{\\max} = ${v}\\pi \\, \\mathrm{cm/s}$ và gia tốc cực đại $a_{\\max} = ${a}\\pi^2 \\, \\mathrm{cm/s^2}$, thì biên độ dao động là`;
+    
+    let choices = [
+     {n: `${A}\\text{cm}`, d: true},
+     {n: `${A*2}\\text{cm}`, d: false},
+     {n: `${w}\\text{cm}`, d: false},
+     {n: `${v}\\text{cm}`, d: false}
+    ].sort(() => Math.random() - 0.5);
+    
+    newQ.phuong_an = choices.map((c, i) => ({
+     nhan: String.fromCharCode(65+i),
+     noi_dung_html: `$${c.n}$`,
+     dung: c.d
+    }));
+    
+    newQ.loi_giai_html = `$\\omega = \\dfrac{a_{\\max}}{v_{\\max}} = \\dfrac{${a}\\pi^2}{${v}\\pi} = ${w}\\pi$ (rad/s), $A = \\dfrac{v_{\\max}}{\\omega} = \\dfrac{${v}\\pi}{${w}\\pi} = ${A}$ (cm)`;
+   }
+   else if (index === 11) { // Q12: a = -w^2 x
+    let A = randInt(4, 10) * 2; // Even
+    let w = randInt(2, 6);
+    let half = A/2;
+    
+    newQ.de_html = `Một vật dao động điều hoà theo phương trình $x=${A}\\cos\\left( ${w}\\pi t-\\dfrac{\\pi}{2} \\right)\\text{ cm}$. Gia tốc của vật khi vật đi qua li độ $${half}\\sqrt{3}\\text{ cm}$ là`;
+    
+    let ans_coeff = -w * w * half; // a = -w^2 * pi^2 * x
+    let ans = `${ans_coeff}\\pi^2\\sqrt{3}\\text{ cm/s}^2`;
+    
+    let choices = [
+     {n: ans, d: true},
+     {n: `${-ans_coeff}\\pi^2\\sqrt{3}\\text{ cm/s}^2`, d: false},
+     {n: `${ans_coeff*2}\\pi^2\\sqrt{3}\\text{ cm/s}^2`, d: false},
+     {n: `${-ans_coeff*2}\\pi^2\\sqrt{3}\\text{ cm/s}^2`, d: false}
+    ].sort(() => Math.random() - 0.5);
+    
+    newQ.phuong_an = choices.map((c, i) => ({
+     nhan: String.fromCharCode(65+i),
+     noi_dung_html: `$${c.n}$`,
+     dung: c.d
+    }));
+    
+    newQ.loi_giai_html = `$\\omega = ${w}\\pi\\text{ rad/s}$. $a = -\\omega^2 x = -(${w}\\pi)^2 \\cdot ${half}\\sqrt{3} = ${ans_coeff}\\pi^2\\sqrt{3}\\text{ cm/s}^2$.`;
+   }
+   else if (index === 12) { // Q13: DS
+    let A = randInt(4, 12);
+    let w = randInt(2, 8);
+    let vmax = A * w;
+    let amax = A * w * w;
+    
+    newQ.de_html = `Một vật dao động điều hòa theo phương trình $x = ${A}\\cos\\!\\left(${w}\\pi t + \\dfrac{\\pi}{6}\\right)\\ (\\mathrm{cm})$. <br> Chọn Đúng hoặc Sai cho các phát biểu sau:`;
+    
+    let tf = [
+     { nhan: "a", noi_dung_html: `Tốc độ cực đại của vật là $${vmax}\\pi\\ \\mathrm{cm/s}$`, dung: true },
+     { nhan: "b", noi_dung_html: `Gia tốc cực đại là $${amax}\\pi^2\\ \\mathrm{cm/s^2}$`, dung: true },
+     { nhan: "c", noi_dung_html: `Tốc độ cực đại bằng gia tốc cực đại`, dung: false },
+     { nhan: "d", noi_dung_html: `Biên độ dao động của vật là $${A*2}\\ \\mathrm{cm}$`, dung: false }
+    ];
+    
+    // Maybe randomly swap true/false to make it dynamic
+    if (Math.random() > 0.5) { tf[0].noi_dung_html = `Tốc độ cực đại của vật là $${vmax*2}\\pi\\ \\mathrm{cm/s}$`; tf[0].dung = false; }
+    if (Math.random() > 0.5) { tf[3].noi_dung_html = `Biên độ dao động của vật là $${A}\\ \\mathrm{cm}$`; tf[3].dung = true; }
+    
+    newQ.dung_sai = tf;
+    
+    newQ.loi_giai_html = `<ul class="tex-list">
+     <li>Ý a: Tốc độ cực đại $v_{\\max} = A\\omega = ${A} \\cdot ${w}\\pi = ${vmax}\\pi\\ \\mathrm{cm/s}$. Phát biểu này là ${tf[0].dung ? 'Đúng' : 'Sai'}.</li>
+     <li>Ý b: Gia tốc cực đại $a_{\\max} = A\\omega^2 = ${A} \\cdot (${w}\\pi)^2 = ${amax}\\pi^2\\ \\mathrm{cm/s^2}$. Phát biểu này là ${tf[1].dung ? 'Đúng' : 'Sai'}.</li>
+     <li>Ý c: Tốc độ cực đại và gia tốc cực đại khác nhau về đơn vị, không thể bằng nhau. Phát biểu này là Sai.</li>
+     <li>Ý d: Biên độ dao động $A = ${A}\\mathrm{cm}$. Phát biểu này là ${tf[3].dung ? 'Đúng' : 'Sai'}.</li>
+    </ul>`;
+   }
+   else if (index === 13) { // Q14: DS Pit-tong
+    let A = randChoice([10, 12, 15, 20]);
+    let w = randChoice([40, 50, 60, 80]);
+    let amax = A * w * w;
+    let vmin = -A * w;
+    
+    newQ.de_html = `[TTN] Pit-tông bên trong đông cơ ô tô dao động lên và xuống khi động cơ ô tô hoạt động như hình bên. Các dao động này được coi là dao động điều hòa với phương trình li độ của pit-tông là $x=${A}\\cos \\left( ${w}\\pi t \\right)\\left( cm,\\text{s} \\right).$`;
+    
+    let t_c = 1.25; // x = A cos(1.25 w pi)
+    // keep logic simple
+    let tf = [
+     { nhan: "a", noi_dung_html: `Vận tốc cực tiểu của pit-tông có giá trị cực tiểu bằng không.`, dung: false },
+     { nhan: "b", noi_dung_html: `Gia tốc cực đại của pit-tông là $${amax}{{\\text{ }\\!\\!\\pi\\!\\!\\text{ }}^{\\text{2}}}\\text{ cm/}{{\\text{s}}^{2}}.$`, dung: true },
+     { nhan: "c", noi_dung_html: `Vận tốc cực đại của pit-tông là $${A*w}\\pi\\text{ cm/s}\\text{.}$`, dung: true },
+     { nhan: "d", noi_dung_html: `Gia tốc của pit-tông tại thời điểm $t=1\\text{ s}$ là $${amax}{{\\text{ }\\!\\!\\pi\\!\\!\\text{ }}^{2}}\\text{ cm/s}\\text{.}$`, dung: false }
+    ];
+    newQ.dung_sai = tf;
+    
+    newQ.loi_giai_html = `<ul class="tex-list">
+     <li>Ý a: Sai. Vận tốc cực tiểu là $-\\omega A = -${A*w}\\pi$.</li>
+     <li>Ý b: Đúng. Gia tốc cực đại $a_{\\max} = \\omega^2 A = ${w}^2 \\cdot ${A} = ${amax}\\pi^2$.</li>
+     <li>Ý c: Đúng. Vận tốc cực đại $v_{\\max} = \\omega A = ${w} \\cdot ${A} = ${A*w}\\pi$.</li>
+     <li>Ý d: Sai. Gia tốc tại t=1s là $a = -\\omega^2 A \\cos(${w}\\pi) = -${amax}\\pi^2 \\cos(${w}\\pi) = -${amax}\\pi^2$ (do ${w} là chẵn). Nhưng đơn vị gia tốc là $cm/s^2$, ở đây đề ghi $cm/s$ là sai. Hoặc giá trị âm.</li>
+    </ul>`;
+   }
+   else if (index === 15) { // Q16: a = -w^2 x
+    let w = randInt(3, 8);
+    let x = randInt(2, 5);
+    let a = -w * w * x;
+    newQ.de_html = `Một vật dao động điều hòa có tần số góc ${w} rad/s. Tại thời điểm vật có li độ $${x}\\,\\text{cm}$, gia tốc của vật theo đơn vị cm/s² bằng bao nhiêu?`;
+    newQ.dap_an = a.toString();
+    newQ.loi_giai_html = `a = -ω²x = -${w}²·${x} = ${a} cm/s².`;
+   }
+   else if (index === 16) { // Q17: a_max = w^2 A, pi^2=10
+    let A = randInt(10, 30);
+    let w = randInt(2, 5) * 2; // e.g. 4pi -> w=2 (wait, 2pi -> w=2, w=2pi in text)
+    // text: cos(W pi t)
+    let W = randInt(2, 6); // W*pi
+    let a_max = W * W * 10 * A;
+    
+    newQ.de_html = `Vật dao động điều hòa với phương trình: $x=${A}\\cos (${W}\\pi t-\\pi /2) \\ \\mathrm{cm}$. Lấy $\\pi^2=10$. Độ lớn gia tốc của vật tại vị trí biên là (tính bằng $cm/s^2$)`;
+    newQ.dap_an = a_max.toString();
+    newQ.loi_giai_html = `$a_{\\max } = \\omega^2 A = (${W}\\pi)^2 \\cdot ${A} = ${W*W} \\cdot 10 \\cdot ${A} = ${a_max} \\ \\mathrm{cm/s^2}.$`;
+   }
+
+   currentData[index] = newQ;
+   renderQuestion(index);
+  }
+
+  window.onload = () => {
+   renderQuestion(0);
+  };
+ </script>
+</body>
+</html>
