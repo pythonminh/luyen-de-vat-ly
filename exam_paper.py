@@ -727,13 +727,13 @@ def render_exam(auto_print=False):
         "<p><label><b>Đề hiện tại — sửa các số liệu ở đây nếu muốn</b>"
         "<textarea id='exVarStem' style='width:100%;min-height:75px;box-sizing:border-box;font:13px/1.4 monospace'>" + _esc((first_question or {}).get("text")) + "</textarea></label></p>"
         "<div id='exVarManual' style='margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff'>"
-        "<b>Người dùng tự nhập — không cần AI</b>"
+        "<b>Phương án và lời giải (có thể sửa tay hoặc tính lại bằng AI)</b>"
         "<div id='exVarOptions'></div>"
         "<label>Đáp án mới (trả lời ngắn / tự luận)<input id='exVarAnswer' value='" + _esc((first_question or {}).get("answer")) + "' style='width:100%;padding:7px'></label>"
         "<p><label>Lời giải theo số mới<textarea id='exVarSolution' style='width:100%;min-height:70px;box-sizing:border-box'>" + _esc((first_question or {}).get("solution")) + "</textarea></label></p>"
         "<button type='button' class='btn primary' id='exVarManualSave'>💾 Lưu số liệu và đáp án tự nhập</button>"
         "</div>"
-        "<button type='button' class='btn' id='exVarGenerate'>🤖 Nhờ AI đổi số và tính đáp án</button>"
+        "<button type='button' class='btn' id='exVarGenerate'>🧮 Tính lại đáp án theo số đã sửa (AI)</button>"
         "<div id='exVarState' role='status' style='margin-top:10px'></div>"
         "<div id='exVarReview' hidden style='margin-top:10px;padding:12px;border:1px solid #cbd5e1;background:white;border-radius:8px'>"
         "<b>Kiểm tra kỹ nội dung AI sinh ra trước khi áp dụng</b>"
@@ -832,6 +832,21 @@ def render_exam(auto_print=False):
      if(!d.stem||!d.solution||d.kind!==q.kind)throw Error('Đề hoặc lời giải trả về chưa hợp lệ.');
      if(['TN','DS'].includes(q.kind)&&(!Array.isArray(d.options)||d.options.length!==4))throw Error('Chưa đủ 4 đáp án.');
      candidate=d;
+     // Cập nhật ngay các ô nhập để giáo viên thấy đáp án mới cạnh đề đã sửa.
+     // Chỉ lưu khi giáo viên bấm xác nhận; AI không tự ghi vào ngân hàng.
+     stemEl.value=d.stem;
+     document.getElementById('exVarAnswer').value=d.answer||'';
+     document.getElementById('exVarSolution').value=d.solution||'';
+     if(['TN','DS'].includes(q.kind)){
+       const incoming=d.options||[];
+       const fields=[...document.querySelectorAll('#exVarOptions [data-opt]')];
+       fields.forEach((el,i)=>{
+         if(!incoming[i])return;
+         el.value=incoming[i].text||'';
+         const ck=document.querySelector('#exVarOptions [data-correct="'+i+'"]');
+         if(ck)ck.checked=!!incoming[i].correct;
+       });
+     }
      preview.innerHTML='<h4>Đề mới</h4><div>'+d.stem_html+'</div>'+
        (d.opt_html||'')+'<h4>Đáp án</h4><div>'+esc(q.kind==='TN'?
          'ABCD'.charAt(d.options.findIndex(o=>o.correct)):d.answer||'Xem các ý đúng/sai ở trên')+'</div>'+
@@ -840,7 +855,7 @@ def render_exam(auto_print=False):
      review.hidden=false;
      apply.disabled=false;
      if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([preview]).catch(()=>{});
-     state.textContent='✅ AI đã tạo xong sau '+Math.round((performance.now()-started)/1000)+' giây. Chờ giáo viên xác nhận.';
+     state.textContent='✅ Đã tính lại đáp án và điền vào các ô sau '+Math.round((performance.now()-started)/1000)+' giây. Hãy kiểm tra rồi bấm Lưu số liệu và đáp án tự nhập.';
    }catch(e){state.textContent='❌ '+String(e.message||e)}
    finally{clearInterval(timer);working=false;gen.disabled=false}
  };
