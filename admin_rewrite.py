@@ -3829,7 +3829,7 @@ function showEditor(box, d){
   };
   previewBox(box);
 }
-async function loadRewrite(src, fi, box, mode){
+async function loadRewrite(src, fi, box, mode, extra){
   // Đồng hồ đo thời gian thực. Thanh chạy vô định vì API chưa phát tiến độ thực.
   if(box._rwTimer) clearInterval(box._rwTimer);
   const title=mode==='edit'?'Đang tải lời giải hiện tại':(mode==='similar'?'AI đang phát triển câu và lời giải':'AI đang viết lại đề và lời giải');
@@ -3851,6 +3851,7 @@ async function loadRewrite(src, fi, box, mode){
   let success=false;
   try{
     const body={src:src,file_idx:fi,mode:mode||'ai'};
+    if(mode==='custom'&&extra){body.target_level=extra.target_level;body.requirements=extra.requirements;body.stem=extra.stem||'';}
     if(mode!=='edit') body.api_keys=keys();
     if(mode!=='edit'&&!(body.api_keys||[]).length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');box.innerHTML='';return;}
     const r=await fetch('/api/admin/rewrite-question',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
@@ -3943,6 +3944,62 @@ window.ldvlAdminNotebookPrompt=function(src,fi,box){
   host.setAttribute('data-fi', String(fi));
   rwLoadNotebook(host);
 };
+// Cho từng câu trong ngân hàng: lựa chọn độ khó và yêu cầu AI riêng.
+function rwEnsureCustomButton(bar){
+  if(!bar || bar.querySelector('.rwcustom-toggle'))return;
+  const ref=bar.querySelector('.rwsim')||bar.querySelector('.rwgo');
+  if(!ref)return;
+  const button=document.createElement('button');
+  button.type='button';button.className='btn mini rwcustom-toggle';
+  button.textContent='🎯 Đổi mức độ + yêu cầu';
+  ref.insertAdjacentElement('afterend',button);
+}
+function rwPrepareCustom(){
+  document.querySelectorAll('.rwbar').forEach(rwEnsureCustomButton);
+}
+rwPrepareCustom();
+if(window.MutationObserver){
+  const watcher=new MutationObserver(function(records){
+    const added=records.some(function(rec){return rec.addedNodes&&rec.addedNodes.length;});
+    if(added)rwPrepareCustom();
+  });
+  watcher.observe(document.body,{childList:true,subtree:true});
+}
+document.addEventListener('click',function(e){
+  const toggle=e.target.closest&&e.target.closest('.rwcustom-toggle');
+  if(toggle){
+    e.preventDefault();
+    const bar=toggle.closest('.rwbar');if(!bar)return;
+    let panel=bar.querySelector('.rwcustom-panel');
+    if(panel){panel.remove();return}
+    panel=document.createElement('div');panel.className='rwcustom-panel';
+    panel.style.cssText='margin:9px 0;padding:12px;border:1px solid #93c5fd;border-radius:9px;background:#eff6ff';
+    panel.innerHTML='<b>🎯 Thay đổi mức độ câu hỏi</b>'+
+      '<p><label>Mức độ mới <select class="rwcustom-level" style="padding:6px;margin:5px">'+
+      '<option value="NB">NB – Nhận biết</option><option value="TH">TH – Thông hiểu</option>'+
+      '<option value="VD">VD – Vận dụng</option><option value="VDC">VDC – Vận dụng cao</option></select></label></p>'+
+      '<label>Yêu cầu bổ sung của giáo viên<textarea class="rwcustom-requirements" rows="3" '+
+      'placeholder="Ví dụ: nâng lên vận dụng cao, thêm dữ kiện, giải nhiều bước, không làm tròn…" '+
+      'style="width:100%;box-sizing:border-box;margin:5px 0;padding:7px"></textarea></label>'+
+      '<button type="button" class="btn primary rwcustom-run">🤖 Tạo câu theo mức độ đã chọn</button>'+
+      '<p style="font-size:12px">Bản mới chỉ được lưu vào ngân hàng sau khi xem trước và chấp nhận.</p>';
+    const out=bar.querySelector('.rwout');
+    if(out)out.insertAdjacentElement('beforebegin',panel);else bar.appendChild(panel);
+    return;
+  }
+  const run=e.target.closest&&e.target.closest('.rwcustom-run');
+  if(!run)return;
+  e.preventDefault();
+  const bar=run.closest('.rwbar'),panel=run.closest('.rwcustom-panel');
+  if(!bar||!panel)return;
+  const srcButton=bar.querySelector('.rwsim')||bar.querySelector('.rwgo');
+  const p=srcButton&&dropOf(srcButton);
+  if(!p)return;
+  const level=panel.querySelector('.rwcustom-level').value;
+  const requirements=panel.querySelector('.rwcustom-requirements').value.trim();
+  const out=outBox(srcButton);
+  loadRewrite(p.src,p.fi,out,'custom',{target_level:level,requirements:requirements});
+});
 document.addEventListener('click',function(e){
   const go=e.target.closest&&e.target.closest('.rwgo');
   const sim=e.target.closest&&e.target.closest('.rwsim');
