@@ -226,47 +226,56 @@ def _gemini_call(api_key: str, prompt: str, max_tokens: int, temperature: float,
 
 
 def _gemini_fast_one(key: str, model: str, prompt: str, max_tokens: int):
+    """Allow slower reasoning responses while the UI shows elapsed time."""
     try:
-        return _gemini_call(key, prompt, max_tokens, 0.2, True, model, timeout=20)
+        return _gemini_call(key, prompt, max_tokens, 0.2, True, model, timeout=45)
     except urllib.error.HTTPError as exc:
         if exc.code == 400:
-            return _gemini_call(key, prompt, max_tokens, 0.2, False, model, timeout=20)
+            return _gemini_call(key, prompt, max_tokens, 0.2, False, model, timeout=45)
         raise
 
 
 def gemini_fast(keys, prompt: str, max_tokens: int = 1400):
-    """Đổi số: bỏ model 404 ngay, chỉ chờ model key thực sự gọi được."""
-    usable = [str(k).strip() for k in (keys or []) if str(k or "").strip()]
+    """Retry temporary Gemini failures, distinguish rate limits and invalid keys."""
+    usable = list(dict.fromkeys(str(k).strip() for k in (keys or []) if str(k or "").strip()))
     if not usable:
         return "", "Chưa có key Gemini."
-    missed = 0
-    waited = 0
+    last_error = ""
+    missing = 0
+    attempted = 0
     for key in usable[:2]:
         for model in GEMINI_MODELS:
-            try:
-                text, _finish = _gemini_fast_one(key, model, prompt, max_tokens)
-            except urllib.error.HTTPError as exc:
-                if exc.code == 404:
-                    missed += 1
-                    continue
-                waited += 1
-                if waited >= 2:
-                    return "", "Gemini chưa trả lời kịp. Bấm lại."
-                continue
-            except Exception:
-                waited += 1
-                if waited >= 2:
-                    return "", "Gemini chưa trả lời kịp. Bấm lại."
-                continue
-            if text:
-                return text, ""
-            waited += 1
-            if waited >= 2:
-                return "", "Gemini trả về trống. Bấm lại."
-    if missed and not waited:
-        return "", "Key Gemini không gọi được model. Vào mục Gemini, dán key khác rồi bấm lại."
-    return "", "Gemini chưa trả lời kịp. Bấm lại."
-
+            for retry in range(2):
+                attempted += 1
+                try:
+                    result, finish = _gemini_fast_one(key, model, prompt, max_tokens)
+                    if result:
+                        return result, ""
+                    last_error = "Gemini trả về nội dung trống."
+                    if finish == "MAX_TOKENS":
+                        last_error = "Gemini cần thêm dung lượng để tạo đủ lời giải."
+                        break
+                except urllib.error.HTTPError as exc:
+                    if exc.code == 404:
+                        missing += 1
+                        break
+                    if exc.code in (401, 403):
+                        last_error = "Key Gemini bị từ chối (401/403). Kiểm tra lại key."
+                        break
+                    if exc.code == 429:
+                        last_error = "Gemini đang giới hạn lượt gọi (429). Hãy chờ hoặc dùng key khác."
+                    elif exc.code in (500, 502, 503, 504):
+                        last_error = "Máy chủ Gemini đang bận (" + str(exc.code) + ")."
+                    else:
+                        last_error = "Gemini báo lỗi HTTP " + str(exc.code) + "."
+                        break
+                except Exception as exc:
+                    last_error = "Gemini phản hồi quá lâu hoặc kết nối bị gián đoạn: " + type(exc).__name__
+                if retry == 0:
+                    time.sleep(1.5)
+    if missing and missing == attempted:
+        return "", "Key Gemini không gọi được model. Kiểm tra model hoặc thay key."
+    return "", (last_error or "Gemini chưa phản hồi. Hãy thử lại sau.")
 
 def _http_busy(exc: urllib.error.HTTPError) -> bool:
     return exc.code in (429, 503)
