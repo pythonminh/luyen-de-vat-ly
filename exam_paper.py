@@ -1567,6 +1567,9 @@ def member_exam_variant_apply():
             payload["sha"] = sha
         gh_api(_variant_api_path(token), "PUT", payload)
         exam["variant_active"] = True
+        exam.pop("_variant_loaded", None)
+        for item in exam.get("copies") or []:
+            item.pop("overrides", None)  # Biến thể ở GitHub, không nhét vào cookie.
         session["exam"] = exam
         session.modified = True
         return jsonify(ok=True, message="Đã cập nhật đề và đáp án của mã " + code)
