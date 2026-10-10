@@ -1,0 +1,10 @@
+\begin{tikzpicture}[>=stealth, line cap=round, line join=round, scale=1.05]
+  \draw[->] (-0.15,0) -- (2.35,0) node[below] {$t\,(\mathrm{s})$};
+  \draw[->] (0,-1.55) -- (0,1.7) node[left] {$x\,(\mathrm{cm})$};
+  \foreach \x/\lab in {0.5/0{,}5,1/1,1.5/1{,}5,2/2}
+    \draw (\x,0.06) -- (\x,-0.06) node[below=2pt] {\lab};
+  \draw (0.06,1.2) -- (-0.06,1.2) node[left=2pt] {$3$};
+  \draw (0.06,-1.2) -- (-0.06,-1.2) node[left=2pt] {$-3$};
+  \draw[thick, domain=0:2, samples=200, smooth]
+    plot (\x, {1.2*cos(360*\x)});
+\end{tikzpicture}
