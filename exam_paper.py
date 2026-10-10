@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import html
+import base64
+import secrets
+from app import gh_api, BRANCH
 import io
 import json
 import random
@@ -62,6 +65,9 @@ def load_qs(path):
 def load_exam_qs(exam):
     """Câu của đề đang lưu. Đề cả chương lấy từng bài theo qmap, idx là vị trí trong đề."""
     exam = exam or {}
+    snapshot = exam.get("snapshot_qs")
+    if isinstance(snapshot, list) and snapshot:
+        return snapshot
     qmap = exam.get("qmap") or []
     if not qmap:
         return load_qs(str(exam.get("path") or ""))
@@ -616,6 +622,8 @@ def render_exam(auto_print=False):
         "<button class='btn primary' name='exam_action' value='print' formaction='/member/exam/print'>🖨 In đề</button>"
         "<button class='btn' name='exam_action' value='azota' formaction='/member/exam/azota'>⬇ Word Azota</button>"
         "<button class='btn' name='exam_action' value='xlsx' formaction='/member/exam/xlsx'>⬇ Excel đáp án</button>"
+        "<button class='btn' name='exam_action' value='save'>💾 Lưu đề và đáp án</button>"
+        "<a class='btn' href='/member/exams/saved'>📚 Đề đã lưu</a>"
         f"<button class='btn' name='exam_action' value='key' formaction='/member/exam/key'>{html.escape(key_lab)}</button>"
         + ("" if exam.get("qmap") else "<button class='btn' name='exam_action' value='practice'>▶ Làm bài với đề này</button>")
         + f"<a class='btn' href='{_esc(back)}'>← Chọn lại số câu</a>"
@@ -1206,6 +1214,8 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         session["exam"] = exam
         session.modified = True
         return render_exam(auto_print=False)
+    if action == "save":
+        return save_exam_archive()
     if action == "azota":
         return _azota_download()
     if action == "xlsx":
@@ -1325,6 +1335,115 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         ruled=ruled,
     )
     return render_exam(auto_print=auto_print)
+
+
+
+# Kho lưu đề ở GitHub để không mất khi Render khởi động lại.
+# Mỗi đề là một tệp JSON; mã đề và hoán vị đáp án được cố định.
+_SAVED_PREFIX = "ngan-hang/_de-da-luu/"
+
+
+def _saved_id(raw):
+    value = str(raw or "").strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{24}", value):
+        raise ValueError("Mã đề lưu không hợp lệ.")
+    return value
+
+
+def _saved_api_path(code):
+    return "contents/" + _SAVED_PREFIX + _saved_id(code) + ".json"
+
+
+def _saved_load(code):
+    raw = gh_api(_saved_api_path(code) + "?ref=" + urllib.parse.quote(BRANCH, safe=""))
+    payload = json.loads(base64.b64decode(raw.get("content", "")).decode("utf-8"))
+    if not isinstance(payload, dict) or not isinstance(payload.get("exam"), dict):
+        raise ValueError("Dữ liệu đề không hợp lệ.")
+    return payload, raw.get("sha", "")
+
+
+def save_exam_archive():
+    if not can_manage_bank():
+        return redirect("/member/login")
+    exam = session.get("exam") or {}
+    if not exam.get("copies") or not exam.get("path"):
+        return page("Lưu đề", "<p>Chưa có đề để lưu.</p>")
+    try:
+        qs = load_exam_qs(exam)
+        if not qs:
+            raise ValueError("Không tìm thấy câu hỏi.")
+        frozen = dict(exam)
+        frozen["snapshot_qs"] = qs
+        frozen["show_key"] = False
+        code = secrets.token_hex(12)
+        payload = {
+            "id": code,
+            "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "title": str(exam.get("title") or lesson_title(exam.get("path")))[:200],
+            "exam": frozen,
+        }
+        gh_api(_saved_api_path(code), "PUT", {
+            "message": "Save exam " + code,
+            "content": base64.b64encode(json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")).decode("ascii"),
+            "branch": BRANCH,
+        })
+    except Exception as exc:
+        return page("Lỗi lưu đề", "<div class='wrap'><div class='err'>Không lưu được đề: " + _esc(exc) + "</div><a href='/member/exam'>← Quay lại</a></div>")
+    return redirect("/member/exams/saved?new=" + code)
+
+
+@app.get("/member/exams/saved")
+def member_saved_exams():
+    if not can_manage_bank():
+        return redirect("/member/login")
+    try:
+        rows = gh_api("contents/" + _SAVED_PREFIX.rstrip("/") + "?ref=" + urllib.parse.quote(BRANCH, safe=""))
+        if not isinstance(rows, list):
+            rows = []
+    except Exception as exc:
+        if "404" in str(exc):
+            rows = []
+        else:
+            return page("Đề đã lưu", "<div class='wrap'><div class='err'>Không tải được kho đề: " + _esc(exc) + "</div></div>")
+    items = []
+    for row in rows:
+        name = row.get("name", "")
+        if not re.fullmatch(r"[0-9a-f]{24}\.json", name):
+            continue
+        try:
+            saved, _ = _saved_load(name[:-5])
+            title = _esc(saved.get("title") or "Đề kiểm tra")
+            created = _esc(saved.get("created") or "")
+            code = _esc(name[:-5])
+            copies = saved.get("exam", {}).get("copies") or []
+            n = len((copies[0] if copies else {}).get("ids") or [])
+            items.append("<div style='padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin:10px 0'>"
+                "<b>" + title + "</b><div style='color:#64748b'>Ngày lưu: " + created + " · " + str(n) + " câu · " + str(len(copies)) + " mã đề</div>"
+                "<form method='post' action='/member/exams/open' style='margin-top:8px'>"
+                "<input type='hidden' name='id' value='" + code + "'>"
+                "<button class='btn primary'>📖 Mở lại đề này</button></form></div>")
+        except Exception:
+            continue
+    note = "<p class='success'>✅ Đã lưu đề và đáp án thành công.</p>" if request.args.get("new") else ""
+    return page("Đề đã lưu", "<div class='wrap'><h2>📚 Đề kiểm tra đã lưu</h2>" + note +
+                ("".join(items) if items else "<p>Chưa có đề được lưu.</p>") +
+                "<p><a class='btn' href='/member/exam'>← Quay lại đề hiện tại</a></p></div>")
+
+
+@app.post("/member/exams/open")
+def member_open_saved_exam():
+    if not can_manage_bank():
+        return redirect("/member/login")
+    try:
+        saved, _ = _saved_load(request.form.get("id"))
+        exam = saved["exam"]
+        if not exam.get("copies") or not exam.get("snapshot_qs"):
+            raise ValueError("Đề lưu thiếu dữ liệu.")
+        session["exam"] = exam
+        session.modified = True
+    except Exception as exc:
+        return page("Mở đề", "<div class='wrap'><div class='err'>Không mở được đề: " + _esc(exc) + "</div></div>")
+    return redirect("/member/exam")
 
 
 @app.route("/member/exam", methods=["GET", "POST"])
