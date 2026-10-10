@@ -730,7 +730,7 @@ def _variant_fields(pack, raw):
     return stem, solution, answer, new_opts
 
 
-def live_number_variant(src, fi, keys):
+def live_number_variant(src, fi, keys, requirements=''):
     """Cùng câu, bộ số mới, đáp án tính lại. Không ghi vào ngân hàng."""
     q, _tex = _load_q(src, fi)
     if not q:
@@ -739,6 +739,8 @@ def live_number_variant(src, fi, keys):
         return None, "Chưa có key Gemini. Nạp key ở mục Gemini, hoặc đặt GEMINI_API_KEY trên máy chủ."
     pack = _q_plain_pack(q)
     prompt = _prompt_live_numbers(pack)
+    if str(requirements or '').strip():
+        prompt += '\nYÊU CẦU RIÊNG CỦA GIÁO VIÊN (chỉ đổi số, bảo đảm lời giải và đáp án đồng nhất, không làm tròn):\n' + str(requirements).strip()[:1600] + '\n'
     from student_gemini import gemini_fast
 
     raw, err = gemini_fast(keys, prompt, 1400)
