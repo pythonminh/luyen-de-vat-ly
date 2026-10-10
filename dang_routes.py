@@ -2844,7 +2844,7 @@ def member_number_mix():
     <div id="nmControls"><button type="button" id="nmCheck">✅ Kiểm tra</button>
     <button type="button" id="nmChange">🎲 Đổi số câu này</button>
     <button type="button" id="nmSolution">📖 Xem lời giải</button></div>
-    <div id="nmStatus" aria-live="polite"></div><div id="nmSol" hidden></div>
+    <div id="nmStatus" aria-live="polite"></div><div id="nmSol" hidden></div><section id="nmStudy" class="nm-study" hidden><h3>📚 Học tập theo 4 khối</h3><div class="nm-study-grid"><article><b>📘 Công thức</b><div id="nmFormula"></div></article><article><b>💡 Giải thích</b><div id="nmExplain"></div></article><article><b>📝 Lời giải</b><div id="nmDetail"></div></article><article><b>🖼 Minh họa</b><div id="nmPicture"></div></article></div><button type="button" id="nmStudyPrompt">📋 Sao chép prompt tạo 4 khối</button><button type="button" id="nmStudyGemini">✦ Gemini</button></section>
     <div class="nm-toolbar"><button type="button" id="nmPrev">← Câu trước</button>
     <button type="button" id="nmNext">Câu tiếp →</button></div>
   </section></main></div>
@@ -2863,7 +2863,7 @@ def member_number_mix():
 .nm-question button,.nm-toolbar button{cursor:pointer;padding:9px 13px;margin:4px;border-radius:7px;border:1px solid #93c5fd;background:#eff6ff}
 #nmControls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 #nmStatus{margin:9px 0;font-weight:bold}#nmSol{border:1px solid #cbd5e1;background:#f8fafc;padding:12px;border-radius:8px}
-.nm-progress{height:9px;background:#dbeafe;border-radius:9px;overflow:hidden}
+.nm-study{margin-top:12px;padding:12px;border:1px solid #93c5fd;background:#eff6ff;border-radius:10px}.nm-study-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.nm-study article{padding:12px;background:white;border:1px solid #cbd5e1;border-radius:8px;min-width:0;overflow-wrap:anywhere}.nm-study article b{display:block;margin-bottom:8px}.nm-study button{padding:8px;margin:10px 6px 0 0;border:1px solid #93c5fd;background:white;border-radius:6px;cursor:pointer}@media(max-width:700px){.nm-study-grid{grid-template-columns:1fr}}.nm-progress{height:9px;background:#dbeafe;border-radius:9px;overflow:hidden}
 .nm-progress i{display:block;height:100%;width:30%;background:#2563eb;animation:nm-slide 1.2s linear infinite}
 @keyframes nm-slide{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
 @media print{.nm-nav,.nm-toolbar,#nmControls{display:none}}
@@ -2939,7 +2939,7 @@ function render(){
  else if(q.kind==='DS')h=(q.statements||[]).map((o,i)=>'<label>'+('abcd'[i]||i)+') '+o.text+' <select data-tf="'+i+'"><option value="">Chọn</option><option value="1">Đúng</option><option value="0">Sai</option></select></label>').join('');
  else h='<label>Đáp án của em <input id="nmAnswer" type="text" autocomplete="off" placeholder="Nhập đáp án"></label>';
  el('nmOpts').innerHTML=h;el('nmStatus').textContent=st.checked?(st.correct?'✅ Đã làm đúng':'❌ Chưa đúng'):'';
- el('nmSol').innerHTML=q.solution||'Chưa có lời giải';el('nmSol').hidden=!st.show;
+ el('nmSol').innerHTML=q.solution||'Chưa có lời giải';el('nmSol').hidden=!st.show;renderStudy(q,st.show);
  el('nmPrev').disabled=index===0;el('nmNext').disabled=index===questions.length-1;
  typeset()
 }
@@ -2952,6 +2952,32 @@ el('nmCheck').onclick=()=>{
  else {const input=el('nmAnswer');if(!input.value.trim())return alert('Nhập đáp án');ok=q.kind==='TLN'&&norm(input.value)===norm(q.answer)}
  st.checked=true;st.correct=ok;el('nmStatus').textContent=ok?'✅ Chính xác':'❌ Chưa đúng, hãy kiểm tra cách giải';render()
 };
+
+function renderStudy(q,show){
+ const section=el('nmStudy');section.hidden=!show;if(!show)return;
+ const sol=q.solution||'';const wrapper=document.createElement('div');wrapper.innerHTML=sol;
+ const formulas=[...wrapper.querySelectorAll('math,.katex,.MathJax,script[type^="math/tex"]')].map(n=>n.outerHTML);
+ el('nmFormula').innerHTML=formulas.length?formulas.join(' '):'Xem các hệ thức trong lời giải; chưa có công thức tách riêng.';
+ el('nmExplain').textContent=wrapper.textContent.trim().slice(0,1000)||'Ngân hàng chưa có giải thích cho câu này.';
+ el('nmDetail').innerHTML=sol||'Ngân hàng chưa có lời giải cho câu này.';
+ const figures=document.createElement('div');figures.innerHTML=(q.text||'')+sol;
+ const drawings=[...figures.querySelectorAll('img,svg')];
+ el('nmPicture').innerHTML=drawings.length?drawings.map(n=>n.outerHTML).join(''):'Chưa có hình minh họa trong ngân hàng. Dùng prompt AI để tạo sơ đồ phù hợp.';
+}
+function makeStudyPrompt(){
+ const q=questions[index];
+ return ['TẠO 4 KHỐI HỌC TẬP CHO CÂU HỎI SAU:',
+ '1. Công thức và điều kiện áp dụng. 2. Giải thích bản chất. 3. Lời giải từng bước, kiểm tra đáp án, không làm tròn nếu đề không yêu cầu. 4. Hình minh họa bằng SVG đúng bản chất vật lí/toán.',
+ 'Nếu dữ liệu thiếu hoặc đáp án gốc sai, hãy báo rõ, không bịa. Viết mã HTML/CSS/SVG có thể chèn vào web, không phụ thuộc thư viện.',
+ 'Đề: '+(q.text||''),'Các phương án: '+JSON.stringify(q.options||q.statements||[]),'Đáp án: '+(q.answer||''),'Lời giải: '+(q.solution||'')].join('\n\n');
+}
+async function copyStudyPrompt(){
+ const prompt=makeStudyPrompt();
+ try{await navigator.clipboard.writeText(prompt);alert('Đã sao chép prompt 4 khối.')}
+ catch(e){const box=el('nmPromptExport');box.value=prompt;box.style.display='block';box.focus();box.select();alert('Sao chép prompt đang được chọn trong ô.')}
+}
+el('nmStudyPrompt').onclick=copyStudyPrompt;
+el('nmStudyGemini').onclick=()=>{window.open('https://gemini.google.com/app','_blank','noopener');copyStudyPrompt()};
 el('nmSolution').onclick=()=>{states[index].show=!states[index].show;render()};
 el('nmNext').onclick=()=>{index++;render()};
 el('nmPrev').onclick=()=>{index--;render()};
