@@ -219,7 +219,7 @@ def apply_perm(q, copy):
     idx = str(q.get("idx"))
     variant = (copy.get("overrides") or {}).get(idx)
     if isinstance(variant, dict):
-        q.update({k: variant[k] for k in ("text", "solution", "answer", "options", "statements") if k in variant})
+        q.update({k: variant[k] for k in ("text", "solution", "answer", "options", "statements", "level") if k in variant})
     kind = str(q.get("kind") or "")
     if kind == "TN":
         opts = list(q.get("options") or [])
@@ -871,7 +871,8 @@ def render_exam(auto_print=False):
    working=true;state.textContent='⏳ Đang lưu bản tự nhập…';
    try{
      const r=await fetch('/api/exam/variant/apply',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
-       body:JSON.stringify({code:codeEl.value,idx:+questionEl.value,stem,solution,answer,options})});
+       body:JSON.stringify({code:codeEl.value,idx:+questionEl.value,stem,solution,answer,options,
+          level:document.getElementById('exVarLevel').value==='keep'?'':document.getElementById('exVarLevel').value})});
      const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Không lưu được');
      location.href='/member/exam';
    }catch(e){state.textContent='❌ '+String(e.message||e)}finally{working=false}
@@ -907,6 +908,7 @@ def render_exam(auto_print=False):
      if(['TN','DS'].includes(q.kind)&&(!Array.isArray(d.options)||d.options.length!==4))throw Error('Chưa đủ 4 đáp án.');
      candidate=d;
      if(mode==='custom') d.note=(d.note||'')+' · Mức độ yêu cầu: '+(level==='keep'?'giữ nguyên':level);
+     d.target_level=(level==='keep'?'':level);
      // Cập nhật ngay các ô nhập để giáo viên thấy đáp án mới cạnh đề đã sửa.
      // Chỉ lưu khi giáo viên bấm xác nhận; AI không tự ghi vào ngân hàng.
      stemEl.value=d.stem;
@@ -943,7 +945,7 @@ def render_exam(auto_print=False):
        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
        body:JSON.stringify({code:codeEl.value,idx:+questionEl.value,
          stem:candidate.stem,solution:candidate.solution,
-         answer:candidate.answer,options:candidate.options})
+         answer:candidate.answer,options:candidate.options,level:candidate.target_level||''})
      });
      const d=await r.json();
      if(!r.ok||!d.ok)throw Error(d.error||'Lưu thất bại');
@@ -1790,6 +1792,11 @@ def member_exam_variant_apply():
         if stem == str(q.get("text") or "").strip():
             raise ValueError("Đề chưa được thay số hoặc nội dung.")
         variant = {"text": stem, "solution": sol, "answer": ans}
+        level = str(data.get("level") or "").upper().strip()
+        if level:
+            if level not in {"NB", "TH", "VD", "VDC"}:
+                raise ValueError("Mức độ không hợp lệ.")
+            variant["level"] = level
         if kind in ("TN", "DS"):
             if len(raw_opts) != 4:
                 raise ValueError("Cần đủ bốn phương án hoặc bốn ý đúng/sai.")
