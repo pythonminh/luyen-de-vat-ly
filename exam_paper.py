@@ -539,7 +539,9 @@ def exam_css():
 .exheadblock{display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:6px;align-items:start;border-bottom:1.5px solid #111;padding-bottom:2px;margin-bottom:3px}
 .exschool,.exmeta{font-size:11pt;line-height:1.2}.extitle{text-align:center;font-size:14pt;line-height:1.2}
 .exnote{margin:1px 0 3px}
-.expart{margin:6px 0 2px;font-size:12.5pt;border-bottom:1px solid #bbb;padding-bottom:1px}
+.expart{margin:15px 0 9px;padding:7px 11px;font-size:13pt;font-weight:800;line-height:1.3;color:#114c80;background:#eaf3fc;border-left:5px solid #2476b8;border-bottom:1.5px solid #8bb4d6;letter-spacing:.015em;break-after:avoid;page-break-after:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.expage>.expart:first-child{margin-top:3px}
+@media print{.expart{color:#111;background:#edf3f8!important;border-left:4px solid #333;border-bottom:1px solid #777;margin:12px 0 8px;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 .exq{margin:0 0 9px;padding:3px 0 7px;border-bottom:1px solid #d5dde8;break-inside:avoid;page-break-inside:avoid}
 .exstem{margin:0 0 3px;line-height:1.3}
 .exstem p{margin:0}
