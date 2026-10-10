@@ -3808,16 +3808,40 @@ function showEditor(box, d){
   previewBox(box);
 }
 async function loadRewrite(src, fi, box, mode){
-  box.innerHTML=mode==='edit'?'⏳ Đang tải lời giải hiện tại...':(mode==='similar'?'⏳ Đang phát triển từ câu và tính lời giải, đáp án mới...':'⏳ AI đang viết lại đề và lời giải...');
+  // Đồng hồ đo thời gian thực. Thanh chạy vô định vì API chưa phát tiến độ thực.
+  if(box._rwTimer) clearInterval(box._rwTimer);
+  const title=mode==='edit'?'Đang tải lời giải hiện tại':(mode==='similar'?'AI đang phát triển câu và lời giải':'AI đang viết lại đề và lời giải');
+  const started=performance.now();
+  const fmt=function(ms){const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+  const style='border:1px solid #93c5fd;border-radius:9px;padding:12px;background:#eff6ff;margin:8px 0;color:#1e3a8a';
+  const progress='<div style="height:7px;overflow:hidden;border-radius:9px;background:#bfdbfe;margin:8px 0" role="progressbar" aria-label="Đang xử lý" aria-valuetext="Đang xử lý"><div class="rw-time-moving"></div></div>';
+  if(!document.getElementById('rw-time-style')){
+    const st=document.createElement('style');st.id='rw-time-style';
+    st.textContent='@keyframes rwTimeSlide{0%{transform:translateX(-110%)}100%{transform:translateX(310%)}}.rw-time-moving{width:25%;height:100%;background:#2563eb;border-radius:9px;animation:rwTimeSlide 1.4s ease-in-out infinite}@media(prefers-reduced-motion:reduce){.rw-time-moving{animation:none;width:100%;opacity:.6}}';
+    document.head.appendChild(st);
+  }
+  box.innerHTML='<div style="'+style+'" role="status" aria-live="polite"><b>⏳ '+title+'</b><div class="rw-elapsed" style="font-variant-numeric:tabular-nums;margin-top:5px">Thời gian: 00:00</div>'+progress+'<small>Đang chờ máy chủ phản hồi…</small></div>';
+  const timer=setInterval(function(){
+    const el=box.querySelector('.rw-elapsed');
+    if(el) el.textContent='Thời gian: '+fmt(performance.now()-started);
+  },250);
+  box._rwTimer=timer;
+  let success=false;
   try{
     const body={src:src,file_idx:fi,mode:mode||'ai'};
     if(mode!=='edit') body.api_keys=keys();
     if(mode!=='edit'&&!(body.api_keys||[]).length){alert('Nạp key Gemini (trang 🤖 Gemini) rồi thử lại.');box.innerHTML='';return;}
     const r=await fetch('/api/admin/rewrite-question',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(body)});
     const d=await r.json();
-    if(!d.ok){box.innerHTML='<div class="err">'+(d.error||'Lỗi')+'</div>';return;}
+    if(!d.ok){box.innerHTML='<div class="err">❌ '+esc(d.error||'Lỗi')+' · '+fmt(performance.now()-started)+'</div>';return;}
     showEditor(box,d);
-  }catch(e){box.innerHTML='<div class="err">'+e+'</div>';}
+    success=true;
+  }catch(e){box.innerHTML='<div class="err">❌ '+esc(String(e))+' · '+fmt(performance.now()-started)+'</div>';}
+  finally{
+    clearInterval(timer);
+    if(box._rwTimer===timer) box._rwTimer=null;
+    if(success) box.insertAdjacentHTML('afterbegin','<div role="status" style="'+style+';border-color:#86efac;background:#f0fdf4;color:#166534">✅ Hoàn tất sau <b>'+fmt(performance.now()-started)+'</b>. Kiểm tra nội dung bên dưới trước khi lưu.</div>');
+  }
 }
 function rwFigLine(file){
   return '\\begin{center}\\includegraphics[width=0.55\\linewidth]{'+file+'}\\end{center}\n';
