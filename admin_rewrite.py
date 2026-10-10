@@ -1075,7 +1075,7 @@ def api_rewrite_question():
         return jsonify(ok=False, error="Thiếu Gemini API key."), 400
     from admin_classify import _gemini_once
 
-    variant = mode in {"similar", "recalc"}
+    variant = mode in {"similar", "recalc", "custom"}
     develop = mode == "similar" or bool(data.get("develop"))
 
     def fields_from(raw):
@@ -1118,7 +1118,26 @@ def api_rewrite_question():
             answer, solution = _coerce_tln(answer, solution)
         return stem, solution, answer, new_opts, note
 
-    if variant and mode == "similar":
+    if variant and mode == "custom":
+        level = str(data.get("target_level") or "TH").upper()
+        if level not in {"NB", "TH", "VD", "VDC"}:
+            return jsonify(ok=False, error="Mức độ không hợp lệ."), 400
+        requirements = str(data.get("requirements") or "").strip()[:1800]
+        edited = _clean_tex(str(data.get("stem") or "").strip())[:14000]
+        guidance = {
+            "NB": "Nhận biết: hỏi khái niệm, công thức, đơn vị; một thao tác ngắn.",
+            "TH": "Thông hiểu: giải thích, phân biệt, áp dụng trực tiếp một hoặc hai bước.",
+            "VD": "Vận dụng: có dữ kiện đa dạng, suy luận nhiều bước, không chỉ thay số.",
+            "VDC": "Vận dụng cao: bài tổng hợp, điều kiện ràng buộc, nhiều bước lập luận nhưng vẫn đủ dữ kiện giải được.",
+        }
+        prompt = (_prompt_similar(pack) +
+            "\\nYÊU CẦU BIẾN THỂ RIÊNG: " + guidance[level] +
+            "\\nMức độ đích: " + level +
+            "\\nGiữ đúng loại câu và trọng tâm kiến thức, nhưng ĐƯỢC thay đổi độ phức tạp/cấu trúc để đạt mức độ đích. " +
+            "Tạo đề, bốn phương án nếu có, đáp án chính xác và lời giải thống nhất. KHÔNG được tự làm tròn.\\n" +
+            ("BẢN ĐỀ GIÁO VIÊN ĐÃ CHỈNH ĐỂ LÀM CĂN CỨ:\\n" + edited + "\\n" if edited else "") +
+            ("YÊU CẦU BỔ SUNG CỦA GIÁO VIÊN:\\n" + requirements + "\\n" if requirements else ""))
+    elif variant and mode == "similar":
         prompt = _prompt_similar(pack)
     elif variant:
         prompt = _prompt_recalc(pack, data)
