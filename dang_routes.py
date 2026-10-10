@@ -2802,7 +2802,145 @@ def start_selected_questions():
         practice_done=[],
         practice_ai=True,
     )
+    if request.form.get('practice_mode')=='number_mix':
+        session['number_mix_path']=path
+        session['number_mix_ids']=ids[:120]
+        session.modified=True
+        return redirect('/member/number-mix')
     return redirect('/member/practice')
+
+
+@app.get('/member/number-mix')
+def member_number_mix():
+    """Chương trình luyện nhiều câu từ danh sách đã chọn, không sửa ngân hàng."""
+    m=member_current()
+    path=str(session.get('number_mix_path') or '')
+    ids=[int(i) for i in (session.get('number_mix_ids') or []) if str(i).isdigit()]
+    if not m or not path or not ids or not can_practice(m,path):
+        return redirect(login_url('/member') if not m else '/member')
+    try:
+        qs=parse_lesson_questions(path)
+        if not qs:
+            _,tex=read_tex(path)
+            qs=nest_developments(parse_questions(tex))
+        from app import question_payload
+        by={int(q.get('idx')):q for q in qs if str(q.get('idx','')).isdigit()}
+        items=[question_payload(by[i]) for i in ids if i in by]
+    except Exception as exc:
+        return page('Luyện đổi số', "<p>Không đọc được câu đã chọn: "+html.escape(str(exc))+"</p>")
+    if not items:
+        return page('Luyện đổi số', '<p>Không còn câu hợp lệ.</p>')
+    packed=base64.b64encode(json.dumps(items,ensure_ascii=False).encode('utf-8')).decode('ascii')
+    back=dang_view_url(path,session.get('practice_dang') or '')
+    inner=r"""
+<div class="nm-wrap">
+  <header class="nm-head"><h2>🎲 Chương trình luyện đổi số nhiều câu</h2>
+  <p>Chọn câu từ danh sách, tự làm và kiểm tra. Có thể đổi số từng câu bằng AI; câu gốc không thay đổi.</p>
+  <div class="nm-toolbar"><b id="nmCount"></b><button id="nmReset" type="button">↻ Làm lại bộ này</button>
+  <a href="BACK_URL">← Quay lại ngân hàng</a></div></header>
+  <nav id="nmNav" class="nm-nav"></nav>
+  <main class="nm-body"><section class="nm-question">
+    <h3 id="nmTitle"></h3><div id="nmStem"></div><div id="nmOpts"></div>
+    <div id="nmControls"><button type="button" id="nmCheck">✅ Kiểm tra</button>
+    <button type="button" id="nmChange">🎲 Đổi số câu này</button>
+    <button type="button" id="nmSolution">📖 Xem lời giải</button></div>
+    <div id="nmStatus" aria-live="polite"></div><div id="nmSol" hidden></div>
+    <div class="nm-toolbar"><button type="button" id="nmPrev">← Câu trước</button>
+    <button type="button" id="nmNext">Câu tiếp →</button></div>
+  </section></main></div>
+<div id="nmData" data-json="PACKED" hidden></div>
+<style>
+.nm-wrap{max-width:1050px;margin:12px auto;padding:12px;font-family:Arial,sans-serif}
+.nm-head,.nm-question{background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:16px}
+.nm-head{background:#eff6ff}.nm-head h2{font-size:20px;margin:0 0 6px;color:#123b70}
+.nm-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:10px 0}
+.nm-nav{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.nm-nav button{padding:7px 10px;min-width:44px;border:1px solid #93c5fd;border-radius:7px;background:white;cursor:pointer}
+.nm-nav button.on{background:#1d4ed8;color:white}.nm-nav button.done{border-color:#16a34a}
+.nm-question{font-size:16px;line-height:1.5}.nm-question h3{color:#1d4ed8}
+.nm-question label{display:block;margin:8px 0;padding:9px;border:1px solid #e2e8f0;border-radius:7px;cursor:pointer}
+.nm-question input[type=text]{width:100%;max-width:350px;padding:10px;border:1px solid #93c5fd;border-radius:7px;font-size:17px}
+.nm-question button,.nm-toolbar button{cursor:pointer;padding:9px 13px;margin:4px;border-radius:7px;border:1px solid #93c5fd;background:#eff6ff}
+#nmControls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+#nmStatus{margin:9px 0;font-weight:bold}#nmSol{border:1px solid #cbd5e1;background:#f8fafc;padding:12px;border-radius:8px}
+.nm-progress{height:9px;background:#dbeafe;border-radius:9px;overflow:hidden}
+.nm-progress i{display:block;height:100%;width:30%;background:#2563eb;animation:nm-slide 1.2s linear infinite}
+@keyframes nm-slide{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
+@media print{.nm-nav,.nm-toolbar,#nmControls{display:none}}
+</style>
+<script>
+(function(){
+const data=document.getElementById('nmData');
+let questions;
+try{questions=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(data.dataset.json),c=>c.charCodeAt(0))))}
+catch(e){document.getElementById('nmCount').textContent='Không đọc được bộ câu hỏi';return}
+let index=0;
+const states=questions.map(()=>({checked:false,correct:false,show:false}));
+const el=id=>document.getElementById(id);
+function typeset(){if(window.MathJax&&MathJax.typesetPromise)window.MathJax.typesetPromise().catch(()=>{});}
+function norm(v){return String(v||'').trim().replace(/\s/g,'').replace(/,/g,'.').replace(/^\+/,'').toLowerCase()}
+function render(){
+ const q=questions[index],st=states[index];
+ el('nmCount').textContent=questions.length+' câu đã chọn · '+states.filter(x=>x.checked).length+' câu đã kiểm tra';
+ el('nmNav').innerHTML='';
+ questions.forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.textContent=i+1;b.className=(i===index?'on ':'')+(states[i].checked?'done':'');
+   b.onclick=()=>{index=i;render()};el('nmNav').appendChild(b)});
+ el('nmTitle').textContent='Câu '+(index+1)+' / '+questions.length+' · '+(q.kind==='TLN'?'Trả lời ngắn':q.kind==='DS'?'Đúng/Sai':q.kind==='TN'?'Trắc nghiệm':'Tự luận');
+ el('nmStem').innerHTML=q.text||'';
+ let h='';
+ if(q.kind==='TN')h=(q.options||[]).map((o,i)=>'<label><input type="radio" name="nmAns" value="'+i+'"> '+'ABCD'[i]+'. '+o.text+'</label>').join('');
+ else if(q.kind==='DS')h=(q.statements||[]).map((o,i)=>'<label>'+('abcd'[i]||i)+') '+o.text+' <select data-tf="'+i+'"><option value="">Chọn</option><option value="1">Đúng</option><option value="0">Sai</option></select></label>').join('');
+ else h='<label>Đáp án của em <input id="nmAnswer" type="text" autocomplete="off" placeholder="Nhập đáp án"></label>';
+ el('nmOpts').innerHTML=h;el('nmStatus').textContent=st.checked?(st.correct?'✅ Đã làm đúng':'❌ Chưa đúng'):'';
+ el('nmSol').innerHTML=q.solution||'Chưa có lời giải';el('nmSol').hidden=!st.show;
+ el('nmPrev').disabled=index===0;el('nmNext').disabled=index===questions.length-1;
+ typeset()
+}
+el('nmCheck').onclick=()=>{
+ const q=questions[index],st=states[index];let ok=false;
+ if(q.kind==='TN'){const input=document.querySelector('input[name=nmAns]:checked');if(!input)return alert('Chọn đáp án');
+  ok=!!((q.options||[])[+input.value]||{}).correct}
+ else if(q.kind==='DS'){const selects=[...document.querySelectorAll('[data-tf]')];if(selects.some(x=>!x.value))return alert('Chọn đủ Đúng/Sai');
+  ok=selects.every((x,i)=>(x.value==='1')===!!((q.statements||[])[i]||{}).correct)}
+ else {const input=el('nmAnswer');if(!input.value.trim())return alert('Nhập đáp án');ok=q.kind==='TLN'&&norm(input.value)===norm(q.answer)}
+ st.checked=true;st.correct=ok;el('nmStatus').textContent=ok?'✅ Chính xác':'❌ Chưa đúng, hãy kiểm tra cách giải';render()
+};
+el('nmSolution').onclick=()=>{states[index].show=!states[index].show;render()};
+el('nmNext').onclick=()=>{index++;render()};
+el('nmPrev').onclick=()=>{index--;render()};
+el('nmReset').onclick=()=>{if(!confirm('Làm lại bộ câu hỏi này?'))return;states.forEach(x=>{x.checked=false;x.correct=false;x.show=false});index=0;render()};
+el('nmChange').onclick=async()=>{
+ const q=questions[index],btn=el('nmChange');
+ if(!q.src||q.file_idx==null){alert('Câu này chưa hỗ trợ đổi số');return}
+ const keys=window.ldvlFilledKeys?window.ldvlFilledKeys():[];
+ if(!keys.length){alert('Hãy nạp Gemini API key trước khi đổi số');return}
+ btn.disabled=true;const start=performance.now();
+ const fmt=()=>{const n=Math.floor((performance.now()-start)/1000);return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0')};
+ el('nmStatus').innerHTML='⏳ AI đang đổi số: <b id="nmClock">00:00</b><div class="nm-progress"><i></i></div>';
+ const timer=setInterval(()=>{if(el('nmClock'))el('nmClock').textContent=fmt()},250);
+ try{
+  let response=await fetch('/api/practice/reshuffle',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({src:q.src,file_idx:q.file_idx,api_keys:keys})});
+  let result=await response.json();
+  if(result.ok&&result.job){
+   for(let tries=0;tries<90;tries++){
+    await new Promise(done=>setTimeout(done,1000));
+    response=await fetch('/api/practice/reshuffle?job='+encodeURIComponent(result.job),{credentials:'same-origin'});
+    result=await response.json();
+    if(result.state!=='run')break;
+   }
+  }
+  if(!result.ok||!result.q)throw Error(result.error||'Chưa đổi được số liệu');
+  questions[index]=result.q;states[index]={checked:false,correct:false,show:false};render();
+  el('nmStatus').textContent='✅ Đã đổi số sau '+fmt()+'. Đề và đáp án đã cập nhật.';
+ }catch(e){el('nmStatus').textContent='❌ '+String(e.message||e)}
+ finally{clearInterval(timer);btn.disabled=false}
+};
+render();
+})();
+</script>
+"""
+    inner=inner.replace('PACKED',packed).replace('BACK_URL',html.escape(back,quote=True))
+    return page('Luyện đổi số nhiều câu',inner)
 
 @app.route('/member/start-selected', methods=['GET','POST'])
 def member_start_selected():
