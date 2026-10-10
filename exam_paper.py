@@ -1498,7 +1498,8 @@ def _hydrate_variants(exam):
     if not isinstance(exam, dict):
         return
     code = exam.get("variant_id")
-    if not code or exam.get("_variant_loaded"):
+    # Không gọi GitHub khi chỉ trộn thứ tự. Đề lưu đã có bản chụp biến số.
+    if not code or not exam.get("variant_active") or exam.get("saved_code") or exam.get("_variant_loaded"):
         return
     # Đề mở từ kho lưu có bản chụp riêng, ưu tiên các biến thể đã lưu.
     data, _sha = _variant_read(code)
@@ -1565,6 +1566,9 @@ def member_exam_variant_apply():
         if sha:
             payload["sha"] = sha
         gh_api(_variant_api_path(token), "PUT", payload)
+        exam["variant_active"] = True
+        session["exam"] = exam
+        session.modified = True
         return jsonify(ok=True, message="Đã cập nhật đề và đáp án của mã " + code)
     except Exception as exc:
         return jsonify(ok=False, error=str(exc)[:350]), 400
