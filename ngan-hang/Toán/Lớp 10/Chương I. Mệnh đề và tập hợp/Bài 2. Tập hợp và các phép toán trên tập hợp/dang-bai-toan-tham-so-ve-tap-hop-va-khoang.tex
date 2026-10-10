@@ -173,9 +173,49 @@ Vẽ trục số biểu diễn hai tập $A$ và $B$ giao nhau bằng rỗng
 % ===== Câu 25 =====
 % ID: T10C1B2-08-TLN
 % Mức: VDC
-\begin{ex}
-% ID: T10C1B2-08-TLN
+\begin{ex}% ID: T10C1B2-08-TLN
 % Mức: VDC
+\begin{tikzpicture}[>=stealth, scale=1]
+    % Trục số biểu diễn tập A
+    \draw[->, thick] (-0.5, 2) -- (7, 2) node[right] {$\mathbb{R}$};
+    \node[left] at (-0.5, 2) {Tập $A$:};
+    
+    % Vạch và điểm trên tập A
+    \draw[thick] (1, 1.85) -- (1, 2.15);
+    \draw[thick] (5, 1.85) -- (5, 2.15);
+    \node[above] at (1, 2.15) {$1$};
+    \node[above] at (5, 2.15) {$5$};
+    \node at (1, 2) {$($};
+    \node at (5, 2) {$)$};
+    \draw[ultra thick, blue] (1.1, 2) -- (4.9, 2);
+    \node[blue, above] at (3, 2.15) {$A = (1; 5)$};
+
+    % Trục số biểu diễn B con A
+    \draw[->, thick] (-0.5, 0) -- (7, 0) node[right] {$\mathbb{R}$};
+    \node[left] at (-0.5, 0) {Điều kiện $B \subset A$:};
+    
+    % Vị trí của A trên trục dưới (mờ)
+    \draw[dashed, gray] (1, 0) -- (1, 2);
+    \draw[dashed, gray] (5, 0) -- (5, 2);
+    \node[below, gray] at (1, -0.1) {$1$};
+    \node[below, gray] at (5, -0.1) {$5$};
+    \node[gray] at (1, 0) {$($};
+    \node[gray] at (5, 0) {$)$};
+
+    % Tập B nằm trong A
+    \draw[thick] (2, -0.15) -- (2, 0.15);
+    \draw[thick] (4, -0.15) -- (4, 0.15);
+    \node[red] at (2, 0) {$($};
+    \node[red] at (4, 0) {$)$};
+    \draw[ultra thick, red] (2.1, 0) -- (3.9, 0);
+    \node[red, above] at (3, 0.1) {$B = (m; 4m-1)$};
+    \node[below, red] at (2, -0.1) {$m$};
+    \node[below, red] at (4, -0.1) {$4m-1$};
+
+    % Mũi tên so sánh điều kiện
+    \draw[->, thick, teal] (1.8, -0.6) -- (1.1, -0.6) node[midway, below] {$1 \le m$};
+    \draw[->, thick, teal] (4.2, -0.6) -- (4.9, -0.6) node[midway, below] {$4m-1 \le 5$};
+\end{tikzpicture}
 Cho hai tập hợp khác rỗng $A=(1;5)$ và $B=(m;4m-1) \neq \varnothing$, $m \in \mathbb{R}$. Có bao nhiêu giá trị nguyên của tham số $m$ để $B \subset A$.
 \shortans{1}
 \loigiai{
