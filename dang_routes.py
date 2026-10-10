@@ -2836,9 +2836,9 @@ def member_number_mix():
 <div class="nm-wrap">
   <header class="nm-head"><h2>🎲 Chương trình luyện đổi số nhiều câu</h2>
   <p>Chọn câu từ danh sách, tự làm và kiểm tra. Có thể đổi số từng câu bằng AI; câu gốc không thay đổi.</p>
-  <div class="nm-toolbar"><b id="nmCount"></b><button id="nmReset" type="button">↻ Làm lại bộ này</button>
+  <div class="nm-toolbar"><b id="nmCount"></b><button type="button" id="nmFullscreen">⛶ Toàn màn hình</button><button id="nmReset" type="button">↻ Làm lại bộ này</button>
   <a href="BACK_URL">← Quay lại ngân hàng</a></div></header>
-  <nav id="nmNav" class="nm-nav"></nav>
+  <details class="nm-prompt" open><summary>📝 Prompt / yêu cầu đổi số cho AI</summary><textarea id="nmPrompt" rows="3" placeholder="Ví dụ: Giữ nguyên dạng câu, đổi tất cả dữ kiện, không làm tròn đáp án, tính lại phương án và lời giải."></textarea><small>Yêu cầu này được gửi cho AI khi bấm Đổi số câu này.</small></details><nav id="nmNav" class="nm-nav"></nav>
   <main class="nm-body"><section class="nm-question">
     <h3 id="nmTitle"></h3><div id="nmStem"></div><div id="nmOpts"></div>
     <div id="nmControls"><button type="button" id="nmCheck">✅ Kiểm tra</button>
@@ -2850,11 +2850,11 @@ def member_number_mix():
   </section></main></div>
 <div id="nmData" data-json="PACKED" hidden></div>
 <style>
-.nm-wrap{max-width:1050px;margin:12px auto;padding:12px;font-family:Arial,sans-serif}
+.nm-wrap{max-width:none;width:100%;box-sizing:border-box;margin:0 auto;padding:12px;font-family:Arial,sans-serif;min-height:85vh}
 .nm-head,.nm-question{background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:16px}
 .nm-head{background:#eff6ff}.nm-head h2{font-size:20px;margin:0 0 6px;color:#123b70}
 .nm-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:10px 0}
-.nm-nav{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.nm-prompt{border:1px solid #93c5fd;border-radius:9px;padding:12px;margin:12px 0;background:#f8fbff}.nm-prompt summary{cursor:pointer;font-weight:700}.nm-prompt textarea{width:100%;box-sizing:border-box;margin:8px 0;padding:10px;font:14px/1.5 Arial,sans-serif}.nm-prompt small{display:block;color:#475569}.nm-wrap:fullscreen{overflow:auto;background:#f1f5f9;padding:18px}.nm-wrap:fullscreen .nm-question{min-height:50vh}.nm-nav{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
 .nm-nav button{padding:7px 10px;min-width:44px;border:1px solid #93c5fd;border-radius:7px;background:white;cursor:pointer}
 .nm-nav button.on{background:#1d4ed8;color:white}.nm-nav button.done{border-color:#16a34a}
 .nm-question{font-size:16px;line-height:1.5}.nm-question h3{color:#1d4ed8}
@@ -2876,6 +2876,7 @@ try{questions=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(data.data
 catch(e){document.getElementById('nmCount').textContent='Không đọc được bộ câu hỏi';return}
 let index=0;
 const states=questions.map(()=>({checked:false,correct:false,show:false}));
+const fs=document.getElementById('nmFullscreen');fs.onclick=async()=>{const box=document.querySelector('.nm-wrap');try{if(document.fullscreenElement)await document.exitFullscreen();else if(box.requestFullscreen)await box.requestFullscreen();else{box.classList.toggle('nm-wide');fs.textContent='⛶ Vừa màn hình';}}catch(e){box.classList.toggle('nm-wide')}};document.addEventListener('fullscreenchange',()=>{fs.textContent=document.fullscreenElement?'⤢ Thoát toàn màn hình':'⛶ Toàn màn hình'});
 const el=id=>document.getElementById(id);
 function typeset(){if(window.MathJax&&MathJax.typesetPromise)window.MathJax.typesetPromise().catch(()=>{});}
 function norm(v){return String(v||'').trim().replace(/\s/g,'').replace(/,/g,'.').replace(/^\+/,'').toLowerCase()}
@@ -2919,7 +2920,7 @@ el('nmChange').onclick=async()=>{
  el('nmStatus').innerHTML='⏳ AI đang đổi số: <b id="nmClock">00:00</b><div class="nm-progress"><i></i></div>';
  const timer=setInterval(()=>{if(el('nmClock'))el('nmClock').textContent=fmt()},250);
  try{
-  let response=await fetch('/api/practice/reshuffle',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({src:q.src,file_idx:q.file_idx,api_keys:keys})});
+  let response=await fetch('/api/practice/reshuffle',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({src:q.src,file_idx:q.file_idx,api_keys:keys,requirements:el('nmPrompt').value.trim()})});
   let result=await response.json();
   if(result.ok&&result.job){
    for(let tries=0;tries<90;tries++){
