@@ -2810,6 +2810,14 @@ def start_selected_questions():
     return redirect('/member/practice')
 
 
+@app.get('/member/luyen-17-cau')
+def member_luyen_17_cau():
+    """Bản luyện 17 câu kèm công thức, giải thích, lời giải và SVG offline."""
+    from flask import send_from_directory
+    static_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+    return send_from_directory(static_dir, 'luyen_17_cau_4_khoi.html', mimetype='text/html')
+
+
 @app.get('/member/number-mix')
 def member_number_mix():
     """Chương trình luyện nhiều câu từ danh sách đã chọn, không sửa ngân hàng."""
