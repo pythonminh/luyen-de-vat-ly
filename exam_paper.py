@@ -9,6 +9,8 @@ from app import gh_api, BRANCH
 import io
 import json
 import random
+import secrets
+import base64
 import re
 import urllib.parse
 import zipfile
@@ -65,6 +67,7 @@ def load_qs(path):
 def load_exam_qs(exam):
     """Câu của đề đang lưu. Đề cả chương lấy từng bài theo qmap, idx là vị trí trong đề."""
     exam = exam or {}
+    _hydrate_variants(exam)
     snapshot = exam.get("snapshot_qs")
     if isinstance(snapshot, list) and snapshot:
         return snapshot
@@ -214,6 +217,9 @@ def shuffle_copy(qs, ids, shuffle_opts=True):
 def apply_perm(q, copy):
     q = dict(q or {})
     idx = str(q.get("idx"))
+    variant = (copy.get("overrides") or {}).get(idx)
+    if isinstance(variant, dict):
+        q.update({k: variant[k] for k in ("text", "solution", "answer", "options", "statements") if k in variant})
     kind = str(q.get("kind") or "")
     if kind == "TN":
         opts = list(q.get("options") or [])
@@ -721,6 +727,7 @@ def _save_exam(path, qs, ids, copies_n, shuffle, dang="", show_key=None, ruled=N
         "show_key": bool(session.get("exam", {}).get("show_key") if show_key is None else show_key),
         "ruled": bool(session.get("exam", {}).get("ruled") if ruled is None else ruled),
         "base_ids": list(ids),
+        "variant_id": secrets.token_hex(12),
     }
     if qmap:
         exam["qmap"] = [dict(x) for x in qmap if isinstance(x, dict)]
@@ -1341,6 +1348,108 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
     )
     return render_exam(auto_print=auto_print)
 
+
+
+
+# Mỗi phiên đề có kho biến số riêng. Chỉ giữ mã khóa trong session để
+# tránh vượt giới hạn cookie khi thay nhiều câu và nhiều mã đề.
+def _variant_file_id(code):
+    value = str(code or "").lower().strip()
+    if not re.fullmatch(r"[0-9a-f]{24}", value):
+        raise ValueError("Mã bản nháp biến số không hợp lệ.")
+    return value
+
+
+def _variant_api_path(code):
+    return "contents/ngan-hang/_de-da-luu/_bien-so/" + _variant_file_id(code) + ".json"
+
+
+def _variant_read(code):
+    try:
+        obj = gh_api(_variant_api_path(code) + "?ref=" + urllib.parse.quote(BRANCH, safe=""))
+        raw = base64.b64decode(obj.get("content", "")).decode("utf-8")
+        data = json.loads(raw)
+        return (data if isinstance(data, dict) else {}), obj.get("sha")
+    except Exception as exc:
+        if "404" in str(exc):
+            return {}, None
+        raise
+
+
+def _hydrate_variants(exam):
+    if not isinstance(exam, dict):
+        return
+    code = exam.get("variant_id")
+    if not code or exam.get("_variant_loaded"):
+        return
+    # Đề mở từ kho lưu có bản chụp riêng, ưu tiên các biến thể đã lưu.
+    data, _sha = _variant_read(code)
+    copies = exam.get("copies") or []
+    for copy in copies:
+        extra = data.get(str(copy.get("code") or ""), {})
+        if isinstance(extra, dict):
+            merged = dict(copy.get("overrides") or {})
+            merged.update(extra)
+            copy["overrides"] = merged
+    exam["_variant_loaded"] = True
+
+
+@app.post("/api/exam/variant/apply")
+def member_exam_variant_apply():
+    if not can_manage_bank():
+        return jsonify(ok=False, error="Chỉ quản trị viên mới được thay số đề thi."), 403
+    data = request.get_json(silent=True) or {}
+    exam = session.get("exam") or {}
+    code = str(data.get("code") or "")
+    copy = next((x for x in (exam.get("copies") or []) if str(x.get("code")) == code), None)
+    if not copy:
+        return jsonify(ok=False, error="Mã đề không tồn tại."), 400
+    try:
+        idx = int(data.get("idx"))
+        if idx not in copy.get("ids", []):
+            raise ValueError("Câu không thuộc mã đề này.")
+        qs = load_exam_qs(exam)
+        q = next(x for x in qs if int(x.get("idx")) == idx)
+        kind = str(q.get("kind") or "")
+        if kind not in ("TN", "DS", "TLN", "TL"):
+            raise ValueError("Loại câu chưa được hỗ trợ.")
+        stem = str(data.get("stem") or "").strip()
+        sol = str(data.get("solution") or "").strip()
+        ans = str(data.get("answer") or "").strip()
+        raw_opts = data.get("options") if isinstance(data.get("options"), list) else []
+        if not stem or not sol or len(stem) > 20000 or len(sol) > 30000:
+            raise ValueError("Đề và lời giải cần đầy đủ.")
+        if stem == str(q.get("text") or "").strip():
+            raise ValueError("Đề chưa được thay số hoặc nội dung.")
+        variant = {"text": stem, "solution": sol, "answer": ans}
+        if kind in ("TN", "DS"):
+            if len(raw_opts) != 4:
+                raise ValueError("Cần đủ bốn phương án hoặc bốn ý đúng/sai.")
+            opts = []
+            for x in raw_opts:
+                if not isinstance(x, dict) or not isinstance(x.get("correct"), bool):
+                    raise ValueError("Định dạng đáp án chưa đúng.")
+                t = str(x.get("text") or "").strip()
+                if not t or len(t) > 5000:
+                    raise ValueError("Phương án hoặc ý đúng/sai không hợp lệ.")
+                opts.append({"text": t, "correct": x["correct"]})
+            if kind == "TN" and sum(x["correct"] for x in opts) != 1:
+                raise ValueError("Trắc nghiệm phải có đúng một đáp án đúng.")
+            variant["options" if kind == "TN" else "statements"] = opts
+        elif kind == "TLN" and not ans:
+            raise ValueError("Câu trả lời ngắn cần có đáp án mới.")
+        token = _variant_file_id(exam.get("variant_id"))
+        store, sha = _variant_read(token)
+        store.setdefault(code, {})[str(idx)] = variant
+        encoded = base64.b64encode(json.dumps(store, ensure_ascii=False).encode("utf-8")).decode("ascii")
+        payload = {"message": "Save recalculated numeric exam variant",
+                   "content": encoded, "branch": BRANCH}
+        if sha:
+            payload["sha"] = sha
+        gh_api(_variant_api_path(token), "PUT", payload)
+        return jsonify(ok=True, message="Đã cập nhật đề và đáp án của mã " + code)
+    except Exception as exc:
+        return jsonify(ok=False, error=str(exc)[:350]), 400
 
 
 # Kho lưu đề ở GitHub để không mất khi Render khởi động lại.
