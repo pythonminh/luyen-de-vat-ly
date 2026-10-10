@@ -433,11 +433,12 @@ def _q_html(q, seq, src, show_key=False, ruled=False):
             "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
         )
     elif kind == "TLN":
-        if not ruled:
-            body = "<div class='exblank'>Đáp án: …………………………</div>"
+        # Bốn ô trả lời ngắn giống phiếu tô đáp án, hỗ trợ số và dấu phẩy.
+        cells = "".join("<span class='ex-short-cell' aria-hidden='true'></span>" for _ in range(4))
+        body = "<div class='ex-short-answer'><b>Đáp án:</b> <span class='ex-short-grid'>" + cells + "</span></div>"
         if show_key:
             ans = str(q.get("answer") or "").strip()
-            body += f"<div class='exkeyline'><b>Đáp án:</b> {html_question(ans, src) if ans else '—'}</div>"
+            body += f"<div class='exkeyline'><b>Đáp án đúng:</b> {html_question(ans, src) if ans else '—'}</div>"
     else:
         if not ruled:
             body = "<div class='exblank'>Đáp án: …………………………</div>"
@@ -545,6 +546,11 @@ def exam_css():
 .exno{float:left;margin-right:.35em}
 .exq img{max-width:100%;max-height:40mm;height:auto}
 /* Bảng Đúng/Sai giống phiếu trắc nghiệm: đủ bốn hàng, dễ in A4. */
+.ex-short-answer{display:flex;align-items:center;gap:8px;margin:6px 0 9px;font-size:11pt;break-inside:avoid;page-break-inside:avoid}
+.ex-short-grid{display:inline-flex;align-items:stretch;border:1.5px solid #2873bd;height:30px}
+.ex-short-cell{display:inline-block;width:29px;height:30px;box-sizing:border-box;border-right:1px solid #2873bd}
+.ex-short-cell:last-child{border-right:0}
+@media print{.ex-short-answer{break-inside:avoid;page-break-inside:avoid}.ex-short-grid{border-color:#222}.ex-short-cell{border-right-color:#222}}
 .ex-tf-table{border-collapse:collapse;border-spacing:0;width:100%;table-layout:fixed;margin:5px 0 8px;font-family:'Times New Roman',Times,serif;font-size:11.5pt;line-height:1.25}
 .ex-tf-table th,.ex-tf-table td{border:1px solid #2873bd;padding:5px 7px;vertical-align:middle}
 .ex-tf-table thead th{background:#eff7ff;color:#135b9f;text-align:center;font-weight:700}
