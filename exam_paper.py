@@ -571,6 +571,15 @@ def exam_css():
 .ex-tf-circle{border-color:#111}
 .ex-tf-circle.is-marked{background:#111}
 }
+.ex-direct-answers{margin:10px 0 14px;border:1px solid #93c5fd;border-radius:10px;padding:10px;background:#f8fbff}
+.ex-direct-answers summary{font-weight:800;cursor:pointer;color:#174f8a}
+.ex-key-code{border-top:1px solid #cbd5e1;margin-top:12px;padding-top:7px}
+.ex-key-code h3{margin:4px 0 8px;color:#174f8a}
+.ex-key-code h4{margin:10px 0 6px;font-size:13px}
+.ex-key-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:6px}
+.ex-key-chip{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:7px;display:flex;justify-content:space-between;gap:7px;font-size:13px}
+.ex-key-chip span{font-weight:800;color:#0f5195;overflow-wrap:anywhere}
+@media print{.ex-direct-answers{display:none!important}}
 .exopts{display:grid;row-gap:5px;column-gap:18px;padding:4px 0 1px 1.15em;align-items:start}
 .exopts.stack{grid-template-columns:1fr}
 .exopts.grid2{grid-template-columns:1fr 1fr}
@@ -879,6 +888,31 @@ def render_exam(auto_print=False):
 })();
 </script>
 """
+    # Bảng đáp án trực tiếp, tổng hợp theo từng mã đề và đúng thứ tự đã trộn.
+    answer_panels = []
+    for copy in copies:
+        grouped = {k: [] for k in KIND_ORDER}
+        for item in _copy_answer_rows(qs, copy):
+            grouped.setdefault(item["kind"], []).append(item)
+        sections = []
+        for kind in KIND_ORDER:
+            items = grouped.get(kind) or []
+            if not items:
+                continue
+            cells = "".join(
+                "<div class='ex-key-chip'><b>Câu " + str(row["n"]) + "</b><span>" +
+                _esc(row.get("answer") or ("Xem lời giải" if kind == "TL" else "—")) +
+                "</span></div>" for row in items
+            )
+            sections.append("<h4>" + _esc(KIND_LABEL.get(kind, kind)) + "</h4><div class='ex-key-grid'>" + cells + "</div>")
+        answer_panels.append("<section class='ex-key-code'><h3>Mã đề " + _esc(copy.get("code")) +
+                             "</h3>" + "".join(sections) + "</section>")
+    direct_answer_panel = (
+        "<details class='ex-direct-answers noprint' id='exDirectAnswers'>"
+        "<summary>📋 Xem bảng đáp án trực tiếp (tất cả mã đề)</summary>"
+        "<p class='muted'>Đáp án tương ứng từng mã đề sau khi trộn. Chỉ hiển thị trong trang quản trị.</p>"
+        + "".join(answer_panels) + "</details>"
+    )
     print_js = (
         "<script>function paginateExams(){if(document.body.getAttribute('data-expage')==='1')return;"
         "var ruler=document.createElement('div');ruler.style.cssText='position:absolute;left:0;top:0;height:248mm;width:190mm;visibility:hidden';"
@@ -918,6 +952,7 @@ def render_exam(auto_print=False):
     body = (
         "<div class='wrap examwrap'>"
         + bar
+        + direct_answer_panel
         + variant_panel
         + "<div class='exampaper'>"
         + "".join(papers)
