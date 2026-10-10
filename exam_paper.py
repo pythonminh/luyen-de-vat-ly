@@ -540,8 +540,8 @@ def exam_css():
 .exschool,.exmeta{font-size:11pt;line-height:1.2}.extitle{text-align:center;font-size:14pt;line-height:1.2}
 .exnote{margin:1px 0 3px}
 .expart{margin:6px 0 2px;font-size:12.5pt;border-bottom:1px solid #bbb;padding-bottom:1px}
-.exq{margin:0 0 3px;break-inside:avoid;page-break-inside:avoid}
-.exstem{margin:0}
+.exq{margin:0 0 9px;padding:3px 0 7px;border-bottom:1px solid #d5dde8;break-inside:avoid;page-break-inside:avoid}
+.exstem{margin:0 0 3px;line-height:1.3}
 .exstem p{margin:0}
 .exno{float:left;margin-right:.35em}
 .exq img{max-width:100%;max-height:40mm;height:auto}
@@ -569,11 +569,11 @@ def exam_css():
 .ex-tf-circle{border-color:#111}
 .ex-tf-circle.is-marked{background:#111}
 }
-.exopts{display:grid;gap:1px 14px;padding-left:1.15em}
+.exopts{display:grid;row-gap:5px;column-gap:18px;padding:4px 0 1px 1.15em;align-items:start}
 .exopts.stack{grid-template-columns:1fr}
 .exopts.grid2{grid-template-columns:1fr 1fr}
 .exopts.grid4{grid-template-columns:1fr 1fr 1fr 1fr}
-.exopt{display:flex;gap:6px;align-items:flex-start;min-width:0}
+.exopt{display:flex;gap:7px;align-items:flex-start;min-width:0;line-height:1.3;padding:2px 0}
 .exoptxt{min-width:0}
 .exrules{margin:8px 0 2px;background-image:repeating-linear-gradient(to bottom,transparent,transparent calc(1.15em - 1px),#334155 calc(1.15em - 1px),#334155 1.15em);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .exopt.ok{background:#e8f8ee;border-radius:6px;padding:2px 6px}
