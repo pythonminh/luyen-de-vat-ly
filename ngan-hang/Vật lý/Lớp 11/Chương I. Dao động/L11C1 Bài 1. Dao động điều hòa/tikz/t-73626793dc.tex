@@ -1,0 +1,40 @@
+\begin{tikzpicture}[>=stealth, x=12cm, y=0.45cm]
+    % Trục tọa độ
+    \draw[->] (-0.025,0) -- (0.48,0)
+        node[below] {$t$ (s)};
+    \draw[->] (0,-7.5) -- (0,7.5)
+        node[left] {$x$ (cm)};
+
+    % Các vạch trên trục thời gian
+    \foreach \t in {0.1,0.2,0.3,0.4}
+        \draw (\t,0.15) -- (\t,-0.15)
+            node[below=4pt] {$\t$};
+
+    % Các vạch trên trục li độ
+    \foreach \x in {-6,-3,3,6}
+        \draw (0.004,\x) -- (-0.004,\x)
+            node[left] {$\x$};
+
+    % Đường biên
+    \draw[dashed,gray] (0,6) -- (0.45,6);
+    \draw[dashed,gray] (0,-6) -- (0.45,-6);
+
+    % Phương trình:
+    % x = 6cos(10pi*t + 2pi/3)
+    \draw[blue,very thick,samples=200,
+          domain=0:0.43,smooth]
+        plot (\x,{6*cos(1800*\x+120)});
+
+    % Điểm đặc biệt
+    \fill[red] (0,-3) circle (1.6pt);
+    \fill[red] (0.1,-6) circle (1.6pt);
+    \fill[red] (0.2,-3) circle (1.6pt);
+
+    % Biên độ
+    \draw[<->,red,thick]
+        (0.455,0) -- (0.455,6)
+        node[midway,right] {$A=6$ cm};
+
+    % Gốc tọa độ
+    \node[above left] at (0,0) {$O$};
+\end{tikzpicture}
