@@ -68,6 +68,11 @@ def load_exam_qs(exam):
     snapshot = exam.get("snapshot_qs")
     if isinstance(snapshot, list) and snapshot:
         return snapshot
+    if exam.get("saved_code"):
+        saved, _ = _saved_load(exam["saved_code"])
+        frozen_qs = saved.get("exam", {}).get("snapshot_qs")
+        if isinstance(frozen_qs, list) and frozen_qs:
+            return frozen_qs
     qmap = exam.get("qmap") or []
     if not qmap:
         return load_qs(str(exam.get("path") or ""))
@@ -1439,7 +1444,9 @@ def member_open_saved_exam():
         exam = saved["exam"]
         if not exam.get("copies") or not exam.get("snapshot_qs"):
             raise ValueError("Đề lưu thiếu dữ liệu.")
-        session["exam"] = exam
+        lean = {k: v for k, v in exam.items() if k != "snapshot_qs"}
+        lean["saved_code"] = saved["id"]
+        session["exam"] = lean
         session.modified = True
     except Exception as exc:
         return page("Mở đề", "<div class='wrap'><div class='err'>Không mở được đề: " + _esc(exc) + "</div></div>")
