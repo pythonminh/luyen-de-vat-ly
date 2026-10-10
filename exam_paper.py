@@ -747,13 +747,15 @@ def render_exam(auto_print=False):
         "<div style='display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:8px 0'>"
         "<label>Mã đề <select id='exVarCode' style='padding:7px;min-width:100px'>" + initial_options + "</select></label>"
         "<label>Câu <select id='exVarQuestion' style='padding:7px;min-width:140px'>" + question_options + "</select></label></div>"
-        "<p><label><b>Đề hiện tại — sửa các số liệu ở đây nếu muốn</b>"
-        "<textarea id='exVarStem' style='width:100%;min-height:75px;box-sizing:border-box;font:13px/1.4 monospace'>" + _esc((first_question or {}).get("text")) + "</textarea></label></p>"
+        "<p><label><b>Mã LaTeX của đề — sửa trực tiếp số liệu</b>"
+        "<textarea id='exVarStem' spellcheck='false' style='width:100%;min-height:90px;box-sizing:border-box;font:13px/1.5 Consolas,monospace;white-space:pre;tab-size:2'>" + _esc((first_question or {}).get("text")) + "</textarea></label></p>"
+        "<button type='button' class='btn' id='exVarPreviewBtn'>👁 Xem công thức đã hiển thị</button>"
+        "<div id='exVarLatexPreview' style='display:none;margin:9px 0;padding:12px;border:1px solid #cbd5e1;border-radius:8px;background:white'></div>"
         "<div id='exVarManual' style='margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff'>"
         "<b>Phương án và lời giải (có thể sửa tay hoặc tính lại bằng AI)</b>"
         "<div id='exVarOptions'></div>"
         "<label>Đáp án mới (trả lời ngắn / tự luận)<input id='exVarAnswer' value='" + _esc((first_question or {}).get("answer")) + "' style='width:100%;padding:7px'></label>"
-        "<p><label>Lời giải theo số mới<textarea id='exVarSolution' style='width:100%;min-height:70px;box-sizing:border-box'>" + _esc((first_question or {}).get("solution")) + "</textarea></label></p>"
+        "<p><label>Mã LaTeX lời giải theo số mới<textarea id='exVarSolution' spellcheck='false' style='width:100%;min-height:70px;box-sizing:border-box'>" + _esc((first_question or {}).get("solution")) + "</textarea></label></p>"
         "<button type='button' class='btn primary' id='exVarManualSave'>💾 Lưu số liệu và đáp án tự nhập</button>"
         "</div>"
         "<button type='button' class='btn' id='exVarGenerate'>🧮 Tính lại đáp án theo số đã sửa (AI)</button>"
@@ -778,6 +780,22 @@ def render_exam(auto_print=False):
  const state=document.getElementById('exVarState'),review=document.getElementById('exVarReview'),
  preview=document.getElementById('exVarPreview');
  const gen=document.getElementById('exVarGenerate'), apply=document.getElementById('exVarApply');
+ const renderBtn=document.getElementById('exVarPreviewBtn'), renderBox=document.getElementById('exVarLatexPreview');
+ renderBtn.onclick=async function(){
+   if(renderBtn.disabled)return;
+   renderBtn.disabled=true;renderBox.style.display='block';renderBox.textContent='⏳ Đang dựng công thức LaTeX…';
+   try{
+     const source=stemEl.value;
+     const response=await fetch('/api/admin/tex-preview',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({tex:source,src:(chosen()||{}).src||''})});
+     const data=await response.json();
+     if(!response.ok||!data.ok)throw Error(data.error||'Không dựng được công thức');
+     renderBox.innerHTML='<b>Đề hiển thị:</b><div style="margin-top:8px">'+data.html+'</div>';
+     if(window.MathJax&&MathJax.typesetPromise)await MathJax.typesetPromise([renderBox]);
+     else if(window.ldvlTypeset)window.ldvlTypeset(renderBox);
+   }catch(e){renderBox.textContent='❌ '+String(e.message||e)}
+   finally{renderBtn.disabled=false}
+ };
  let candidate=null, working=false;
  function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
  function opt(sel,value,label){const o=document.createElement('option');o.value=value;o.textContent=label;sel.appendChild(o)}
@@ -821,6 +839,7 @@ def render_exam(auto_print=False):
      const hint=document.createElement('small');hint.textContent=q.kind==='TN'?'Chọn đúng một đáp án':'Tích những ý đúng; các ý không tích là sai';host.appendChild(hint);
    }
    candidate=null;review.hidden=true;state.textContent='';
+   renderBox.style.display='none';
  }
  document.getElementById('exVarManualSave').onclick=async function(){
    const q=chosen();if(!q||working)return;
@@ -870,6 +889,7 @@ def render_exam(auto_print=False):
      // Cập nhật ngay các ô nhập để giáo viên thấy đáp án mới cạnh đề đã sửa.
      // Chỉ lưu khi giáo viên bấm xác nhận; AI không tự ghi vào ngân hàng.
      stemEl.value=d.stem;
+     renderBox.style.display='none';
      document.getElementById('exVarAnswer').value=d.answer||'';
      document.getElementById('exVarSolution').value=d.solution||'';
      if(['TN','DS'].includes(q.kind)){
