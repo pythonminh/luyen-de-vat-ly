@@ -914,6 +914,34 @@ def render_exam(auto_print=False):
 })();
 </script>
 """
+    # Cảnh báo trùng đề sau khi đã áp dụng các biến thể theo từng mã.
+    duplicate_warnings = []
+    for copy in copies:
+        seen = {}
+        for kind in KIND_ORDER:
+            seq = 0
+            selected = {int(i) for i in (copy.get("ids") or [])}
+            for idx in (copy.get("ids") or []):
+                q = next((q for q in qs if int(q.get("idx", -1)) == int(idx)), None)
+                if not q or str(q.get("kind")) != kind:
+                    continue
+                seq += 1
+                text_value = str(apply_perm(q, copy).get("text") or "")
+                norm = re.sub(r"\\s+", " ", re.sub(r"\\\\(?:textbf|mathrm|text)\\b", "", text_value)).strip().casefold()
+                if not norm:
+                    continue
+                if norm in seen:
+                    duplicate_warnings.append(f"Mã {_esc(copy.get('code'))}, phần {kind}: câu {seen[norm]} và câu {seq} giống nội dung")
+                else:
+                    seen[norm] = seq
+    duplicates_panel = (
+        "<div class='noprint' id='exDuplicateWarning' style='padding:10px;margin:9px 0;border:1px solid #f59e0b;background:#fffbeb;border-radius:8px'>"
+        "<b>⚠️ Phát hiện câu trùng — cần sửa trước khi in:</b><ul>" +
+        "".join("<li>" + msg + "</li>" for msg in duplicate_warnings) +
+        "</ul><small>Bấm vào câu trong đề rồi chọn «Sửa câu này trong đề»; cập nhật câu và đáp án, sau đó in lại.</small></div>"
+        if duplicate_warnings else
+        "<div class='noprint' style='padding:7px;color:#166534'>✅ Không phát hiện câu trùng nguyên văn trong từng mã đề.</div>"
+    )
     # Bảng đáp án trực tiếp, tổng hợp theo từng mã đề và đúng thứ tự đã trộn.
     answer_panels = []
     for copy in copies:
@@ -979,6 +1007,7 @@ def render_exam(auto_print=False):
     body = (
         "<div class='wrap examwrap'>"
         + bar
+        + duplicates_panel
         + direct_answer_panel
         + variant_panel
         + "<div class='exampaper'>"
