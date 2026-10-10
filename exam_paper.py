@@ -410,18 +410,28 @@ def _q_html(q, seq, src, show_key=False, ruled=False):
             )
         body = f"<div class='exopts {_choice_class(opts)}'>" + "".join(bits) + "</div>"
     elif kind == "DS":
-        bits = []
-        for i, s in enumerate(q.get("statements") or []):
-            lab = ("abcd"[i] + ")") if i < 4 else str(i + 1)
-            mark = ""
-            if show_key:
-                mark = " <b class='exmark'>" + ("Đúng" if s.get("correct") else "Sai") + "</b>"
-            bits.append(
-                f"<div class='exopt'><span class='exlab'>{lab}.</span> "
-                f"<span class='exoptxt'>{html_question(s.get('text') or '', src)}{mark}</span></div>"
+        # Một bảng kẻ ô toàn chiều ngang, giống mẫu đề kiểm tra Đúng/Sai.
+        rows = []
+        for i, statement in enumerate(q.get("statements") or []):
+            lab = ("abcd"[i] + ")") if i < 4 else str(i + 1) + ")"
+            correct = bool(statement.get("correct"))
+            yes_on = " is-marked" if show_key and correct else ""
+            no_on = " is-marked" if show_key and not correct else ""
+            rows.append(
+                "<tr>"
+                f"<td class='ex-tf-label'>{html.escape(lab)}</td>"
+                f"<td class='ex-tf-proposition'>{html_question(statement.get('text') or '', src)}</td>"
+                f"<td class='ex-tf-choice'><span class='ex-tf-circle{yes_on}' aria-label='Đúng'></span></td>"
+                f"<td class='ex-tf-choice'><span class='ex-tf-circle{no_on}' aria-label='Sai'></span></td>"
+                "</tr>"
             )
-        cols = "grid2" if len(bits) >= 2 else "stack"
-        body = f"<div class='exopts {cols}'>" + "".join(bits) + "</div>"
+        body = (
+            "<table class='ex-tf-table'>"
+            "<thead><tr>"
+            "<th class='ex-tf-label'></th><th>Mệnh đề</th>"
+            "<th class='ex-tf-choice'>Đúng</th><th class='ex-tf-choice'>Sai</th>"
+            "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
+        )
     elif kind == "TLN":
         if not ruled:
             body = "<div class='exblank'>Đáp án: …………………………</div>"
@@ -534,6 +544,25 @@ def exam_css():
 .exstem p{margin:0}
 .exno{float:left;margin-right:.35em}
 .exq img{max-width:100%;max-height:40mm;height:auto}
+/* Bảng Đúng/Sai giống phiếu trắc nghiệm: đủ bốn hàng, dễ in A4. */
+.ex-tf-table{border-collapse:collapse;border-spacing:0;width:100%;table-layout:fixed;margin:5px 0 8px;font-family:'Times New Roman',Times,serif;font-size:11.5pt;line-height:1.25}
+.ex-tf-table th,.ex-tf-table td{border:1px solid #2873bd;padding:5px 7px;vertical-align:middle}
+.ex-tf-table thead th{background:#eff7ff;color:#135b9f;text-align:center;font-weight:700}
+.ex-tf-table .ex-tf-label{width:31px;text-align:center;font-weight:bold;padding:5px 2px}
+.ex-tf-table .ex-tf-choice{width:48px;text-align:center;padding:4px 2px}
+.ex-tf-table .ex-tf-proposition{text-align:left;overflow-wrap:break-word}
+.ex-tf-table .ex-tf-proposition p{margin:0}
+.ex-tf-circle{display:inline-block;width:16px;height:16px;box-sizing:border-box;border:2px solid #2074c4;border-radius:50%;vertical-align:middle}
+.ex-tf-circle.is-marked{background:#2074c4;box-shadow:inset 0 0 0 3px white}
+@media print{
+.ex-tf-table{font-size:11pt;break-inside:avoid;page-break-inside:avoid}
+.ex-tf-table thead{display:table-header-group}
+.ex-tf-table tr{break-inside:avoid;page-break-inside:avoid}
+.ex-tf-table th,.ex-tf-table td{border-color:#222}
+.ex-tf-table thead th{background:#fff!important;color:#111}
+.ex-tf-circle{border-color:#111}
+.ex-tf-circle.is-marked{background:#111}
+}
 .exopts{display:grid;gap:1px 14px;padding-left:1.15em}
 .exopts.stack{grid-template-columns:1fr}
 .exopts.grid2{grid-template-columns:1fr 1fr}
