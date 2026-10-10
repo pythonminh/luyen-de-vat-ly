@@ -2923,7 +2923,7 @@ el('nmChange').onclick=async()=>{
   let response=await fetch('/api/practice/reshuffle',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({src:q.src,file_idx:q.file_idx,api_keys:keys,requirements:el('nmPrompt').value.trim()})});
   let result=await response.json();
   if(result.ok&&result.job){
-   for(let tries=0;tries<90;tries++){
+   for(let tries=0;tries<240;tries++){
     await new Promise(done=>setTimeout(done,1000));
     response=await fetch('/api/practice/reshuffle?job='+encodeURIComponent(result.job),{credentials:'same-origin'});
     result=await response.json();
