@@ -428,7 +428,7 @@ def _q_html(q, seq, src, show_key=False, ruled=False):
         body = (
             "<table class='ex-tf-table'>"
             "<thead><tr>"
-            "<th class='ex-tf-label'></th><th>Mệnh đề</th>"
+            "<th class='ex-tf-label'></th><th>Phát biểu</th>"
             "<th class='ex-tf-choice'>Đúng</th><th class='ex-tf-choice'>Sai</th>"
             "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
         )
