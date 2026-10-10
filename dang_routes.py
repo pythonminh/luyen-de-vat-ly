@@ -619,6 +619,7 @@ def member_dang():
           "<div class='photobar'><button type='button' class='btn aiPhotoBtn'>📷 Chụp hình</button><span>Chụp hoặc chọn ảnh đề — máy nhận dạng chữ rồi viết lại prompt.</span></div>"
           "<div class='toolbar'>"
           "<button type='button' class='btn primary' id='qPresentBtn'>📺 Chiếu câu đã chọn</button>"
+          "<button type='submit' form='questionForm' name='practice_mode' value='number_mix' class='btn' style='border-color:#2563eb;color:#1d4ed8;font-weight:800' onclick='if(!document.querySelector(\"input[name=qid]:checked\")){alert(\"Hãy chọn ít nhất 2 câu để tạo bộ Luyện đổi số.\");return false;}if(document.querySelectorAll(\"input[name=qid]:checked\").length<2){alert(\"Hãy chọn từ 2 câu trở lên để tạo bộ luyện nhiều câu.\");return false;}'>🎲 Luyện đổi số từ câu đã chọn</button>"
           "<button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
           + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if can_manage_bank() and (dao_n or cung_n) else "")
@@ -2784,6 +2785,8 @@ def start_selected_questions():
         if dang:
             url+='&dang='+urllib.parse.quote(dang,safe='')
         return redirect(url)
+    if request.form.get('practice_mode')=='number_mix' and len(ids)<2:
+        return redirect(dang_view_url(path, dang))
     ids = sort_ids_by_kind(qs, ids, shuffle_within=False)
     kinds={str((next((q for q in qs if q.get('idx')==i),{}) or {}).get('kind') or '') for i in ids}
     kinds={k for k in kinds if k}
