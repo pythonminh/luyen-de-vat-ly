@@ -2838,7 +2838,7 @@ def member_number_mix():
   <p>Chọn câu từ danh sách, tự làm và kiểm tra. Có thể đổi số từng câu bằng AI; câu gốc không thay đổi.</p>
   <div class="nm-toolbar"><b id="nmCount"></b><button type="button" id="nmFullscreen">⛶ Toàn màn hình</button><button id="nmReset" type="button">↻ Làm lại bộ này</button>
   <a href="BACK_URL">← Quay lại ngân hàng</a></div></header>
-  <details class="nm-prompt" open><summary>📝 Prompt / yêu cầu đổi số cho AI</summary><textarea id="nmPrompt" rows="3" placeholder="Ví dụ: Giữ nguyên dạng câu, đổi tất cả dữ kiện, không làm tròn đáp án, tính lại phương án và lời giải."></textarea><small>Yêu cầu này được gửi cho AI khi bấm Đổi số câu này.</small><div class="nm-toolbar"><button type="button" id="nmCopyPrompt">📋 Sao chép prompt tạo HTML (tất cả câu)</button><button type="button" id="nmViewPrompt">👁 Xem prompt</button></div><textarea id="nmPromptExport" rows="9" style="display:none" readonly aria-label="Prompt tạo chương trình HTML"></textarea></details><nav id="nmNav" class="nm-nav"></nav>
+  <details class="nm-prompt" open><summary>📝 Prompt / yêu cầu đổi số cho AI</summary><textarea id="nmPrompt" rows="3" placeholder="Ví dụ: Giữ nguyên dạng câu, đổi tất cả dữ kiện, không làm tròn đáp án, tính lại phương án và lời giải."></textarea><small>Yêu cầu này được gửi cho AI khi bấm Đổi số câu này.</small><div class="nm-toolbar"><button type="button" id="nmCopyPrompt">📋 Sao chép prompt tạo HTML (tất cả câu)</button><button type="button" id="nmViewPrompt">👁 Xem prompt</button><button type="button" id="nmOpenGemini">✦ Mở Gemini</button><button type="button" id="nmOpenGPT">◉ Mở ChatGPT</button></div><textarea id="nmPromptExport" rows="9" style="display:none" readonly aria-label="Prompt tạo chương trình HTML"></textarea></details><nav id="nmNav" class="nm-nav"></nav>
   <main class="nm-body"><section class="nm-question">
     <h3 id="nmTitle"></h3><div id="nmStem"></div><div id="nmOpts"></div>
     <div id="nmControls"><button type="button" id="nmCheck">✅ Kiểm tra</button>
@@ -2910,6 +2910,22 @@ el('nmCopyPrompt').onclick=async()=>{
  }catch(e){el('nmPromptExport').style.display='block';el('nmPromptExport').focus();el('nmPromptExport').select();el('nmCopyPrompt').textContent='Chọn và sao chép prompt bên dưới'}
 };
 el('nmViewPrompt').onclick=()=>{const t=el('nmPromptExport');t.value=makeHtmlPrompt();t.style.display=t.style.display==='none'?'block':'none'};
+async function openPromptService(url){
+ const content=makeHtmlPrompt();
+ const newTab=window.open(url,'_blank','noopener');
+ let copied=false;
+ try{
+  if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(content);copied=true}
+  else{const field=el('nmPromptExport');field.value=content;field.style.display='block';field.focus();field.select();copied=document.execCommand('copy')}
+ }catch(e){}
+ if(!copied){const field=el('nmPromptExport');field.value=content;field.style.display='block';field.focus();field.select();}
+ el('nmCopyPrompt').textContent=copied?'✅ Đã sao chép prompt '+questions.length+' câu':'📋 Chọn prompt bên dưới và sao chép';
+ if(!newTab)window.location.href=url;
+ else alert(copied?'Đã sao chép prompt. Hãy dán bằng Ctrl+V trong tab vừa mở.':'Đã mở trang AI. Hãy sao chép prompt trong ô bên dưới rồi dán vào trang đó.');
+}
+el('nmOpenGemini').onclick=()=>openPromptService('https://gemini.google.com/app');
+el('nmOpenGPT').onclick=()=>openPromptService('https://chatgpt.com/');
+
 function render(){
  const q=questions[index],st=states[index];
  el('nmCount').textContent=questions.length+' câu đã chọn · '+states.filter(x=>x.checked).length+' câu đã kiểm tra';
