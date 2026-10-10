@@ -646,6 +646,122 @@ def render_exam(auto_print=False):
         "<div id='gradeOut'></div>"
         "</div>"
     )
+    # Thay số cho từng câu / từng mã đề, duyệt đáp án trước khi áp dụng.
+    source_items = []
+    for q in qs:
+        idx = int(q.get("idx"))
+        entry = (exam.get("qmap") or [])
+        mapped = entry[idx] if 0 <= idx < len(entry) else None
+        src = str(mapped.get("path") or "") if isinstance(mapped, dict) else str(q.get("src") or path)
+        fi = mapped.get("idx") if isinstance(mapped, dict) else q.get("file_idx", idx)
+        if src and fi is not None:
+            source_items.append({"idx": idx, "kind": str(q.get("kind") or ""),
+                                 "src": src, "file_idx": fi,
+                                 "text": str(q.get("text") or "")})
+    variant_seed = json.dumps({
+        "copies": [{"code": str(c.get("code") or ""), "ids": list(c.get("ids") or [])} for c in copies],
+        "questions": source_items,
+    }, ensure_ascii=False).replace("<", "\\u003c")
+    variant_panel = (
+        "<details class='noprint' style='margin:12px 0;padding:12px;border:1px solid #93c5fd;border-radius:9px;background:#eff6ff'>"
+        "<summary style='cursor:pointer;font-weight:800'>🎲 Đổi số + tính lại đáp án theo từng mã đề (AI)</summary>"
+        "<p style='font-size:13px'>Chọn mã đề và câu, có thể sửa số trong đề hoặc để AI tự đổi số. "
+        "Xem kỹ đề, phương án, lời giải rồi bấm Áp dụng. Không thay đổi câu gốc trong ngân hàng.</p>"
+        "<label>Mã đề <select id='exVarCode'></select></label> "
+        "<label>Câu <select id='exVarQuestion'></select></label>"
+        "<p><label><b>Đề hiện tại — sửa các số liệu ở đây nếu muốn</b>"
+        "<textarea id='exVarStem' style='width:100%;min-height:95px;box-sizing:border-box;font:13px/1.4 monospace'></textarea></label></p>"
+        "<button type='button' class='btn primary' id='exVarGenerate'>🤖 Tạo số liệu và đáp án mới</button>"
+        "<div id='exVarState' role='status' style='margin-top:10px'></div>"
+        "<div id='exVarReview' hidden style='margin-top:10px;padding:12px;border:1px solid #cbd5e1;background:white;border-radius:8px'>"
+        "<b>Kiểm tra kỹ nội dung AI sinh ra trước khi áp dụng</b>"
+        "<div id='exVarPreview'></div>"
+        "<button type='button' class='btn primary' id='exVarApply'>✅ Áp dụng cho mã đề này</button>"
+        "</div>"
+        "<script type='application/json' id='exVarData'>" + variant_seed + "</script>"
+        "</details>"
+    )
+    variant_script = r"""
+<script>
+(function(){
+ const dataEl=document.getElementById('exVarData');
+ if(!dataEl)return;
+ const seed=JSON.parse(dataEl.textContent), codeEl=document.getElementById('exVarCode'),
+ questionEl=document.getElementById('exVarQuestion'), stemEl=document.getElementById('exVarStem');
+ const state=document.getElementById('exVarState'),review=document.getElementById('exVarReview'),
+ preview=document.getElementById('exVarPreview');
+ const gen=document.getElementById('exVarGenerate'), apply=document.getElementById('exVarApply');
+ let candidate=null, working=false;
+ function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+ function opt(sel,value,label){const o=document.createElement('option');o.value=value;o.textContent=label;sel.appendChild(o)}
+ seed.copies.forEach(c=>opt(codeEl,c.code,c.code));
+ function chosen(){return seed.questions.find(q=>String(q.idx)===questionEl.value)}
+ function updateQuestions(){
+   questionEl.innerHTML='';
+   const c=seed.copies.find(c=>c.code===codeEl.value);
+   (c&&c.ids||[]).forEach((idx,n)=>{
+     const q=seed.questions.find(q=>q.idx===idx);
+     if(q)opt(questionEl,String(q.idx),'Câu '+(n+1)+' · '+q.kind);
+   });
+   updateStem();
+ }
+ function updateStem(){const q=chosen();stemEl.value=q?q.text:'';candidate=null;review.hidden=true;state.textContent=''}
+ codeEl.addEventListener('change',updateQuestions);
+ questionEl.addEventListener('change',updateStem);
+ updateQuestions();
+ gen.onclick=async function(){
+   if(working)return;
+   const q=chosen();if(!q)return;
+   const edited=stemEl.value.trim();
+   if(!edited){state.textContent='Đề không được để trống.';return}
+   const mode=edited===q.text.trim()?'similar':'recalc';
+   const keys=window.ldvlFilledKeys?window.ldvlFilledKeys():[];
+   if(!keys.length){state.textContent='Cần nạp Gemini API key trước khi đổi số.';return}
+   working=true;gen.disabled=true;apply.disabled=true;review.hidden=true;candidate=null;
+   const started=performance.now();
+   const timer=setInterval(()=>{state.textContent='⏳ AI đang tính lại đề và đáp án · '+Math.round((performance.now()-started)/1000)+' giây';},300);
+   try{
+     const r=await fetch('/api/admin/rewrite-question',{
+       method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({src:q.src,file_idx:q.file_idx,mode:mode,stem:edited,api_keys:keys})
+     });
+     const d=await r.json();
+     if(!r.ok||!d.ok)throw Error(d.error||'AI chưa tạo được biến thể');
+     if(!d.stem||!d.solution||d.kind!==q.kind)throw Error('Đề hoặc lời giải trả về chưa hợp lệ.');
+     if(['TN','DS'].includes(q.kind)&&(!Array.isArray(d.options)||d.options.length!==4))throw Error('Chưa đủ 4 đáp án.');
+     candidate=d;
+     preview.innerHTML='<h4>Đề mới</h4><div>'+d.stem_html+'</div>'+
+       (d.opt_html||'')+'<h4>Đáp án</h4><div>'+esc(q.kind==='TN'?
+         'ABCD'.charAt(d.options.findIndex(o=>o.correct)):d.answer||'Xem các ý đúng/sai ở trên')+'</div>'+
+       '<h4>Lời giải</h4><div>'+d.sol_html+'</div>'+
+       '<p style="color:#b45309">⚠️ AI có thể tính sai. Giáo viên phải đối chiếu trước khi lưu.</p>';
+     review.hidden=false;
+     apply.disabled=false;
+     if(window.MathJax&&MathJax.typesetPromise) MathJax.typesetPromise([preview]).catch(()=>{});
+     state.textContent='✅ AI đã tạo xong sau '+Math.round((performance.now()-started)/1000)+' giây. Chờ giáo viên xác nhận.';
+   }catch(e){state.textContent='❌ '+String(e.message||e)}
+   finally{clearInterval(timer);working=false;gen.disabled=false}
+ };
+ apply.onclick=async function(){
+   if(!candidate||working)return;
+   working=true;apply.disabled=true;state.textContent='💾 Đang lưu biến thể và đáp án…';
+   try{
+     const r=await fetch('/api/exam/variant/apply',{
+       method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({code:codeEl.value,idx:+questionEl.value,
+         stem:candidate.stem,solution:candidate.solution,
+         answer:candidate.answer,options:candidate.options})
+     });
+     const d=await r.json();
+     if(!r.ok||!d.ok)throw Error(d.error||'Lưu thất bại');
+     state.textContent='✅ Đã lưu biến thể. Đang mở lại đề để đồng bộ đáp án…';
+     location.href='/member/exam';
+   }catch(e){state.textContent='❌ '+String(e.message||e);apply.disabled=false}
+   finally{working=false}
+ };
+})();
+</script>
+"""
     print_js = (
         "<script>function paginateExams(){if(document.body.getAttribute('data-expage')==='1')return;"
         "var ruler=document.createElement('div');ruler.style.cssText='position:absolute;left:0;top:0;height:248mm;width:190mm;visibility:hidden';"
@@ -685,11 +801,13 @@ def render_exam(auto_print=False):
     body = (
         "<div class='wrap examwrap'>"
         + bar
+        + variant_panel
         + "<div class='exampaper'>"
         + "".join(papers)
         + "</div></div>"
         + exam_css()
         + print_js
+        + variant_script
     )
     return page("Đề thi · " + title, body)
 
