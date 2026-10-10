@@ -698,6 +698,19 @@ def render_exam(auto_print=False):
                                  "solution": str(q.get("solution") or ""),
                                  "answer": str(q.get("answer") or ""),
                                  "options": q.get("options") or q.get("statements") or []})
+    first_copy = copies[0] if copies else {}
+    first_ids = list(first_copy.get("ids") or [])
+    first_question = next((q for i in first_ids for q in source_items if q["idx"] == int(i)), None)
+    if first_question is None and source_items:
+        first_question = source_items[0]
+    initial_options = "".join(
+        f"<option value='{_esc(c.get('code'))}'>{_esc(c.get('code'))}</option>" for c in copies
+    )
+    question_options = "".join(
+        f"<option value='{q['idx']}'>Câu {i+1} · {_esc(q['kind'])}</option>"
+        for i, idx in enumerate(first_ids)
+        for q in source_items if q["idx"] == int(idx)
+    )
     variant_seed = json.dumps({
         "copies": [{"code": str(c.get("code") or ""), "ids": list(c.get("ids") or [])} for c in copies],
         "questions": source_items,
@@ -707,15 +720,16 @@ def render_exam(auto_print=False):
         "<summary style='cursor:pointer;font-weight:800'>✏️ Tự nhập số liệu, đáp án / 🤖 AI đổi số</summary>"
         "<p style='font-size:13px'>Chọn mã đề và câu, có thể sửa số trong đề hoặc để AI tự đổi số. "
         "Xem kỹ đề, phương án, lời giải rồi bấm Áp dụng. Không thay đổi câu gốc trong ngân hàng.</p>"
-        "<label>Mã đề <select id='exVarCode'></select></label> "
-        "<label>Câu <select id='exVarQuestion'></select></label>"
+        "<div style='display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:8px 0'>"
+        "<label>Mã đề <select id='exVarCode' style='padding:7px;min-width:100px'>" + initial_options + "</select></label>"
+        "<label>Câu <select id='exVarQuestion' style='padding:7px;min-width:140px'>" + question_options + "</select></label></div>"
         "<p><label><b>Đề hiện tại — sửa các số liệu ở đây nếu muốn</b>"
-        "<textarea id='exVarStem' style='width:100%;min-height:95px;box-sizing:border-box;font:13px/1.4 monospace'></textarea></label></p>"
+        "<textarea id='exVarStem' style='width:100%;min-height:75px;box-sizing:border-box;font:13px/1.4 monospace'>" + _esc((first_question or {}).get("text")) + "</textarea></label></p>"
         "<div id='exVarManual' style='margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff'>"
         "<b>Người dùng tự nhập — không cần AI</b>"
         "<div id='exVarOptions'></div>"
-        "<label>Đáp án mới (trả lời ngắn / tự luận)<input id='exVarAnswer' style='width:100%;padding:7px'></label>"
-        "<p><label>Lời giải theo số mới<textarea id='exVarSolution' style='width:100%;min-height:90px;box-sizing:border-box'></textarea></label></p>"
+        "<label>Đáp án mới (trả lời ngắn / tự luận)<input id='exVarAnswer' value='" + _esc((first_question or {}).get("answer")) + "' style='width:100%;padding:7px'></label>"
+        "<p><label>Lời giải theo số mới<textarea id='exVarSolution' style='width:100%;min-height:70px;box-sizing:border-box'>" + _esc((first_question or {}).get("solution")) + "</textarea></label></p>"
         "<button type='button' class='btn primary' id='exVarManualSave'>💾 Lưu số liệu và đáp án tự nhập</button>"
         "</div>"
         "<button type='button' class='btn' id='exVarGenerate'>🤖 Nhờ AI đổi số và tính đáp án</button>"
@@ -733,7 +747,9 @@ def render_exam(auto_print=False):
 (function(){
  const dataEl=document.getElementById('exVarData');
  if(!dataEl)return;
- const seed=JSON.parse(dataEl.textContent), codeEl=document.getElementById('exVarCode'),
+ let seed;
+ try{seed=JSON.parse(dataEl.textContent)}catch(e){dataEl.parentElement.insertAdjacentHTML('beforeend','<p style="color:#b91c1c">Không đọc được dữ liệu đề. Hãy tải lại trang.</p>');return}
+ const codeEl=document.getElementById('exVarCode'),
  questionEl=document.getElementById('exVarQuestion'), stemEl=document.getElementById('exVarStem');
  const state=document.getElementById('exVarState'),review=document.getElementById('exVarReview'),
  preview=document.getElementById('exVarPreview');
@@ -741,7 +757,7 @@ def render_exam(auto_print=False):
  let candidate=null, working=false;
  function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
  function opt(sel,value,label){const o=document.createElement('option');o.value=value;o.textContent=label;sel.appendChild(o)}
- seed.copies.forEach(c=>opt(codeEl,c.code,c.code));
+ if(!codeEl.options.length) seed.copies.forEach(c=>opt(codeEl,c.code,c.code));
  function chosen(){return seed.questions.find(q=>String(q.idx)===questionEl.value)}
  function updateQuestions(){
    questionEl.innerHTML='';
