@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 186,
-  "total_questions": 12255,
+  "total_questions": 12256,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -4987,23 +4987,16 @@
       "Chuong": "Chương I. Vật lí nhiệt",
       "BaiHoc": "Ôn tập Chương 1 - Lý 12",
       "De": "Ôn tập Chương 1 - Lý 12",
-      "questions": 57,
-      "count": 57,
+      "questions": 29,
+      "count": 29,
       "dang": {
-        "Chưa phân dạng": 29,
-        "Đề ôn 2": 28
+        "Chưa phân dạng": 29
       },
       "dang_kinds": {
         "Chưa phân dạng": {
           "TN": 18,
           "DS": 4,
           "TLN": 7,
-          "TL": 0
-        },
-        "Đề ôn 2": {
-          "TN": 18,
-          "DS": 4,
-          "TLN": 6,
           "TL": 0
         }
       }
