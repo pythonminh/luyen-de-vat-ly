@@ -489,7 +489,10 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
             seq += 1
             src = str(q.get("src") or "")
             qq = apply_perm(q, copy)
-            parts.append(_q_html(qq, seq, src, show_key=show_key, ruled=ruled))
+            question_html = _q_html(qq, seq, src, show_key=show_key, ruled=ruled)
+            anchor_id = f"exq-{copy.get('code')}-{kind}-{seq}"
+            question_html = question_html.replace("<article class='exq'>", f"<article class='exq' id='{_esc(anchor_id)}'>", 1)
+            parts.append(question_html)
             if kind == "TN":
                 ans = _tn_letter(qq)
             elif kind == "DS":
@@ -578,6 +581,10 @@ def exam_css():
 .ex-key-code h4{margin:10px 0 6px;font-size:13px}
 .ex-key-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:6px}
 .ex-key-chip{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:7px;display:flex;justify-content:space-between;gap:7px;font-size:13px}
+.ex-key-chip{text-decoration:none;cursor:pointer;color:inherit}
+.ex-key-chip:hover,.ex-key-chip:focus-visible{border-color:#1d70c9;background:#eaf4ff;outline:2px solid #bfdbfe}
+.exq:target{background:#fff5d8!important;outline:2px solid #e8a23b;outline-offset:3px;border-radius:3px;scroll-margin-top:70px}
+@media print{.exq:target{background:none!important;outline:none!important}}
 .ex-key-chip span{font-weight:800;color:#0f5195;overflow-wrap:anywhere}
 @media print{.ex-direct-answers{display:none!important}}
 .exopts{display:grid;row-gap:5px;column-gap:18px;padding:4px 0 1px 1.15em;align-items:start}
@@ -900,9 +907,10 @@ def render_exam(auto_print=False):
             if not items:
                 continue
             cells = "".join(
-                "<div class='ex-key-chip'><b>Câu " + str(row["n"]) + "</b><span>" +
+                "<a class='ex-key-chip' href='#exq-" + _esc(copy.get("code")) + "-" + kind + "-" + str(row["n"]) +
+                "' title='Đến câu hỏi tương ứng'><b>Câu " + str(row["n"]) + "</b><span>" +
                 _esc(row.get("answer") or ("Xem lời giải" if kind == "TL" else "—")) +
-                "</span></div>" for row in items
+                "</span></a>" for row in items
             )
             sections.append("<h4>" + _esc(KIND_LABEL.get(kind, kind)) + "</h4><div class='ex-key-grid'>" + cells + "</div>")
         answer_panels.append("<section class='ex-key-code'><h3>Mã đề " + _esc(copy.get("code")) +
