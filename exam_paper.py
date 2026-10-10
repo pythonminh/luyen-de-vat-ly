@@ -492,6 +492,11 @@ def _copy_html(qs, copy, title, show_key=False, ruled=False):
             question_html = _q_html(qq, seq, src, show_key=show_key, ruled=ruled)
             anchor_id = f"exq-{copy.get('code')}-{kind}-{seq}"
             question_html = question_html.replace("<article class='exq'>", f"<article class='exq' id='{_esc(anchor_id)}'>", 1)
+            question_html = question_html.replace(
+                "</article>",
+                "<button type='button' class='ex-edit-this noprint' data-code='" + code +
+                "' data-idx='" + str(q.get("idx")) + "'>✏️ Sửa câu này trong đề</button></article>", 1
+            )
             parts.append(question_html)
             if kind == "TN":
                 ans = _tn_letter(qq)
@@ -585,6 +590,8 @@ def exam_css():
 .ex-key-chip:hover,.ex-key-chip:focus-visible{border-color:#1d70c9;background:#eaf4ff;outline:2px solid #bfdbfe}
 .exq:target{background:#fff5d8!important;outline:2px solid #e8a23b;outline-offset:3px;border-radius:3px;scroll-margin-top:70px}
 @media print{.exq:target{background:none!important;outline:none!important}}
+ .ex-edit-this{display:block;margin:6px 0 0 auto;padding:4px 9px;background:#eef6ff;border:1px solid #93c5fd;border-radius:5px;color:#174f8a;font:700 12px Arial,sans-serif;cursor:pointer}
+.ex-edit-this:hover{background:#dbeafe}
 .ex-key-chip span{font-weight:800;color:#0f5195;overflow-wrap:anywhere}
 @media print{.ex-direct-answers{display:none!important}}
 .exopts{display:grid;row-gap:5px;column-gap:18px;padding:4px 0 1px 1.15em;align-items:start}
@@ -775,6 +782,18 @@ def render_exam(auto_print=False):
  function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
  function opt(sel,value,label){const o=document.createElement('option');o.value=value;o.textContent=label;sel.appendChild(o)}
  if(!codeEl.options.length) seed.copies.forEach(c=>opt(codeEl,c.code,c.code));
+ document.addEventListener('click',function(e){
+   const button=e.target.closest&&e.target.closest('.ex-edit-this');
+   if(!button)return;
+   const panel=document.getElementById('exVarData').closest('details');
+   panel.open=true;
+   codeEl.value=button.dataset.code;
+   updateQuestions();
+   questionEl.value=button.dataset.idx;
+   updateStem();
+   panel.scrollIntoView({behavior:'smooth',block:'start'});
+   stemEl.focus({preventScroll:true});
+ });
  function chosen(){return seed.questions.find(q=>String(q.idx)===questionEl.value)}
  function updateQuestions(){
    questionEl.innerHTML='';
