@@ -2838,7 +2838,7 @@ def member_number_mix():
   <p>Chọn câu từ danh sách, tự làm và kiểm tra. Có thể đổi số từng câu bằng AI; câu gốc không thay đổi.</p>
   <div class="nm-toolbar"><b id="nmCount"></b><button type="button" id="nmFullscreen">⛶ Toàn màn hình</button><button id="nmReset" type="button">↻ Làm lại bộ này</button>
   <a href="BACK_URL">← Quay lại ngân hàng</a></div></header>
-  <details class="nm-prompt" open><summary>📝 Prompt / yêu cầu đổi số cho AI</summary><textarea id="nmPrompt" rows="3" placeholder="Ví dụ: Giữ nguyên dạng câu, đổi tất cả dữ kiện, không làm tròn đáp án, tính lại phương án và lời giải."></textarea><small>Yêu cầu này được gửi cho AI khi bấm Đổi số câu này.</small></details><nav id="nmNav" class="nm-nav"></nav>
+  <details class="nm-prompt" open><summary>📝 Prompt / yêu cầu đổi số cho AI</summary><textarea id="nmPrompt" rows="3" placeholder="Ví dụ: Giữ nguyên dạng câu, đổi tất cả dữ kiện, không làm tròn đáp án, tính lại phương án và lời giải."></textarea><small>Yêu cầu này được gửi cho AI khi bấm Đổi số câu này.</small><div class="nm-toolbar"><button type="button" id="nmCopyPrompt">📋 Sao chép prompt tạo HTML (tất cả câu)</button><button type="button" id="nmViewPrompt">👁 Xem prompt</button></div><textarea id="nmPromptExport" rows="9" style="display:none" readonly aria-label="Prompt tạo chương trình HTML"></textarea></details><nav id="nmNav" class="nm-nav"></nav>
   <main class="nm-body"><section class="nm-question">
     <h3 id="nmTitle"></h3><div id="nmStem"></div><div id="nmOpts"></div>
     <div id="nmControls"><button type="button" id="nmCheck">✅ Kiểm tra</button>
@@ -2880,6 +2880,36 @@ const fs=document.getElementById('nmFullscreen');fs.onclick=async()=>{const box=
 const el=id=>document.getElementById(id);
 function typeset(){if(window.MathJax&&MathJax.typesetPromise)window.MathJax.typesetPromise().catch(()=>{});}
 function norm(v){return String(v||'').trim().replace(/\s/g,'').replace(/,/g,'.').replace(/^\+/,'').toLowerCase()}
+function makeHtmlPrompt(){
+ const custom=el('nmPrompt').value.trim();
+ const payload=questions.map((q,i)=>({
+  cau:i+1,loai:q.kind,ma:q.id||'',nguon:q.nguon||'',de_html:q.text||'',
+  phuong_an:(q.options||[]).map((o,j)=>({nhan:'ABCD'[j],noi_dung_html:o.text||'',dung:!!o.correct})),
+  dung_sai:(q.statements||[]).map((o,j)=>({nhan:'abcd'[j],noi_dung_html:o.text||'',dung:!!o.correct})),
+  dap_an:q.answer||'',loi_giai_html:q.solution||''
+ }));
+ return [
+ 'Hãy TẠO MỘT FILE HTML HOÀN CHỈNH CHẠY OFFLINE cho học sinh luyện đổi số từ '+questions.length+' câu dưới đây.',
+ 'Chỉ trả về mã HTML duy nhất; CSS và JavaScript nằm cùng file; KHÔNG dùng CDN, thư viện ngoài, hình tạo sẵn hay canvas tĩnh.',
+ 'Thanh navy chữ trắng: Lớp Học Thầy Minh · Zalo 0946111107; dòng nhỏ lophocthayminh.onrender.com.',
+ 'Trang responsive, có danh sách câu, nút đổi đề bài mới cho từng câu, ô trả lời, kiểm tra, xem lời giải, nút chuyển câu, nút toàn màn hình.',
+ 'Lần mở đầu giữ đúng toàn bộ số liệu, đáp án, vị trí đúng/sai và lời giải gốc trong JSON.',
+ 'Mỗi lần bấm đổi số: thay số liệu hợp lý nhưng giữ dạng và điều kiện của bài; tính lại ĐÚNG đáp án và cả các phương án lựa chọn bằng JavaScript. TUYỆT ĐỐI không làm tròn nếu đề không yêu cầu. Kết quả vô hạn phải thể hiện bằng phân số hoặc biểu thức chính xác.',
+ 'Không chỉ thay số bằng phép replace chữ: với mỗi dạng phải xây dựng hàm sinh dữ kiện, bộ tính kết quả, tạo nhiễu trắc nghiệm và lời giải mới. Khi không thể xác định chắc công thức hoặc thiếu dữ kiện, hãy khóa nút đổi số của riêng câu đó kèm giải thích, không tạo đáp án sai.',
+ 'Giữ phép toán và LaTeX hiển thị chính xác; vì không có thư viện ngoài, dùng HTML/CSS, SVG hoặc cách trình bày công thức tự viết phù hợp.',
+ 'Không lộ đáp án trước khi học sinh kiểm tra hoặc bấm xem lời giải. Đánh giá câu Đúng/Sai theo từng ý, câu trả lời ngắn theo đáp án chính xác.',
+ custom?'YÊU CẦU BỔ SUNG CỦA GIÁO VIÊN:\n'+custom:'',
+ 'DỮ LIỆU CÂU HỎI VÀ ĐÁP ÁN GỐC (JSON):\n'+JSON.stringify(payload,null,2)
+ ].filter(Boolean).join('\n\n');
+}
+el('nmCopyPrompt').onclick=async()=>{
+ const content=makeHtmlPrompt();el('nmPromptExport').value=content;
+ try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(content)}
+ else{el('nmPromptExport').style.display='block';el('nmPromptExport').focus();el('nmPromptExport').select();if(!document.execCommand('copy'))throw Error('Trình duyệt chặn sao chép')}
+ el('nmCopyPrompt').textContent='✅ Đã sao chép prompt '+questions.length+' câu';
+ }catch(e){el('nmPromptExport').style.display='block';el('nmPromptExport').focus();el('nmPromptExport').select();el('nmCopyPrompt').textContent='Chọn và sao chép prompt bên dưới'}
+};
+el('nmViewPrompt').onclick=()=>{const t=el('nmPromptExport');t.value=makeHtmlPrompt();t.style.display=t.style.display==='none'?'block':'none'};
 function render(){
  const q=questions[index],st=states[index];
  el('nmCount').textContent=questions.length+' câu đã chọn · '+states.filter(x=>x.checked).length+' câu đã kiểm tra';
