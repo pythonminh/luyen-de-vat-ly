@@ -711,10 +711,11 @@ def render_exam(auto_print=False):
         for i, idx in enumerate(first_ids)
         for q in source_items if q["idx"] == int(idx)
     )
-    variant_seed = json.dumps({
+    # Base64 protects the JSON seed against HTML/script parsing and LaTeX characters.
+    variant_seed = base64.b64encode(json.dumps({
         "copies": [{"code": str(c.get("code") or ""), "ids": list(c.get("ids") or [])} for c in copies],
         "questions": source_items,
-    }, ensure_ascii=False).replace("<", "\\u003c")
+    }, ensure_ascii=False).encode("utf-8")).decode("ascii")
     variant_panel = (
         "<details class='noprint' style='margin:12px 0;padding:12px;border:1px solid #93c5fd;border-radius:9px;background:#eff6ff'>"
         "<summary style='cursor:pointer;font-weight:800'>✏️ Tự nhập số liệu, đáp án / 🤖 AI đổi số</summary>"
@@ -739,7 +740,7 @@ def render_exam(auto_print=False):
         "<div id='exVarPreview'></div>"
         "<button type='button' class='btn primary' id='exVarApply'>✅ Áp dụng cho mã đề này</button>"
         "</div>"
-        "<script type='application/json' id='exVarData'>" + variant_seed + "</script>"
+        "<div id='exVarData' data-encoded='" + variant_seed + "' hidden></div>"
         "</details>"
     )
     variant_script = r"""
@@ -748,7 +749,7 @@ def render_exam(auto_print=False):
  const dataEl=document.getElementById('exVarData');
  if(!dataEl)return;
  let seed;
- try{seed=JSON.parse(dataEl.textContent)}catch(e){dataEl.parentElement.insertAdjacentHTML('beforeend','<p style="color:#b91c1c">Không đọc được dữ liệu đề. Hãy tải lại trang.</p>');return}
+ try{seed=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(dataEl.dataset.encoded||''),c=>c.charCodeAt(0))))}catch(e){dataEl.parentElement.insertAdjacentHTML('beforeend','<p style="color:#b91c1c">Không đọc được dữ liệu đề. Hãy tải lại trang.</p>');return}
  const codeEl=document.getElementById('exVarCode'),
  questionEl=document.getElementById('exVarQuestion'), stemEl=document.getElementById('exVarStem');
  const state=document.getElementById('exVarState'),review=document.getElementById('exVarReview'),
@@ -1515,7 +1516,7 @@ def build_from_request(shuffle=False, auto_print=False, keep=False):
         ids = list(exam.get("base_ids") or (exam.get("copies") or [{}])[0].get("ids") or [])
         if (p or exam.get("qmap")) and ids:
             try:
-                qs = load_exam_qs(exam) if exam.get("qmap") else load_qs(p)
+                qs = load_exam_qs(exam)
             except Exception as e:
                 return page("Lỗi", f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
             exam["ruled"] = ruled
