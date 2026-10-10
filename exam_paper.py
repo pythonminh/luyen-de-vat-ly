@@ -765,7 +765,14 @@ def render_exam(auto_print=False):
         "<p><label>Mã LaTeX lời giải theo số mới<textarea id='exVarSolution' spellcheck='false' style='width:100%;min-height:70px;box-sizing:border-box'>" + _esc((first_question or {}).get("solution")) + "</textarea></label></p>"
         "<button type='button' class='btn primary' id='exVarManualSave'>💾 Lưu số liệu và đáp án tự nhập</button>"
         "</div>"
-        "<button type='button' class='btn' id='exVarGenerate'>🧮 Tính lại đáp án theo số đã sửa (AI)</button>"
+        "<div class='ex-ai-options' style='display:flex;flex-wrap:wrap;gap:10px;margin:10px 0'>"
+        "<label>Mức độ <select id='exVarLevel' style='padding:7px'>"
+        "<option value='keep'>Giữ nguyên mức hiện tại</option>"
+        "<option value='NB'>NB – Nhận biết</option><option value='TH'>TH – Thông hiểu</option>"
+        "<option value='VD'>VD – Vận dụng</option><option value='VDC'>VDC – Vận dụng cao</option>"
+        "</select></label><label style='flex:1;min-width:230px'>Yêu cầu riêng"
+        "<textarea id='exVarRequirements' placeholder='Ví dụ: thêm điều kiện cân bằng nhiệt, nhiều bước tính, không làm tròn…' style='display:block;width:100%;min-height:54px;box-sizing:border-box'></textarea></label></div>"
+        "<button type='button' class='btn' id='exVarGenerate'>🧮 Đổi số / đổi mức độ / tính lại đáp án (AI)</button>"
         "<div id='exVarState' role='status' style='margin-top:10px'></div>"
         "<div id='exVarReview' hidden style='margin-top:10px;padding:12px;border:1px solid #cbd5e1;background:white;border-radius:8px'>"
         "<b>Kiểm tra kỹ nội dung AI sinh ra trước khi áp dụng</b>"
@@ -877,7 +884,9 @@ def render_exam(auto_print=False):
    const q=chosen();if(!q)return;
    const edited=stemEl.value.trim();
    if(!edited){state.textContent='Đề không được để trống.';return}
-   const mode=edited===q.text.trim()?'similar':'recalc';
+   const level=document.getElementById('exVarLevel').value;
+   const requirements=document.getElementById('exVarRequirements').value.trim();
+   const mode=(level!=='keep'||requirements)?'custom':(edited===q.text.trim()?'similar':'recalc');
    const keys=window.ldvlFilledKeys?window.ldvlFilledKeys():[];
    if(!keys.length){state.textContent='Cần nạp Gemini API key trước khi đổi số.';return}
    working=true;gen.disabled=true;apply.disabled=true;review.hidden=true;candidate=null;
@@ -889,13 +898,15 @@ def render_exam(auto_print=False):
    try{
      const r=await fetch('/api/admin/rewrite-question',{
        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
-       body:JSON.stringify({src:q.src,file_idx:q.file_idx,mode:mode,stem:edited,api_keys:keys})
+       body:JSON.stringify({src:q.src,file_idx:q.file_idx,mode:mode,stem:edited,
+         target_level:level==='keep'?'TH':level,requirements:requirements,api_keys:keys})
      });
      const d=await r.json();
      if(!r.ok||!d.ok)throw Error(d.error||'AI chưa tạo được biến thể');
      if(!d.stem||!d.solution||d.kind!==q.kind)throw Error('Đề hoặc lời giải trả về chưa hợp lệ.');
      if(['TN','DS'].includes(q.kind)&&(!Array.isArray(d.options)||d.options.length!==4))throw Error('Chưa đủ 4 đáp án.');
      candidate=d;
+     if(mode==='custom') d.note=(d.note||'')+' · Mức độ yêu cầu: '+(level==='keep'?'giữ nguyên':level);
      // Cập nhật ngay các ô nhập để giáo viên thấy đáp án mới cạnh đề đã sửa.
      // Chỉ lưu khi giáo viên bấm xác nhận; AI không tự ghi vào ngân hàng.
      stemEl.value=d.stem;
