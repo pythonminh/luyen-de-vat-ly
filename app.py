@@ -4752,11 +4752,11 @@ def _reshuffle_put(job, **fields):
                 _RESHUFFLE_JOBS.pop(key, None)
 
 
-def _reshuffle_payload(src, fi, keys, code, token, pub_path, pub_pos):
+def _reshuffle_payload(src, fi, keys, code, token, pub_path, pub_pos, requirements=''):
     from admin_rewrite import live_number_variant
     from live_present import publish_number_variant
 
-    got, err = live_number_variant(src, fi, keys)
+    got, err = live_number_variant(src, fi, keys, requirements=requirements)
     if not got:
         return None, err or 'Chưa đổi được số.'
     orig = got['orig']
@@ -4788,10 +4788,10 @@ def _reshuffle_payload(src, fi, keys, code, token, pub_path, pub_pos):
     return payload, ''
 
 
-def _reshuffle_work(job, src, fi, keys, code, token, pub_path, pub_pos):
+def _reshuffle_work(job, src, fi, keys, code, token, pub_path, pub_pos, requirements=''):
     try:
         with app.app_context():
-            payload, err = _reshuffle_payload(src, fi, keys, code, token, pub_path, pub_pos)
+            payload, err = _reshuffle_payload(src, fi, keys, code, token, pub_path, pub_pos, requirements)
         if not payload:
             _reshuffle_put(job, state='error', error=err or 'Chưa đổi được số.', q=None)
             return
@@ -4873,7 +4873,7 @@ def practice_reshuffle():
     _reshuffle_put(job, state='run', who=_reshuffle_who(m), error='', q=None)
     threading.Thread(
         target=_reshuffle_work,
-        args=(job, src, fi, keys, code, token, pub_path, pub_pos),
+        args=(job, src, fi, keys, code, token, pub_path, pub_pos, str(data.get('requirements') or '')[:1600]),
         daemon=True,
     ).start()
     return jsonify(ok=True, job=job, state='run')
