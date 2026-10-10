@@ -657,21 +657,31 @@ def render_exam(auto_print=False):
         if src and fi is not None:
             source_items.append({"idx": idx, "kind": str(q.get("kind") or ""),
                                  "src": src, "file_idx": fi,
-                                 "text": str(q.get("text") or "")})
+                                 "text": str(q.get("text") or ""),
+                                 "solution": str(q.get("solution") or ""),
+                                 "answer": str(q.get("answer") or ""),
+                                 "options": q.get("options") or q.get("statements") or []})
     variant_seed = json.dumps({
         "copies": [{"code": str(c.get("code") or ""), "ids": list(c.get("ids") or [])} for c in copies],
         "questions": source_items,
     }, ensure_ascii=False).replace("<", "\\u003c")
     variant_panel = (
         "<details class='noprint' style='margin:12px 0;padding:12px;border:1px solid #93c5fd;border-radius:9px;background:#eff6ff'>"
-        "<summary style='cursor:pointer;font-weight:800'>🎲 Đổi số + tính lại đáp án theo từng mã đề (AI)</summary>"
+        "<summary style='cursor:pointer;font-weight:800'>✏️ Tự nhập số liệu, đáp án / 🤖 AI đổi số</summary>"
         "<p style='font-size:13px'>Chọn mã đề và câu, có thể sửa số trong đề hoặc để AI tự đổi số. "
         "Xem kỹ đề, phương án, lời giải rồi bấm Áp dụng. Không thay đổi câu gốc trong ngân hàng.</p>"
         "<label>Mã đề <select id='exVarCode'></select></label> "
         "<label>Câu <select id='exVarQuestion'></select></label>"
         "<p><label><b>Đề hiện tại — sửa các số liệu ở đây nếu muốn</b>"
         "<textarea id='exVarStem' style='width:100%;min-height:95px;box-sizing:border-box;font:13px/1.4 monospace'></textarea></label></p>"
-        "<button type='button' class='btn primary' id='exVarGenerate'>🤖 Tạo số liệu và đáp án mới</button>"
+        "<div id='exVarManual' style='margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff'>"
+        "<b>Người dùng tự nhập — không cần AI</b>"
+        "<div id='exVarOptions'></div>"
+        "<label>Đáp án mới (trả lời ngắn / tự luận)<input id='exVarAnswer' style='width:100%;padding:7px'></label>"
+        "<p><label>Lời giải theo số mới<textarea id='exVarSolution' style='width:100%;min-height:90px;box-sizing:border-box'></textarea></label></p>"
+        "<button type='button' class='btn primary' id='exVarManualSave'>💾 Lưu số liệu và đáp án tự nhập</button>"
+        "</div>"
+        "<button type='button' class='btn' id='exVarGenerate'>🤖 Nhờ AI đổi số và tính đáp án</button>"
         "<div id='exVarState' role='status' style='margin-top:10px'></div>"
         "<div id='exVarReview' hidden style='margin-top:10px;padding:12px;border:1px solid #cbd5e1;background:white;border-radius:8px'>"
         "<b>Kiểm tra kỹ nội dung AI sinh ra trước khi áp dụng</b>"
@@ -705,7 +715,45 @@ def render_exam(auto_print=False):
    });
    updateStem();
  }
- function updateStem(){const q=chosen();stemEl.value=q?q.text:'';candidate=null;review.hidden=true;state.textContent=''}
+ function updateStem(){
+   const q=chosen();stemEl.value=q?q.text:'';
+   document.getElementById('exVarAnswer').value=q?q.answer:'';
+   document.getElementById('exVarSolution').value=q?q.solution:'';
+   const host=document.getElementById('exVarOptions');host.innerHTML='';
+   if(q&&['TN','DS'].includes(q.kind)){
+     const original=q.options||[];
+     original.forEach((o,i)=>{
+       const wrap=document.createElement('div');wrap.style.cssText='display:flex;gap:8px;align-items:center;margin:7px 0';
+       const inp=document.createElement('input');inp.type='text';inp.value=o.text||'';inp.dataset.opt=String(i);inp.style.cssText='flex:1;min-width:80px;padding:7px';
+       const checked=document.createElement('input');checked.type=q.kind==='TN'?'radio':'checkbox';checked.name='exVarCorrect';checked.dataset.correct=String(i);checked.checked=!!o.correct;
+       const lab=document.createElement('span');lab.textContent='ABCD'[i]+'.';
+       wrap.append(lab,inp,checked);host.appendChild(wrap);
+     });
+     const hint=document.createElement('small');hint.textContent=q.kind==='TN'?'Chọn đúng một đáp án':'Tích những ý đúng; các ý không tích là sai';host.appendChild(hint);
+   }
+   candidate=null;review.hidden=true;state.textContent='';
+ }
+ document.getElementById('exVarManualSave').onclick=async function(){
+   const q=chosen();if(!q||working)return;
+   const stem=stemEl.value.trim(),solution=document.getElementById('exVarSolution').value.trim();
+   const answer=document.getElementById('exVarAnswer').value.trim();
+   const options=[...document.querySelectorAll('#exVarOptions [data-opt]')].map((el,i)=>({
+     text:el.value.trim(),correct:!!document.querySelector('#exVarOptions [data-correct="'+i+'"]').checked
+   }));
+   if(!stem||!solution){state.textContent='❌ Cần điền đề và lời giải đầy đủ.';return}
+   if(stem===q.text.trim()){state.textContent='❌ Hãy thay số hoặc nội dung đề trước khi lưu.';return}
+   if(q.kind==='TN'&&options.filter(x=>x.correct).length!==1){state.textContent='❌ Chọn đúng một đáp án A–D.';return}
+   if(['TN','DS'].includes(q.kind)&&options.some(x=>!x.text)){state.textContent='❌ Cần đủ bốn phương án.';return}
+   if(q.kind==='TLN'&&!answer){state.textContent='❌ Chưa nhập đáp án số mới.';return}
+   if(!confirm('Đã đối chiếu số liệu mới, đáp án và lời giải? Lưu riêng cho mã đề '+codeEl.value+'?'))return;
+   working=true;state.textContent='⏳ Đang lưu bản tự nhập…';
+   try{
+     const r=await fetch('/api/exam/variant/apply',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({code:codeEl.value,idx:+questionEl.value,stem,solution,answer,options})});
+     const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Không lưu được');
+     location.href='/member/exam';
+   }catch(e){state.textContent='❌ '+String(e.message||e)}finally{working=false}
+ };
  codeEl.addEventListener('change',updateQuestions);
  questionEl.addEventListener('change',updateStem);
  updateQuestions();
