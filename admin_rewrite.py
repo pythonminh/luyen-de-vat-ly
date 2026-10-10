@@ -644,6 +644,7 @@ def _prompt_similar(pack):
         lab = letters[i] if kind == "TN" else str(i + 1)
         opt_lines.append(f"{lab}.{mark} {o.get('text') or ''}")
     return (
+        "KHÔNG LÀM TRÒN SỐ: giữ nguyên mọi chữ số của dữ kiện; tính toán bằng phân số hoặc biểu thức chính xác. Không dùng giá trị gần đúng, không tự đặt số chữ số thập phân. Nếu kết quả là thập phân vô hạn, ghi phân số tối giản hoặc biểu thức căn/pi chính xác; các phương án và đáp án phải khớp giá trị chính xác. Chỉ làm tròn nếu chính đề bài yêu cầu rõ.\\n"
         "PHÁT TRIỂN TỪ CÂU GỐC để học sinh tham khảo. Không chép lại nguyên văn câu cũ.\n"
         f"Giữ đúng loại {kind} và cùng dạng kiến thức.\n"
         "Đổi các số liệu (khối lượng, thể tích, nhiệt độ, thời gian, công suất, hiệu suất, tiền điện...) sang số mới hợp lí, khác rõ số cũ.\n"
@@ -678,6 +679,7 @@ def _prompt_live_numbers(pack):
         lab = letters[i] if kind == "TN" else str(i + 1)
         opt_lines.append(f"{lab}.{mark} {o.get('text') or ''}")
     return (
+        "KHÔNG LÀM TRÒN SỐ: giữ nguyên mọi chữ số của dữ kiện; tính toán bằng phân số hoặc biểu thức chính xác. Không dùng giá trị gần đúng, không tự đặt số chữ số thập phân. Nếu kết quả là thập phân vô hạn, ghi phân số tối giản hoặc biểu thức căn/pi chính xác; các phương án và đáp án phải khớp giá trị chính xác. Chỉ làm tròn nếu chính đề bài yêu cầu rõ.\\n"
         "ĐỔI SỐ LIỆU để học sinh luyện ngay trên trang làm bài và màn chiếu. Không viết file HTML. Không vẽ Canva.\n"
         f"Giữ đúng loại {kind}. Giữ nguyên hiện tượng, tên chất, câu chữ, đơn vị và hình (TikZ, bảng).\n"
         "Chỉ thay các số liệu bằng số mới hợp lí, khác rõ số cũ. Số trong bảng và trong mã TikZ phải đổi theo.\n"
@@ -768,6 +770,7 @@ def _prompt_recalc(pack, data):
         lab = letters[i] if kind == "TN" else str(i + 1)
         lines.append(f"{lab}. {txt or ''}")
     return (
+        "KHÔNG LÀM TRÒN SỐ: giữ nguyên mọi chữ số của dữ kiện; tính toán bằng phân số hoặc biểu thức chính xác. Không dùng giá trị gần đúng, không tự đặt số chữ số thập phân. Nếu kết quả là thập phân vô hạn, ghi phân số tối giản hoặc biểu thức căn/pi chính xác; các phương án và đáp án phải khớp giá trị chính xác. Chỉ làm tròn nếu chính đề bài yêu cầu rõ.\\n"
         "ADMIN vừa sửa số hoặc từ trong đề. Giữ NGUYÊN stem dưới đây, không viết lại câu chữ của đề.\n"
         "Tính lại lời giải từ đầu cho khớp đúng bản ADMIN đã sửa.\n"
         "Đáp án đúng phải là kết quả của số liệu đang có trong stem. Cấm giữ đáp án cũ nếu số đã khác.\n"
