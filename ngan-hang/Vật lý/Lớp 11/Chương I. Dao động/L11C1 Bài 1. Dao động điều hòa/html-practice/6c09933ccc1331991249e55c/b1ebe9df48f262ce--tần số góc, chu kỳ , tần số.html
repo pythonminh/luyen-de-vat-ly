@@ -1,0 +1,541 @@
+<!--hp-title:dOG6p24gc+G7kSBnw7NjLCBjaHUga+G7syAsIHThuqduIHPhu5E=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luyện Tập Dao Động Điều Hòa - Thầy Minh</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background-color: #f4f6f9;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background-color: #0b1d3a;
+      color: #ffffff;
+      padding: 14px 20px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    header .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    header .brand-sub {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      margin-top: 3px;
+    }
+    .main-container {
+      flex: 1;
+      max-width: 1100px;
+      width: 100%;
+      margin: 24px auto;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 820px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    .panel {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0b1d3a;
+      border-bottom: 2px solid #eef2f6;
+      padding-bottom: 10px;
+      margin-bottom: 18px;
+    }
+    /* Panel Trái: Tóm tắt & Công thức */
+    .summary-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+    .summary-row:last-child {
+      margin-bottom: 0;
+    }
+    .summary-value {
+      font-weight: 700;
+      color: #1e3a8a;
+    }
+    .formula-box {
+      background: #eef2ff;
+      border-left: 4px solid #3b82f6;
+      padding: 14px;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .formula-math {
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: #1e40af;
+      text-align: center;
+      margin: 8px 0;
+    }
+    /* Panel Phải: Đề bài & Luyện tập */
+    .question-box {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      background: #fafafa;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #0b1d3a;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    button {
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 6px;
+      padding: 10px 16px;
+      border: none;
+      transition: all 0.2s ease;
+    }
+    .btn-change {
+      background-color: #0b1d3a;
+      color: #ffffff;
+    }
+    .btn-change:hover {
+      background-color: #1a365d;
+    }
+    .btn-explain {
+      background-color: #e2e8f0;
+      color: #334155;
+    }
+    .btn-explain:hover {
+      background-color: #cbd5e1;
+    }
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .option-btn {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      padding: 12px 14px;
+      border-radius: 8px;
+      text-align: left;
+      font-size: 0.95rem;
+      color: #1e293b;
+    }
+    .option-btn:hover {
+      background-color: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .option-btn.selected-correct {
+      background-color: #dcfce7;
+      border-color: #22c55e;
+      color: #15803d;
+    }
+    .option-btn.selected-wrong {
+      background-color: #fee2e2;
+      border-color: #ef4444;
+      color: #b91c1c;
+    }
+    .input-group-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 520px) {
+      .input-group-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .input-box {
+      width: 100%;
+      padding: 9px 12px;
+      font-size: 0.95rem;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      outline: none;
+    }
+    .input-box:focus {
+      border-color: #2563eb;
+    }
+    .btn-check {
+      background-color: #2563eb;
+      color: #ffffff;
+      width: 100%;
+      margin-bottom: 16px;
+    }
+    .btn-check:hover {
+      background-color: #1d4ed8;
+    }
+    .result-alert {
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: none;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    .result-correct {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .result-wrong {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    .solution-box {
+      background: #fdfaf2;
+      border: 1px solid #fed7aa;
+      border-left: 4px solid #f97316;
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #7c2d12;
+      display: none;
+    }
+    .solution-box h4 {
+      margin-bottom: 6px;
+      color: #9a3412;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-title">Lớp Học Thầy Minh · Zalo 0946111107</div>
+    <div class="brand-sub">lophocthayminh.onrender.com</div>
+  </header>
+
+  <main class="main-container">
+    <!-- CỘT TRÁI: BẢNG CÔNG THỨC & DỮ LIỆU ĐANG HIỆN -->
+    <div class="panel">
+      <div class="panel-title">TÓM TẮT & CÔNG THỨC BÀI TOÁN</div>
+
+      <div class="summary-card">
+        <div class="summary-row">
+          <span>Số dao động toàn phần (N):</span>
+          <span class="summary-value" id="disp-N">50 dao động</span>
+        </div>
+        <div class="summary-row">
+          <span>Thời gian thực hiện (t):</span>
+          <span class="summary-value" id="disp-t">1 s</span>
+        </div>
+        <div class="summary-row">
+          <span>Các đại lượng cần tìm:</span>
+          <span class="summary-value">Chu kỳ (T), Tần số (f), Tần số góc (ω)</span>
+        </div>
+      </div>
+
+      <div class="formula-box">
+        <strong>1. Chu kỳ dao động (T):</strong><br>
+        Là khoảng thời gian để vật thực hiện được 1 dao động toàn phần:
+        <div class="formula-math">T = t / N&nbsp;&nbsp;(s)</div>
+      </div>
+
+      <div class="formula-box">
+        <strong>2. Tần số dao động (f):</strong><br>
+        Là số dao động toàn phần thực hiện được trong 1 giây:
+        <div class="formula-math">f = N / t = 1 / T&nbsp;&nbsp;(Hz)</div>
+      </div>
+
+      <div class="formula-box" style="margin-bottom: 0;">
+        <strong>3. Tần số góc (ω):</strong><br>
+        Tốc độ biến thiên pha dao động của vật:
+        <div class="formula-math">ω = 2π / T = 2πf&nbsp;&nbsp;(rad/s)</div>
+      </div>
+    </div>
+
+    <!-- CỘT PHẢI: ĐỀ BÀI, TRẮC NGHIỆM & ĐỔI SỐ -->
+    <div class="panel">
+      <div class="panel-title">LUYỆN TẬP TỰ ĐỘNG</div>
+
+      <div class="btn-group">
+        <button class="btn-change" onclick="changeProblem()">« Đổi đề bài mới »</button>
+        <button class="btn-explain" onclick="toggleSolution()">Xem lời giải</button>
+      </div>
+
+      <div class="question-box" id="question-text">
+        Một vật nhỏ dao động điều hòa thực hiện 50 dao động toàn phần trong 1 s. Chu kỳ, tần số và tần số góc của dao động lần lượt là
+      </div>
+
+      <!-- Ô nhập học sinh -->
+      <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; color: #475569;">
+        Nhập kết quả tự luận:
+      </div>
+      <div class="input-group-grid">
+        <input type="text" class="input-box" id="input-T" placeholder="T (s) vd: 0,02">
+        <input type="text" class="input-box" id="input-f" placeholder="f (Hz) vd: 50">
+        <input type="text" class="input-box" id="input-w" placeholder="ω (rad/s) vd: 100pi">
+      </div>
+      <button class="btn-check" onclick="checkInputAnswers()">Kiểm tra bài làm</button>
+
+      <div id="result-status" class="result-alert"></div>
+
+      <!-- Trắc nghiệm A B C D -->
+      <div style="font-weight: 600; margin-bottom: 10px; font-size: 0.95rem; color: #475569;">
+        Hoặc chọn phương án trắc nghiệm:
+      </div>
+      <div class="options-grid" id="options-container">
+        <!-- Render bằng JavaScript -->
+      </div>
+
+      <!-- Lời giải chi tiết -->
+      <div id="solution-section" class="solution-box">
+        <h4>Lời giải chi tiết:</h4>
+        <div id="solution-text"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentN = 50;
+    let currentT = 1;
+    let currentValT = 0.02;
+    let currentValF = 50;
+    let currentValOmegaCoeff = 100; // Hệ số trước pi (rad/s)
+    let currentChoices = [];
+
+    function formatNumber(num) {
+      if (Number.isInteger(num)) return num.toString();
+      const rounded = parseFloat(num.toFixed(4));
+      return rounded.toString().replace('.', ',');
+    }
+
+    // Đề gốc ban đầu
+    function initOriginalProblem() {
+      currentN = 50;
+      currentT = 1;
+      currentValT = 0.02;
+      currentValF = 50;
+      currentValOmegaCoeff = 100;
+
+      currentChoices = [
+        { label: 'A', text: 'T = 50 s; f = 0,02 Hz; ω = 0,04π rad/s', isCorrect: false },
+        { label: 'B', text: 'T = 0,02 s; f = 50π Hz; ω = 100 rad/s', isCorrect: false },
+        { label: 'C', text: 'T = 0,02 s; f = 50 Hz; ω = 100π rad/s', isCorrect: true },
+        { label: 'D', text: 'T = 0,02 s; f = 50 Hz; ω = 50π rad/s', isCorrect: false }
+      ];
+
+      renderUI();
+    }
+
+    // Đổi số đề bài mới
+    function changeProblem() {
+      const presets = [
+        { n: 20, t: 1 },
+        { n: 40, t: 1 },
+        { n: 60, t: 2 },
+        { n: 100, t: 2 },
+        { n: 30, t: 1 },
+        { n: 75, t: 3 },
+        { n: 80, t: 2 },
+        { n: 120, t: 2 },
+        { n: 25, t: 1 },
+        { n: 10, t: 2 },
+        { n: 20, t: 4 }
+      ];
+
+      let picked;
+      do {
+        picked = presets[Math.floor(Math.random() * presets.length)];
+      } while (picked.n === currentN && picked.t === currentT);
+
+      currentN = picked.n;
+      currentT = picked.t;
+      currentValF = currentN / currentT;
+      currentValT = currentT / currentN;
+      currentValOmegaCoeff = 2 * currentValF;
+
+      const strT = formatNumber(currentValT);
+      const strF = formatNumber(currentValF);
+      const strW = formatNumber(currentValOmegaCoeff);
+
+      // Tạo các phương án trắc nghiệm với bẫy quen thuộc
+      let choicesPool = [
+        { text: `T = ${strT} s; f = ${strF} Hz; ω = ${strW}π rad/s`, isCorrect: true },
+        { text: `T = ${strF} s; f = ${strT} Hz; ω = ${formatNumber(2 * currentValT)}π rad/s`, isCorrect: false },
+        { text: `T = ${strT} s; f = ${strF}π Hz; ω = ${strW} rad/s`, isCorrect: false },
+        { text: `T = ${strT} s; f = ${strF} Hz; ω = ${formatNumber(currentValF)}π rad/s`, isCorrect: false }
+      ];
+
+      // Đảo vị trí ngẫu nhiên
+      choicesPool.sort(() => Math.random() - 0.5);
+
+      const labels = ['A', 'B', 'C', 'D'];
+      currentChoices = choicesPool.map((c, idx) => ({
+        label: labels[idx],
+        text: c.text,
+        isCorrect: c.isCorrect
+      }));
+
+      renderUI();
+    }
+
+    // Cập nhật giao diện
+    function renderUI() {
+      // Cột trái
+      document.getElementById('disp-N').textContent = `${currentN} dao động`;
+      document.getElementById('disp-t').textContent = `${currentT} s`;
+
+      // Cột phải
+      document.getElementById('question-text').textContent = 
+        `Một vật nhỏ dao động điều hòa thực hiện ${currentN} dao động toàn phần trong ${currentT} s. Chu kỳ, tần số và tần số góc của dao động lần lượt là`;
+
+      // Render danh sách lựa chọn
+      const optContainer = document.getElementById('options-container');
+      optContainer.innerHTML = '';
+      currentChoices.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = `${item.label}. ${item.text}`;
+        btn.onclick = () => selectChoice(item);
+        optContainer.appendChild(btn);
+      });
+
+      // Xóa dữ liệu nhập
+      document.getElementById('input-T').value = '';
+      document.getElementById('input-f').value = '';
+      document.getElementById('input-w').value = '';
+
+      const statusBox = document.getElementById('result-status');
+      statusBox.style.display = 'none';
+      statusBox.className = 'result-alert';
+      statusBox.textContent = '';
+
+      updateSolutionContent();
+      document.getElementById('solution-section').style.display = 'none';
+    }
+
+    // Kiểm tra ô nhập tay cả 3 đại lượng
+    function checkInputAnswers() {
+      const rawT = document.getElementById('input-T').value.trim().replace(',', '.');
+      const rawF = document.getElementById('input-f').value.trim().replace(',', '.');
+      let rawW = document.getElementById('input-w').value.trim().toLowerCase().replace(',', '.').replace('pi', '').replace('π', '').trim();
+
+      const statusBox = document.getElementById('result-status');
+      statusBox.style.display = 'block';
+
+      if (!rawT || !rawF || !rawW) {
+        statusBox.className = 'result-alert result-wrong';
+        statusBox.textContent = 'Vui lòng nhập đủ kết quả cho cả 3 đại lượng T, f và ω.';
+        return;
+      }
+
+      const valT = parseFloat(rawT);
+      const valF = parseFloat(rawF);
+      const valW = parseFloat(rawW);
+
+      const okT = Math.abs(valT - currentValT) < 1e-4;
+      const okF = Math.abs(valF - currentValF) < 1e-4;
+      // Chấp nhận học sinh nhập hệ số kèm pi hoặc tính ra số thực
+      const okW = Math.abs(valW - currentValOmegaCoeff) < 1e-2 || Math.abs(valW - (currentValOmegaCoeff * Math.PI)) < 0.2;
+
+      if (okT && okF && okW) {
+        statusBox.className = 'result-alert result-correct';
+        statusBox.textContent = 'Chính xác hoàn toàn! Bạn đã tính đúng cả chu kỳ, tần số và tần số góc.';
+      } else {
+        let msg = 'Chưa đúng: ';
+        let errs = [];
+        if (!okT) errs.push('Chu kỳ T');
+        if (!okF) errs.push('Tần số f');
+        if (!okW) errs.push('Tần số góc ω');
+        msg += errs.join(', ') + ' chưa chính xác. Hãy kiểm tra lại công thức!';
+        statusBox.className = 'result-alert result-wrong';
+        statusBox.textContent = msg;
+      }
+    }
+
+    // Xử lý bấm trắc nghiệm
+    function selectChoice(item) {
+      const statusBox = document.getElementById('result-status');
+      statusBox.style.display = 'block';
+
+      const buttons = document.querySelectorAll('.option-btn');
+      buttons.forEach((btn, idx) => {
+        btn.classList.remove('selected-correct', 'selected-wrong');
+        if (currentChoices[idx].label === item.label) {
+          if (item.isCorrect) {
+            btn.classList.add('selected-correct');
+          } else {
+            btn.classList.add('selected-wrong');
+          }
+        }
+      });
+
+      if (item.isCorrect) {
+        statusBox.className = 'result-alert result-correct';
+        statusBox.textContent = `Chính xác! Phương án ${item.label} là đáp án đúng.`;
+      } else {
+        statusBox.className = 'result-alert result-wrong';
+        statusBox.textContent = `Chưa đúng! Phương án ${item.label} chưa chính xác, hãy tính cẩn thận lại nhé.`;
+      }
+    }
+
+    // Cập nhật lời giải theo bộ số hiện thời
+    function updateSolutionContent() {
+      const solText = document.getElementById('solution-text');
+      const strT = formatNumber(currentValT);
+      const strF = formatNumber(currentValF);
+      const strW = formatNumber(currentValOmegaCoeff);
+
+      solText.innerHTML = 
+        `1. <strong>Chu kỳ dao động (T):</strong><br>` +
+        `• T = t / N = ${currentT} / ${currentN} = <strong>${strT} s</strong>.<br><br>` +
+        `2. <strong>Tần số dao động (f):</strong><br>` +
+        `• f = N / t = ${currentN} / ${currentT} = <strong>${strF} Hz</strong>.<br><br>` +
+        `3. <strong>Tần số góc (ω):</strong><br>` +
+        `• ω = 2πf = 2π · ${strF} = <strong>${strW}π rad/s</strong> (≈ ${(currentValOmegaCoeff * Math.PI).toFixed(2).replace('.', ',')} rad/s).`;
+    }
+
+    function toggleSolution() {
+      const solSection = document.getElementById('solution-section');
+      if (solSection.style.display === 'none' || solSection.style.display === '') {
+        solSection.style.display = 'block';
+      } else {
+        solSection.style.display = 'none';
+      }
+    }
+
+    window.onload = initOriginalProblem;
+  </script>
+</body>
+</html>
