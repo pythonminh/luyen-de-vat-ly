@@ -61,7 +61,7 @@ def inspect_code(source):
             if len({k.value for k in node.keys})!=len(node.keys): raise ValueError('Tên số liệu bị trùng.')
             for value in node.values: expression(value,known,owner)
             return
-        if owner=='sinh_so_lieu' and isinstance(node,(ast.List,ast.Tuple)):
+        if isinstance(node,ast.Tuple) or (owner=='sinh_so_lieu' and isinstance(node,ast.List)):
             if not 1<=len(node.elts)<=100: raise ValueError('Danh sách sinh số có 1–100 giá trị.')
             for value in node.elts: expression(value,known,owner)
             return
@@ -154,6 +154,9 @@ def run(source,function,values):
         if function=='sinh_so_lieu':
             if not isinstance(result,dict) or not result: raise ValueError('sinh_so_lieu phải trả về dict số liệu.')
             return {name:number(value) for name,value in result.items()}
+        if isinstance(result,tuple) and 1<=len(result)<=3:
+            if any(not isinstance(v,sp.Expr) or v.is_number is not True or v.is_real is not True or v.is_finite is not True for v in result): raise ValueError('Kết quả thành phần không hợp lệ.')
+            return tuple(sp.simplify(v) for v in result)
         if not isinstance(result,sp.Expr) or result.is_number is not True or result.is_real is not True or result.is_finite is not True or sp.count_ops(result)>100: raise ValueError('Hàm phải trả về một kết quả số thực hữu hạn.')
         return sp.simplify(result)
     except (TypeError,NameError,ZeroDivisionError,OverflowError) as exc: raise ValueError('Không chạy được hàm: '+str(exc)) from None
@@ -190,21 +193,25 @@ def validate_config(q,c):
     if not used: raise ValueError('Gắn ít nhất một tham số với số trong đề.')
     for key in ('answer_template','solution_template'):
         if not isinstance(c.get(key),str) or not c[key].strip() or len(c[key])>5000: raise ValueError('Điền mẫu đáp án và lời giải.')
-    if '{answer}' not in c['answer_template']: raise ValueError('Mẫu đáp án cần {answer}.')
+    if '{answer}' not in c['answer_template'] and '{answer1}' not in c['answer_template']: raise ValueError('Mẫu đáp án cần {answer}.')
     if q['kind']=='TN' and (not isinstance(c.get('distractors'),list) or len(c['distractors'])!=3): raise ValueError('Cần 3 công thức phương án nhiễu.')
     return c
 
 def latex(value):
     from variable_templates import tex_number
+    if isinstance(value,tuple): return '; '.join(latex(v) for v in value)
     if value.is_Rational: return tex_number(Fraction(str(value)))
     return sp.latex(value)
 
 def render(template,values):
+    if isinstance(values.get('answer'),tuple): values={**values,**{'answer'+str(i+1):v for i,v in enumerate(values['answer'])}}
     for name,value in values.items(): template=template.replace('{'+name+'}',latex(value))
     return template
 
 def arithmetic(source,values):
     # Distractors and dependent values use the same numeric functions, never eval strings.
+    if isinstance(values.get('answer'),tuple):
+        return tuple(arithmetic(source,{'answer':v}) for v in values['answer'])
     names=list(values)
     code='def ket_qua('+','.join(names)+'):\n    return '+source+'\n'
     module,_=inspect_code(code)
@@ -246,8 +253,8 @@ def generate(q,c,original=False,overrides=None):
     values['answer']=answer
     options=[]
     if q['kind']=='TN':
-        candidates=[answer]+[sp.simplify(arithmetic(x,{'answer':answer})) for x in c['distractors']]
-        if any(v.is_real is not True or v.is_finite is not True for v in candidates) or len(set(candidates))!=4: raise ValueError('Phương án nhiễu trùng hoặc không hợp lệ.')
+        candidates=[answer]+[arithmetic(x,{'answer':answer}) for x in c['distractors']]
+        if any(part.is_real is not True or part.is_finite is not True for v in candidates for part in (v if isinstance(v,tuple) else (v,))) or len(set(candidates))!=4: raise ValueError('Phương án nhiễu trùng hoặc không hợp lệ.')
         options=[{'text':render(c['answer_template'],{**values,'answer':v}),'correct':i==0} for i,v in enumerate(candidates)]
         RNG.shuffle(options)
     elif c['answer_template'].strip()!='{answer}': raise ValueError('Trả lời ngắn dùng mẫu {answer}.')

@@ -1,0 +1,37 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
+  "fingerprint": "45bcf37d937335c7e812dc8fa231fb93",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    so_dao_dong = random.randint(2, 20)\n    quang_duong = 4 * random.randint(2, 12) * so_dao_dong\n    return {'so_dao_dong': so_dao_dong, 'quang_duong': quang_duong}\n\ndef tinh_orbit(so_dao_dong, quang_duong):\n    return quang_duong/(2*so_dao_dong)\n",
+    "function_name": "tinh_orbit",
+    "parameters": [
+      {
+        "argument": "so_dao_dong",
+        "slot": "v0",
+        "original": "10",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      },
+      {
+        "argument": "quang_duong",
+        "slot": "v1",
+        "original": "120",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm}$",
+    "solution_template": "$L=S/(2N)={quang_duong}/(2\\cdot{so_dao_dong})={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer*2",
+      "answer/2",
+      "answer*3"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    so_dao_dong = random.randint(2, 20)\n    quang_duong = 4 * random.randint(2, 12) * so_dao_dong\n    return {'so_dao_dong': so_dao_dong, 'quang_duong': quang_duong}\n\ndef tinh_orbit(so_dao_dong, quang_duong):\n    return quang_duong/(2*so_dao_dong)\n"
+}

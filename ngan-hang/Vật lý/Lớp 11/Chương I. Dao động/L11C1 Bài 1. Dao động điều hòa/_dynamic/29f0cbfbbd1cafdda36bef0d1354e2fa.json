@@ -1,0 +1,37 @@
+{
+  "question_id": "L11C1B1-09-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
+  "fingerprint": "29f0cbfbbd1cafdda36bef0d1354e2fa",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    ban_kinh = random.randint(2, 15)\n    toc_do_goc = random.randint(2, 10)\n    return {'ban_kinh': ban_kinh, 'toc_do_goc': toc_do_goc}\n\ndef tinh_projection(ban_kinh, toc_do_goc):\n    return (ban_kinh,toc_do_goc)\n",
+    "function_name": "tinh_projection",
+    "parameters": [
+      {
+        "argument": "ban_kinh",
+        "slot": "v0",
+        "original": "10",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      },
+      {
+        "argument": "toc_do_goc",
+        "slot": "v1",
+        "original": "5",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer1}\\,\\mathrm{cm};\\ {answer2}\\,\\mathrm{rad/s}$",
+    "solution_template": "Hình chiếu có $A=R={answer1}\\,\\mathrm{cm}$ và $\\omega={answer2}\\,\\mathrm{rad/s}$.",
+    "distractors": [
+      "answer*2",
+      "answer/2",
+      "answer*3"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    ban_kinh = random.randint(2, 15)\n    toc_do_goc = random.randint(2, 10)\n    return {'ban_kinh': ban_kinh, 'toc_do_goc': toc_do_goc}\n\ndef tinh_projection(ban_kinh, toc_do_goc):\n    return (ban_kinh,toc_do_goc)\n"
+}

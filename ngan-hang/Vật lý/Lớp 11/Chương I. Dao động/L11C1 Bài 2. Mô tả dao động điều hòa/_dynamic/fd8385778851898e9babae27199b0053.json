@@ -1,0 +1,29 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
+  "fingerprint": "fd8385778851898e9babae27199b0053",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    chieu_dai = 2 * random.randint(2, 15)\n    return {'chieu_dai': chieu_dai}\n\ndef tinh_amplitude(chieu_dai):\n    return chieu_dai/2\n",
+    "function_name": "tinh_amplitude",
+    "parameters": [
+      {
+        "argument": "chieu_dai",
+        "slot": "v0",
+        "original": "16",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "{answer}",
+    "solution_template": "$A=L/2={chieu_dai}/2={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer*2",
+      "answer/2",
+      "answer*3"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    chieu_dai = 2 * random.randint(2, 15)\n    return {'chieu_dai': chieu_dai}\n\ndef tinh_amplitude(chieu_dai):\n    return chieu_dai/2\n"
+}

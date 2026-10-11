@@ -1,0 +1,45 @@
+{
+  "question_id": "L11C1B1-04-TLN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
+  "fingerprint": "f20018e407753307aefd88a3b1d782ab",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    so_dao_dong = random.randint(10, 40)\n    thoi_gian = so_dao_dong * random.randint(4, 12) / 10\n    khoi_luong = random.randint(4, 20) / 100\n    return {'so_dao_dong': so_dao_dong, 'thoi_gian': thoi_gian, 'khoi_luong': khoi_luong}\n\ndef tinh_spring(so_dao_dong, thoi_gian, khoi_luong):\n    return 40*khoi_luong/(thoi_gian/so_dao_dong)**2\n",
+    "function_name": "tinh_spring",
+    "parameters": [
+      {
+        "argument": "so_dao_dong",
+        "slot": "v0",
+        "original": "25",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      },
+      {
+        "argument": "thoi_gian",
+        "slot": "v1",
+        "original": "25/2",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      },
+      {
+        "argument": "khoi_luong",
+        "slot": "v2",
+        "original": "2/25",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "{answer}",
+    "solution_template": "$T=\\Delta t/N={thoi_gian}/{so_dao_dong}\\,\\mathrm{s}$. Lấy $\\pi^2=10$, $k=40m/T^2={answer}\\,\\mathrm{N/m}$.",
+    "distractors": [
+      "answer*2",
+      "answer/2",
+      "answer*3"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    so_dao_dong = random.randint(10, 40)\n    thoi_gian = so_dao_dong * random.randint(4, 12) / 10\n    khoi_luong = random.randint(4, 20) / 100\n    return {'so_dao_dong': so_dao_dong, 'thoi_gian': thoi_gian, 'khoi_luong': khoi_luong}\n\ndef tinh_spring(so_dao_dong, thoi_gian, khoi_luong):\n    return 40*khoi_luong/(thoi_gian/so_dao_dong)**2\n"
+}

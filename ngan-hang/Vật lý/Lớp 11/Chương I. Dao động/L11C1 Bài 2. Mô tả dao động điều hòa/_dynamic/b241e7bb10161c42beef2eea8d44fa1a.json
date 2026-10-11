@@ -1,0 +1,37 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 2. Mô tả dao động điều hòa/de.tex",
+  "fingerprint": "b241e7bb10161c42beef2eea8d44fa1a",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    thoi_gian_phut = random.randint(1, 4)\n    so_dao_dong = random.choice([15, 20, 30, 40, 60, 120])\n    return {'thoi_gian_phut': thoi_gian_phut, 'so_dao_dong': so_dao_dong}\n\ndef tinh_period(thoi_gian_phut, so_dao_dong):\n    return 60*thoi_gian_phut/so_dao_dong\n",
+    "function_name": "tinh_period",
+    "parameters": [
+      {
+        "argument": "thoi_gian_phut",
+        "slot": "v1",
+        "original": "1",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      },
+      {
+        "argument": "so_dao_dong",
+        "slot": "v0",
+        "original": "120",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "{answer}",
+    "solution_template": "$T=60\\Delta t/N=60\\cdot{thoi_gian_phut}/{so_dao_dong}={answer}\\,\\mathrm{s}$.",
+    "distractors": [
+      "answer*2",
+      "answer/2",
+      "answer*3"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    thoi_gian_phut = random.randint(1, 4)\n    so_dao_dong = random.choice([15, 20, 30, 40, 60, 120])\n    return {'thoi_gian_phut': thoi_gian_phut, 'so_dao_dong': so_dao_dong}\n\ndef tinh_period(thoi_gian_phut, so_dao_dong):\n    return 60*thoi_gian_phut/so_dao_dong\n"
+}

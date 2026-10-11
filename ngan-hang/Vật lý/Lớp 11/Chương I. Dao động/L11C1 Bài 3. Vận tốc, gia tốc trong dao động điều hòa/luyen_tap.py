@@ -16,3 +16,16 @@ def tinh_gia_toc(bien_do, he_so_omega):
     li_do = bien_do * math.sqrt(3) / 2
     return -(omega**2) * li_do
 # END 0ac40af36527781e34771c8a21ec4276
+
+# BEGIN cf21b100f629593a8e5aac1120c8fc92
+import math
+import random
+
+def sinh_so_lieu():
+    bien_do = random.randint(2, 12)
+    he_so_omega = random.randint(1, 8)
+    return {'bien_do': bien_do, 'he_so_omega': he_so_omega}
+
+def tinh_acceleration(bien_do, he_so_omega):
+    return bien_do*(he_so_omega*math.pi)**2
+# END cf21b100f629593a8e5aac1120c8fc92
