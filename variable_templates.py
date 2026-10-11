@@ -66,6 +66,9 @@ def evaluate(expression,values):
 def validate(q,config):
     if q.get('kind') not in {'TN','TLN'}: raise ValueError('Hiện hỗ trợ câu tính toán TN và trả lời ngắn.')
     if not isinstance(config,dict): raise ValueError('Cấu hình không hợp lệ.')
+    if config.get('mode')=='python':
+        from python_questions import validate_config
+        return validate_config(q,config)
     known={v['name']:v for v in slots(q['text'])}
     selected=config.get('variables',[])
     if not isinstance(selected,list) or not 1<=len(selected)<=20: raise ValueError('Chọn từ 1 đến 20 số để đổi.')
@@ -98,6 +101,9 @@ def render(template,values):
 
 def generate_custom(q,config,original=False):
     config=validate(q,config)
+    if config.get('mode')=='python':
+        from python_questions import generate
+        return generate(q,{**config,'python_code':verified_source(q,config)},original)
     numbered=slots(q['text'])
     values=saved_function_values(q,config,original)
     answer=values['answer']
@@ -132,6 +138,7 @@ def expression_source(expression,values):
 
 def source_code(q,config):
     validate(q,config)
+    if config.get('mode')=='python': return config['python_code'].rstrip()+'\n'
     originals={s['name']:fraction(s['value']) for s in slots(q['text'])}
     validation_values={}
     lines=['def '+function_name(q)+'(dung_so_goc=False):','    for _ in range(100):']
@@ -153,7 +160,7 @@ def source_code(q,config):
     lines.extend(['        return {'+', '.join(items)+'}',"    raise ValueError('Không sinh được bộ số hợp lệ.')"])
     return '\n'.join(lines)+'\n'
 
-def saved_function_values(q,config,original):
+def verified_source(q,config):
     from app import ROOT
     file=ROOT/(q['src'].rsplit('/',1)[0]+'/luyen_tap.py')
     expected=source_code(q,config)
@@ -165,6 +172,10 @@ def saved_function_values(q,config,original):
         if saved!=expected: raise ValueError('Mã hàm không khớp cấu hình đã lưu; lưu lại mẫu.')
     else:
         saved=expected  # Used only for a preview before the initial save.
+    return saved
+
+def saved_function_values(q,config,original):
+    saved=verified_source(q,config)
     namespace={'__builtins__':{},'Fraction':Fraction,'randint':RNG.randint,'range':range,'ValueError':ValueError}
     exec(compile(saved,'<verified-numeric-template>','exec'),namespace)
     return namespace[function_name(q)](original)
@@ -205,10 +216,11 @@ def register(app):
     @app.post('/api/variable-template/preview')
     @app.post('/api/variable-template/save')
     def preview_save():
-        from app import can_manage_bank,html_question,github_put_text,github_file_sha,_safe_repo_file
+        from app import can_manage_bank,html_question,_safe_repo_file
         if not can_manage_bank(): return jsonify(ok=False,error='Chỉ ADMIN được cấu hình mẫu.'),403
         try:
             data=request.get_json(silent=True) or {}
+            if not isinstance(data,dict): raise ValueError('Yêu cầu không hợp lệ.')
             q=get_question(data.get('src',''),data.get('file_idx'))
             config=validate(q,data.get('config'))
             original=generate_custom(q,config,True)
@@ -246,13 +258,41 @@ def register(app):
                 _,local=_safe_repo_file(path);local.parent.mkdir(parents=True,exist_ok=True);local.write_text(text,encoding='utf-8')
                 py_local.parent.mkdir(parents=True,exist_ok=True);py_local.write_text(module,encoding='utf-8')
             return jsonify(ok=True,original=view(original),example=view(generated),code=source_code(q,config),saved=request.path.endswith('/save'))
-        except (ValueError,TypeError,KeyError,ZeroDivisionError,SyntaxError): return jsonify(ok=False,error='Cấu hình không hợp lệ. Kiểm tra biến, khoảng số, công thức, điều kiện và phương án nhiễu.'),400
+        except (ValueError,TypeError,KeyError,ZeroDivisionError,SyntaxError) as exc: return jsonify(ok=False,error=str(exc) or 'Cấu hình không hợp lệ.'),400
         except RuntimeError: return jsonify(ok=False,error='Chưa lưu được lên GitHub. Kiểm tra kết nối GitHub của máy chủ.'),502
+
+    @app.post('/api/variable-template/python-functions')
+    def python_functions():
+        from app import can_manage_bank
+        if not can_manage_bank(): return jsonify(ok=False,error='Chỉ ADMIN được viết hàm.'),403
+        try:
+            from python_questions import signatures
+            data=request.get_json(silent=True) or {}
+            if not isinstance(data,dict): raise ValueError('Yêu cầu không hợp lệ.')
+            return jsonify(ok=True,functions=signatures(data.get('code','')))
+        except (ValueError,TypeError) as exc: return jsonify(ok=False,error=str(exc)),400
+
+    @app.post('/api/variable-template/run')
+    def python_run():
+        from app import can_manage_bank,html_question
+        if not can_manage_bank(): return jsonify(ok=False,error='Chỉ ADMIN được chạy thử hàm.'),403
+        try:
+            from python_questions import generate
+            data=request.get_json(silent=True) or {}
+            if not isinstance(data,dict): raise ValueError('Yêu cầu không hợp lệ.')
+            q=get_question(data.get('src',''),data.get('file_idx'))
+            config=validate(q,data.get('config'))
+            if config.get('mode')!='python': raise ValueError('Nhập hàm Python trước khi chạy.')
+            values=data.get('values')
+            if not isinstance(values,dict) or set(values)!={p['argument'] for p in config['parameters']}: raise ValueError('Nhập đủ số liệu cho các tham số.')
+            exercise=generate(q,config,overrides=values)
+            return jsonify(ok=True,text=html_question(exercise['text'],q['src']),answer=html_question(exercise['answer_text'],q['src']),solution=html_question(exercise['solution'],q['src']))
+        except (ValueError,TypeError,KeyError,ZeroDivisionError,SyntaxError) as exc: return jsonify(ok=False,error=str(exc)),400
 
     @app.get('/member/variable-builder')
     def builder_page():
         from app import can_manage_bank,page,login_url
         if not can_manage_bank(): return redirect(login_url(request.full_path))
-        return page('Đổi biến bằng Python', '''<section id="vb"><h2>🐍 Tạo hàm đổi biến cho câu này</h2><p>Mỗi bài lưu một file <b>luyen_tap.py</b> cạnh de.tex; mỗi câu có một hàm tính riêng trong file đó.</p><p>Chọn số trong $…$ hoặc $$…$$ được phép đổi; số bỏ chọn được giữ nguyên. Công thức dùng v0, v1… và + − * / **.</p><pre id="vbStem"></pre><div id="vbVariables"></div><label>Công thức tính đáp án (hoặc hệ số)<input id="vbFormula" placeholder="-v1**2*v3"></label><label>Điều kiện (tùy chọn)<input id="vbCondition" placeholder="v3**2*3 <= v0**2"></label><label>Mẫu đáp án: dùng {answer}<input id="vbAnswer" placeholder="$ {answer}\\pi^2\\sqrt{3}\\,\\mathrm{cm/s^2} $"></label><label>Mẫu lời giải<textarea id="vbSolution"></textarea></label><label>Ba công thức nhiễu, mỗi dòng một công thức<textarea id="vbDistractors">answer*2
-answer/2
--answer</textarea></label><button id="vbPreview" type="button">Chạy thử và xem hàm</button><div id="vbOutput"></div><label><input id="vbConfirm" type="checkbox"> Tôi đã đối chiếu kết quả từ số liệu gốc với đáp án gốc.</label><button id="vbSave" type="button">Lưu hàm cho câu này</button><p id="vbStatus" role="status"></p><pre id="vbCode"></pre><a id="vbPractice" class="btn" hidden>Mở bài đổi số bằng Python</a></section><style>#vb{max-width:1000px;margin:16px auto;padding:16px}#vb label{display:block;margin:10px 0}#vb input:not([type=checkbox]),#vb textarea{box-sizing:border-box;padding:8px;width:100%}#vb textarea{min-height:75px}.vb-row{display:grid;grid-template-columns:40px 1fr repeat(3,90px) 150px;gap:8px;align-items:center;margin:8px 0}#vb pre{overflow:auto;padding:12px;background:#102137;color:#e3edfb;white-space:pre-wrap}#vb button{padding:10px;margin:8px;border-radius:7px}#vbOutput{line-height:1.7;border:1px solid #abc;padding:12px} @media(max-width:700px){.vb-row{grid-template-columns:30px 1fr 1fr}.vb-row input{min-width:0}}</style><script src="/static/variable-builder.js"></script>''')
+        return page('Hàm Python của câu', '''<section id="vb"><h2>🐍 Viết hàm Python cho câu này</h2><p>Mã được lưu trong <b>luyen_tap.py</b> của bài, gắn với câu đang mở.</p><pre id="vbStem"></pre><label><b>Mã Python</b><textarea id="vbPythonCode" spellcheck="false"></textarea></label><p>Viết hàm <code>def tinh_...(tham_so)</code> và <code>return</code> kết quả. Các ô nhập và nút bấm trên app thực hiện phần nhập số. Hỗ trợ phép tính, biến trung gian, gọi hàm phụ, <code>if</code> và <code>math</code>.</p><button id="vbReadParameters" type="button">Đọc tham số từ mã</button><label>Hàm tính cho câu này<select id="vbFunction"></select></label><h3>Số liệu truyền vào hàm</h3><p>Gắn từng tham số với số tương ứng trong đề. “Số nhập” dùng khi chạy thử; khoảng nhỏ nhất–lớn nhất–bước dùng khi đổi số.</p><div id="vbParameters"></div><details><summary>Số khác trong đề phụ thuộc tham số</summary><p>Ví dụ hệ số li độ bằng nửa biên độ: <code>bien_do/2</code>.</p><div id="vbReplacements"></div><button id="vbAddReplacement" type="button">Thêm số phụ thuộc</button></details><details><summary>Định dạng đáp án, lời giải và phương án nhiễu</summary><label>Mẫu đáp án<input id="vbAnswer" value="$ {answer} $"></label><label>Mẫu lời giải<textarea id="vbSolution"></textarea></label><p>Dùng {answer} và tên tham số như {khoi_luong}, {v} trong mẫu.</p><label>Ba công thức phương án nhiễu<textarea id="vbDistractors">-answer
+answer*2
+answer/2</textarea></label></details><button id="vbRun" type="button">▶ Chạy thử số nhập</button><button id="vbPreview" type="button">🎲 Đổi số thử và đối chiếu đề gốc</button><div id="vbOutput"></div><label><input id="vbConfirm" type="checkbox"> Tôi đã đối chiếu kết quả hàm với đáp án đề gốc.</label><button id="vbSave" type="button">💾 Lưu hàm Python cho câu</button><p id="vbStatus" role="status"></p><a id="vbPractice" class="btn" hidden>Mở bài đổi số bằng Python</a></section><link rel="stylesheet" href="/static/python-builder.css"><script src="/static/variable-builder.js"></script>''')

@@ -157,7 +157,9 @@ def register(app):
             if item.get('custom_config'):
                 from variable_templates import generate_custom
                 from app import html_question
-                exercise=generate_custom(item['raw_question'],item['custom_config'],original)
+                for _ in range(20):
+                    exercise=generate_custom(item['raw_question'],item['custom_config'],original)
+                    if original or exercise['params']!=last: break
                 for field in ('text','solution'):
                     exercise[field]=html_question(exercise[field],item['raw_question'].get('src'))
                 exercise['options']=[{**o,'text':html_question(o['text'],item['raw_question'].get('src'))} for o in exercise['options']]
@@ -200,8 +202,11 @@ def register(app):
         else:
             try:
                 if len(str(body.get('answer','')))>100: raise ValueError()
-                correct=fraction(body.get('answer',''))==fraction(exercise['answer'])
-            except (ValueError,ZeroDivisionError): return jsonify(ok=False,error='Nhập số hoặc phân số chính xác.'),400
+                if exercise.get('python_function'):
+                    from python_questions import same_answer
+                    correct=same_answer(body.get('answer',''),exercise['answer'])
+                else: correct=fraction(body.get('answer',''))==fraction(exercise['answer'])
+            except (ValueError,ZeroDivisionError): return jsonify(ok=False,error='Nhập số, phân số hoặc biểu thức như sqrt(3), pi.'),400
         return jsonify(ok=True,correct=correct)
 
     @app.post('/api/dynamic-practice/solution')
