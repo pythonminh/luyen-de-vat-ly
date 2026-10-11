@@ -3156,15 +3156,16 @@ def member_html_practice():
     body = ('<div class="wrap"><h2>Bài HTML luyện đổi số</h2><p>' + html.escape(dang or 'Cả bài') + '</p>'
             '<p><a class="btn" href="' + html.escape(back, quote=True) + '">← Về dạng bài</a> '
             '<button type="button" id="hpFull">Mở rộng bài</button> <button type="button" id="hpShare">Sao chép link học sinh</button></p>'
-            + note + editor + '<p id="hpStatus" role="status">Đang mở bài đã lưu…</p>'
+            + '<div style="padding:12px;border:2px solid #2563eb;border-radius:8px;background:#eff6ff;margin:12px 0"><label for="hpLink"><strong>🔗 Link học sinh — mở bài đã lưu</strong></label><input id="hpLink" type="text" readonly style="display:block;width:100%;box-sizing:border-box;padding:10px;margin:8px 0;font-size:14px"><a id="hpOpenSaved" class="btn primary" target="_blank" rel="noopener">▶ Mở bài đã lưu</a><p>Gửi link này sau khi lưu bài thành công.</p></div>' + note + editor + '<p id="hpStatus" role="status">Đang mở bài đã lưu…</p>'
             '<iframe id="hpFrame" title="Bài luyện tập đổi số" sandbox="allow-scripts" referrerpolicy="no-referrer" '
             'style="display:block;width:100%;height:85vh;min-height:500px;border:1px solid #cbd5e1;background:white"></iframe></div>'
             '<style>body.hp-expanded #hpFrame{position:fixed;inset:0;height:100dvh!important;width:100vw!important;z-index:9998}body.hp-expanded #hpFull{position:fixed;right:8px;top:8px;z-index:9999}</style>')
     script = r"""<script>
 const hpFrame=document.getElementById('hpFrame'),hpStatus=document.getElementById('hpStatus');
+const hpSavedUrl=new URL(location.href);hpSavedUrl.searchParams.delete('content');hpSavedUrl.hash='hpFrame';document.getElementById('hpLink').value=hpSavedUrl.href;document.getElementById('hpOpenSaved').href=hpSavedUrl.href;
 fetch(CONTENT_URL).then(async r=>{const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Không mở được bài');hpFrame.srcdoc=d.source;hpStatus.textContent='Bài đã lưu · Bấm đổi đề trong bài để luyện tập.'}).catch(e=>{hpStatus.textContent=e.message;});
 document.getElementById('hpFull').onclick=()=>{document.body.classList.toggle('hp-expanded');document.getElementById('hpFull').textContent=document.body.classList.contains('hp-expanded')?'Thu nhỏ':'Mở rộng bài';};
-document.getElementById('hpShare').onclick=async()=>{const u=new URL(location.href);u.searchParams.delete('content');try{await navigator.clipboard.writeText(u.href);hpStatus.textContent='Đã sao chép link học sinh.';}catch(e){hpStatus.textContent=u.href;}};
+document.getElementById('hpShare').onclick=async()=>{const u=hpSavedUrl;try{await navigator.clipboard.writeText(u.href);hpStatus.textContent='Đã sao chép link học sinh.';}catch(e){hpStatus.textContent=u.href;}};
 const hpPreview=document.getElementById('hpPreview');if(hpPreview)hpPreview.onclick=async()=>{try{const f=document.getElementById('hpFile').files[0];if(f&&f.size>2097152)throw Error('File quá 2 MB.');const source=f?await f.text():document.getElementById('hpSource').value;if(!source.trim())throw Error('Chọn file hoặc dán mã HTML.');hpFrame.srcdoc=source;hpStatus.textContent='Đang chạy thử · Chưa lưu.';}catch(e){hpStatus.textContent=e.message;}};
 </script>""".replace('CONTENT_URL', json.dumps(content_url, ensure_ascii=True))
     return page('Bài HTML luyện đổi số', body + script)
