@@ -675,7 +675,7 @@ def member_dang():
     dang_lab=dang or 'Cả bài'
     body=("<div class='wrap'>"+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang_lab)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}{qdel_form}"
-          +matrix_html+form_open+"<div id='presentSlot'></div>"+tools+
+          +_html_practice_link(path, dang)+matrix_html+form_open+"<div id='presentSlot'></div>"+tools+
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
           "</div></div></div>"
@@ -3059,3 +3059,112 @@ def make_catalog_rows_enhanced(response):
         response.set_data(body.replace('</body>',script+'</body>'))
     except Exception: pass
     return response
+
+
+# Imported standalone HTML exercises retain their own JavaScript in an opaque iframe.
+def _html_practice_location(path, dang):
+    path, _ = _safe_repo_file(path)
+    if not path.lower().endswith('.tex'):
+        raise ValueError('Chọn một bài trong ngân hàng.')
+    key = hashlib.sha256((path + '\n' + dang.strip()).encode('utf-8')).hexdigest()[:24]
+    return path.rsplit('/', 1)[0] + '/html-practice/' + key + '.html'
+
+
+def _html_practice_link(path, dang):
+    url = '/member/html-practice?' + urllib.parse.urlencode({'path': path, 'dang': dang})
+    label = '📂 Nhập / mở bài HTML có đổi số' if can_manage_bank() else '🎲 Mở bài HTML có đổi số'
+    return '<div class="toolbar"><a class="btn primary" href="' + html.escape(url, quote=True) + '">' + label + '</a></div>'
+
+
+@app.route('/member/html-practice', methods=['GET', 'POST'])
+def member_html_practice():
+    from flask import Response
+    import secrets
+    path = str(request.values.get('path') or '').strip()
+    dang = str(request.values.get('dang') or '').strip()
+    try:
+        rel = _html_practice_location(path, dang)
+    except ValueError as exc:
+        return str(exc), 400
+    m = member_current()
+    manager = can_manage_bank()
+    if not can_view(m, path):
+        return redirect(login_url(request.full_path)) if not m else ('Bài này dành cho VIP.', 403)
+    if 'html_practice_csrf' not in session:
+        session['html_practice_csrf'] = secrets.token_urlsafe(32)
+    note = ''
+    if request.method == 'POST':
+        if not manager:
+            return 'Chỉ ADMIN được lưu bài HTML.', 403
+        if not secrets.compare_digest(str(request.form.get('csrf') or ''), session['html_practice_csrf']):
+            return 'Phiên đã hết hạn. Tải lại trang.', 403
+        try:
+            upload = request.files.get('file')
+            if upload and upload.filename:
+                if not upload.filename.lower().endswith(('.html', '.htm')):
+                    raise ValueError('Chọn file .html hoặc .htm.')
+                raw = upload.stream.read(2 * 1024 * 1024 + 1)
+                source = raw.decode('utf-8-sig')
+            else:
+                source = str(request.form.get('source') or '').strip()
+                raw = source.encode('utf-8')
+            if not raw or len(raw) > 2 * 1024 * 1024:
+                raise ValueError('File phải có nội dung và không quá 2 MB.')
+            if not re.search(r'<html\b', source, re.I) or not re.search(r'<script\b', source, re.I):
+                raise ValueError('Cần mã HTML hoàn chỉnh có JavaScript cho bài tương tác.')
+            from app import github_file_sha, github_token
+            if not github_token():
+                raise ValueError('Máy chủ chưa có quyền lưu vào GitHub.')
+            try:
+                sha = github_file_sha(rel)
+            except RuntimeError as exc:
+                if 'GitHub API 404:' not in str(exc):
+                    raise
+                sha = None
+            github_put_text(rel, source, 'Lưu bài HTML luyện đổi số: ' + dang[:100], sha)
+            _, local = _safe_repo_file(rel)
+            local.parent.mkdir(parents=True, exist_ok=True)
+            local.write_text(source, encoding='utf-8')
+            note = '<p role="status">✅ Đã lưu. Học sinh mở đường link này để luyện tập.</p>'
+        except Exception as exc:
+            note = '<p role="alert">Không lưu được: ' + html.escape(str(exc)) + '</p>'
+    if request.args.get('content') == '1':
+        from app import _fetch_bytes_remote
+        _, local = _safe_repo_file(rel)
+        try:
+            source = local.read_text(encoding='utf-8') if local.is_file() else _fetch_bytes_remote(rel).decode('utf-8-sig')
+        except Exception:
+            return jsonify(ok=False, error='Dạng bài này chưa có bài HTML đã lưu.'), 404
+        response = jsonify(ok=True, source=source)
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+    back = dang_view_url(path, dang)
+    content_url = '/member/html-practice?' + urllib.parse.urlencode({'path': path, 'dang': dang, 'content': '1'})
+    editor = ''
+    if manager:
+        editor = ('<details open><summary>📂 Nhập bài HTML có đổi số</summary>'
+                  '<form method="post" enctype="multipart/form-data">'
+                  '<input type="hidden" name="path" value="' + html.escape(path, quote=True) + '">'
+                  '<input type="hidden" name="dang" value="' + html.escape(dang, quote=True) + '">'
+                  '<input type="hidden" name="csrf" value="' + html.escape(session['html_practice_csrf'], quote=True) + '">'
+                  '<p><label>Chọn file HTML <input id="hpFile" name="file" type="file" accept=".html,.htm,text/html"></label></p>'
+                  '<p><label for="hpSource">Hoặc dán toàn bộ mã HTML</label></p>'
+                  '<textarea id="hpSource" name="source" rows="7" style="width:100%;font-family:monospace"></textarea>'
+                  '<p><button type="button" id="hpPreview">Chạy thử</button> <button type="submit">Lưu bài theo dạng này</button></p>'
+                  '<p>Lưu lại sẽ thay bài HTML trước của dạng này. File giữ nguyên chương trình đổi số; cần kiểm tra đáp án trước khi lưu.</p>'
+                  '</form></details>')
+    body = ('<div class="wrap"><h2>Bài HTML luyện đổi số</h2><p>' + html.escape(dang or 'Cả bài') + '</p>'
+            '<p><a class="btn" href="' + html.escape(back, quote=True) + '">← Về dạng bài</a> '
+            '<button type="button" id="hpFull">Mở rộng bài</button> <button type="button" id="hpShare">Sao chép link học sinh</button></p>'
+            + note + editor + '<p id="hpStatus" role="status">Đang mở bài đã lưu…</p>'
+            '<iframe id="hpFrame" title="Bài luyện tập đổi số" sandbox="allow-scripts" referrerpolicy="no-referrer" '
+            'style="display:block;width:100%;height:85vh;min-height:500px;border:1px solid #cbd5e1;background:white"></iframe></div>'
+            '<style>body.hp-expanded #hpFrame{position:fixed;inset:0;height:100dvh!important;width:100vw!important;z-index:9998}body.hp-expanded #hpFull{position:fixed;right:8px;top:8px;z-index:9999}</style>')
+    script = r"""<script>
+const hpFrame=document.getElementById('hpFrame'),hpStatus=document.getElementById('hpStatus');
+fetch(CONTENT_URL).then(async r=>{const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Không mở được bài');hpFrame.srcdoc=d.source;hpStatus.textContent='Bài đã lưu · Bấm đổi đề trong bài để luyện tập.'}).catch(e=>{hpStatus.textContent=e.message;});
+document.getElementById('hpFull').onclick=()=>{document.body.classList.toggle('hp-expanded');document.getElementById('hpFull').textContent=document.body.classList.contains('hp-expanded')?'Thu nhỏ':'Mở rộng bài';};
+document.getElementById('hpShare').onclick=async()=>{const u=new URL(location.href);u.searchParams.delete('content');try{await navigator.clipboard.writeText(u.href);hpStatus.textContent='Đã sao chép link học sinh.';}catch(e){hpStatus.textContent=u.href;}};
+const hpPreview=document.getElementById('hpPreview');if(hpPreview)hpPreview.onclick=async()=>{try{const f=document.getElementById('hpFile').files[0];if(f&&f.size>2097152)throw Error('File quá 2 MB.');const source=f?await f.text():document.getElementById('hpSource').value;if(!source.trim())throw Error('Chọn file hoặc dán mã HTML.');hpFrame.srcdoc=source;hpStatus.textContent='Đang chạy thử · Chưa lưu.';}catch(e){hpStatus.textContent=e.message;}};
+</script>""".replace('CONTENT_URL', json.dumps(content_url, ensure_ascii=True))
+    return page('Bài HTML luyện đổi số', body + script)
