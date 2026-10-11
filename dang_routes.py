@@ -3076,7 +3076,7 @@ def _html_practice_link(path, dang):
     return ('<section id="htmlPracticeEntry" style="display:block!important;padding:18px;margin:0 0 16px;border:3px solid #2563eb;border-radius:12px;background:#eff6ff">'
             '<strong style="display:block;font-size:20px;color:#123b70;margin-bottom:8px">🎲 BÀI HTML ĐỔI SỐ</strong>'
             '<p style="margin:6px 0 12px">Nhập file HTML, lưu bài và mở chương trình luyện đổi số của dạng này.</p>'
-            '<a href="' + html.escape(url, quote=True) + '" style="display:inline-block!important;padding:12px 18px;background:#2563eb;color:#fff!important;border-radius:8px;font-weight:bold;text-decoration:none">' + label + '</a></section>')
+            '<a href="' + html.escape(url, quote=True) + '" style="display:inline-block!important;padding:12px 18px;background:#2563eb;color:#fff!important;border-radius:8px;font-weight:bold;text-decoration:none">' + label + '</a>' + _html_practice_list_html(path, dang) + '</section>')
 
 
 @app.route('/member/html-practice', methods=['GET', 'POST'])
@@ -3086,7 +3086,12 @@ def member_html_practice():
     path = str(request.values.get('path') or '').strip()
     dang = str(request.values.get('dang') or '').strip()
     try:
-        rel = _html_practice_location(path, dang)
+        legacy = _html_practice_location(path, dang)
+        folder = legacy[:-5]
+        item = str(request.values.get("item") or "").strip()
+        if item and ("/" in item or "\\" in item or ".." in item or not item.endswith(".html")):
+            raise ValueError("Bài HTML không hợp lệ.")
+        rel = folder + "/" + item if item else legacy
     except ValueError as exc:
         return str(exc), 400
     m = member_current()
@@ -3118,6 +3123,10 @@ def member_html_practice():
             from app import github_file_sha, github_token
             if not github_token():
                 raise ValueError('Máy chủ chưa có quyền lưu vào GitHub.')
+            title = str(request.form.get('title') or (upload.filename if upload and upload.filename else '') or 'Bài luyện tập').strip()
+            title = re.sub(r'[<>:/\\|?*\x00-\x1f]', '-', title)[:100].removesuffix('.html').removesuffix('.htm') or 'Bài luyện tập'
+            item = secrets.token_hex(8) + '--' + title + '.html'
+            rel = folder + '/' + item
             try:
                 sha = github_file_sha(rel)
             except RuntimeError as exc:
@@ -3128,7 +3137,8 @@ def member_html_practice():
             _, local = _safe_repo_file(rel)
             local.parent.mkdir(parents=True, exist_ok=True)
             local.write_text(source, encoding='utf-8')
-            note = '<p role="status">✅ Đã lưu. Học sinh mở đường link này để luyện tập.</p>'
+            _HTML_LIST_CACHE.clear()
+            return redirect('/member/html-practice?' + urllib.parse.urlencode({'path':path, 'dang':dang, 'item':item, 'saved':'1'}))
         except Exception as exc:
             note = '<p role="alert">Không lưu được: ' + html.escape(str(exc)) + '</p>'
     if request.args.get('content') == '1':
@@ -3142,7 +3152,10 @@ def member_html_practice():
         response.headers['Cache-Control'] = 'no-store'
         return response
     back = dang_view_url(path, dang)
-    content_url = '/member/html-practice?' + urllib.parse.urlencode({'path': path, 'dang': dang, 'content': '1'})
+    content_url = '/member/html-practice?' + urllib.parse.urlencode({'path': path, 'dang': dang, 'item':item, 'content': '1'})
+    if request.args.get('saved') == '1':
+        note = '<p role="status">✅ Đã thêm bài mới. Các bài trước vẫn được giữ.</p>'
+    listing = _html_practice_list_html(path, dang)
     editor = ''
     if manager:
         editor = ('<details open><summary>📂 Nhập bài HTML có đổi số</summary>'
@@ -3150,25 +3163,94 @@ def member_html_practice():
                   '<input type="hidden" name="path" value="' + html.escape(path, quote=True) + '">'
                   '<input type="hidden" name="dang" value="' + html.escape(dang, quote=True) + '">'
                   '<input type="hidden" name="csrf" value="' + html.escape(session['html_practice_csrf'], quote=True) + '">'
+                  '<p><label>Tên bài <input name="title" type="text" maxlength="100" placeholder="Ví dụ: Biên độ từ li độ và vận tốc" style="width:100%"></label></p>'
                   '<p><label>Chọn file HTML <input id="hpFile" name="file" type="file" accept=".html,.htm,text/html"></label></p>'
                   '<p><label for="hpSource">Hoặc dán toàn bộ mã HTML</label></p>'
                   '<textarea id="hpSource" name="source" rows="7" style="width:100%;font-family:monospace"></textarea>'
-                  '<p><button type="button" id="hpPreview">Chạy thử</button> <button type="submit">Lưu bài theo dạng này</button></p>'
-                  '<p>Lưu lại sẽ thay bài HTML trước của dạng này. File giữ nguyên chương trình đổi số; cần kiểm tra đáp án trước khi lưu.</p>'
+                  '<p><button type="button" id="hpPreview">Chạy thử</button> <button type="submit">Thêm bài vào thư mục dạng</button></p>'
+                  '<p>Mỗi lần lưu thêm một bài mới, không ghi đè các bài trước. File giữ nguyên chương trình đổi số; cần kiểm tra đáp án trước khi lưu.</p>'
                   '</form></details>')
     body = ('<div class="wrap"><h2>Bài HTML luyện đổi số</h2><p>' + html.escape(dang or 'Cả bài') + '</p>'
             '<p><a class="btn" href="' + html.escape(back, quote=True) + '">← Về dạng bài</a> '
             '<button type="button" id="hpFull">Mở rộng bài</button> <button type="button" id="hpShare">Sao chép link học sinh</button></p>'
-            + '<div style="padding:12px;border:2px solid #2563eb;border-radius:8px;background:#eff6ff;margin:12px 0"><label for="hpLink"><strong>🔗 Link học sinh — mở bài đã lưu</strong></label><input id="hpLink" type="text" readonly style="display:block;width:100%;box-sizing:border-box;padding:10px;margin:8px 0;font-size:14px"><a id="hpOpenSaved" class="btn primary" target="_blank" rel="noopener">▶ Mở bài đã lưu</a><p>Gửi link này sau khi lưu bài thành công.</p></div>' + note + editor + '<p id="hpStatus" role="status">Đang mở bài đã lưu…</p>'
+            + '<div style="padding:12px;border:2px solid #2563eb;border-radius:8px;background:#eff6ff;margin:12px 0"><label for="hpLink"><strong>🔗 Link học sinh — mở bài đã lưu</strong></label><input id="hpLink" type="text" readonly style="display:block;width:100%;box-sizing:border-box;padding:10px;margin:8px 0;font-size:14px"><a id="hpOpenSaved" class="btn primary" target="_blank" rel="noopener">▶ Mở bài đã lưu</a><p>Gửi link này sau khi lưu bài thành công.</p></div>' + note + listing + editor + '<p id="hpStatus" role="status">Đang mở bài đã lưu…</p>'
             '<iframe id="hpFrame" title="Bài luyện tập đổi số" sandbox="allow-scripts" referrerpolicy="no-referrer" '
             'style="display:block;width:100%;height:85vh;min-height:500px;border:1px solid #cbd5e1;background:white"></iframe></div>'
             '<style>body.hp-expanded #hpFrame{position:fixed;inset:0;height:100dvh!important;width:100vw!important;z-index:9998}body.hp-expanded #hpFull{position:fixed;right:8px;top:8px;z-index:9999}</style>')
     script = r"""<script>
 const hpFrame=document.getElementById('hpFrame'),hpStatus=document.getElementById('hpStatus');
-const hpSavedUrl=new URL(location.href);hpSavedUrl.searchParams.delete('content');hpSavedUrl.hash='hpFrame';document.getElementById('hpLink').value=hpSavedUrl.href;document.getElementById('hpOpenSaved').href=hpSavedUrl.href;
+const hpSavedUrl=new URL(location.href);hpSavedUrl.searchParams.delete('content');hpSavedUrl.searchParams.delete('saved');hpSavedUrl.hash='hpFrame';document.getElementById('hpLink').value=hpSavedUrl.href;document.getElementById('hpOpenSaved').href=hpSavedUrl.href;
 fetch(CONTENT_URL).then(async r=>{const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Không mở được bài');hpFrame.srcdoc=d.source;hpStatus.textContent='Bài đã lưu · Bấm đổi đề trong bài để luyện tập.'}).catch(e=>{hpStatus.textContent=e.message;});
 document.getElementById('hpFull').onclick=()=>{document.body.classList.toggle('hp-expanded');document.getElementById('hpFull').textContent=document.body.classList.contains('hp-expanded')?'Thu nhỏ':'Mở rộng bài';};
 document.getElementById('hpShare').onclick=async()=>{const u=hpSavedUrl;try{await navigator.clipboard.writeText(u.href);hpStatus.textContent='Đã sao chép link học sinh.';}catch(e){hpStatus.textContent=u.href;}};
 const hpPreview=document.getElementById('hpPreview');if(hpPreview)hpPreview.onclick=async()=>{try{const f=document.getElementById('hpFile').files[0];if(f&&f.size>2097152)throw Error('File quá 2 MB.');const source=f?await f.text():document.getElementById('hpSource').value;if(!source.trim())throw Error('Chọn file hoặc dán mã HTML.');hpFrame.srcdoc=source;hpStatus.textContent='Đang chạy thử · Chưa lưu.';}catch(e){hpStatus.textContent=e.message;}};
 </script>""".replace('CONTENT_URL', json.dumps(content_url, ensure_ascii=True))
     return page('Bài HTML luyện đổi số', body + script)
+
+
+_HTML_LIST_CACHE = {}
+
+
+def _html_directory_entries(rel):
+    from app import gh_api, BRANCH
+    now = time.time()
+    cached = _HTML_LIST_CACHE.get(rel)
+    if cached and now - cached[0] < 30:
+        return cached[1]
+    _, local = _safe_repo_file(rel)
+    entries = {f.name: {'name':f.name, 'path':rel+'/'+f.name, 'type':'dir' if f.is_dir() else 'file'} for f in local.iterdir()} if local.is_dir() else {}
+    try:
+        remote = gh_api('contents/' + urllib.parse.quote(rel, safe='/') + '?ref=' + urllib.parse.quote(BRANCH))
+        if isinstance(remote, list):
+            for entry in remote:
+                entries[entry['name']] = entry
+    except Exception:
+        pass
+    result = list(entries.values())
+    _HTML_LIST_CACHE[rel] = (now, result)
+    return result
+
+
+def _html_practice_list_html(path, dang):
+    legacy = _html_practice_location(path, dang)
+    rows = []
+    for entry in sorted(_html_directory_entries(legacy[:-5]), key=lambda e:e['name']):
+        name = entry['name']
+        if entry.get('type') != 'file' or not name.endswith('.html'):
+            continue
+        title = name.split('--',1)[-1][:-5]
+        href = '/member/html-practice?' + urllib.parse.urlencode({'path':path,'dang':dang,'item':name})
+        rows.append('<li style="margin:8px 0"><a class="btn" href="' + html.escape(href, quote=True) + '">▶ ' + html.escape(title) + '</a></li>')
+    parent = legacy.rsplit('/',1)[0]
+    if any(e['name'] == legacy.rsplit('/',1)[1] for e in _html_directory_entries(parent)):
+        href = '/member/html-practice?' + urllib.parse.urlencode({'path':path,'dang':dang})
+        rows.insert(0, '<li><a class="btn" href="' + html.escape(href,quote=True) + '">▶ Bài đã lưu trước đây</a></li>')
+    return '<details open style="margin-top:12px"><summary><b>📁 Danh sách bài HTML (' + str(len(rows)) + ')</b></summary><ul>' + ''.join(rows) + '</ul></details>' if rows else '<p>Thư mục dạng này chưa có bài HTML. ADMIN có thể thêm nhiều bài.</p>'
+
+
+@app.after_request
+def html_practice_on_lesson_menu(response):
+    if request.path not in {'/member/select', '/member'} or 'text/html' not in response.headers.get('Content-Type',''):
+        return response
+    try:
+        body = response.get_data(as_text=True)
+        if request.path == '/member/select':
+            path = request.args.get('path','')
+            if path and can_view(member_current(),path):
+                qs = parse_lesson_questions(path)
+                dangs = list(dict.fromkeys(str(q.get('dang') or '').strip() for q in qs))
+                menu = '<section style="padding:14px;border:2px solid #2563eb;border-radius:10px;margin:12px"><h2>📁 Bài HTML đổi số theo dạng</h2>'
+                for dang in dangs:
+                    url='/member/html-practice?'+urllib.parse.urlencode({'path':path,'dang':dang})
+                    menu += '<details><summary><a href="'+html.escape(url,quote=True)+'">'+html.escape(dang or 'Cả bài')+'</a></summary>'+_html_practice_list_html(path,dang)+'</details>'
+                menu += '</section>'
+                body = body.replace('</body>',menu+'</body>',1)
+        else:
+            script = """<script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('a[href^="/member/select?path="]').forEach(function(a){const u=new URL(a.href,location.origin),p=u.searchParams.get('path');if(!p)return;const b=document.createElement('a');b.className='btn';b.textContent='📁 HTML đổi số';b.href='/member/select?path='+encodeURIComponent(p)+'#htmlLessonMenu';a.insertAdjacentElement('afterend',b);});});</script>"""
+            body=body.replace('</body>',script+'</body>',1)
+        body=body.replace('<section style="padding:14px;border:2px solid #2563eb', '<section id="htmlLessonMenu" style="padding:14px;border:2px solid #2563eb')
+        response.set_data(body)
+        response.headers['Cache-Control']='no-store'
+    except Exception:
+        pass
+    return response
