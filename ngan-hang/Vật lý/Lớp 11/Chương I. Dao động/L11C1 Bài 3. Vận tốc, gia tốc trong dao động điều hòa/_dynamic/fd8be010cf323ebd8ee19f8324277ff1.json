@@ -1,0 +1,45 @@
+{
+  "question_id": "L11C1B3-86-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "fd8be010cf323ebd8ee19f8324277ff1",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    vmax = random.randint(2, 8) * 10\n    toc_do = vmax / 2\n    he_so_gia_toc = random.randint(1, 8) * 10\n    return {'vmax': vmax, 'toc_do': toc_do, 'he_so_gia_toc': he_so_gia_toc}\n\ndef tinh_L11C1B3_86_TN(vmax, toc_do, he_so_gia_toc):\n    return vmax*math.sqrt(vmax**2-toc_do**2)/(he_so_gia_toc*math.sqrt(3))\n",
+    "function_name": "tinh_L11C1B3_86_TN",
+    "parameters": [
+      {
+        "argument": "vmax",
+        "slot": "v0",
+        "original": "20",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "toc_do",
+        "slot": "v1",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_gia_toc",
+        "slot": "v2",
+        "original": "40",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm}$",
+    "solution_template": "$\\omega=|a|/\\sqrt{v_{max}^2-v^2}$. $A=v_{max}/\\omega=v_{max}\\sqrt{v_{max}^2-v^2}/|a|={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    vmax = random.randint(2, 8) * 10\n    toc_do = vmax / 2\n    he_so_gia_toc = random.randint(1, 8) * 10\n    return {'vmax': vmax, 'toc_do': toc_do, 'he_so_gia_toc': he_so_gia_toc}\n\ndef tinh_L11C1B3_86_TN(vmax, toc_do, he_so_gia_toc):\n    return vmax*math.sqrt(vmax**2-toc_do**2)/(he_so_gia_toc*math.sqrt(3))\n"
+}

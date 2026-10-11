@@ -1,0 +1,37 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "932b1bca9392da7c904a330a5b8c9c11",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    he_so_vmax = random.randint(2, 15)\n    he_so_omega = random.randint(1, 10)\n    return {'he_so_vmax': he_so_vmax, 'he_so_omega': he_so_omega}\n\ndef tinh_cau_78(he_so_vmax, he_so_omega):\n    return he_so_vmax*he_so_omega*10\n",
+    "function_name": "tinh_cau_78",
+    "parameters": [
+      {
+        "argument": "he_so_vmax",
+        "slot": "v0",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_omega",
+        "slot": "v1",
+        "original": "2",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "$a=-{answer}\\sin({he_so_omega}\\pi t)\\,\\mathrm{cm/s^2}$",
+    "solution_template": "Đạo hàm $v={he_so_vmax}\\pi\\cos({he_so_omega}\\pi t)$, lấy $\\pi^2=10$: $a=-{answer}\\sin({he_so_omega}\\pi t)\\,\\mathrm{cm/s^2}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    he_so_vmax = random.randint(2, 15)\n    he_so_omega = random.randint(1, 10)\n    return {'he_so_vmax': he_so_vmax, 'he_so_omega': he_so_omega}\n\ndef tinh_cau_78(he_so_vmax, he_so_omega):\n    return he_so_vmax*he_so_omega*10\n"
+}

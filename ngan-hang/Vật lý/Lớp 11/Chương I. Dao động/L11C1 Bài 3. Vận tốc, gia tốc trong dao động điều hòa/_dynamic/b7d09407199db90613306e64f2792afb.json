@@ -1,0 +1,37 @@
+{
+  "question_id": "L11C1B3-08-TLN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "b7d09407199db90613306e64f2792afb",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 20)\n    he_so_omega = random.randint(1, 8)\n    return {'bien_do': bien_do, 'he_so_omega': he_so_omega}\n\ndef tinh_L11C1B3_08_TLN(bien_do, he_so_omega):\n    return bien_do*he_so_omega**2*10\n",
+    "function_name": "tinh_L11C1B3_08_TLN",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "20",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_omega",
+        "slot": "v1",
+        "original": "2",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "{answer}",
+    "solution_template": "Lấy $\\pi^2=10$: $a_{max}=A\\omega^2={bien_do}\\cdot{he_so_omega}^2\\cdot10={answer}\\,\\mathrm{cm/s^2}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 20)\n    he_so_omega = random.randint(1, 8)\n    return {'bien_do': bien_do, 'he_so_omega': he_so_omega}\n\ndef tinh_L11C1B3_08_TLN(bien_do, he_so_omega):\n    return bien_do*he_so_omega**2*10\n"
+}

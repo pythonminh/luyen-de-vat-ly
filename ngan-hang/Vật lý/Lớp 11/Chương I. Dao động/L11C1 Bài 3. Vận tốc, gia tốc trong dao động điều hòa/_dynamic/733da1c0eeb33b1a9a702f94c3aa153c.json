@@ -1,0 +1,45 @@
+{
+  "question_id": "L11C1B3-85-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "733da1c0eeb33b1a9a702f94c3aa153c",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    omega = random.randint(1, 10)\n    li_do = random.randint(2, 10)\n    toc_do = omega * random.randint(2, 10)\n    return {'omega': omega, 'li_do': li_do, 'toc_do': toc_do}\n\ndef tinh_L11C1B3_85_TN(omega, li_do, toc_do):\n    return math.sqrt(li_do**2+(toc_do/omega)**2)\n",
+    "function_name": "tinh_L11C1B3_85_TN",
+    "parameters": [
+      {
+        "argument": "omega",
+        "slot": "v0",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "li_do",
+        "slot": "v1",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "toc_do",
+        "slot": "v2",
+        "original": "40",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm}$",
+    "solution_template": "$A=\\sqrt{x^2+(v/\\omega)^2}=\\sqrt{{li_do}^2+({toc_do}/{omega})^2}={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    omega = random.randint(1, 10)\n    li_do = random.randint(2, 10)\n    toc_do = omega * random.randint(2, 10)\n    return {'omega': omega, 'li_do': li_do, 'toc_do': toc_do}\n\ndef tinh_L11C1B3_85_TN(omega, li_do, toc_do):\n    return math.sqrt(li_do**2+(toc_do/omega)**2)\n"
+}

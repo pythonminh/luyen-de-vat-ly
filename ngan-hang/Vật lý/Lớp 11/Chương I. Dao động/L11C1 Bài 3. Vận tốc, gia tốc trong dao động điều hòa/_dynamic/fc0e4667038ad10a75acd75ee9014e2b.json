@@ -1,0 +1,45 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "fc0e4667038ad10a75acd75ee9014e2b",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    chieu_dai = 2 * random.randint(5, 20)\n    li_do = chieu_dai/2 * random.choice([0.2, 0.4, 0.6, 0.8])\n    he_so_toc_do = random.randint(5, 50)\n    return {'chieu_dai': chieu_dai, 'li_do': li_do, 'he_so_toc_do': he_so_toc_do}\n\ndef tinh_cau_116(chieu_dai, li_do, he_so_toc_do):\n    return math.sqrt((chieu_dai/2)**2-li_do**2)/he_so_toc_do\n",
+    "function_name": "tinh_cau_116",
+    "parameters": [
+      {
+        "argument": "chieu_dai",
+        "slot": "v0",
+        "original": "25",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "li_do",
+        "slot": "v1",
+        "original": "7/2",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_toc_do",
+        "slot": "v2",
+        "original": "48",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{s}$",
+    "solution_template": "$A=L/2$; $\\omega=v/\\sqrt{A^2-x^2}$. Thời gian lớn nhất không đổi chiều là $T/2=\\pi/\\omega=\\sqrt{A^2-x^2}/{he_so_toc_do}={answer}\\,\\mathrm{s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    chieu_dai = 2 * random.randint(5, 20)\n    li_do = chieu_dai/2 * random.choice([0.2, 0.4, 0.6, 0.8])\n    he_so_toc_do = random.randint(5, 50)\n    return {'chieu_dai': chieu_dai, 'li_do': li_do, 'he_so_toc_do': he_so_toc_do}\n\ndef tinh_cau_116(chieu_dai, li_do, he_so_toc_do):\n    return math.sqrt((chieu_dai/2)**2-li_do**2)/he_so_toc_do\n"
+}

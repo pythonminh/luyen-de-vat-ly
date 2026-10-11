@@ -1,0 +1,45 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "2424e5c2cd2ceb743a79221e46a72d04",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(5, 15)\n    amax = random.randint(2, 12)\n    he_so_gia_toc = amax * random.choice([0.2, 0.4, 0.5])\n    return {'bien_do': bien_do, 'amax': amax, 'he_so_gia_toc': he_so_gia_toc}\n\ndef tinh_cau_84(bien_do, amax, he_so_gia_toc):\n    return -bien_do*he_so_gia_toc*math.sqrt(3)/amax\n",
+    "function_name": "tinh_cau_84",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "amax",
+        "slot": "v1",
+        "original": "8",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_gia_toc",
+        "slot": "v3",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm}$",
+    "solution_template": "$x=-aA/a_{max}=-{he_so_gia_toc}\\sqrt{3}\\cdot{bien_do}/{amax}={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(5, 15)\n    amax = random.randint(2, 12)\n    he_so_gia_toc = amax * random.choice([0.2, 0.4, 0.5])\n    return {'bien_do': bien_do, 'amax': amax, 'he_so_gia_toc': he_so_gia_toc}\n\ndef tinh_cau_84(bien_do, amax, he_so_gia_toc):\n    return -bien_do*he_so_gia_toc*math.sqrt(3)/amax\n"
+}

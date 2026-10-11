@@ -1,0 +1,45 @@
+{
+  "question_id": "L11C1B3-37-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "9b0f1cfb14e9c9c21065e3212310cb05",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    mau_chu_ki = random.randint(1, 8)\n    bien_do = random.randint(5, 15)\n    li_do = bien_do * random.choice([0.2, 0.4, 0.6, 0.8])\n    return {'mau_chu_ki': mau_chu_ki, 'bien_do': bien_do, 'li_do': li_do}\n\ndef tinh_L11C1B3_37_TN(mau_chu_ki, bien_do, li_do):\n    return 2*mau_chu_ki*math.sqrt(bien_do**2-li_do**2)\n",
+    "function_name": "tinh_L11C1B3_37_TN",
+    "parameters": [
+      {
+        "argument": "mau_chu_ki",
+        "slot": "v0",
+        "original": "2",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "bien_do",
+        "slot": "v1",
+        "original": "5",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "li_do",
+        "slot": "v2",
+        "original": "3",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm/s}$",
+    "solution_template": "$\\omega=2\\pi/T=2\\cdot{mau_chu_ki}$. $|v|=\\omega\\sqrt{A^2-x^2}={answer}\\,\\mathrm{cm/s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    mau_chu_ki = random.randint(1, 8)\n    bien_do = random.randint(5, 15)\n    li_do = bien_do * random.choice([0.2, 0.4, 0.6, 0.8])\n    return {'mau_chu_ki': mau_chu_ki, 'bien_do': bien_do, 'li_do': li_do}\n\ndef tinh_L11C1B3_37_TN(mau_chu_ki, bien_do, li_do):\n    return 2*mau_chu_ki*math.sqrt(bien_do**2-li_do**2)\n"
+}

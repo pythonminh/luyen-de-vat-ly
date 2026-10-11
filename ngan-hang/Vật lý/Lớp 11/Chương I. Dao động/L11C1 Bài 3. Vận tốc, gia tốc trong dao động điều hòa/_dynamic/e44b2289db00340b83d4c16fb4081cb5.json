@@ -1,0 +1,29 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "e44b2289db00340b83d4c16fb4081cb5",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    vmax = 3.14 * random.randint(2, 20)\n    return {'vmax': vmax}\n\ndef tinh_cau_109(vmax):\n    return 2*vmax/3.14\n",
+    "function_name": "tinh_cau_109",
+    "parameters": [
+      {
+        "argument": "vmax",
+        "slot": "v0",
+        "original": "157/5",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm/s}$",
+    "solution_template": "$\\overline v=4A/T=2v_{max}/\\pi=2\\cdot{vmax}/3,14={answer}\\,\\mathrm{cm/s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    vmax = 3.14 * random.randint(2, 20)\n    return {'vmax': vmax}\n\ndef tinh_cau_109(vmax):\n    return 2*vmax/3.14\n"
+}
