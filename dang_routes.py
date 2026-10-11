@@ -411,7 +411,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             if manage: python_tools+=f"<a class='btn mini' href='{_esc(pyurl+'&show_code=1')}'>🐍 Xem hàm Python</a>"
     if manage:
         vburl='/member/variable-builder?'+urllib.parse.urlencode({'src':src,'file_idx':fi})
-        python_tools+=f"<a class='btn mini vb-open' href='{_esc(vburl)}'>🐍 Tạo / lưu hàm đổi biến</a>"
+        python_tools+=f"<a class='btn mini vb-open' href='{_esc(vburl)}'>🐍 Viết / sửa hàm Python</a>"
     rw=''
     if manage:
         rw=(f"<details class='qtools-fold'><summary>🛠 Công cụ chỉnh sửa câu hỏi</summary><div class='rwbar'><button type='button' class='btn mini primary rwreshuf' data-drop='{drop_key}'>🤖 Đổi số bằng AI</button><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"

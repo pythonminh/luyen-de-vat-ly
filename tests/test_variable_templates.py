@@ -18,7 +18,7 @@ class VariableTests(unittest.TestCase):
         cls.qs=portal.parse_questions((portal.ROOT/cls.path).read_text())
         cls.q=next(q for q in cls.qs if q.get('id')=='L11C1B3-31-TN').copy()
         cls.q.update(src=cls.path,file_idx=cls.q['idx'])
-        cls.config=vt.load_config(cls.q)
+        cls.config={'variables':[{'name':'v0','min':'4','max':'12','step':'1'},{'name':'v1','min':'1','max':'6','step':'1'},{'name':'v3','relation':'v0/2'}],'formula':'-v1**2*v3','condition':'v3**2*3 <= v0**2','answer_template':r'${answer}\pi^{2}\sqrt{3}\,\mathrm{cm/s^2}$','solution_template':r'$a={answer}\pi^2\sqrt{3}$','distractors':['-answer','answer*2','answer/2']}
 
     def test_saved_function_and_1000_variants(self):
         self.assertIsNotNone(self.config)
@@ -74,7 +74,7 @@ class VariableTests(unittest.TestCase):
             correct=next(i for i,o in enumerate(stored['options']) if o['correct'])
             self.assertTrue(client.post('/api/dynamic-practice/check',json={'token':r['token'],'choice':correct}).get_json()['correct'])
             code=client.get('/api/dynamic-practice/code',query_string={'src':self.path,'file_idx':self.q['file_idx']}).get_json()['code']
-            self.assertIn('def '+vt.function_name(self.q),code)
+            self.assertIn('def '+vt.load_config(self.q)['function_name'],code)
 
     def test_save_commits_both_files_and_preserves_other_functions(self):
         import base64
