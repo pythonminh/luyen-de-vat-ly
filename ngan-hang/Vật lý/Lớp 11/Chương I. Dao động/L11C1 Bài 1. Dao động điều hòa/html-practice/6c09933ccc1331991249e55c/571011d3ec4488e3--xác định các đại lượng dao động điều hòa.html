@@ -1,0 +1,628 @@
+<!--hp-title:eMOhYyDEkeG7i25oIGPDoWMgxJHhuqFpIGzGsOG7o25nIGRhbyDEkeG7mW5nIMSRaeG7gXUgaMOyYQ==-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khảo Sát Toàn Diện Dao Động Điều Hòa - Thầy Minh</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background-color: #f4f6f9;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background-color: #0b1d3a;
+      color: #ffffff;
+      padding: 14px 20px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    header .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    header .brand-sub {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      margin-top: 3px;
+    }
+    .main-container {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 20px auto;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 860px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    .panel {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0b1d3a;
+      border-bottom: 2px solid #eef2f6;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+    }
+    .summary-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 0.92rem;
+    }
+    .summary-row:last-child {
+      margin-bottom: 0;
+    }
+    .summary-value {
+      font-weight: 700;
+      color: #1e3a8a;
+    }
+    .formula-box {
+      background: #eef2ff;
+      border-left: 4px solid #3b82f6;
+      padding: 11px 13px;
+      border-radius: 4px;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+    .formula-math {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: #1e40af;
+      text-align: center;
+      margin: 4px 0;
+    }
+    .question-box {
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      background: #fafafa;
+      padding: 14px;
+      border-radius: 8px;
+      border-left: 4px solid #0b1d3a;
+    }
+    .equation-display {
+      font-size: 1.18rem;
+      font-weight: 700;
+      color: #0b1d3a;
+      text-align: center;
+      margin: 8px 0;
+      background: #eef2f6;
+      padding: 9px;
+      border-radius: 6px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    button {
+      cursor: pointer;
+      font-size: 0.92rem;
+      font-weight: 600;
+      border-radius: 6px;
+      padding: 9px 15px;
+      border: none;
+      transition: all 0.2s ease;
+    }
+    .btn-change {
+      background-color: #0b1d3a;
+      color: #ffffff;
+    }
+    .btn-change:hover {
+      background-color: #1a365d;
+    }
+    .btn-explain {
+      background-color: #e2e8f0;
+      color: #334155;
+    }
+    .btn-explain:hover {
+      background-color: #cbd5e1;
+    }
+    .input-section {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 500px) {
+      .input-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .input-box {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      outline: none;
+    }
+    .input-box:focus {
+      border-color: #2563eb;
+    }
+    .btn-check {
+      background-color: #2563eb;
+      color: #ffffff;
+      width: 100%;
+    }
+    .btn-check:hover {
+      background-color: #1d4ed8;
+    }
+    .result-alert {
+      padding: 11px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      display: none;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+    .result-correct {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    .result-wrong {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 9px;
+      margin-bottom: 16px;
+    }
+    .option-btn {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      padding: 11px 13px;
+      border-radius: 8px;
+      text-align: left;
+      font-size: 0.88rem;
+      color: #1e293b;
+      line-height: 1.5;
+    }
+    .option-btn:hover {
+      background-color: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .option-btn.selected-correct {
+      background-color: #dcfce7;
+      border-color: #22c55e;
+      color: #15803d;
+    }
+    .option-btn.selected-wrong {
+      background-color: #fee2e2;
+      border-color: #ef4444;
+      color: #b91c1c;
+    }
+    .solution-box {
+      background: #fdfaf2;
+      border: 1px solid #fed7aa;
+      border-left: 4px solid #f97316;
+      border-radius: 6px;
+      padding: 13px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #7c2d12;
+      display: none;
+    }
+    .solution-box h4 {
+      margin-bottom: 6px;
+      color: #9a3412;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-title">Lớp Học Thầy Minh · Zalo 0946111107</div>
+    <div class="brand-sub">lophocthayminh.onrender.com</div>
+  </header>
+
+  <main class="main-container">
+    <!-- CỘT TRÁI: BẢNG CÔNG THỨC & DỮ LIỆU ĐANG HIỆN -->
+    <div class="panel">
+      <div class="panel-title">TỔNG HỢP TOÀN BỘ ĐẠI LƯỢNG</div>
+
+      <div class="summary-card">
+        <div class="summary-row">
+          <span>Phương trình li độ x:</span>
+          <span class="summary-value" id="disp-eq-x">x = 4cos(5πt - π/3) cm</span>
+        </div>
+        <div class="summary-row">
+          <span>Biên độ (A):</span>
+          <span class="summary-value" id="disp-A">4 cm</span>
+        </div>
+        <div class="summary-row">
+          <span>Tần số góc (ω):</span>
+          <span class="summary-value" id="disp-omega">5π rad/s</span>
+        </div>
+        <div class="summary-row">
+          <span>Chu kỳ (T) & Tần số (f):</span>
+          <span class="summary-value" id="disp-T-f">T = 0,4 s ; f = 2,5 Hz</span>
+        </div>
+        <div class="summary-row">
+          <span>Pha ban đầu (φ):</span>
+          <span class="summary-value" id="disp-phi">-π/3 rad</span>
+        </div>
+        <div class="summary-row">
+          <span>Số dao động trong Δt:</span>
+          <span class="summary-value" id="disp-N">N = 10 (trong 4 s)</span>
+        </div>
+        <div class="summary-row">
+          <span>Tốc độ tại li độ x:</span>
+          <span class="summary-value" id="disp-speed">|v| = 10√3π cm/s (tại x = -2 cm)</span>
+        </div>
+      </div>
+
+      <div class="formula-box">
+        <strong>1. Nhận biết trực tiếp từ x = A·cos(ωt + φ):</strong><br>
+        • Biên độ: <strong>A</strong> (hệ số trước cos, A > 0).<br>
+        • Tần số góc: <strong>ω</strong> (hệ số đứng cùng t).<br>
+        • Pha ban đầu: <strong>φ</strong> (số hạng tự do tại t = 0).<br>
+        • Chu kỳ & Tần số: <strong>T = 2π / ω</strong> ; <strong>f = ω / 2π = 1 / T</strong>.
+      </div>
+
+      <div class="formula-box">
+        <strong>2. Số dao động toàn phần trong thời gian Δt:</strong>
+        <div class="formula-math">N = Δt / T = f · Δt</div>
+      </div>
+
+      <div class="formula-box" style="margin-bottom: 0;">
+        <strong>3. Phương trình v, a & Hệ thức độc lập:</strong><br>
+        • v = -ωA·sin(ωt + φ) ; a = -ω²x<br>
+        • Hệ thức độc lập vuông pha giữa x và v:
+        <div class="formula-math">A² = x² + (v / ω)² &nbsp;⟺&nbsp; |v| = ω·√(A² - x²)</div>
+      </div>
+    </div>
+
+    <!-- CỘT PHẢI: ĐỀ BÀI, LUYỆN TẬP VÀ ĐỔI ĐỀ -->
+    <div class="panel">
+      <div class="panel-title">LUYỆN TẬP TÍNH TOÁN TOÀN DIỆN</div>
+
+      <div class="btn-group">
+        <button class="btn-change" onclick="changeProblem()">« Đổi đề bài mới »</button>
+        <button class="btn-explain" onclick="toggleSolution()">Xem lời giải</button>
+      </div>
+
+      <div class="question-box">
+        Một vật nhỏ dao động điều hòa với phương trình:
+        <div class="equation-display" id="question-eq">x = 4cos(5πt - π/3) (cm)</div>
+        <div id="question-desc">
+          Xác định biên độ A, tần số góc ω, tần số f, số dao động thực hiện trong Δt = 4 s và tốc độ |v| tại li độ x = -2 cm.
+        </div>
+      </div>
+
+      <!-- Ô nhập học sinh -->
+      <div class="input-section">
+        <div style="font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; color: #475569;">
+          Nhập kết quả tự luận:
+        </div>
+        <div class="input-grid">
+          <input type="text" class="input-box" id="inp-A" placeholder="A (cm) vd: 4">
+          <input type="text" class="input-box" id="inp-f" placeholder="f (Hz) vd: 2,5">
+          <input type="text" class="input-box" id="inp-N" placeholder="N (dđ) vd: 10">
+        </div>
+        <button class="btn-check" onclick="checkInputs()">Kiểm tra kết quả tự luận</button>
+      </div>
+
+      <div id="result-status" class="result-alert"></div>
+
+      <!-- Trắc nghiệm A B C D -->
+      <div style="font-weight: 600; margin-bottom: 8px; font-size: 0.92rem; color: #475569;">
+        Hoặc chọn phương án trắc nghiệm đúng toàn bộ:
+      </div>
+      <div class="options-grid" id="options-container">
+        <!-- Render qua JS -->
+      </div>
+
+      <!-- Lời giải chi tiết -->
+      <div id="solution-section" class="solution-box">
+        <h4>Lời giải chi tiết:</h4>
+        <div id="solution-text"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let cur = {
+      A: 4,
+      wCoeff: 5,
+      phiStr: '-π/3',
+      phiDisplay: '- π/3',
+      deltaT: 4,
+      T: 0.4,
+      f: 2.5,
+      N: 10,
+      givenX: -2,
+      speedFactorPi: 17.32
+    };
+
+    let currentChoices = [];
+
+    function formatNumber(num) {
+      if (Number.isInteger(num)) return num.toString();
+      const rounded = parseFloat(num.toFixed(2));
+      return rounded.toString().replace('.', ',');
+    }
+
+    function initOriginalProblem() {
+      cur = {
+        A: 4,
+        wCoeff: 5,
+        phiStr: '-π/3',
+        phiDisplay: '- π/3',
+        deltaT: 4,
+        T: 0.4,
+        f: 2.5,
+        N: 10,
+        givenX: -2,
+        speedFactorPi: 17.32
+      };
+
+      currentChoices = [
+        { 
+          label: 'A', 
+          text: 'A = 4 cm; ω = 5π rad/s; f = 2,5 Hz; trong 4 s thực hiện N = 10 dđ; tại x = -2 cm thì |v| = 10√3π cm/s', 
+          isCorrect: true 
+        },
+        { 
+          label: 'B', 
+          text: 'A = 4 cm; ω = 5 rad/s; f = 2,5 Hz; trong 4 s thực hiện N = 20 dđ; tại x = -2 cm thì |v| = 20π cm/s', 
+          isCorrect: false 
+        },
+        { 
+          label: 'C', 
+          text: 'A = 8 cm; ω = 5π rad/s; f = 5 Hz; trong 4 s thực hiện N = 10 dđ; tại x = -2 cm thì |v| = 10√3π cm/s', 
+          isCorrect: false 
+        },
+        { 
+          label: 'D', 
+          text: 'A = 4 cm; ω = 5π rad/s; f = 0,4 Hz; trong 4 s thực hiện N = 1,6 dđ; tại x = -2 cm thì |v| = 10π cm/s', 
+          isCorrect: false 
+        }
+      ];
+
+      renderUI();
+    }
+
+    function changeProblem() {
+      const presets = [
+        { A: 6, wCoeff: 2, phiStr: '+π/3', phiDisplay: '+ π/3', deltaT: 5, givenX: 3 },
+        { A: 5, wCoeff: 4, phiStr: '-π/2', phiDisplay: '- π/2', deltaT: 3, givenX: 3 },
+        { A: 8, wCoeff: 2, phiStr: '-π/6', phiDisplay: '- π/6', deltaT: 4, givenX: 4 },
+        { A: 10, wCoeff: 5, phiStr: '0', phiDisplay: '', deltaT: 2, givenX: 6 },
+        { A: 4, wCoeff: 10, phiStr: '+π/4', phiDisplay: '+ π/4', deltaT: 2, givenX: 2 },
+        { A: 8, wCoeff: 4, phiStr: '-π/3', phiDisplay: '- π/3', deltaT: 2.5, givenX: 4 }
+      ];
+
+      let picked;
+      do {
+        picked = presets[Math.floor(Math.random() * presets.length)];
+      } while (picked.A === cur.A && picked.wCoeff === cur.wCoeff && picked.deltaT === cur.deltaT);
+
+      const T = 2 / picked.wCoeff;
+      const f = picked.wCoeff / 2;
+      const N = Math.round(f * picked.deltaT);
+      const speedFactorPi = picked.wCoeff * Math.sqrt(picked.A * picked.A - picked.givenX * picked.givenX);
+
+      cur = {
+        A: picked.A,
+        wCoeff: picked.wCoeff,
+        phiStr: picked.phiStr,
+        phiDisplay: picked.phiDisplay,
+        deltaT: picked.deltaT,
+        T: T,
+        f: f,
+        N: N,
+        givenX: picked.givenX,
+        speedFactorPi: parseFloat(speedFactorPi.toFixed(2))
+      };
+
+      const strA = cur.A;
+      const strW = `${cur.wCoeff}π`;
+      const strF = formatNumber(cur.f);
+      const strN = cur.N;
+      const strSpeed = formatNumber(cur.speedFactorPi);
+
+      let choicesPool = [
+        { 
+          text: `A = ${strA} cm; ω = ${strW} rad/s; f = ${strF} Hz; N = ${strN} dđ; |v| = ${strSpeed}π cm/s`, 
+          isCorrect: true 
+        },
+        { 
+          text: `A = ${strA} cm; ω = ${cur.wCoeff} rad/s; f = ${strF} Hz; N = ${strN * 2} dđ; |v| = ${strSpeed}π cm/s`, 
+          isCorrect: false 
+        },
+        { 
+          text: `A = ${strA * 2} cm; ω = ${strW} rad/s; f = ${formatNumber(cur.f * 2)} Hz; N = ${strN} dđ; |v| = ${strSpeed}π cm/s`, 
+          isCorrect: false 
+        },
+        { 
+          text: `A = ${strA} cm; ω = ${strW} rad/s; f = ${formatNumber(cur.T)} Hz; N = ${formatNumber(cur.deltaT / cur.f)} dđ; |v| = ${formatNumber(cur.A * cur.wCoeff)}π cm/s`, 
+          isCorrect: false 
+        }
+      ];
+
+      choicesPool.sort(() => Math.random() - 0.5);
+      const labels = ['A', 'B', 'C', 'D'];
+      currentChoices = choicesPool.map((c, idx) => ({
+        label: labels[idx],
+        text: c.text,
+        isCorrect: c.isCorrect
+      }));
+
+      renderUI();
+    }
+
+    function renderUI() {
+      const signPart = cur.phiDisplay ? ` ${cur.phiDisplay}` : '';
+
+      // Cột trái
+      document.getElementById('disp-eq-x').textContent = `x = ${cur.A}cos(${cur.wCoeff}πt${signPart}) cm`;
+      document.getElementById('disp-A').textContent = `${cur.A} cm`;
+      document.getElementById('disp-omega').textContent = `${cur.wCoeff}π rad/s`;
+      document.getElementById('disp-T-f').textContent = `T = ${formatNumber(cur.T)} s ; f = ${formatNumber(cur.f)} Hz`;
+      document.getElementById('disp-phi').textContent = `${cur.phiStr} rad`;
+      document.getElementById('disp-N').textContent = `N = ${cur.N} (trong ${formatNumber(cur.deltaT)} s)`;
+      document.getElementById('disp-speed').textContent = `|v| = ${formatNumber(cur.speedFactorPi)}π cm/s (tại x = ${formatNumber(cur.givenX)} cm)`;
+
+      // Cột phải
+      document.getElementById('question-eq').textContent = `x = ${cur.A}cos(${cur.wCoeff}πt${signPart}) (cm)`;
+      document.getElementById('question-desc').innerHTML = 
+        `1. Xác định biên độ A, tần số góc ω, chu kỳ T và tần số f.<br>` +
+        `2. Tính số dao động toàn phần trong thời gian Δt = ${formatNumber(cur.deltaT)} s.<br>` +
+        `3. Dùng hệ thức độc lập, tính tốc độ |v| tại li độ x = ${formatNumber(cur.givenX)} cm (theo đơn vị π cm/s).`;
+
+      const optContainer = document.getElementById('options-container');
+      optContainer.innerHTML = '';
+      currentChoices.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = `${item.label}. ${item.text}`;
+        btn.onclick = () => selectChoice(item);
+        optContainer.appendChild(btn);
+      });
+
+      document.getElementById('inp-A').value = '';
+      document.getElementById('inp-f').value = '';
+      document.getElementById('inp-N').value = '';
+
+      const statusBox = document.getElementById('result-status');
+      statusBox.style.display = 'none';
+      statusBox.className = 'result-alert';
+      statusBox.textContent = '';
+
+      updateSolutionContent();
+      document.getElementById('solution-section').style.display = 'none';
+    }
+
+    function checkInputs() {
+      const rawA = document.getElementById('inp-A').value.trim().replace(',', '.');
+      const rawF = document.getElementById('inp-f').value.trim().replace(',', '.');
+      const rawN = document.getElementById('inp-N').value.trim().replace(',', '.');
+      const statusBox = document.getElementById('result-status');
+      statusBox.style.display = 'block';
+
+      if (!rawA || !rawF || !rawN) {
+        statusBox.className = 'result-alert result-wrong';
+        statusBox.textContent = 'Vui lòng nhập đủ kết quả cho Biên độ A, Tần số f và Số dao động N.';
+        return;
+      }
+
+      const valA = parseFloat(rawA);
+      const valF = parseFloat(rawF);
+      const valN = parseFloat(rawN);
+
+      const okA = Math.abs(valA - cur.A) < 0.05;
+      const okF = Math.abs(valF - cur.f) < 0.05;
+      const okN = Math.abs(valN - cur.N) < 0.1;
+
+      if (okA && okF && okN) {
+        statusBox.className = 'result-alert result-correct';
+        statusBox.textContent = 'Chính xác hoàn toàn! Bạn đã nắm trọn vẹn từ đọc các đại lượng A, f đến tính số dao động.';
+      } else {
+        let errs = [];
+        if (!okA) errs.push('Biên độ A');
+        if (!okF) errs.push('Tần số f');
+        if (!okN) errs.push('Số dao động N');
+        statusBox.className = 'result-alert result-wrong';
+        statusBox.textContent = `Chưa đúng ở: ${errs.join(', ')}. Hãy kiểm tra lại đối chiếu phương trình!`;
+      }
+    }
+
+    function selectChoice(item) {
+      const statusBox = document.getElementById('result-status');
+      statusBox.style.display = 'block';
+
+      const buttons = document.querySelectorAll('.option-btn');
+      buttons.forEach((btn, idx) => {
+        btn.classList.remove('selected-correct', 'selected-wrong');
+        if (currentChoices[idx].label === item.label) {
+          if (item.isCorrect) btn.classList.add('selected-correct');
+          else btn.classList.add('selected-wrong');
+        }
+      });
+
+      if (item.isCorrect) {
+        statusBox.className = 'result-alert result-correct';
+        statusBox.textContent = `Chính xác! Phương án ${item.label} là phương án đúng toàn diện.`;
+      } else {
+        statusBox.className = 'result-alert result-wrong';
+        statusBox.textContent = `Chưa đúng! Phương án ${item.label} có chứa đại lượng chưa chính xác, hãy rà soát lại.`;
+      }
+    }
+
+    function updateSolutionContent() {
+      const solText = document.getElementById('solution-text');
+      const diffSqr = cur.A * cur.A - cur.givenX * cur.givenX;
+
+      solText.innerHTML = 
+        `1. <strong>Đọc các đại lượng từ phương trình li độ x = A·cos(ωt + φ):</strong><br>` +
+        `• <strong>Biên độ:</strong> A = <strong>${cur.A} cm</strong>.<br>` +
+        `• <strong>Tần số góc:</strong> ω = <strong>${cur.wCoeff}π rad/s</strong>.<br>` +
+        `• <strong>Pha ban đầu:</strong> φ = <strong>${cur.phiStr} rad</strong>.<br>` +
+        `• <strong>Chu kỳ:</strong> T = 2π / ω = 2π / (${cur.wCoeff}π) = <strong>${formatNumber(cur.T)} s</strong>.<br>` +
+        `• <strong>Tần số:</strong> f = 1 / T = ω / 2π = <strong>${formatNumber(cur.f)} Hz</strong>.<br><br>` +
+        `2. <strong>Số dao động toàn phần trong Δt = ${formatNumber(cur.deltaT)} s:</strong><br>` +
+        `• N = Δt / T = f · Δt = ${formatNumber(cur.f)} · ${formatNumber(cur.deltaT)} = <strong>${cur.N} dao động</strong>.<br><br>` +
+        `3. <strong>Tốc độ |v| tại li độ x = ${formatNumber(cur.givenX)} cm:</strong><br>` +
+        `• Áp dụng hệ thức độc lập: A² = x² + (v / ω)² &nbsp;⟹&nbsp; |v| = ω·√(A² - x²)<br>` +
+        `• Thay số: |v| = ${cur.wCoeff}π · √(${cur.A}² - (${formatNumber(cur.givenX)})²) = ${cur.wCoeff}π · √${diffSqr} ≈ <strong>${formatNumber(cur.speedFactorPi)}π cm/s</strong>.`;
+    }
+
+    function toggleSolution() {
+      const solSection = document.getElementById('solution-section');
+      if (solSection.style.display === 'none' || solSection.style.display === '') {
+        solSection.style.display = 'block';
+      } else {
+        solSection.style.display = 'none';
+      }
+    }
+
+    window.onload = initOriginalProblem;
+  </script>
+</body>
+</html>
