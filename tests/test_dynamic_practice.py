@@ -13,7 +13,7 @@ from dynamic_engine import exact, fraction, generate, solve
 
 class EngineTests(unittest.TestCase):
     def test_original_results_and_7000_variants(self):
-        cases={'amplitude':(['12'],'6'),'projection':(['10','5'],'10;5'),'period':(['1','30'],'2'),'orbit':(['10','120'],'6'),'distance':(['2.5','4','6','3.75'],'75'),'rotation':(['15','2'],'1;1'),'spring':(['25','12.5','0.08'],'12,8')}
+        cases={'acceleration':(['6','4','4'],'96'),'amplitude':(['12'],'6'),'projection':(['10','5'],'10;5'),'period':(['1','30'],'2'),'orbit':(['10','120'],'6'),'distance':(['2.5','4','6','3.75'],'75'),'rotation':(['15','2'],'1;1'),'spring':(['25','12.5','0.08'],'12,8')}
         for key,(p,answer) in cases.items():
             self.assertEqual(solve(key,p)['answer'],answer)
             for _ in range(1000):
@@ -92,6 +92,18 @@ class APITests(unittest.TestCase):
         bounds={n:{'min':v,'max':v} for n,v in [('N',25),('tenths',5),('grams',80)]}
         r=self.new(bounds=bounds).get_json()
         self.assertTrue(self.client.post('/api/dynamic-practice/check',json={'token':r['token'],'answer':'12,8'}).get_json()['correct'])
+
+    def test_admin_code_and_acceleration(self):
+        r=self.client.get('/api/dynamic-practice/code')
+        self.assertEqual(r.status_code,200)
+        self.assertIn('def generate',r.get_json()['code'])
+        with patch.object(portal,'can_manage_bank',return_value=False):
+            self.assertEqual(self.client.get('/api/dynamic-practice/code').status_code,403)
+        spec=dp.classify({'kind':'TN','text':r'Một vật có $x=6\cos(4\pi t+\frac{\pi}{4})$ cm. Tìm gia tốc cực đại.'})
+        self.assertEqual(spec['template'],'acceleration')
+        exercise=solve(spec['template'],spec['params'])
+        self.assertIn('96π²',exercise['solution'])
+        self.assertTrue(any(o['correct'] and o['text']=='96 π² cm/s²' for o in exercise['options']))
 
     def test_access_and_bad_inputs(self):
         with patch.object(portal,'member_current',return_value=None): self.assertEqual(self.new().status_code,401)

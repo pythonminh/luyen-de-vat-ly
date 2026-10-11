@@ -3,7 +3,7 @@
 'use strict';
 const $=id=>document.getElementById(id),escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob($('dpData').textContent.trim()),c=>c.charCodeAt(0))));
-let group=0,source=0,exercise=null,token=null,busy=false,running=false,frame=null,angle=0;
+let group=data.initial[0],source=data.initial[1],exercise=null,token=null,busy=false,running=false,frame=null,angle=0;
 const bounds={};
 async function api(action,body){const response=await fetch('/api/dynamic-practice/'+action,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let r;try{r=await response.json()}catch(e){throw Error('Máy chủ chưa trả lời hợp lệ. Hãy thử lại.')}if(!response.ok||!r.ok)throw Error(r.error||'Không thực hiện được.');return r}
 function lock(value){busy=value;document.querySelectorAll('#dynamicPractice button:not(#dpAnimate):not(#dpFull),#dynamicPractice select').forEach(el=>el.disabled=value)}
@@ -15,8 +15,9 @@ function render(original){stop();$('dpStem').innerHTML=exercise.html?exercise.te
  $('dpMeta').textContent=`${original?'Đề gốc':'Đề do Python sinh'} · ${data.groups[group].label} · ID: ${exercise.source_id||'Chưa có ID'} · STT file: ${exercise.file_idx} · ${data.groups[group].items.length} câu cùng mẫu`;
  figure();if(window.ldvlTypeset)window.ldvlTypeset($('dynamicPractice'))}
 async function newExercise(original){if(busy)return false;lock(true);$('dpFeedback').textContent='Python đang tạo đề…';try{const r=await api('new',{path:data.path,dang:data.dang,group,source,original,bounds:original?null:bounds[data.groups[group].key],previous_token:token});exercise=r.exercise;token=r.token;render(original);return true}catch(e){token=null;stop();$('dpFeedback').textContent=e.message;return false}finally{lock(false)}}
-function sources(){source=0;$('dpSource').innerHTML=data.groups[group].items.map((s,i)=>`<option value="${i}">${escape(s.id||'Chưa có ID')} · STT file ${s.file_idx}</option>`).join('');newExercise(true)}
+function sources(reset=true){if(reset)source=0;$('dpSource').innerHTML=data.groups[group].items.map((s,i)=>`<option value="${i}">${escape(s.id||'Chưa có ID')} · STT file ${s.file_idx}</option>`).join('');$('dpSource').value=source;newExercise(true)}
 $('dpGroup').innerHTML=data.groups.map((g,i)=>`<option value="${i}">${escape(g.label)} · ${g.items.length} câu gốc</option>`).join('');
+$('dpGroup').value=group;
 $('dpGroup').onchange=e=>{group=Number(e.target.value);sources()};$('dpSource').onchange=e=>{source=Number(e.target.value);newExercise(true)};
 $('dpOriginal').onclick=()=>newExercise(true);$('dpNew').onclick=()=>newExercise(false);
 $('dpCheck').onclick=async()=>{if(busy||!token)return;const opts=exercise.options;const checked=document.querySelector('input[name="dpAnswer"]:checked');if(opts.length&&!checked){$('dpFeedback').textContent='Hãy chọn một phương án.';return}lock(true);try{const r=await api('check',{token,choice:checked?Number(checked.value):null,answer:$('dpInput').value});$('dpFeedback').textContent=r.correct?'✓ Đúng!':'Chưa đúng. Hãy xem lại công thức và đơn vị.';$('dpFeedback').style.color=r.correct?'#087438':'#b23a2c'}catch(e){$('dpFeedback').textContent=e.message}finally{lock(false)}};
@@ -26,5 +27,7 @@ $('dpAnimate').onclick=()=>{if(running){stop();return}if(!exercise)return;runnin
 $('dpConfigure').hidden=!data.can_configure;
 $('dpConfigure').onclick=()=>{const g=data.groups[group],saved=bounds[g.key]||{};$('dpConfigName').textContent=g.label;$('dpConfigError').textContent='';$('dpBounds').innerHTML=g.specs.map(([name,label,min,max])=>`<label class="dp-bound">${escape(label)}<input type="number" min="1" max="1000" step="1" data-variable="${name}" data-bound="min" aria-label="${escape(label)} nhỏ nhất" value="${saved[name]?.min??min}"><input type="number" min="1" max="1000" step="1" data-variable="${name}" data-bound="max" aria-label="${escape(label)} lớn nhất" value="${saved[name]?.max??max}"></label>`).join('');$('dpConfig').showModal()};
 $('dpApply').onclick=async()=>{const next={};document.querySelectorAll('#dpBounds input').forEach(input=>{(next[input.dataset.variable]??={})[input.dataset.bound]=Number(input.value)});if(Object.values(next).some(r=>!Number.isInteger(r.min)||!Number.isInteger(r.max)||r.min<1||r.max>1000||r.min>r.max)){$('dpConfigError').textContent='Nhập khoảng số nguyên 1–1000, nhỏ nhất ≤ lớn nhất.';return}const key=data.groups[group].key,previous=bounds[key];bounds[key]=next;const ok=await newExercise(false);if(ok)$('dpConfig').close();else{bounds[key]=previous;$('dpConfigError').textContent=$('dpFeedback').textContent}};
-sources();
+async function showCode(){try{const response=await fetch('/api/dynamic-practice/code',{credentials:'same-origin'});const r=await response.json();if(!response.ok||!r.ok)throw Error(r.error||'Không đọc được mã');$('dpCodeText').textContent=r.code;$('dpCodeDialog').showModal()}catch(e){$('dpFeedback').textContent=e.message}}
+$('dpCodeButton').hidden=!data.can_configure;$('dpCodeButton').onclick=showCode;
+sources(false);if(data.show_code&&data.can_configure)showCode();
 })();

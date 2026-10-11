@@ -4,6 +4,7 @@ from random import SystemRandom
 
 RNG = SystemRandom()
 SPECS = {
+    'acceleration': [('A', 'Biên độ (cm)', 2, 12), ('w', 'Hệ số của π trong ω', 1, 8)],
     'amplitude': [('A', 'Biên độ (cm)', 2, 15)],
     'projection': [('R', 'Bán kính (cm)', 2, 15), ('w', 'Tốc độ góc (rad/s)', 2, 10)],
     'period': [('minutes', 'Thời gian (phút)', 1, 4), ('N', 'Số dao động', 15, 60)],
@@ -54,7 +55,8 @@ def generate(key, bounds=None, previous=None):
     ranges = validate_bounds(key, bounds)
     def one():
         v = {name: RNG.randint(*r) for name, r in ranges.items()}
-        if key == 'amplitude': p = [2*v['A']]
+        if key == 'acceleration': p = [v['A'], v['w'], RNG.choice([3,4,6])]
+        elif key == 'amplitude': p = [2*v['A']]
         elif key == 'projection': p = [v['R'], v['w']]
         elif key == 'period': p = [v['minutes'], v['N']]
         elif key == 'orbit': p = [v['N'], 4*v['A']*v['N']]
@@ -77,7 +79,12 @@ def solve(key, params):
     unit = 'cm'
     A = None
     candidates = None
-    if key == 'amplitude':
+    if key == 'acceleration':
+        A = p[0]; answer = A*p[1]*p[1]; unit = 'π² cm/s²'
+        stem = f'Vật dao động x = {f(A)} cos({f(p[1])}πt + π/{f(p[2])}) cm. Tìm độ lớn gia tốc cực đại.'
+        formula = 'a = −ω²x; a_max = ω²A.'
+        steps = f'A = {f(A)} cm; ω = {f(p[1])}π rad/s. a_max = ({f(p[1])}π)² × {f(A)} = {f(answer)}π² cm/s².'
+    elif key == 'amplitude':
         answer = p[0]/2
         stem = f'Một vật dao động điều hòa trên quỹ đạo dài {f(p[0])} cm. Biên độ của vật là bao nhiêu?'
         formula = 'L = 2A; A = L/2.'

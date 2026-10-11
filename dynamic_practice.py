@@ -10,6 +10,7 @@ import time
 from fractions import Fraction
 
 LABELS = {
+    'acceleration': 'Gia tốc cực đại từ phương trình li độ',
     'amplitude': 'Biên độ từ chiều dài quỹ đạo',
     'projection': 'Hình chiếu chuyển động tròn đều',
     'period': 'Chu kì từ số dao động',
@@ -29,7 +30,10 @@ def classify(q):
     plain = re.sub(r'\\[,;!]|[$~{}]', '', plain).lower()
     nums = re.findall(NUM, plain)
     key = None
-    if 'quỹ đạo dài' in plain and 'biên độ' in plain and len(nums) == 1:
+    if 'gia tốc cực đại' in plain:
+        m=re.search(r'x\s*=\s*'+NUM+r'\s*\\cos\s*\(\s*'+NUM+r'\s*\\pi\s*t\s*\+\s*(?:\\frac\s*)?\\pi\s*/?\s*(\d+)\s*\)',plain)
+        if m: key,nums='acceleration',list(m.groups())
+    elif 'quỹ đạo dài' in plain and 'biên độ' in plain and len(nums) == 1:
         key = 'amplitude'
     elif 'bán kính' in plain and 'biên độ và tần số góc' in plain and len(nums) == 2 and '\\pi' not in plain:
         key = 'projection'
@@ -109,6 +113,13 @@ def lesson_questions(path, dang):
 
 def register(app):
     from flask import request, redirect, jsonify, session
+
+    @app.get('/api/dynamic-practice/code')
+    def dynamic_code():
+        from app import can_manage_bank
+        if not can_manage_bank(): return jsonify(ok=False,error='Chỉ ADMIN được xem mã Python.'),403
+        from pathlib import Path
+        return jsonify(ok=True,code=Path(__file__).with_name('dynamic_engine.py').read_text(encoding='utf-8'))
     from dynamic_engine import SPECS, generate, solve, fraction
 
     @app.post('/api/dynamic-practice/new')
@@ -193,6 +204,12 @@ def register(app):
         if not groups:
             return page('Bài động', '<p>Chưa có mẫu tính toán đã kiểm chứng cho các câu này.</p>')
         safe_groups=[{'key':g['key'],'label':g['label'],'specs':SPECS[g['key']], 'items':[{'id':i['original']['id'],'file_idx':i['original']['file_idx']} for i in g['items']]} for g in groups]
-        packed = base64.b64encode(json.dumps({'groups':safe_groups,'path':path,'dang':dang,'can_configure':can_manage_bank()}, ensure_ascii=False).encode()).decode()
-        inner = '<section id="dynamicPractice"><header class="dp-brand">Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>\n<div class="dp-controls"><a class="btn" href="BACK">← Về dạng bài</a><select id="dpGroup" aria-label="Mẫu bài"></select><select id="dpSource" aria-label="Câu gốc"></select><button type="button" id="dpNew">Đổi đề bài mới</button><button type="button" id="dpOriginal">Về đề gốc</button><button type="button" id="dpFull">⛶ Toàn màn hình</button></div>\n<button type="button" id="dpConfigure" hidden>⚙ Cấu hình hàm Python</button><dialog id="dpConfig"><form method="dialog"><h3>Cấu hình sinh số</h3><p id="dpConfigName"></p><div id="dpBounds"></div><p>Các giá trị là số nguyên. Đề, đáp án và lời giải được Python tính đồng bộ. Cấu hình áp dụng trong lượt luyện hiện tại.</p><p id="dpConfigError" role="status"></p><button type="button" id="dpApply">Áp dụng và thử đổi đề</button><button type="submit">Đóng</button></form></dialog><p id="dpMeta"></p><div class="dp-grid"><article><h3>1. Đề bài</h3><div id="dpStem"></div><div id="dpOptions"></div><label id="dpInputLabel">Nhập kết quả chính xác (có thể nhập phân số)<input id="dpInput" autocomplete="off"></label><button type="button" id="dpCheck">Kiểm tra</button><p id="dpFeedback" role="status" aria-live="polite"></p></article>\n<article><h3>2. Công thức và kiến thức</h3><div id="dpFormula"></div></article><article><h3>3. Minh họa động</h3><div id="dpFigure"></div><button type="button" id="dpAnimate">▶ Chạy / Dừng</button></article><article><h3>4. Hướng dẫn và lời giải</h3><button type="button" id="dpReveal">Xem lời giải</button><div id="dpSolution" hidden></div></article></div></section>\n<link rel="stylesheet" href="/static/dynamic-practice.css"><script id="dpData" type="application/json">PACKED</script><script src="/static/dynamic-practice.js"></script>'
+        initial=(0,0)
+        wanted_src=request.args.get('src','')
+        wanted_idx=request.args.get('file_idx','')
+        for gi,g in enumerate(groups):
+            for si,i in enumerate(g['items']):
+                if i['original']['src']==wanted_src and str(i['original']['file_idx'])==wanted_idx: initial=(gi,si)
+        packed = base64.b64encode(json.dumps({'initial':initial,'show_code':request.args.get('show_code')=='1','groups':safe_groups,'path':path,'dang':dang,'can_configure':can_manage_bank()}, ensure_ascii=False).encode()).decode()
+        inner = '<section id="dynamicPractice"><header class="dp-brand">Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>\n<div class="dp-controls"><a class="btn" href="BACK">← Về dạng bài</a><select id="dpGroup" aria-label="Mẫu bài"></select><select id="dpSource" aria-label="Câu gốc"></select><button type="button" id="dpNew">Đổi đề bài mới</button><button type="button" id="dpOriginal">Về đề gốc</button><button type="button" id="dpFull">⛶ Toàn màn hình</button></div>\n<button type="button" id="dpConfigure" hidden>⚙ Cấu hình hàm Python</button><dialog id="dpConfig"><form method="dialog"><h3>Cấu hình sinh số</h3><p id="dpConfigName"></p><div id="dpBounds"></div><p>Các giá trị là số nguyên. Đề, đáp án và lời giải được Python tính đồng bộ. Cấu hình áp dụng trong lượt luyện hiện tại.</p><p id="dpConfigError" role="status"></p><button type="button" id="dpApply">Áp dụng và thử đổi đề</button><button type="submit">Đóng</button></form></dialog><button type="button" id="dpCodeButton" hidden>🐍 Xem hàm Python</button><dialog id="dpCodeDialog"><form method="dialog"><h3>Mã Python đang dùng để sinh và tính bài</h3><p>Các mẫu dùng chung hàm generate và solve; chọn nhánh theo tên mẫu.</p><pre id="dpCodeText"></pre><button type="submit">Đóng</button></form></dialog><p id="dpMeta"></p><div class="dp-grid"><article><h3>1. Đề bài</h3><div id="dpStem"></div><div id="dpOptions"></div><label id="dpInputLabel">Nhập kết quả chính xác (có thể nhập phân số)<input id="dpInput" autocomplete="off"></label><button type="button" id="dpCheck">Kiểm tra</button><p id="dpFeedback" role="status" aria-live="polite"></p></article>\n<article><h3>2. Công thức và kiến thức</h3><div id="dpFormula"></div></article><article><h3>3. Minh họa động</h3><div id="dpFigure"></div><button type="button" id="dpAnimate">▶ Chạy / Dừng</button></article><article><h3>4. Hướng dẫn và lời giải</h3><button type="button" id="dpReveal">Xem lời giải</button><div id="dpSolution" hidden></div></article></div></section>\n<link rel="stylesheet" href="/static/dynamic-practice.css"><script id="dpData" type="application/json">PACKED</script><script src="/static/dynamic-practice.js"></script>'
         return page('Luyện bài động', inner.replace('BACK', html.escape(dang_view_url(path, dang), quote=True)).replace('PACKED', packed))

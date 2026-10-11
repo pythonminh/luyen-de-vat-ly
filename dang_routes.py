@@ -400,9 +400,17 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     try: fi=int(q.get('file_idx') if q.get('file_idx') is not None else n)
     except (TypeError, ValueError): fi=int(n or 0)
     drop_key=_esc(src+'||'+str(fi))
+    python_tools=''
+    if not preview_only and (manage or can_practice(member_current(),src)):
+        from dynamic_practice import classify
+        if classify(q):
+            args={'path':request.args.get('path') or src,'dang':request.args.get('dang') or '', 'src':src,'file_idx':fi}
+            pyurl='/member/dynamic-practice?'+urllib.parse.urlencode(args)
+            python_tools=f"<a class='btn mini primary' href='{_esc(pyurl)}'>🐍 Đổi số bằng Python</a>"
+            if manage: python_tools+=f"<a class='btn mini' href='{_esc(pyurl+'&show_code=1')}'>🐍 Xem hàm Python</a>"
     rw=''
     if manage:
-        rw=(f"<details class='qtools-fold'><summary>🛠 Công cụ chỉnh sửa câu hỏi</summary><div class='rwbar'><button type='button' class='btn mini primary rwreshuf' data-drop='{drop_key}'>🎲 Đổi đề bài mới</button><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
+        rw=(f"<details class='qtools-fold'><summary>🛠 Công cụ chỉnh sửa câu hỏi</summary><div class='rwbar'><button type='button' class='btn mini primary rwreshuf' data-drop='{drop_key}'>🤖 Đổi số bằng AI</button><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
             f"<button type='button' class='btn mini rwgo' data-drop='{drop_key}'>✍️ AI viết lại đề + lời giải</button>"
             f"<button type='button' class='btn mini rwedit' data-drop='{drop_key}'>✏️ Sửa đề / lời giải</button>"
             f"<button type='button' class='btn mini rwimgs' data-drop='{drop_key}'>🖼 Ảnh thư mục</button>"
@@ -411,6 +419,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎲 Luyện đổi số</button>"
             f"<button form='qdel' class='btn mini red' type='submit' name='drop' value='{drop_key}' onclick=\"return confirm('Xóa vĩnh viễn câu này khỏi file TEX? Không hoàn tác trên trang này.')\">🗑 Xóa câu</button>"
             "<div class='rwout'></div></div></details>")
+    rw=python_tools+rw
     dcls=' dupcard' if dup.get('label') else ''
     if hid and qid.lower()==hid:
         dcls+=' qhit'
@@ -433,7 +442,7 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-idx='{fi}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'>{qlab}"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"{tex_badge}{gh}{nguon_html(q)}<span class='level muc-{muc}'>Mức {html.escape(muc_label(muc))}</span>"
-            + (f"<button type='button' class='btn mini primary rwreshuf' data-drop='{drop_key}'>🎲 Đổi đề bài mới</button>" if manage else "")
+            + (f"<button type='button' class='btn mini primary rwreshuf' data-drop='{drop_key}'>🤖 Đổi số bằng AI</button>" if manage else "")
             + "</div>"
             f"<div class='qheadline'><span class='qbadge'>Câu {seq}</span><div class='qstem'>{html_question(text, src)}</div></div>{options}{develop_reference_html(q, src)}{rw}{sol_html}</article>")
 
