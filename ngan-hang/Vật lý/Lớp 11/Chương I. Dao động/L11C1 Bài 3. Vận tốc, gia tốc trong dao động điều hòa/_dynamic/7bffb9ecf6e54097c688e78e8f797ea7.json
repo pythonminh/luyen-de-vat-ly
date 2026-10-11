@@ -1,0 +1,45 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "7bffb9ecf6e54097c688e78e8f797ea7",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    he_so_omega = random.randint(1, 10)\n    thoi_gian = random.choice([0.25, 0.5, 0.75, 1, 2])\n    return {'bien_do': bien_do, 'he_so_omega': he_so_omega, 'thoi_gian': thoi_gian}\n\ndef tinh_cau_90(bien_do, he_so_omega, thoi_gian):\n    return -bien_do*he_so_omega*math.pi*math.sin(he_so_omega*math.pi*thoi_gian)\n",
+    "function_name": "tinh_cau_90",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "5",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_omega",
+        "slot": "v1",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "thoi_gian",
+        "slot": "v2",
+        "original": "5",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm/s}$",
+    "solution_template": "$v=-A\\omega\\sin(\\omega t)=-{bien_do}\\cdot{he_so_omega}\\pi\\sin({he_so_omega}\\pi\\cdot{thoi_gian})={answer}\\,\\mathrm{cm/s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    he_so_omega = random.randint(1, 10)\n    thoi_gian = random.choice([0.25, 0.5, 0.75, 1, 2])\n    return {'bien_do': bien_do, 'he_so_omega': he_so_omega, 'thoi_gian': thoi_gian}\n\ndef tinh_cau_90(bien_do, he_so_omega, thoi_gian):\n    return -bien_do*he_so_omega*math.pi*math.sin(he_so_omega*math.pi*thoi_gian)\n"
+}

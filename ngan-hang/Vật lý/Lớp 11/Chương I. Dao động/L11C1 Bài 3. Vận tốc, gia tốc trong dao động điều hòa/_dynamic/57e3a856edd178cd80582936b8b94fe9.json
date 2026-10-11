@@ -1,0 +1,53 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "57e3a856edd178cd80582936b8b94fe9",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    li_do1 = random.randint(2, 10)\n    vmax = random.randint(2, 10) * 10\n    toc_do1 = vmax * 0.8\n    toc_do2 = vmax * 0.6\n    return {'li_do1': li_do1, 'toc_do1': toc_do1, 'vmax': vmax, 'toc_do2': toc_do2}\n\ndef tinh_cau_87(li_do1, toc_do1, vmax, toc_do2):\n    return li_do1*math.sqrt((vmax**2-toc_do2**2)/(vmax**2-toc_do1**2))\n",
+    "function_name": "tinh_cau_87",
+    "parameters": [
+      {
+        "argument": "li_do1",
+        "slot": "v1",
+        "original": "3",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "toc_do1",
+        "slot": "v3",
+        "original": "40",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "vmax",
+        "slot": "v4",
+        "original": "50",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "toc_do2",
+        "slot": "v5",
+        "original": "30",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "$\\pm{answer}\\,\\mathrm{cm}$",
+    "solution_template": "$\\omega^2=(v_{max}^2-v_1^2)/x_1^2$. $x_2=\\pm\\sqrt{v_{max}^2-v_2^2}/\\omega=\\pm{answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    li_do1 = random.randint(2, 10)\n    vmax = random.randint(2, 10) * 10\n    toc_do1 = vmax * 0.8\n    toc_do2 = vmax * 0.6\n    return {'li_do1': li_do1, 'toc_do1': toc_do1, 'vmax': vmax, 'toc_do2': toc_do2}\n\ndef tinh_cau_87(li_do1, toc_do1, vmax, toc_do2):\n    return li_do1*math.sqrt((vmax**2-toc_do2**2)/(vmax**2-toc_do1**2))\n"
+}

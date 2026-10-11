@@ -1,0 +1,45 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "d0111ddfb7dd8dc8b793fd0ced0cd5b2",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(5, 20)\n    he_so_vmax = random.randint(5, 20)\n    toc_do = he_so_vmax\n    return {'bien_do': bien_do, 'he_so_vmax': he_so_vmax, 'toc_do': toc_do}\n\ndef tinh_cau_81(bien_do, he_so_vmax, toc_do):\n    return bien_do*math.sqrt(1-toc_do**2/(2*he_so_vmax**2))\n",
+    "function_name": "tinh_cau_81",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "20",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_vmax",
+        "slot": "v1",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "toc_do",
+        "slot": "v3",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "$\\pm{answer}\\,\\mathrm{cm}$",
+    "solution_template": "$x=\\pm A\\sqrt{1-v^2/v_{max}^2}=\\pm{answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(5, 20)\n    he_so_vmax = random.randint(5, 20)\n    toc_do = he_so_vmax\n    return {'bien_do': bien_do, 'he_so_vmax': he_so_vmax, 'toc_do': toc_do}\n\ndef tinh_cau_81(bien_do, he_so_vmax, toc_do):\n    return bien_do*math.sqrt(1-toc_do**2/(2*he_so_vmax**2))\n"
+}

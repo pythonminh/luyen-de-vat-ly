@@ -1,0 +1,37 @@
+{
+  "question_id": "L11C1B3-35-TLN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "060be6f46ead577e370b806a623434df",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 12)\n    vmax = bien_do * random.randint(1, 10)\n    return {'vmax': vmax, 'bien_do': bien_do}\n\ndef tinh_L11C1B3_35_TLN(vmax, bien_do):\n    return vmax/bien_do\n",
+    "function_name": "tinh_L11C1B3_35_TLN",
+    "parameters": [
+      {
+        "argument": "vmax",
+        "slot": "v0",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "bien_do",
+        "slot": "v1",
+        "original": "5",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "{answer}",
+    "solution_template": "$\\omega=v_{max}/A={vmax}/{bien_do}={answer}\\,\\mathrm{rad/s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 12)\n    vmax = bien_do * random.randint(1, 10)\n    return {'vmax': vmax, 'bien_do': bien_do}\n\ndef tinh_L11C1B3_35_TLN(vmax, bien_do):\n    return vmax/bien_do\n"
+}

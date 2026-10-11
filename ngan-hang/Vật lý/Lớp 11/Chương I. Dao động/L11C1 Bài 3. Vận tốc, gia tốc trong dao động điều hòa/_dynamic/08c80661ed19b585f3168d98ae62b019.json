@@ -1,0 +1,45 @@
+{
+  "question_id": "L11C1B3-51-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "08c80661ed19b585f3168d98ae62b019",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(5, 15)\n    tan_so = random.randint(1, 8)\n    li_do = bien_do * random.choice([0.2, 0.4, 0.6, 0.8])\n    return {'bien_do': bien_do, 'tan_so': tan_so, 'li_do': li_do}\n\ndef tinh_L11C1B3_51_TN(bien_do, tan_so, li_do):\n    return 2*math.pi*tan_so*math.sqrt(bien_do**2-li_do**2)\n",
+    "function_name": "tinh_L11C1B3_51_TN",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "5",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "tan_so",
+        "slot": "v1",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "li_do",
+        "slot": "v2",
+        "original": "3",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "$\\pm{answer}\\,\\mathrm{cm/s}$",
+    "solution_template": "Đề chưa cho chiều chuyển động nên $v=\\pm2\\pi f\\sqrt{A^2-x^2}=\\pm{answer}\\,\\mathrm{cm/s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(5, 15)\n    tan_so = random.randint(1, 8)\n    li_do = bien_do * random.choice([0.2, 0.4, 0.6, 0.8])\n    return {'bien_do': bien_do, 'tan_so': tan_so, 'li_do': li_do}\n\ndef tinh_L11C1B3_51_TN(bien_do, tan_so, li_do):\n    return 2*math.pi*tan_so*math.sqrt(bien_do**2-li_do**2)\n"
+}

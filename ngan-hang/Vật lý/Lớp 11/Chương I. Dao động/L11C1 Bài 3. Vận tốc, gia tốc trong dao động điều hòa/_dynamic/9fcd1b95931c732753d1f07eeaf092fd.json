@@ -1,0 +1,45 @@
+{
+  "question_id": "L11C1B3-12-TLN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "9fcd1b95931c732753d1f07eeaf092fd",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(5, 15)\n    omega = random.randint(1, 10)\n    toc_do = bien_do * omega * random.choice([0.2, 0.4, 0.6, 0.8])\n    return {'bien_do': bien_do, 'omega': omega, 'toc_do': toc_do}\n\ndef tinh_L11C1B3_12_TLN(bien_do, omega, toc_do):\n    return math.sqrt(bien_do**2-(toc_do/omega)**2)\n",
+    "function_name": "tinh_L11C1B3_12_TLN",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "13",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "omega",
+        "slot": "v1",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "toc_do",
+        "slot": "v2",
+        "original": "20",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "{answer}",
+    "solution_template": "$|x|=\\sqrt{A^2-(v/\\omega)^2}=\\sqrt{{bien_do}^2-({toc_do}/{omega})^2}={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(5, 15)\n    omega = random.randint(1, 10)\n    toc_do = bien_do * omega * random.choice([0.2, 0.4, 0.6, 0.8])\n    return {'bien_do': bien_do, 'omega': omega, 'toc_do': toc_do}\n\ndef tinh_L11C1B3_12_TLN(bien_do, omega, toc_do):\n    return math.sqrt(bien_do**2-(toc_do/omega)**2)\n"
+}

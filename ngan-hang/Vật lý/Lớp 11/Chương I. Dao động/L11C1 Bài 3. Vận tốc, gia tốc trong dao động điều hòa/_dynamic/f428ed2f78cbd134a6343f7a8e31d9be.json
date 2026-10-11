@@ -1,0 +1,37 @@
+{
+  "question_id": "L11C1B3-25-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "f428ed2f78cbd134a6343f7a8e31d9be",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 12)\n    omega = random.randint(1, 12)\n    return {'bien_do': bien_do, 'omega': omega}\n\ndef tinh_L11C1B3_25_TN(bien_do, omega):\n    return bien_do*omega**2\n",
+    "function_name": "tinh_L11C1B3_25_TN",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "omega",
+        "slot": "v1",
+        "original": "8",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm/s^2}$",
+    "solution_template": "$a_{max}=A\\omega^2={bien_do}\\cdot{omega}^2={answer}\\,\\mathrm{cm/s^2}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 12)\n    omega = random.randint(1, 12)\n    return {'bien_do': bien_do, 'omega': omega}\n\ndef tinh_L11C1B3_25_TN(bien_do, omega):\n    return bien_do*omega**2\n"
+}

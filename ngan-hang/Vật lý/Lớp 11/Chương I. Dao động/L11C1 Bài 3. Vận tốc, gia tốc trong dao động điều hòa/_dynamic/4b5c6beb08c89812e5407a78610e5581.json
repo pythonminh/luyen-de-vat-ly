@@ -1,0 +1,45 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "4b5c6beb08c89812e5407a78610e5581",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 12)\n    he_so_omega = random.randint(1, 10)\n    li_do = bien_do / 2\n    return {'bien_do': bien_do, 'he_so_omega': he_so_omega, 'li_do': li_do}\n\ndef tinh_cau_92(bien_do, he_so_omega, li_do):\n    return li_do*he_so_omega*math.pi/math.asin(li_do/bien_do)/100\n",
+    "function_name": "tinh_cau_92",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "6",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_omega",
+        "slot": "v1",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "li_do",
+        "slot": "v2",
+        "original": "3",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{m/s}$",
+    "solution_template": "Từ vị trí cân bằng theo chiều dương đến $x=A/2$, thời gian là $\\Delta t=T/12=1/(6\\cdot{he_so_omega})$. Tốc độ trung bình $\\overline v=x/\\Delta t={answer}\\,\\mathrm{m/s}$ (đã đổi cm sang m).",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 12)\n    he_so_omega = random.randint(1, 10)\n    li_do = bien_do / 2\n    return {'bien_do': bien_do, 'he_so_omega': he_so_omega, 'li_do': li_do}\n\ndef tinh_cau_92(bien_do, he_so_omega, li_do):\n    return li_do*he_so_omega*math.pi/math.asin(li_do/bien_do)/100\n"
+}

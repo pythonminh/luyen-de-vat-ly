@@ -1,0 +1,37 @@
+{
+  "question_id": "L11C1B3-28-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "42a67389b12a59f7ecd53a7da84c8690",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    he_so_vmax = random.randint(2, 15)\n    he_so_amax = random.randint(2, 30)\n    return {'he_so_vmax': he_so_vmax, 'he_so_amax': he_so_amax}\n\ndef tinh_L11C1B3_28_TN(he_so_vmax, he_so_amax):\n    return he_so_vmax**2/he_so_amax\n",
+    "function_name": "tinh_L11C1B3_28_TN",
+    "parameters": [
+      {
+        "argument": "he_so_vmax",
+        "slot": "v0",
+        "original": "8",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_amax",
+        "slot": "v1",
+        "original": "16",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm}$",
+    "solution_template": "$A=v_{max}^2/a_{max}=({he_so_vmax}\\pi)^2/({he_so_amax}\\pi^2)={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    he_so_vmax = random.randint(2, 15)\n    he_so_amax = random.randint(2, 30)\n    return {'he_so_vmax': he_so_vmax, 'he_so_amax': he_so_amax}\n\ndef tinh_L11C1B3_28_TN(he_so_vmax, he_so_amax):\n    return he_so_vmax**2/he_so_amax\n"
+}

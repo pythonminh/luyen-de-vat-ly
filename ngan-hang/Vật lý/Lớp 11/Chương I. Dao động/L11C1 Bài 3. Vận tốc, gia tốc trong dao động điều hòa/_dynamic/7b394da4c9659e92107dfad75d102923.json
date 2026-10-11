@@ -1,0 +1,53 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "7b394da4c9659e92107dfad75d102923",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    x1 = 3 * random.randint(1, 4)\n    x2 = 4 * x1 / 3\n    v1 = 4 * random.randint(1, 5)\n    v2 = 3 * v1 / 4\n    return {'x1': x1, 'v1': v1, 'x2': x2, 'v2': v2}\n\ndef tinh_cau_118(x1, v1, x2, v2):\n    return math.sqrt((v1**2*x2**2-v2**2*x1**2)/(v1**2-v2**2))\n",
+    "function_name": "tinh_cau_118",
+    "parameters": [
+      {
+        "argument": "x1",
+        "slot": "v1",
+        "original": "3",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "v1",
+        "slot": "v3",
+        "original": "8",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "x2",
+        "slot": "v5",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "v2",
+        "slot": "v7",
+        "original": "6",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm}$",
+    "solution_template": "Từ $v_1^2=\\omega^2(A^2-x_1^2)$ và $v_2^2=\\omega^2(A^2-x_2^2)$: $A=\\sqrt{(v_1^2x_2^2-v_2^2x_1^2)/(v_1^2-v_2^2)}={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    x1 = 3 * random.randint(1, 4)\n    x2 = 4 * x1 / 3\n    v1 = 4 * random.randint(1, 5)\n    v2 = 3 * v1 / 4\n    return {'x1': x1, 'v1': v1, 'x2': x2, 'v2': v2}\n\ndef tinh_cau_118(x1, v1, x2, v2):\n    return math.sqrt((v1**2*x2**2-v2**2*x1**2)/(v1**2-v2**2))\n"
+}

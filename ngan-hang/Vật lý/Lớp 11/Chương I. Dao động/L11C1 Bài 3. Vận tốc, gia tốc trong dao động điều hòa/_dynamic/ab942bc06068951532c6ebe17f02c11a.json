@@ -1,0 +1,37 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "ab942bc06068951532c6ebe17f02c11a",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    he_so_vmax = random.randint(2, 20)\n    return {'bien_do': bien_do, 'he_so_vmax': he_so_vmax}\n\ndef tinh_cau_119(bien_do, he_so_vmax):\n    return 2*bien_do/he_so_vmax\n",
+    "function_name": "tinh_cau_119",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "5",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_vmax",
+        "slot": "v1",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{s}$",
+    "solution_template": "$T=2\\pi A/v_{max}=2\\cdot{bien_do}/{he_so_vmax}={answer}\\,\\mathrm{s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    he_so_vmax = random.randint(2, 20)\n    return {'bien_do': bien_do, 'he_so_vmax': he_so_vmax}\n\ndef tinh_cau_119(bien_do, he_so_vmax):\n    return 2*bien_do/he_so_vmax\n"
+}

@@ -1,0 +1,29 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "036d3a98e601ac6d6f0dc0dd57bb3b71",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    he_so_omega = random.randint(1, 12)\n    return {'he_so_omega': he_so_omega}\n\ndef tinh_cau_121(he_so_omega):\n    return 1/(3*he_so_omega)\n",
+    "function_name": "tinh_cau_121",
+    "parameters": [
+      {
+        "argument": "he_so_omega",
+        "slot": "v0",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{s}$",
+    "solution_template": "$|a|/a_{max}=|\\cos(\\omega t)|=1/2$. Lần đầu có $\\omega t=\\pi/3$, nên $t=1/(3\\cdot{he_so_omega})={answer}\\,\\mathrm{s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    he_so_omega = random.randint(1, 12)\n    return {'he_so_omega': he_so_omega}\n\ndef tinh_cau_121(he_so_omega):\n    return 1/(3*he_so_omega)\n"
+}

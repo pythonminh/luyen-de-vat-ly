@@ -1,0 +1,45 @@
+{
+  "question_id": "L11C1B3-34-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "b9067a8dd976af26ff289846420c9d1a",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    vmax = random.randint(10, 50)\n    amax = vmax * random.randint(1, 10)\n    li_do = vmax**2/amax * random.choice([0.2, 0.4, 0.6, 0.8])\n    return {'vmax': vmax, 'amax': amax, 'li_do': li_do}\n\ndef tinh_L11C1B3_34_TN(vmax, amax, li_do):\n    return math.sqrt(vmax**2-(amax/vmax*li_do)**2)\n",
+    "function_name": "tinh_L11C1B3_34_TN",
+    "parameters": [
+      {
+        "argument": "vmax",
+        "slot": "v0",
+        "original": "20",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "amax",
+        "slot": "v1",
+        "original": "100",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "li_do",
+        "slot": "v3",
+        "original": "3",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm/s}$",
+    "solution_template": "$\\omega=a_{max}/v_{max}={amax}/{vmax}$. $|v|=\\sqrt{v_{max}^2-\\omega^2x^2}={answer}\\,\\mathrm{cm/s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    vmax = random.randint(10, 50)\n    amax = vmax * random.randint(1, 10)\n    li_do = vmax**2/amax * random.choice([0.2, 0.4, 0.6, 0.8])\n    return {'vmax': vmax, 'amax': amax, 'li_do': li_do}\n\ndef tinh_L11C1B3_34_TN(vmax, amax, li_do):\n    return math.sqrt(vmax**2-(amax/vmax*li_do)**2)\n"
+}

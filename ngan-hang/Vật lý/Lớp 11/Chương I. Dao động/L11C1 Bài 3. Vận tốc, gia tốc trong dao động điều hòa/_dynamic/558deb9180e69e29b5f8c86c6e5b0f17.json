@@ -1,0 +1,37 @@
+{
+  "question_id": "L11C1B3-05-TLN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "558deb9180e69e29b5f8c86c6e5b0f17",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    omega = random.randint(1, 10)\n    li_do = random.randint(1, 8)\n    return {'omega': omega, 'li_do': li_do}\n\ndef tinh_L11C1B3_05_TLN(omega, li_do):\n    return -omega**2*li_do\n",
+    "function_name": "tinh_L11C1B3_05_TLN",
+    "parameters": [
+      {
+        "argument": "omega",
+        "slot": "v0",
+        "original": "5",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "li_do",
+        "slot": "v1",
+        "original": "2",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "{answer}",
+    "solution_template": "$a=-\\omega^2x=-{omega}^2\\cdot{li_do}={answer}\\,\\mathrm{cm/s^2}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    omega = random.randint(1, 10)\n    li_do = random.randint(1, 8)\n    return {'omega': omega, 'li_do': li_do}\n\ndef tinh_L11C1B3_05_TLN(omega, li_do):\n    return -omega**2*li_do\n"
+}

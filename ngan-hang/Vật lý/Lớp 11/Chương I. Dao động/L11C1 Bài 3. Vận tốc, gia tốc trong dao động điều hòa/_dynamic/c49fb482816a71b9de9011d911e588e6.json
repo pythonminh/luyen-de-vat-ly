@@ -1,0 +1,37 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "c49fb482816a71b9de9011d911e588e6",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(1, 4)\n    chu_ki = 3.14 * random.choice([0.5, 1, 2, 4])\n    return {'chu_ki': chu_ki, 'bien_do': bien_do}\n\ndef tinh_cau_75(chu_ki, bien_do):\n    return 2*3.14*bien_do/chu_ki\n",
+    "function_name": "tinh_cau_75",
+    "parameters": [
+      {
+        "argument": "chu_ki",
+        "slot": "v0",
+        "original": "157/50",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "bien_do",
+        "slot": "v1",
+        "original": "1",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{m/s}$",
+    "solution_template": "$|v|_{VCB}=2\\pi A/T=2\\cdot3,14\\cdot{bien_do}/{chu_ki}={answer}\\,\\mathrm{m/s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(1, 4)\n    chu_ki = 3.14 * random.choice([0.5, 1, 2, 4])\n    return {'chu_ki': chu_ki, 'bien_do': bien_do}\n\ndef tinh_cau_75(chu_ki, bien_do):\n    return 2*3.14*bien_do/chu_ki\n"
+}

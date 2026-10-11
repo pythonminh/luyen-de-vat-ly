@@ -1,0 +1,37 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "35561888681f9d756209fa06952a8b25",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    omega = random.randint(1, 10)\n    return {'bien_do': bien_do, 'omega': omega}\n\ndef tinh_cau_77(bien_do, omega):\n    return bien_do*omega\n",
+    "function_name": "tinh_cau_77",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "omega",
+        "slot": "v1",
+        "original": "10",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "$v=-{answer}\\sin({omega}t+\\pi/2)\\,\\mathrm{cm/s}$",
+    "solution_template": "Đạo hàm $x=A\\cos(\\omega t+\\pi/2)$: $v=-A\\omega\\sin(\\omega t+\\pi/2)=-{answer}\\sin({omega}t+\\pi/2)\\,\\mathrm{cm/s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    omega = random.randint(1, 10)\n    return {'bien_do': bien_do, 'omega': omega}\n\ndef tinh_cau_77(bien_do, omega):\n    return bien_do*omega\n"
+}

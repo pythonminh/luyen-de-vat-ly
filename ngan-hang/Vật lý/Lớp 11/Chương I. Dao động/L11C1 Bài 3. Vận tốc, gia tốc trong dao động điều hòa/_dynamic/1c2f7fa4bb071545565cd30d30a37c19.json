@@ -1,0 +1,29 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "1c2f7fa4bb071545565cd30d30a37c19",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    return {'bien_do': bien_do}\n\ndef tinh_cau_89(bien_do):\n    return bien_do*math.pi\n",
+    "function_name": "tinh_cau_89",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "5",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm/s}$",
+    "solution_template": "$v_{max}=A\\omega={bien_do}\\pi={answer}\\,\\mathrm{cm/s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    return {'bien_do': bien_do}\n\ndef tinh_cau_89(bien_do):\n    return bien_do*math.pi\n"
+}

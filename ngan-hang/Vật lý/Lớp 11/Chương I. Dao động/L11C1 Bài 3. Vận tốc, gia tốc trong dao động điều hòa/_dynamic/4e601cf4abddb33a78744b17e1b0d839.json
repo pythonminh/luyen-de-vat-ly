@@ -1,0 +1,37 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "4e601cf4abddb33a78744b17e1b0d839",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    he_so_vmax = random.randint(1, 8) * 5\n    amax = random.randint(1, 10)\n    return {'he_so_vmax': he_so_vmax, 'amax': amax}\n\ndef tinh_cau_107(he_so_vmax, amax):\n    return (he_so_vmax**2*10/(100*amax),2*he_so_vmax*10/(100*amax))\n",
+    "function_name": "tinh_cau_107",
+    "parameters": [
+      {
+        "argument": "he_so_vmax",
+        "slot": "v0",
+        "original": "20",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "amax",
+        "slot": "v1",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "$A={answer1}\\,\\mathrm{cm};\\ T={answer2}\\,\\mathrm{s}$",
+    "solution_template": "Đổi $a_{max}={amax}\\,\\mathrm{m/s^2}=100\\cdot{amax}\\,\\mathrm{cm/s^2}$. Lấy $\\pi^2=10$: $A=v_{max}^2/a_{max}={answer1}\\,\\mathrm{cm}$ và $T=2\\pi v_{max}/a_{max}={answer2}\\,\\mathrm{s}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    he_so_vmax = random.randint(1, 8) * 5\n    amax = random.randint(1, 10)\n    return {'he_so_vmax': he_so_vmax, 'amax': amax}\n\ndef tinh_cau_107(he_so_vmax, amax):\n    return (he_so_vmax**2*10/(100*amax),2*he_so_vmax*10/(100*amax))\n"
+}

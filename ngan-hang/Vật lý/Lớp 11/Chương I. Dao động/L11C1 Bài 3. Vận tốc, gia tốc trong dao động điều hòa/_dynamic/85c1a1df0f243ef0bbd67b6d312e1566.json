@@ -1,0 +1,45 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "85c1a1df0f243ef0bbd67b6d312e1566",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    chu_ki = random.choice([0.5, 1, 2, 4])\n    thoi_gian = chu_ki * random.randint(1, 8)\n    return {'bien_do': bien_do, 'chu_ki': chu_ki, 'thoi_gian': thoi_gian}\n\ndef tinh_cau_120(bien_do, chu_ki, thoi_gian):\n    return 4*bien_do*thoi_gian/chu_ki\n",
+    "function_name": "tinh_cau_120",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "chu_ki",
+        "slot": "v1",
+        "original": "2",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      },
+      {
+        "argument": "thoi_gian",
+        "slot": "v2",
+        "original": "4",
+        "min": "1",
+        "max": "10000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm}$",
+    "solution_template": "Vì $\\Delta t/T$ là số nguyên, $S=4A\\Delta t/T=4\\cdot{bien_do}\\cdot{thoi_gian}/{chu_ki}={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer+1",
+      "answer+2",
+      "answer-1"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    chu_ki = random.choice([0.5, 1, 2, 4])\n    thoi_gian = chu_ki * random.randint(1, 8)\n    return {'bien_do': bien_do, 'chu_ki': chu_ki, 'thoi_gian': thoi_gian}\n\ndef tinh_cau_120(bien_do, chu_ki, thoi_gian):\n    return 4*bien_do*thoi_gian/chu_ki\n"
+}
