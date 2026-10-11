@@ -3210,7 +3210,14 @@ document.getElementById('hpFull').onclick=()=>{document.body.classList.toggle('h
 document.getElementById('hpShare').onclick=async()=>{const u=hpSavedUrl;try{await navigator.clipboard.writeText(u.href);hpStatus.textContent='Đã sao chép link học sinh.';}catch(e){hpStatus.textContent=u.href;}};
 const hpPreview=document.getElementById('hpPreview');if(hpPreview)hpPreview.onclick=async()=>{try{const f=document.getElementById('hpFile').files[0];if(f&&f.size>2097152)throw Error('File quá 2 MB.');const source=f?await f.text():document.getElementById('hpSource').value;if(!source.trim())throw Error('Chọn file hoặc dán mã HTML.');hpFrame.style.display='block';hpFrame.srcdoc=source;hpFrame.scrollIntoView({block:'start',behavior:'smooth'});hpStatus.textContent='Đang chạy thử · Chưa lưu.';}catch(e){hpStatus.textContent=e.message;}};
 </script>""".replace('CONTENT_URL', json.dumps(content_url, ensure_ascii=True)).replace('SELECTED', 'true' if selected else 'false')
-    return page('Bài HTML luyện đổi số', body + script)
+    preview_title = selected_title if selected else 'HTML đổi số'
+    preview_meta = ('<meta property="og:title" content="' + html.escape(preview_title, quote=True) + '">'
+                    '<meta property="og:description" content="' + html.escape(dang or 'Bài luyện tập đổi số', quote=True) + '">'
+                    '<meta property="og:type" content="website">')
+    response = page(preview_title, body + script)
+    response.set_data(response.get_data(as_text=True).replace('</head>', preview_meta + '</head>', 1))
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 
 _HTML_LIST_CACHE = {}
