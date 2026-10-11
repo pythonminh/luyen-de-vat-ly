@@ -3192,10 +3192,10 @@ def member_html_practice():
                    '<input type="hidden" name="csrf" value="'+html.escape(session['html_practice_csrf'],quote=True)+'">'
                    '<input type="hidden" name="action" value="rename">'
                    '<input name="title" required maxlength="150" value="'+html.escape(selected_title,quote=True)+'"> <button>Lưu tên</button></form></details>')
-    body = ('<div class="wrap"><h2>📁 HTML đổi số</h2><p>' + html.escape(dang or 'Cả bài') + '</p>'
+    body = ('<div class="wrap"><h2>' + html.escape(selected_title if selected else '📁 HTML đổi số') + '</h2><p>' + html.escape(dang or 'Cả bài') + '</p>'
             '<p><a class="btn" href="' + html.escape(folder_url if selected else back, quote=True) + '">← Danh sách</a> '
-            '<button type="button" class="hp-player-control" id="hpFull">Mở rộng bài</button> <button type="button" class="hp-player-control" id="hpShare">Sao chép link học sinh</button></p>'
-            + '<details class="hp-player-control" style="margin:8px 0"><summary>🔗 Link học sinh</summary><input id="hpLink" type="text" readonly style="width:100%;padding:8px;box-sizing:border-box"><a id="hpOpenSaved" class="btn" target="_blank" rel="noopener">Mở bài</a></details>'  + note + ('<h3>' + html.escape(selected_title) + '</h3>' if selected else listing) + editor + '<p id="hpStatus" role="status">Chọn tên bài để luyện tập.</p>'
+            '<button type="button" class="hp-player-control" id="hpFull">Mở rộng bài</button> <button type="button" class="hp-player-control" id="hpShare">Sao chép tên bài + link</button></p>'
+            + '<details class="hp-player-control" style="margin:8px 0"><summary>🔗 Link học sinh</summary><input id="hpLink" type="text" readonly style="width:100%;padding:8px;box-sizing:border-box"><a id="hpOpenSaved" class="btn" target="_blank" rel="noopener">Mở bài</a></details>'  + note + ('' if selected else listing) + editor + '<p id="hpStatus" role="status">Chọn tên bài để luyện tập.</p>'
             '<iframe id="hpFrame" title="Bài luyện tập đổi số" sandbox="allow-scripts" referrerpolicy="no-referrer" '
             'style="display:block;width:100%;height:85vh;min-height:500px;border:1px solid #cbd5e1;background:white"></iframe></div>'
             '<style>body.hp-expanded #hpFrame{position:fixed;inset:0;height:100dvh!important;width:100vw!important;z-index:9998}body.hp-expanded #hpFull{position:fixed;right:8px;top:8px;z-index:9999}</style>')
@@ -3207,9 +3207,10 @@ const hpFrame=document.getElementById('hpFrame'),hpStatus=document.getElementByI
 const hpSavedUrl=new URL(location.href);hpSavedUrl.searchParams.delete('content');hpSavedUrl.searchParams.delete('saved');hpSavedUrl.hash='hpFrame';document.getElementById('hpLink').value=hpSavedUrl.href;document.getElementById('hpOpenSaved').href=hpSavedUrl.href;
 if(SELECTED)fetch(CONTENT_URL).then(async r=>{const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Không mở được bài');hpFrame.srcdoc=d.source;hpStatus.textContent='Bài đã lưu · Bấm đổi đề trong bài để luyện tập.'}).catch(e=>{hpStatus.textContent=e.message;});
 document.getElementById('hpFull').onclick=()=>{document.body.classList.toggle('hp-expanded');document.getElementById('hpFull').textContent=document.body.classList.contains('hp-expanded')?'Thu nhỏ':'Mở rộng bài';};
-document.getElementById('hpShare').onclick=async()=>{const u=hpSavedUrl;try{await navigator.clipboard.writeText(u.href);hpStatus.textContent='Đã sao chép link học sinh.';}catch(e){hpStatus.textContent=u.href;}};
+const hpShareTitle=SHARE_TITLE;
+document.getElementById('hpShare').onclick=async()=>{const text=hpShareTitle+'\n'+hpSavedUrl.href;try{await navigator.clipboard.writeText(text);hpStatus.textContent='Đã sao chép tên bài và link học sinh.';}catch(e){const area=document.createElement('textarea');area.value=text;document.body.appendChild(area);area.select();const copied=document.execCommand('copy');area.remove();hpStatus.textContent=copied?'Đã sao chép tên bài và link học sinh.':text;hpStatus.style.whiteSpace='pre-wrap';}};
 const hpPreview=document.getElementById('hpPreview');if(hpPreview)hpPreview.onclick=async()=>{try{const f=document.getElementById('hpFile').files[0];if(f&&f.size>2097152)throw Error('File quá 2 MB.');const source=f?await f.text():document.getElementById('hpSource').value;if(!source.trim())throw Error('Chọn file hoặc dán mã HTML.');hpFrame.style.display='block';hpFrame.srcdoc=source;hpFrame.scrollIntoView({block:'start',behavior:'smooth'});hpStatus.textContent='Đang chạy thử · Chưa lưu.';}catch(e){hpStatus.textContent=e.message;}};
-</script>""".replace('CONTENT_URL', json.dumps(content_url, ensure_ascii=True)).replace('SELECTED', 'true' if selected else 'false')
+</script>""".replace('CONTENT_URL', json.dumps(content_url, ensure_ascii=True)).replace('SELECTED', 'true' if selected else 'false').replace('SHARE_TITLE', json.dumps(selected_title or 'HTML đổi số', ensure_ascii=True))
     preview_title = selected_title if selected else 'HTML đổi số'
     preview_meta = ('<meta property="og:title" content="' + html.escape(preview_title, quote=True) + '">'
                     '<meta property="og:description" content="' + html.escape(dang or 'Bài luyện tập đổi số', quote=True) + '">'
