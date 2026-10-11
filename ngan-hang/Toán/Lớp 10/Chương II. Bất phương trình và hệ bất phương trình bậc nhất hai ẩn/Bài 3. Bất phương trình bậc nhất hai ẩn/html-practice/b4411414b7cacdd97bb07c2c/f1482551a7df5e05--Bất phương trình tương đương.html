@@ -1,0 +1,713 @@
+<!--hp-title:QuG6pXQgcGjGsMahbmcgdHLDrG5oIHTGsMahbmcgxJHGsMahbmc=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lớp Học Thầy Minh - Luyện Tập Bất Phương Trình</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #f3f6fa;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background-color: #0b1d3a;
+      color: #ffffff;
+      text-align: center;
+      padding: 14px 16px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .main-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .sub-title {
+      font-size: 0.82rem;
+      opacity: 0.85;
+      margin-top: 3px;
+      letter-spacing: 0.4px;
+    }
+
+    .container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 20px auto;
+      padding: 0 16px;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media (min-width: 860px) {
+      .container {
+        grid-template-columns: 1fr 1.2fr;
+      }
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+      border: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0b1d3a;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .formula-box {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .formula-item {
+      margin-bottom: 12px;
+    }
+
+    .formula-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .formula-tag {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #475569;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .math-text {
+      font-family: "Cambria Math", "Times New Roman", serif;
+      font-size: 1.25rem;
+      color: #0f172a;
+      font-weight: 600;
+      background: #ffffff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border-left: 4px solid #2563eb;
+      overflow-x: auto;
+    }
+
+    .visual-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.92rem;
+    }
+
+    .visual-table th, .visual-table td {
+      border: 1px solid #e2e8f0;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .visual-table th {
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-weight: 600;
+    }
+
+    .param-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
+    .problem-box {
+      background: #f1f5f9;
+      padding: 16px;
+      border-radius: 10px;
+      border-left: 5px solid #0b1d3a;
+      font-size: 1.05rem;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .option-btn {
+      text-align: left;
+      background: #ffffff;
+      border: 2px solid #cbd5e1;
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 1.02rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: #2563eb;
+      background-color: #eff6ff;
+      transform: translateY(-1px);
+    }
+
+    .option-letter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      font-weight: bold;
+      color: #334155;
+      flex-shrink: 0;
+    }
+
+    .option-btn.selected-correct {
+      border-color: #16a34a;
+      background-color: #f0fdf4;
+    }
+
+    .option-btn.selected-correct .option-letter {
+      background: #16a34a;
+      color: #ffffff;
+    }
+
+    .option-btn.selected-wrong {
+      border-color: #dc2626;
+      background-color: #fef2f2;
+    }
+
+    .option-btn.selected-wrong .option-letter {
+      background: #dc2626;
+      color: #ffffff;
+    }
+
+    .actions-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      padding: 11px 20px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background-color: #0b1d3a;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background-color: #17325c;
+    }
+
+    .btn-secondary {
+      background-color: #e2e8f0;
+      color: #1e293b;
+    }
+
+    .btn-secondary:hover {
+      background-color: #cbd5e1;
+    }
+
+    .feedback-msg {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.98rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .feedback-success {
+      background-color: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+      display: block;
+    }
+
+    .feedback-error {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fca5a5;
+      display: block;
+    }
+
+    .solution-box {
+      display: none;
+      background-color: #fffbeb;
+      border: 1px solid #fef3c7;
+      border-left: 5px solid #d97706;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .solution-title {
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
+    .step-item {
+      margin-bottom: 8px;
+      line-height: 1.6;
+      color: #451a03;
+      font-size: 0.98rem;
+    }
+
+    .step-item:last-child {
+      margin-bottom: 0;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="main-title">Lớp Học Thầy Minh · Zalo 0946111107</div>
+    <div class="sub-title">lophocthayminh.onrender.com</div>
+  </header>
+
+  <main class="container">
+    
+    <!-- LEFT PANEL: Dynamic Formula Reference & Coefficients Table -->
+    <section class="card" aria-label="Bảng công thức và quy tắc đổi số">
+      <h2 class="card-title">
+        <span>📐</span> Bảng Công Thức &amp; Quy Tắc Rút Gọn
+      </h2>
+
+      <div class="formula-box">
+        <div class="formula-item">
+          <div class="formula-tag">Dạng tổng quát ban đầu</div>
+          <div class="math-text" id="dispGeneralFormula">ax - k(y - mx + c) &gt; 0</div>
+        </div>
+
+        <div class="formula-item">
+          <div class="formula-tag">Quy tắc phân phối dấu trừ</div>
+          <div class="math-text">ax - ky + (k·m)x - (k·c) &gt; 0</div>
+        </div>
+
+        <div class="formula-item">
+          <div class="formula-tag">Gộp các hạng tử đồng dạng</div>
+          <div class="math-text" id="dispGroupFormula">(a + k·m)x - ky - (k·c) &gt; 0</div>
+        </div>
+      </div>
+
+      <div class="formula-box" style="background:#ffffff;">
+        <div class="formula-tag" style="margin-bottom: 8px;">Hệ số hiện tại của bài toán:</div>
+        <table class="visual-table">
+          <thead>
+            <tr>
+              <th>Hệ số a</th>
+              <th>Hệ số k</th>
+              <th>Hệ số m</th>
+              <th>Hệ số c</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="param-chip" id="chipA">3</span></td>
+              <td><span class="param-chip" id="chipK">2</span></td>
+              <td><span class="param-chip" id="chipM">1</span></td>
+              <td><span class="param-chip" id="chipC">1</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: 14px; font-size: 0.9rem; color: #475569; line-height: 1.5;">
+          • Hệ số đứng trước <strong>x</strong>: <code>a + k·m</code> = <strong id="calcXCoeff" style="color:#0f172a;">5</strong><br>
+          • Hệ số đứng trước <strong>y</strong>: <code>-k</code> = <strong id="calcYCoeff" style="color:#0f172a;">-2</strong><br>
+          • Hạng tử tự do: <code>-k·c</code> = <strong id="calcConst" style="color:#0f172a;">-2</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: Current Problem, Multiple Choice and Solution -->
+    <section class="card" aria-label="Đề bài luyện tập">
+      <h2 class="card-title">
+        <span>📝</span> Luyện Tập Trắc Nghiệm Đổi Số
+      </h2>
+
+      <div class="problem-box" id="problemStatement">
+        Bất phương trình 3x - 2(y - x + 1) &gt; 0 tương đương với bất phương trình nào sau đây?
+      </div>
+
+      <div class="options-grid" id="optionsContainer">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div id="feedbackBox" class="feedback-msg"></div>
+
+      <div class="actions-row">
+        <button type="button" class="btn btn-primary" id="btnNewProblem">
+          🔄 Đổi đề bài mới
+        </button>
+        <button type="button" class="btn btn-secondary" id="btnToggleSolution">
+          💡 Xem lời giải
+        </button>
+      </div>
+
+      <div class="solution-box" id="solutionContainer">
+        <div class="solution-title">Lời giải chi tiết:</div>
+        <div id="solutionSteps">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Initial problem coefficients: 3x - 2(y - x + 1) > 0 <=> a=3, k=2, m=1, c=1
+    // Form: a*x - k*(y - m*x + c) > 0
+    let currentProblem = {
+      a: 3,
+      k: 2,
+      m: 1,
+      c: 1,
+      correctX: 5,
+      correctY: -2,
+      correctConst: -2,
+      options: [],
+      correctOptionIndex: 1
+    };
+
+    let userSelectedIndex = null;
+    let isSolutionVisible = false;
+
+    // Helper to format: Ax + By + C > 0 nicely without "+ -", "1x", "+ 0", etc.
+    function formatLinearInequality(coeffX, coeffY, constantVal) {
+      let parts = [];
+
+      // X term
+      if (coeffX === 1) parts.push("x");
+      else if (coeffX === -1) parts.push("-x");
+      else parts.push(`${coeffX}x`);
+
+      // Y term
+      if (coeffY === 1) parts.push("+ y");
+      else if (coeffY === -1) parts.push("- y");
+      else if (coeffY > 0) parts.push(`+ ${coeffY}y`);
+      else parts.push(`- ${Math.abs(coeffY)}y`);
+
+      // Constant term
+      if (constantVal > 0) parts.push(`+ ${constantVal}`);
+      else if (constantVal < 0) parts.push(`- ${Math.abs(constantVal)}`);
+
+      return parts.join(" ") + " > 0";
+    }
+
+    // Format initial expression: ax - k(y - mx + c) > 0
+    function formatProblemText(a, k, m, c) {
+      let xPart = (a === 1) ? "x" : `${a}x`;
+      let mxPart = (m === 1) ? "- x" : (m === -1 ? "+ x" : (m > 0 ? `- ${m}x` : `+ ${Math.abs(m)}x`));
+      let cPart = (c > 0) ? `+ ${c}` : (c < 0 ? `- ${Math.abs(c)}` : "");
+      
+      return `Bất phương trình ${xPart} - ${k}(y ${mxPart} ${cPart}) > 0 tương đương với bất phương trình nào sau đây?`;
+    }
+
+    function generateChoices(a, k, m, c) {
+      const correctX = a + k * m;
+      const correctY = -k;
+      const correctConst = -k * c;
+
+      // Realistic common student pitfalls:
+      // 1. Distractor 1: Forgot to multiply k with x -> a - k*m or a - m (as in original A: x - 2y - 2 > 0 where 3 - 2 = 1)
+      const d1_x = a - k * m > 0 ? a - k * m : 1;
+      const d1_y = -k;
+      const d1_c = correctConst;
+
+      // 2. Distractor 2: Forgot to multiply k with constant c -> c instead of k*c (as in original C: 5x - 2y - 1 > 0)
+      const d2_x = correctX;
+      const d2_y = -k;
+      const d2_c = -c;
+
+      // 3. Distractor 3: Math error in coefficient addition (as in original D: 4x - 2y - 2 > 0)
+      const d3_x = (correctX - 1 > 0 && correctX - 1 !== correctX) ? correctX - 1 : correctX + 2;
+      const d3_y = -k;
+      const d3_c = correctConst;
+
+      // Array of candidates
+      const rawCandidates = [
+        { x: correctX, y: correctY, c: correctConst, isCorrect: true },
+        { x: d1_x, y: d1_y, c: d1_c, isCorrect: false },
+        { x: d2_x, y: d2_y, c: d2_c, isCorrect: false },
+        { x: d3_x, y: d3_y, c: d3_c, isCorrect: false }
+      ];
+
+      // Ensure distinct text
+      let distinctCandidates = [];
+      let seen = new Set();
+
+      rawCandidates.forEach(cand => {
+        let key = `${cand.x},${cand.y},${cand.c}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          distinctCandidates.push(cand);
+        }
+      });
+
+      // Fill fallback distinct candidates if duplicates occurred
+      let altOffset = 1;
+      while (distinctCandidates.length < 4) {
+        let fallback = { x: correctX + altOffset, y: correctY, c: correctConst, isCorrect: false };
+        let fKey = `${fallback.x},${fallback.y},${fallback.c}`;
+        if (!seen.has(fKey)) {
+          seen.add(fKey);
+          distinctCandidates.push(fallback);
+        }
+        altOffset++;
+      }
+
+      return distinctCandidates;
+    }
+
+    function getRandomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function createNewProblem(useOriginal = false) {
+      userSelectedIndex = null;
+      isSolutionVisible = false;
+
+      let a, k, m, c;
+
+      if (useOriginal) {
+        a = 3;
+        k = 2;
+        m = 1;
+        c = 1;
+      } else {
+        // Generate friendly integers ensuring rich practice
+        a = getRandomInt(2, 6);
+        k = getRandomInt(2, 5);
+        m = getRandomInt(1, 3);
+        c = getRandomInt(1, 4);
+
+        // Avoid accidental identical clone of original when clicking new problem
+        if (a === 3 && k === 2 && m === 1 && c === 1) {
+          a = 4;
+        }
+      }
+
+      const correctX = a + k * m;
+      const correctY = -k;
+      const correctConst = -k * c;
+
+      let candidates = generateChoices(a, k, m, c);
+
+      if (useOriginal) {
+        // Original has option order: A: d1, B: Correct, C: d2, D: d3
+        // Matching exact original specification
+        candidates = [
+          { x: 1, y: -2, c: -2, isCorrect: false }, // A. x - 2y - 2 > 0
+          { x: 5, y: -2, c: -2, isCorrect: true },  // B. 5x - 2y - 2 > 0
+          { x: 5, y: -2, c: -1, isCorrect: false }, // C. 5x - 2y - 1 > 0
+          { x: 4, y: -2, c: -2, isCorrect: false }  // D. 4x - 2y - 2 > 0
+        ];
+      } else {
+        // Shuffle candidates randomly for new generations
+        for (let i = candidates.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+        }
+      }
+
+      const correctIndex = candidates.findIndex(cand => cand.isCorrect);
+
+      currentProblem = {
+        a, k, m, c,
+        correctX, correctY, correctConst,
+        options: candidates,
+        correctOptionIndex: correctIndex
+      };
+
+      renderUI();
+    }
+
+    function renderUI() {
+      const { a, k, m, c, correctX, correctY, correctConst, options } = currentProblem;
+
+      // Update Left reference panel
+      document.getElementById("chipA").textContent = a;
+      document.getElementById("chipK").textContent = k;
+      document.getElementById("chipM").textContent = m;
+      document.getElementById("chipC").textContent = c;
+
+      document.getElementById("calcXCoeff").textContent = `${a} + ${k}·${m} = ${correctX}`;
+      document.getElementById("calcYCoeff").textContent = `${correctY}`;
+      document.getElementById("calcConst").textContent = `${correctConst}`;
+
+      const mxStr = (m === 1) ? "- x" : (m === -1 ? "+ x" : (m > 0 ? `- ${m}x` : `+ ${Math.abs(m)}x`));
+      document.getElementById("dispGeneralFormula").textContent = `${a}x - ${k}(y ${mxStr} + ${c}) > 0`;
+      document.getElementById("dispGroupFormula").textContent = `${formatLinearInequality(correctX, correctY, correctConst)}`;
+
+      // Update Right Problem text
+      document.getElementById("problemStatement").textContent = formatProblemText(a, k, m, c);
+
+      // Render Multiple Choice Options
+      const letters = ["A", "B", "C", "D"];
+      const container = document.getElementById("optionsContainer");
+      container.innerHTML = "";
+
+      options.forEach((opt, idx) => {
+        const textFormula = formatLinearInequality(opt.x, opt.y, opt.c);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "option-btn";
+        button.id = `optBtn_${idx}`;
+        button.innerHTML = `
+          <span class="option-letter">${letters[idx]}</span>
+          <span>${textFormula}</span>
+        `;
+        button.addEventListener("click", () => handleSelectOption(idx));
+        container.appendChild(button);
+      });
+
+      // Reset feedback box
+      const fbBox = document.getElementById("feedbackBox");
+      fbBox.className = "feedback-msg";
+      fbBox.textContent = "";
+      fbBox.style.display = "none";
+
+      // Reset Solution container
+      document.getElementById("solutionContainer").style.display = "none";
+      document.getElementById("btnToggleSolution").textContent = "💡 Xem lời giải";
+      isSolutionVisible = false;
+
+      // Generate steps text
+      renderSolutionSteps();
+    }
+
+    function renderSolutionSteps() {
+      const { a, k, m, c, correctX, correctY, correctConst, correctOptionIndex } = currentProblem;
+      const letters = ["A", "B", "C", "D"];
+      const correctLetter = letters[correctOptionIndex];
+
+      const km = k * m;
+      const kc = k * c;
+
+      const expandedText = `${a}x - ${k}y + ${km}x - ${kc} > 0`;
+      const groupedText = `(${a} + ${km})x - ${k}y - ${kc} > 0`;
+      const simplifiedText = formatLinearInequality(correctX, correctY, correctConst);
+
+      const stepsContainer = document.getElementById("solutionSteps");
+      stepsContainer.innerHTML = `
+        <div class="step-item"><strong>Bước 1:</strong> Khai triển dấu ngoặc và phân phối số <code>${k}</code> vào trong:</div>
+        <div class="step-item" style="padding-left:14px; font-family:'Cambria Math', serif; font-size:1.05rem;">
+          ${a}x - ${k}(y - ${m === 1 ? '' : m}x + ${c}) > 0 
+          &hArr; ${expandedText}
+        </div>
+        <div class="step-item"><strong>Bước 2:</strong> Gộp các hạng tử đồng dạng chứa <code>x</code>:</div>
+        <div class="step-item" style="padding-left:14px; font-family:'Cambria Math', serif; font-size:1.05rem;">
+          &hArr; ${groupedText} &hArr; <strong>${simplifiedText}</strong>
+        </div>
+        <div class="step-item" style="margin-top:6px; color:#1e3a8a; font-weight:600;">
+          &rArr; Đáp án chính xác là <strong>${correctLetter}</strong>.
+        </div>
+      `;
+    }
+
+    function handleSelectOption(index) {
+      userSelectedIndex = index;
+      const { correctOptionIndex } = currentProblem;
+      const fbBox = document.getElementById("feedbackBox");
+      const isCorrect = (index === correctOptionIndex);
+
+      // Reset styles on all options
+      document.querySelectorAll(".option-btn").forEach((btn, idx) => {
+        btn.classList.remove("selected-correct", "selected-wrong");
+      });
+
+      const selectedBtn = document.getElementById(`optBtn_${index}`);
+
+      if (isCorrect) {
+        selectedBtn.classList.add("selected-correct");
+        fbBox.className = "feedback-msg feedback-success";
+        fbBox.textContent = "✓ Chính xác! Em đã rút gọn bất phương trình rất đúng.";
+      } else {
+        selectedBtn.classList.add("selected-wrong");
+        fbBox.className = "feedback-msg feedback-error";
+        fbBox.textContent = "✗ Chưa đúng! Hãy kiểm tra lại quy tắc nhân phân phối dấu ngoặc hoặc bấm «Xem lời giải».";
+      }
+    }
+
+    document.getElementById("btnNewProblem").addEventListener("click", () => {
+      createNewProblem(false);
+    });
+
+    document.getElementById("btnToggleSolution").addEventListener("click", () => {
+      const solBox = document.getElementById("solutionContainer");
+      const btn = document.getElementById("btnToggleSolution");
+
+      if (isSolutionVisible) {
+        solBox.style.display = "none";
+        btn.textContent = "💡 Xem lời giải";
+        isSolutionVisible = false;
+      } else {
+        solBox.style.display = "block";
+        btn.textContent = "🙈 Ẩn lời giải";
+        isSolutionVisible = true;
+      }
+    });
+
+    // Run first launch using EXACT original problem data
+    window.addEventListener("DOMContentLoaded", () => {
+      createNewProblem(true);
+    });
+  </script>
+</body>
+</html>
