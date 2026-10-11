@@ -21,6 +21,17 @@ class PythonFunctionTests(unittest.TestCase):
         cls.q.update(src=cls.path,file_idx=cls.q['idx'])
         cls.c=vt.load_config(cls.q)
 
+    def test_saved_generator_controls_numbers(self):
+        c=copy.deepcopy(self.c)
+        c['python_code']='import math\nimport random\ndef sinh_so_lieu():\n    return {"bien_do": random.choice([7]), "he_so_omega": random.randint(3, 3)}\ndef tinh_gia_toc(bien_do, he_so_omega):\n    return -(he_so_omega * math.pi)**2 * bien_do * math.sqrt(3) / 2\n'
+        ex=pyq.generate(self.q,c)
+        self.assertEqual(ex['params'],['7','3'])
+        self.assertEqual(ex['answer'],str(-sp.Rational(63,2)*sp.sqrt(3)*sp.pi**2))
+        self.assertEqual(pyq.generate(self.q,c,True)['params'],['5','2'])
+        self.assertEqual(pyq.generate(self.q,c,overrides={'bien_do':'4','he_so_omega':'1'})['params'],['4','1'])
+        c['python_code']=c['python_code'].replace('"bien_do":','"wrong":')
+        with self.assertRaises(ValueError): pyq.generate(self.q,c)
+
     def test_teacher_functions_and_exact_math(self):
         code='''import math
 

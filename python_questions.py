@@ -3,6 +3,7 @@ import ast
 import copy
 import math
 import re
+import random
 from fractions import Fraction
 from types import SimpleNamespace
 import sympy as sp
@@ -17,7 +18,7 @@ def number(value):
     if len(text)>150 or not re.fullmatch(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d{1,2})?(?:/[+-]?\d+)?',text): raise ValueError('Số liệu phải là số hoặc phân số ngắn.')
     try: result=sp.Rational(text)
     except (ValueError,TypeError): raise ValueError('Số liệu phải là số hoặc phân số.') from None
-    if abs(result)>100000 or result.q.bit_length()>128: raise ValueError('Số liệu vượt giới hạn.')
+    if abs(result)>1000000000 or result.q.bit_length()>128: raise ValueError('Số liệu vượt giới hạn.')
     return result
 
 def power(a,b):
@@ -42,21 +43,34 @@ def inspect_code(source):
     if len(list(ast.walk(module)))>700: raise ValueError('Hàm quá dài.')
     functions={}
     for node in module.body:
-        if isinstance(node,ast.Import) and len(node.names)==1 and node.names[0].name=='math' and not node.names[0].asname: continue
+        if isinstance(node,ast.Import) and len(node.names)==1 and node.names[0].name in {'math','random'} and not node.names[0].asname: continue
         if isinstance(node,ast.ImportFrom) and node.module=='math' and node.level==0 and all(a.name in MATH_FUNCTIONS or a.name in MATH_CONSTANTS for a in node.names) and not any(a.asname for a in node.names): continue
         if isinstance(node,ast.Expr) and isinstance(node.value,ast.Constant) and isinstance(node.value.value,str): continue
         if not isinstance(node,ast.FunctionDef): raise ValueError('Viết import math và các hàm def; thao tác nhập số thực hiện trên giao diện.')
         if node.name.startswith('_') or node.name in functions or node.name in {'abs','math'}: raise ValueError('Tên hàm không hợp lệ hoặc bị trùng.')
         if node.decorator_list or node.returns or node.args.vararg or node.args.kwarg or node.args.kwonlyargs or node.args.posonlyargs: raise ValueError('Hàm dùng tham số thông thường, không decorator hoặc *args.')
-        if not 1<=len(node.args.args)<=12 or any(a.annotation or a.arg.startswith('_') for a in node.args.args): raise ValueError('Hàm có 1–12 tham số có tên rõ ràng.')
+        if not (0 if node.name=='sinh_so_lieu' else 1)<=len(node.args.args)<=12 or any(a.annotation or a.arg.startswith('_') for a in node.args.args): raise ValueError('Hàm có 1–12 tham số có tên rõ ràng.')
         if len({a.arg for a in node.args.args})!=len(node.args.args): raise ValueError('Tham số bị trùng.')
         functions[node.name]=node
     if not 1<=len(functions)<=12: raise ValueError('Viết từ 1 đến 12 hàm tính.')
     imported={a.name for n in module.body if isinstance(n,ast.ImportFrom) for a in n.names}
     edges={name:set() for name in functions}
     def expression(node,known,owner):
+        if owner=='sinh_so_lieu' and isinstance(node,ast.Dict):
+            if not 1<=len(node.keys)<=12 or any(not isinstance(k,ast.Constant) or not isinstance(k.value,str) or not k.value.isidentifier() or k.value.startswith('_') for k in node.keys): raise ValueError('sinh_so_lieu trả về dict với tên tham số rõ ràng.')
+            if len({k.value for k in node.keys})!=len(node.keys): raise ValueError('Tên số liệu bị trùng.')
+            for value in node.values: expression(value,known,owner)
+            return
+        if owner=='sinh_so_lieu' and isinstance(node,(ast.List,ast.Tuple)):
+            if not 1<=len(node.elts)<=100: raise ValueError('Danh sách sinh số có 1–100 giá trị.')
+            for value in node.elts: expression(value,known,owner)
+            return
+        if owner=='sinh_so_lieu' and isinstance(node,ast.Call) and isinstance(node.func,ast.Attribute) and isinstance(node.func.value,ast.Name) and node.func.value.id=='random' and node.func.attr in {'choice','randint'} and not node.keywords:
+            if len(node.args)!=(1 if node.func.attr=='choice' else 2): raise ValueError('Sai tham số hàm random.')
+            for value in node.args: expression(value,known,owner)
+            return
         if isinstance(node,ast.Constant) and type(node.value) in (int,float):
-            if not math.isfinite(node.value) or abs(node.value)>100000: raise ValueError('Hằng số quá lớn.')
+            if not math.isfinite(node.value) or abs(node.value)>1000000000: raise ValueError('Hằng số quá lớn.')
             return
         if isinstance(node,ast.Name) and node.id in known: return
         if isinstance(node,ast.Attribute) and isinstance(node.value,ast.Name) and node.value.id=='math' and node.attr in MATH_CONSTANTS: return
@@ -103,7 +117,7 @@ def inspect_code(source):
 
 def signatures(source):
     _,functions=inspect_code(source)
-    return [{'name':name,'parameters':[a.arg for a in node.args.args]} for name,node in functions.items()]
+    return [{'name':name,'parameters':[a.arg for a in node.args.args]} for name,node in functions.items() if name!='sinh_so_lieu']
 
 def run(source,function,values):
     module,functions=inspect_code(source)
@@ -129,11 +143,17 @@ def run(source,function,values):
     def tick():
         budget[0]-=1
         if budget[0]<0: raise ValueError('Hàm gọi quá nhiều lần.')
-    namespace={'__builtins__':{},'math':MATH,'abs':sp.Abs,'_number':number,'_binary':binary,'_tick':tick}
+    def randint(lo,hi):
+        if not isinstance(lo,sp.Integer) or not isinstance(hi,sp.Integer) or lo>hi or hi-lo>100000: raise ValueError('random.randint cần khoảng số nguyên hợp lệ.')
+        return sp.Integer(random.SystemRandom().randint(int(lo),int(hi)))
+    namespace={'__builtins__':{},'random':SimpleNamespace(choice=random.SystemRandom().choice,randint=randint),'math':MATH,'abs':sp.Abs,'_number':number,'_binary':binary,'_tick':tick}
     namespace.update(MATH_FUNCTIONS);namespace.update(MATH_CONSTANTS)
     try:
         exec(compile(module,'<physics-function>','exec'),namespace)
         result=namespace[function](**{name:number(values[name]) for name in args})
+        if function=='sinh_so_lieu':
+            if not isinstance(result,dict) or not result: raise ValueError('sinh_so_lieu phải trả về dict số liệu.')
+            return {name:number(value) for name,value in result.items()}
         if not isinstance(result,sp.Expr) or result.is_number is not True or result.is_real is not True or result.is_finite is not True or sp.count_ops(result)>100: raise ValueError('Hàm phải trả về một kết quả số thực hữu hạn.')
         return sp.simplify(result)
     except (TypeError,NameError,ZeroDivisionError,OverflowError) as exc: raise ValueError('Không chạy được hàm: '+str(exc)) from None
@@ -144,6 +164,11 @@ def validate_config(q,c):
     target=c.get('function_name')
     if target not in functions: raise ValueError('Chọn hàm tính của câu.')
     args=[a.arg for a in functions[target].args.args]
+    if target=='sinh_so_lieu': raise ValueError('Chọn hàm tính đáp án, không chọn hàm sinh số.')
+    if 'sinh_so_lieu' in functions:
+        if functions['sinh_so_lieu'].args.args: raise ValueError('sinh_so_lieu không nhận tham số.')
+        generated=run(c['python_code'],'sinh_so_lieu',{})
+        if set(generated)!=set(args): raise ValueError('Tên trong dict sinh_so_lieu phải khớp tham số hàm tính.')
     ps=c.get('parameters')
     if not isinstance(ps,list) or any(not isinstance(p,dict) for p in ps) or [p.get('argument') for p in ps]!=args: raise ValueError('Thiếu tham số của hàm.')
     known={s['name']:s for s in slots(q['text'])};used=set()
@@ -200,9 +225,13 @@ def generate(q,c,original=False,overrides=None):
     validate_config(q,c)
     values={}
     replacements={}
+    generated=None
+    if not original and overrides is None and 'sinh_so_lieu' in inspect_code(c['python_code'])[1]:
+        generated=run(c['python_code'],'sinh_so_lieu',{})
     for p in c['parameters']:
         lo,hi,step=(number(p[k]) for k in ('min','max','step'))
         value=number(p['original']) if original else lo+step*RNG.randint(0,int((hi-lo)/step))
+        if generated is not None: value=generated[p['argument']]
         if overrides is not None: value=number(overrides[p['argument']])
         values[p['argument']]=value
         if p.get('slot'): replacements[p['slot']]=value
