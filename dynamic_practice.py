@@ -3,6 +3,10 @@ import base64
 import html
 import json
 import re
+import os
+import secrets
+import sqlite3
+import time
 from fractions import Fraction
 
 LABELS = {
@@ -70,12 +74,114 @@ def launcher(qs, path, dang, allowed):
     url = '/member/dynamic-practice?' + urlencode({'path': path, 'dang': dang})
     return '<div class="notice"><a class="btn primary" href="'+html.escape(url, quote=True)+'">🎲 Luyện bài động · gom mẫu tương tự</a> Đổi số tức thì, không cần gọi AI.</div>'
 
+DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'dynamic-practice.sqlite3')
+
+def save_exercise(owner, path, exercise):
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    token = secrets.token_urlsafe(24)
+    with sqlite3.connect(DB_PATH, timeout=10) as db:
+        db.execute('CREATE TABLE IF NOT EXISTS exercises (token TEXT PRIMARY KEY, owner TEXT, path TEXT, expires REAL, payload TEXT)')
+        db.execute('DELETE FROM exercises WHERE expires < ?', (time.time(),))
+        db.execute('INSERT INTO exercises VALUES (?,?,?,?,?)', (token, owner, path, time.time()+7200, json.dumps(exercise, ensure_ascii=False)))
+    return token
+
+def load_exercise(token, owner):
+    if not isinstance(token, str) or len(token)>100 or not owner:
+        return None
+    try:
+        with sqlite3.connect(DB_PATH, timeout=10) as db:
+            row = db.execute('SELECT path,payload FROM exercises WHERE token=? AND owner=? AND expires>?', (token,owner,time.time())).fetchone()
+        return (row[0], json.loads(row[1])) if row else None
+    except sqlite3.OperationalError:
+        return None
+
+def public_exercise(exercise):
+    return {k:v for k,v in exercise.items() if k not in {'answer','solution','options'}} | {'options':[{'text':o['text']} for o in exercise.get('options',[])]}
+
+def lesson_questions(path, dang):
+    from app import parse_lesson_questions, read_tex, parse_questions, nest_developments
+    from dang_routes import _same_dang
+    qs=parse_lesson_questions(path)
+    if not qs:
+        _,tex=read_tex(path)
+        qs=nest_developments(parse_questions(tex))
+    return [q for q in qs if _same_dang(q.get('dang'),dang)] if dang else qs
+
 def register(app):
-    from flask import request, redirect
+    from flask import request, redirect, jsonify, session
+    from dynamic_engine import SPECS, generate, solve, fraction
+
+    @app.post('/api/dynamic-practice/new')
+    def dynamic_new():
+        from app import member_current, can_practice, can_manage_bank, question_payload
+        m=member_current()
+        body=request.get_json(silent=True) or {}
+        if not isinstance(body,dict): return jsonify(ok=False,error='Yêu cầu không hợp lệ.'),400
+        path=body.get('path','')
+        if not m: return jsonify(ok=False,error='Cần đăng nhập.'),401
+        if not isinstance(path,str) or not path or not can_practice(m,path): return jsonify(ok=False,error='Không có quyền luyện bài này.'),403
+        try:
+            groups=groups_for(lesson_questions(path,str(body.get('dang',''))))
+            gi,si=body.get('group',0),body.get('source',0)
+            if type(gi) is not int or type(si) is not int or gi<0 or si<0: raise ValueError('Chọn mẫu và câu gốc hợp lệ.')
+            item=groups[gi]['items'][si]
+            key=item['template']
+            original=body.get('original') is True
+            bounds=body.get('bounds')
+            if bounds and not can_manage_bank(): return jsonify(ok=False,error='Chỉ giáo viên quản lý được cấu hình khoảng số.'),403
+            previous=load_exercise(body.get('previous_token'),session.get('dp_owner'))
+            last=previous[1]['params'] if previous and previous[0]==path and previous[1].get('template')==key else item['params']
+            params=item['params'] if original else generate(key,bounds,last)
+            exercise=solve(key,params)
+            q=item['original']
+            if original:
+                exercise.update(text=q['text'],solution=q['solution'],html=True)
+                exercise['options']=q.get('options',[])
+                exercise['answer']=q.get('answer',exercise['answer'])
+            if q['kind']=='TLN': exercise['options']=[]
+            exercise.update(kind=q['kind'],source_id=q.get('id',''),file_idx=q['file_idx'],template=key)
+            owner=session.get('dp_owner') or secrets.token_urlsafe(24)
+            session['dp_owner']=owner
+            token=save_exercise(owner,path,exercise)
+            return jsonify(ok=True,token=token,exercise=public_exercise(exercise))
+        except (ValueError,IndexError,KeyError,TypeError,ZeroDivisionError):
+            return jsonify(ok=False,error='Mẫu, câu gốc hoặc khoảng số không hợp lệ.'),400
+
+    def authorized_exercise():
+        from app import member_current, can_practice
+        m=member_current()
+        if not m: return None
+        body=request.get_json(silent=True) or {}
+        if not isinstance(body,dict): return None
+        found=load_exercise(body.get('token'),session.get('dp_owner'))
+        return found[1] if found and can_practice(m,found[0]) else None
+
+    @app.post('/api/dynamic-practice/check')
+    def dynamic_check():
+        exercise=authorized_exercise()
+        if not exercise: return jsonify(ok=False,error='Đề đã hết hạn hoặc không có quyền. Hãy mở lại đề.'),403
+        body=request.get_json(silent=True) or {}
+        options=exercise.get('options',[])
+        if options:
+            idx=body.get('choice')
+            if type(idx) is not int or not 0<=idx<len(options): return jsonify(ok=False,error='Hãy chọn một phương án.'),400
+            correct=bool(options[idx].get('correct'))
+        else:
+            try:
+                if len(str(body.get('answer','')))>100: raise ValueError()
+                correct=fraction(body.get('answer',''))==fraction(exercise['answer'])
+            except (ValueError,ZeroDivisionError): return jsonify(ok=False,error='Nhập số hoặc phân số chính xác.'),400
+        return jsonify(ok=True,correct=correct)
+
+    @app.post('/api/dynamic-practice/solution')
+    def dynamic_solution():
+        exercise=authorized_exercise()
+        if not exercise: return jsonify(ok=False,error='Đề đã hết hạn hoặc không có quyền.'),403
+        return jsonify(ok=True,solution=exercise['solution'],html=exercise['html'])
+
     @app.get('/member/dynamic-practice')
     def dynamic_practice():
-        from app import member_current, can_practice, login_url, parse_lesson_questions, read_tex, parse_questions, nest_developments, page, dang_view_url
-        from dang_routes import _same_dang
+        from app import member_current, can_practice, can_manage_bank, login_url, page, dang_view_url
         path = request.args.get('path', '')
         dang = request.args.get('dang', '')
         m = member_current()
@@ -83,19 +189,10 @@ def register(app):
             return redirect(login_url(request.full_path))
         if not path or not can_practice(m, path):
             return redirect('/member')
-        qs = parse_lesson_questions(path)
-        if not qs:
-            _, tex = read_tex(path)
-            qs = nest_developments(parse_questions(tex))
-        if dang:
-            qs = [q for q in qs if _same_dang(q.get('dang'), dang)]
-        groups = groups_for(qs)
+        groups = groups_for(lesson_questions(path,dang))
         if not groups:
             return page('Bài động', '<p>Chưa có mẫu tính toán đã kiểm chứng cho các câu này.</p>')
-        packed = base64.b64encode(json.dumps(groups, ensure_ascii=False).encode()).decode()
-        inner = '''<section id="dynamicPractice"><header class="dp-brand">Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>
-<div class="dp-controls"><a class="btn" href="BACK">← Về dạng bài</a><select id="dpGroup" aria-label="Mẫu bài"></select><select id="dpSource" aria-label="Câu gốc"></select><button type="button" id="dpNew">Đổi đề bài mới</button><button type="button" id="dpOriginal">Về đề gốc</button><button type="button" id="dpFull">⛶ Toàn màn hình</button></div>
-<p id="dpMeta"></p><div class="dp-grid"><article><h3>1. Đề bài</h3><div id="dpStem"></div><div id="dpOptions"></div><label id="dpInputLabel">Nhập kết quả chính xác (có thể nhập phân số)<input id="dpInput" autocomplete="off"></label><button type="button" id="dpCheck">Kiểm tra</button><p id="dpFeedback" role="status" aria-live="polite"></p></article>
-<article><h3>2. Công thức và kiến thức</h3><div id="dpFormula"></div></article><article><h3>3. Minh họa động</h3><div id="dpFigure"></div><button type="button" id="dpAnimate">▶ Chạy / Dừng</button></article><article><h3>4. Hướng dẫn và lời giải</h3><button type="button" id="dpReveal">Xem lời giải</button><div id="dpSolution" hidden></div></article></div></section>
-<link rel="stylesheet" href="/static/dynamic-practice.css"><script id="dpData" type="application/json">PACKED</script><script src="/static/dynamic-practice.js"></script>'''
+        safe_groups=[{'key':g['key'],'label':g['label'],'specs':SPECS[g['key']], 'items':[{'id':i['original']['id'],'file_idx':i['original']['file_idx']} for i in g['items']]} for g in groups]
+        packed = base64.b64encode(json.dumps({'groups':safe_groups,'path':path,'dang':dang,'can_configure':can_manage_bank()}, ensure_ascii=False).encode()).decode()
+        inner = '<section id="dynamicPractice"><header class="dp-brand">Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>\n<div class="dp-controls"><a class="btn" href="BACK">← Về dạng bài</a><select id="dpGroup" aria-label="Mẫu bài"></select><select id="dpSource" aria-label="Câu gốc"></select><button type="button" id="dpNew">Đổi đề bài mới</button><button type="button" id="dpOriginal">Về đề gốc</button><button type="button" id="dpFull">⛶ Toàn màn hình</button></div>\n<button type="button" id="dpConfigure" hidden>⚙ Cấu hình hàm Python</button><dialog id="dpConfig"><form method="dialog"><h3>Cấu hình sinh số</h3><p id="dpConfigName"></p><div id="dpBounds"></div><p>Các giá trị là số nguyên. Đề, đáp án và lời giải được Python tính đồng bộ. Cấu hình áp dụng trong lượt luyện hiện tại.</p><p id="dpConfigError" role="status"></p><button type="button" id="dpApply">Áp dụng và thử đổi đề</button><button type="submit">Đóng</button></form></dialog><p id="dpMeta"></p><div class="dp-grid"><article><h3>1. Đề bài</h3><div id="dpStem"></div><div id="dpOptions"></div><label id="dpInputLabel">Nhập kết quả chính xác (có thể nhập phân số)<input id="dpInput" autocomplete="off"></label><button type="button" id="dpCheck">Kiểm tra</button><p id="dpFeedback" role="status" aria-live="polite"></p></article>\n<article><h3>2. Công thức và kiến thức</h3><div id="dpFormula"></div></article><article><h3>3. Minh họa động</h3><div id="dpFigure"></div><button type="button" id="dpAnimate">▶ Chạy / Dừng</button></article><article><h3>4. Hướng dẫn và lời giải</h3><button type="button" id="dpReveal">Xem lời giải</button><div id="dpSolution" hidden></div></article></div></section>\n<link rel="stylesheet" href="/static/dynamic-practice.css"><script id="dpData" type="application/json">PACKED</script><script src="/static/dynamic-practice.js"></script>'
         return page('Luyện bài động', inner.replace('BACK', html.escape(dang_view_url(path, dang), quote=True)).replace('PACKED', packed))
