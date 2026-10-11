@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luyện Tập Dao Động Điều Hòa - Thầy Minh</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background-color: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background-color: #0f172a;
+      color: #ffffff;
+      text-align: center;
+      padding: 16px 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .header-main {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .header-sub {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+      font-weight: 400;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      flex: 1;
+      width: 100%;
+    }
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    h2 {
+      font-size: 18px;
+      color: #0f172a;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    .formula-box {
+      background-color: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .formula-title {
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-bottom: 8px;
+    }
+    .formula-display {
+      font-size: 19px;
+      font-weight: bold;
+      color: #b91c1c;
+      text-align: center;
+      padding: 10px;
+      background: #ffffff;
+      border-radius: 6px;
+      border: 1px dashed #94a3b8;
+    }
+    .param-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .param-table th, .param-table td {
+      border: 1px solid #e2e8f0;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    .param-table th {
+      background-color: #f1f5f9;
+      color: #475569;
+    }
+    .param-val {
+      font-weight: bold;
+      color: #2563eb;
+    }
+    .btn {
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-new {
+      background-color: #2563eb;
+      color: white;
+      align-self: flex-start;
+    }
+    .btn-new:hover { background-color: #1d4ed8; }
+    .btn-check {
+      background-color: #059669;
+      color: white;
+    }
+    .btn-check:hover { background-color: #047857; }
+    .btn-solution {
+      background-color: #475569;
+      color: white;
+    }
+    .btn-solution:hover { background-color: #334155; }
+    .question-box {
+      font-size: 16px;
+      line-height: 1.6;
+      background-color: #f8fafc;
+      padding: 16px;
+      border-left: 4px solid #2563eb;
+      border-radius: 4px;
+    }
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 480px) {
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .opt-btn {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 15px;
+      cursor: pointer;
+      font-weight: 500;
+      color: #334155;
+      transition: all 0.15s ease;
+    }
+    .opt-btn:hover {
+      background-color: #e2e8f0;
+      border-color: #94a3b8;
+    }
+    .opt-btn.correct {
+      background-color: #dcfce7 !important;
+      border-color: #16a34a !important;
+      color: #15803d !important;
+      font-weight: 700;
+    }
+    .opt-btn.wrong {
+      background-color: #fee2e2 !important;
+      border-color: #dc2626 !important;
+      color: #b91c1c !important;
+    }
+    .input-section {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .input-section input {
+      flex: 1;
+      min-width: 140px;
+      padding: 9px 12px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    .msg-box {
+      font-size: 14px;
+      font-weight: 600;
+      min-height: 20px;
+    }
+    .msg-correct { color: #16a34a; }
+    .msg-wrong { color: #dc2626; }
+    .solution-box {
+      display: none;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #1e3a8a;
+    }
+  
+    .card { min-width: 0; }
+    button { min-height: 44px; touch-action: manipulation; }
+    input { font-size: 16px !important; }
+    .param-table { table-layout: fixed; overflow-wrap: anywhere; }
+    @media(max-width:480px) {
+      header { padding:12px 10px; }
+      .header-main { font-size:16px; }
+      .container { margin:12px auto; padding:0 10px; gap:12px; }
+      .card { padding:14px; gap:14px; }
+      h2 { font-size:16px; }
+      .param-table th,.param-table td { padding:8px 5px; }
+      .input-section input { width:100%; flex-basis:100%; }
+      .input-section .btn { flex:1; padding:10px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-main">Lớp Học Thầy Minh · Zalo 0946111107</div>
+    <div class="header-sub">lophocthayminh.onrender.com</div>
+  </header>
+
+  <noscript><p style="padding:16px;background:#fff3cd">Nơi mở file này không chạy JavaScript. Hãy tải file về và mở bằng trình duyệt Chrome hoặc Safari, hoặc dùng đường dẫn web của bài tập.</p></noscript>
+  <p id="startupWarning" style="padding:10px;text-align:center">Đang khởi động bài tập… Nếu thông báo này không mất, hãy mở file bằng trình duyệt thay vì trình xem trước của ứng dụng nhắn tin.</p>
+  <main class="container">
+    <!-- CỘT TRÁI: CÔNG THỨC & SỐ LIỆU ĐANG DÙNG -->
+    <div class="card">
+      <h2>BẢNG CÔNG THỨC & THÔNG SỐ ĐỀ BÀI</h2>
+      
+      <div class="formula-box">
+        <div class="formula-title">Hệ thức độc lập thời gian:</div>
+        <div class="formula-display">
+          A² = x² + (v / ω)²
+        </div>
+        <p style="margin-top: 8px; font-size: 14px; color: #475569; text-align: center;">
+          Suy ra: <strong>A = √(x² + (v / ω)²)</strong>
+        </p>
+      </div>
+
+      <table class="param-table">
+        <thead>
+          <tr>
+            <th>Đại lượng</th>
+            <th>Ký hiệu</th>
+            <th>Giá trị hiện tại</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tần số góc</td>
+            <td>ω</td>
+            <td><span id="param-w" class="param-val">5</span> rad/s</td>
+          </tr>
+          <tr>
+            <td>Li độ</td>
+            <td>x</td>
+            <td><span id="param-x" class="param-val">5</span> cm</td>
+          </tr>
+          <tr>
+            <td>Tốc độ</td>
+            <td>v</td>
+            <td><span id="param-v" class="param-val">25</span> cm/s</td>
+          </tr>
+          <tr>
+            <td>Tỉ số (v / ω)</td>
+            <td>v / ω</td>
+            <td><span id="param-vw" class="param-val">5</span> cm</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 13px; color: #64748b;">
+        * Các giá trị ở bảng trên luôn cập nhật đồng bộ ngay khi bấm nút <strong>«Đổi đề bài mới»</strong>.
+      </div>
+    </div>
+
+    <!-- CỘT PHẢI: ĐỀ BÀI, NÚT BẤM, TRẮC NGHIỆM, LỜI GIẢI -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <h2>BÀI TẬP VẬN DỤNG</h2>
+        <button id="btnNew" class="btn btn-new">Đổi đề bài mới</button>
+      </div>
+
+      <div id="questionText" class="question-box"></div>
+
+      <div>
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #475569;">Chọn đáp án đúng (A, B, C hoặc D):</div>
+        <div id="optionsGrid" class="options-grid"></div>
+      </div>
+
+      <div>
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #475569;">Hoặc nhập kết quả số của biên độ A (cm):</div>
+        <div class="input-section">
+          <input type="text" id="numInput" inputmode="text" placeholder="Ví dụ: 5√2 hoặc 5*sqrt(2)" autocomplete="off">
+          <button id="btnCheckNum" class="btn btn-check">Kiểm tra</button>
+          <button id="btnShowSol" class="btn btn-solution">Xem lời giải</button>
+        </div>
+      </div>
+
+      <div id="msgBox" class="msg-box"></div>
+
+      <div id="solutionBox" class="solution-box"></div>
+    </div>
+  </main>
+
+  <script>
+    // Dữ liệu gốc
+    const originalState = {
+      w: 5,
+      x: 5,
+      v: 25,
+      correctText: "5√(2) cm",
+      wrongOptions: ["5,24 cm", "5√(3) cm", "10 cm"],
+      correctVal: 5 * Math.SQRT2
+    };
+
+    let currentState = null;
+
+    function renderQuestion(state) {
+      currentState = state;
+
+      // Cập nhật bảng công thức bên trái
+      document.getElementById('param-w').innerText = state.w;
+      document.getElementById('param-x').innerText = (state.xText || state.x);
+      document.getElementById('param-v').innerText = state.v;
+      const vw = state.v / state.w;
+      document.getElementById('param-vw').innerText = Number.isInteger(vw) ? vw : vw.toFixed(2);
+
+      // Cập nhật câu hỏi bên phải
+      document.getElementById('questionText').innerHTML = 
+        `Một vật dao động điều hòa với tần số góc <strong>${state.w} rad/s</strong>. Khi vật đi qua li độ <strong>${state.xText || state.x} cm</strong> thì nó có tốc độ là <strong>${state.v} cm/s</strong>. Biên độ dao động của vật là:`;
+
+      // Cập nhật trắc nghiệm A, B, C, D
+      const optionsGrid = document.getElementById('optionsGrid');
+      optionsGrid.innerHTML = '';
+
+      const letters = ['A', 'B', 'C', 'D'];
+      state.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'opt-btn';
+        btn.innerText = `${letters[idx]}. ${opt.text}`;
+        btn.onclick = () => selectOption(btn, opt.isCorrect);
+        optionsGrid.appendChild(btn);
+      });
+
+      // Reset lời giải và thông báo
+      document.getElementById('numInput').value = '';
+      document.getElementById('msgBox').innerText = '';
+      document.getElementById('msgBox').className = 'msg-box';
+      const solBox = document.getElementById('solutionBox');
+      solBox.style.display = 'none';
+      solBox.innerHTML = '';
+    }
+
+    function selectOption(btn, isCorrect) {
+      const allBtns = document.querySelectorAll('.opt-btn');
+      allBtns.forEach(b => {
+        b.classList.remove('correct', 'wrong');
+      });
+
+      const msg = document.getElementById('msgBox');
+      if (isCorrect) {
+        btn.classList.add('correct');
+        msg.innerText = 'Chính xác! Bạn đã chọn đáp án đúng.';
+        msg.className = 'msg-box msg-correct';
+      } else {
+        btn.classList.add('wrong');
+        msg.innerText = 'Chưa đúng, hãy thử lại!';
+        msg.className = 'msg-box msg-wrong';
+      }
+    }
+
+    function checkNumber() {
+      const val = parseAnswer(document.getElementById('numInput').value);
+      const msg = document.getElementById('msgBox');
+      if (isNaN(val)) {
+        msg.innerText = 'Vui lòng nhập một số hợp lệ.';
+        msg.className = 'msg-box msg-wrong';
+        return;
+      }
+
+      const diff = Math.abs(val - currentState.exactVal);
+      if (diff <= 1e-9 * Math.max(1, currentState.exactVal)) {
+        msg.innerText = 'Chính xác!';
+        msg.className = 'msg-box msg-correct';
+      } else {
+        msg.innerText = 'Chưa đúng, hãy tính toán và kiểm tra lại!';
+        msg.className = 'msg-box msg-wrong';
+      }
+    }
+
+    function showSolution() {
+      const solBox = document.getElementById('solutionBox');
+      const w = currentState.w;
+      const x = currentState.x;
+      const xText = currentState.xText || x;
+      const v = currentState.v;
+      const vDivW = v / w;
+      const vDivWText = Number.isInteger(vDivW) ? vDivW : vDivW.toFixed(2);
+      const sumSq = x * x + (v * v) / (w * w);
+
+      let resultExpr = currentState.displayFormula || `${Math.sqrt(sumSq).toFixed(2)} cm`;
+
+      solBox.innerHTML = `
+        <strong>Lời giải chi tiết:</strong><br>
+        1. Từ hệ thức độc lập thời gian giữa li độ x và vận tốc v:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;A² = x² + (v / ω)²<br>
+        2. Thay các số liệu từ đề bài:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;• ω = ${w} rad/s<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;• x = ${xText} cm<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;• v = ${v} cm/s ⟹ (v / ω) = ${v} / ${w} = ${vDivWText} cm<br>
+        3. Tính biên độ A:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;A = √((${xText})² + (${v} / ${w})²) = √(${currentState.sumSq || sumSq}) = <strong>${resultExpr}</strong>
+      `;
+      solBox.style.display = 'block';
+    }
+
+    // Tạo đề gốc theo đúng văn bản
+    function loadOriginalQuestion() {
+      const options = [
+        { text: "5,24 cm", isCorrect: false },
+        { text: "5√(2) cm", isCorrect: true },
+        { text: "5√(3) cm", isCorrect: false },
+        { text: "10 cm", isCorrect: false }
+      ];
+
+      renderQuestion({
+        w: 5,
+        x: 5,
+        v: 25,
+        exactVal: 5 * Math.SQRT2,
+        displayFormula: "5√(2) cm",
+        options: options
+      });
+    }
+
+    // Đổi bộ số mới giữ nguyên dạng vật lý
+    function generateNewQuestion() {
+      // Chọn ω đẹp: 2, 4, 5, 10
+      const omegas = [2, 4, 5, 10];
+      const w = omegas[Math.floor(Math.random() * omegas.length)];
+
+      // Các kịch bản đẹp:
+      // Kiểu 1: x = a, v/w = a -> A = a*sqrt(2)
+      // Kiểu 2: x = a, v/w = a*sqrt(3) -> A = 2a
+      // Kiểu 3: x = 3a, v/w = 4a -> A = 5a
+      const types = [1, 2, 3];
+      const type = types[Math.floor(Math.random() * types.length)];
+
+      let x, v, exactVal, correctText, xText, sumSq;
+      let wrongOptions = [];
+
+      if (type === 1) {
+        // A = a * sqrt(2)
+        const aCandidates = [2, 3, 4, 6, 8];
+        const a = aCandidates[Math.floor(Math.random() * aCandidates.length)];
+        x = a;
+        v = a * w;
+        exactVal = a * Math.SQRT2;
+        correctText = `${a}√(2) cm`;
+
+        wrongOptions = [
+          `${a}√(3) cm`,
+          `${2 * a} cm`,
+          `${a} cm`
+        ];
+      } else if (type === 2) {
+        // Bộ số 3 - 4 - 5
+        const kCandidates = [1, 2, 3];
+        const k = kCandidates[Math.floor(Math.random() * kCandidates.length)];
+        x = 3 * k;
+        const vw = 4 * k;
+        v = vw * w;
+        exactVal = 5 * k;
+        correctText = `${5 * k} cm`;
+
+        wrongOptions = [
+          `${3 * k}√(2) cm`,
+          `${4 * k} cm`,
+          `${7 * k} cm`
+        ];
+      } else {
+        // v/w = a, x = a*sqrt(3) -> A = 2a
+        const aCandidates = [2, 3, 4, 5];
+        const a = aCandidates[Math.floor(Math.random() * aCandidates.length)];
+        const vw = a;
+        v = vw * w;
+        exactVal = 2 * a;
+        // x = a*sqrt(3), làm tròn 2 chữ số hoặc hiển thị dạng a√(3)
+        const xVal = a * Math.sqrt(3);
+        xText = `${a}√(3)`;
+        sumSq = 4 * a * a;
+        x = xVal;
+        exactVal = 2 * a;
+        correctText = `${2 * a} cm`;
+
+        wrongOptions = [
+          `${a}√(2) cm`,
+          `${a * 3} cm`,
+          `${a} cm`
+        ];
+      }
+
+      // Xáo trộn vị trí A, B, C, D
+      const allOptStrings = [
+        { text: correctText, isCorrect: true },
+        { text: wrongOptions[0], isCorrect: false },
+        { text: wrongOptions[1], isCorrect: false },
+        { text: wrongOptions[2], isCorrect: false }
+      ];
+
+      // Fisher-Yates shuffle
+      for (let i = allOptStrings.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allOptStrings[i], allOptStrings[j]] = [allOptStrings[j], allOptStrings[i]];
+      }
+
+      renderQuestion({
+        w: w,
+        x: x,
+        xText: xText,
+        sumSq: sumSq,
+        v: v,
+        exactVal: exactVal,
+        displayFormula: correctText,
+        options: allOptStrings
+      });
+    }
+
+    function parseAnswer(raw) {
+      const s = raw.trim().replace(/,/g, '.').replace(/\s/g, '');
+      if (/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(s)) return Number(s);
+      const m = s.match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))?\*?(?:√|sqrt)\(?([0-9]+(?:\.[0-9]+)?)\)?$/i);
+      if (m) return (m[1] ? Number(m[1]) : 1) * Math.sqrt(Number(m[2]));
+      return NaN;
+    }
+    document.getElementById('numInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') checkNumber();
+    });
+    // Gắn sự kiện
+    document.getElementById('btnNew').addEventListener('click', generateNewQuestion);
+    document.getElementById('btnCheckNum').addEventListener('click', checkNumber);
+    document.getElementById('btnShowSol').addEventListener('click', showSolution);
+
+    // Khởi động với đề bài gốc ban đầu
+    loadOriginalQuestion();
+    document.getElementById("startupWarning").style.display = "none";
+  </script>
+</body>
+</html>
