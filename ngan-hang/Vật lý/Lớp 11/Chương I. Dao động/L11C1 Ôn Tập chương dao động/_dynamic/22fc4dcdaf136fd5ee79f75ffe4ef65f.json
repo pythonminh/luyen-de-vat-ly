@@ -1,0 +1,29 @@
+{
+  "question_id": "L11C1B1-174-TLN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Ôn Tập chương dao động/de.tex",
+  "fingerprint": "22fc4dcdaf136fd5ee79f75ffe4ef65f",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    return {'bien_do': bien_do}\n\ndef tinh_orbit_from_amplitude(bien_do):\n    return 2*bien_do\n",
+    "function_name": "tinh_orbit_from_amplitude",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "8",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "{answer}",
+    "solution_template": "$L=2A=2\\cdot{bien_do}={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer*2",
+      "answer/2",
+      "answer*3"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.randint(2, 15)\n    return {'bien_do': bien_do}\n\ndef tinh_orbit_from_amplitude(bien_do):\n    return 2*bien_do\n"
+}

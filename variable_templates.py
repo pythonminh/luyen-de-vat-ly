@@ -164,6 +164,11 @@ def verified_source(q,config):
     from app import ROOT
     file=ROOT/(q['src'].rsplit('/',1)[0]+'/luyen_tap.py')
     expected=source_code(q,config)
+    standalone=ROOT/Path(location(q)).with_suffix('.py')
+    if standalone.is_file() and load_config(q)==config:
+        saved=standalone.read_text(encoding='utf-8')
+        if saved!=expected: raise ValueError('Chương trình riêng không khớp cấu hình; lưu lại câu.')
+        return saved
     if file.is_file() and load_config(q)==config:
         module=file.read_text(encoding='utf-8')
         start='# BEGIN '+identity(q)+'\n';end='# END '+identity(q)
@@ -252,10 +257,11 @@ def register(app):
                 if start in module and end in module:
                     prefix,rest=module.split(start,1);_,suffix=rest.split(end,1);module=prefix+block+suffix
                 else: module+='\n'+block
-                tree=gh_api('git/trees','POST',{'base_tree':base_tree,'tree':[{'path':p,'mode':'100644','type':'blob','content':t} for p,t in [(path,text),(py_path,module)]]})['sha']
+                tree=gh_api('git/trees','POST',{'base_tree':base_tree,'tree':[{'path':p,'mode':'100644','type':'blob','content':t} for p,t in [(path,text),(py_path,module),(str(Path(path).with_suffix('.py')),source_code(q,config))]]})['sha']
                 commit=gh_api('git/commits','POST',{'message':'Lưu hàm đổi biến cho '+str(q.get('id') or identity(q)),'tree':tree,'parents':[head]})['sha']
                 gh_api('git/refs/heads/'+branch,'PATCH',{'sha':commit,'force':False})
                 _,local=_safe_repo_file(path);local.parent.mkdir(parents=True,exist_ok=True);local.write_text(text,encoding='utf-8')
+                standalone_local=local.with_suffix('.py');standalone_local.write_text(source_code(q,config),encoding='utf-8')
                 py_local.parent.mkdir(parents=True,exist_ok=True);py_local.write_text(module,encoding='utf-8')
             return jsonify(ok=True,original=view(original),example=view(generated),code=source_code(q,config),saved=request.path.endswith('/save'))
         except (ValueError,TypeError,KeyError,ZeroDivisionError,SyntaxError) as exc: return jsonify(ok=False,error=str(exc) or 'Cấu hình không hợp lệ.'),400
@@ -293,6 +299,6 @@ def register(app):
     def builder_page():
         from app import can_manage_bank,page,login_url
         if not can_manage_bank(): return redirect(login_url(request.full_path))
-        return page('Hàm Python của câu', '''<section id="vb"><h2>🐍 Viết hàm Python cho câu này</h2><p>Mã được lưu trong <b>luyen_tap.py</b> của bài, gắn với câu đang mở.</p><pre id="vbStem"></pre><label><b>Mã Python</b><textarea id="vbPythonCode" spellcheck="false"></textarea></label><p>Viết hàm <code>def tinh_...(tham_so)</code> và <code>return</code> kết quả. Các ô nhập và nút bấm trên app thực hiện phần nhập số. Hỗ trợ phép tính, biến trung gian, gọi hàm phụ, <code>if</code> và <code>math</code>. Muốn tự viết cách đổi số ngay trong mã: thêm <code>import random</code> và <code>def sinh_so_lieu():</code>, trả về dict có tên khớp tham số hàm tính. Hỗ trợ <code>random.choice</code> và <code>random.randint</code>. Khi bấm Đổi đề, app chạy hàm này; số gốc và chạy thử dùng dữ liệu trong các ô nhập.</p><button id="vbReadParameters" type="button">Đọc tham số từ mã</button><label>Hàm tính cho câu này<select id="vbFunction"></select></label><h3>Số liệu truyền vào hàm</h3><p>Gắn từng tham số với số tương ứng trong đề. “Số nhập” dùng khi chạy thử; khoảng nhỏ nhất–lớn nhất–bước dùng khi đổi số nếu mã chưa có hàm sinh_so_lieu.</p><div id="vbParameters"></div><details><summary>Số khác trong đề phụ thuộc tham số</summary><p>Ví dụ hệ số li độ bằng nửa biên độ: <code>bien_do/2</code>.</p><div id="vbReplacements"></div><button id="vbAddReplacement" type="button">Thêm số phụ thuộc</button></details><details><summary>Định dạng đáp án, lời giải và phương án nhiễu</summary><label>Mẫu đáp án<input id="vbAnswer" value="$ {answer} $"></label><label>Mẫu lời giải<textarea id="vbSolution"></textarea></label><p>Dùng {answer} và tên tham số như {khoi_luong}, {v} trong mẫu.</p><label>Ba công thức phương án nhiễu<textarea id="vbDistractors">-answer
+        return page('Hàm Python của câu', '''<section id="vb"><h2>🐍 Viết hàm Python cho câu này</h2><p>Mỗi câu có một file <b>_dynamic/mã_câu.py</b> riêng; <b>luyen_tap.py</b> của bài lưu bản tổng hợp. Mã gắn với đúng câu đang mở.</p><pre id="vbStem"></pre><label><b>Mã Python</b><textarea id="vbPythonCode" spellcheck="false"></textarea></label><p>Viết hàm <code>def tinh_...(tham_so)</code> và <code>return</code> kết quả. Các ô nhập và nút bấm trên app thực hiện phần nhập số. Hỗ trợ phép tính, biến trung gian, gọi hàm phụ, <code>if</code> và <code>math</code>. Muốn tự viết cách đổi số ngay trong mã: thêm <code>import random</code> và <code>def sinh_so_lieu():</code>, trả về dict có tên khớp tham số hàm tính. Hỗ trợ <code>random.choice</code> và <code>random.randint</code>. Khi bấm Đổi đề, app chạy hàm này; số gốc và chạy thử dùng dữ liệu trong các ô nhập.</p><button id="vbReadParameters" type="button">Đọc tham số từ mã</button><label>Hàm tính cho câu này<select id="vbFunction"></select></label><h3>Số liệu truyền vào hàm</h3><p>Gắn từng tham số với số tương ứng trong đề. “Số nhập” dùng khi chạy thử; khoảng nhỏ nhất–lớn nhất–bước dùng khi đổi số nếu mã chưa có hàm sinh_so_lieu.</p><div id="vbParameters"></div><details><summary>Số khác trong đề phụ thuộc tham số</summary><p>Ví dụ hệ số li độ bằng nửa biên độ: <code>bien_do/2</code>.</p><div id="vbReplacements"></div><button id="vbAddReplacement" type="button">Thêm số phụ thuộc</button></details><details><summary>Định dạng đáp án, lời giải và phương án nhiễu</summary><label>Mẫu đáp án<input id="vbAnswer" value="$ {answer} $"></label><label>Mẫu lời giải<textarea id="vbSolution"></textarea></label><p>Dùng {answer} và tên tham số như {khoi_luong}, {v} trong mẫu.</p><label>Ba công thức phương án nhiễu<textarea id="vbDistractors">-answer
 answer*2
 answer/2</textarea></label></details><button id="vbRun" type="button">▶ Chạy thử số nhập</button><button id="vbPreview" type="button">🎲 Đổi số thử và đối chiếu đề gốc</button><div id="vbOutput"></div><label><input id="vbConfirm" type="checkbox"> Tôi đã đối chiếu kết quả hàm với đáp án đề gốc.</label><button id="vbSave" type="button">💾 Lưu hàm Python cho câu</button><p id="vbStatus" role="status"></p><a id="vbPractice" class="btn" hidden>Mở bài đổi số bằng Python</a></section><link rel="stylesheet" href="/static/python-builder.css"><script src="/static/variable-builder.js"></script>''')

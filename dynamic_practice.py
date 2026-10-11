@@ -18,6 +18,7 @@ LABELS = {
     'distance': 'Quãng đường trong số nguyên nửa chu kì',
     'rotation': 'Chu kì và tần số của bóng trên màn',
     'spring': 'Độ cứng lò xo từ số dao động',
+    'orbit_from_amplitude': 'Chiều dài quỹ đạo từ biên độ',
 }
 NUM = r'(\d+(?:[.,]\d+)?)'
 
@@ -33,12 +34,16 @@ def classify(q):
     if 'gia tốc cực đại' in plain:
         m=re.search(r'x\s*=\s*'+NUM+r'\s*\\cos\s*\(\s*'+NUM+r'\s*\\pi\s*t\s*\+\s*(?:\\frac\s*)?\\pi\s*/?\s*(\d+)\s*\)',plain)
         if m: key,nums='acceleration',list(m.groups())
+    elif 'có biên độ' in plain and 'quỹ đạo dài bao nhiêu' in plain and len(nums)==1:
+        return None  # Per-question program handles this inverse question.
     elif 'quỹ đạo dài' in plain and 'biên độ' in plain and len(nums) == 1:
         key = 'amplitude'
     elif 'bán kính' in plain and 'biên độ và tần số góc' in plain and len(nums) == 2 and '\\pi' not in plain:
         key = 'projection'
     elif 'phút' in plain and 'dao động toàn phần' in plain and 'chu kì' in plain and len(nums) == 2:
         key = 'period'
+        before=plain.index('phút')
+        if plain.index('dao động toàn phần')<before: nums=list(reversed(nums))
     elif 'tổng quãng đường' in plain and 'chiều dài quỹ đạo' in plain and len(nums) == 2:
         key = 'orbit'
     elif 'bàn xoay' in plain and 'chu kì và tần số' in plain and len(nums) == 2 and '\\pi' in plain:

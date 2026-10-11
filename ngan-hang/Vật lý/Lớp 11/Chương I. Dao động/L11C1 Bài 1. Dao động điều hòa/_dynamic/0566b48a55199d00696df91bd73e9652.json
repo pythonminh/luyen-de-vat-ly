@@ -1,0 +1,45 @@
+{
+  "question_id": "",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
+  "fingerprint": "0566b48a55199d00696df91bd73e9652",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.choice([2.5, 3, 4, 5, 6, 8])\n    he_so_omega = random.randint(2, 12)\n    thoi_gian = random.randint(3, 25) / he_so_omega\n    return {'bien_do': bien_do, 'he_so_omega': he_so_omega, 'thoi_gian': thoi_gian}\n\ndef tinh_distance(bien_do, he_so_omega, thoi_gian):\n    return 2*bien_do*he_so_omega*thoi_gian\n",
+    "function_name": "tinh_distance",
+    "parameters": [
+      {
+        "argument": "bien_do",
+        "slot": "v0",
+        "original": "5/2",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_omega",
+        "slot": "v1",
+        "original": "4",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      },
+      {
+        "argument": "thoi_gian",
+        "slot": "v3",
+        "original": "15/4",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer}\\,\\mathrm{cm}$",
+    "solution_template": "$T=2/{he_so_omega}\\,\\mathrm{s}$. Số nửa chu kì là ${he_so_omega}\\cdot{thoi_gian}$, nên $S=2A\\Delta t/(T/2)={answer}\\,\\mathrm{cm}$.",
+    "distractors": [
+      "answer*2",
+      "answer/2",
+      "answer*3"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    bien_do = random.choice([2.5, 3, 4, 5, 6, 8])\n    he_so_omega = random.randint(2, 12)\n    thoi_gian = random.randint(3, 25) / he_so_omega\n    return {'bien_do': bien_do, 'he_so_omega': he_so_omega, 'thoi_gian': thoi_gian}\n\ndef tinh_distance(bien_do, he_so_omega, thoi_gian):\n    return 2*bien_do*he_so_omega*thoi_gian\n"
+}

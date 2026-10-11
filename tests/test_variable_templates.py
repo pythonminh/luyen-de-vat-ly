@@ -93,7 +93,7 @@ class VariableTests(unittest.TestCase):
             result=portal.app.test_client().post('/api/variable-template/save',json={'src':self.path,'file_idx':self.q['file_idx'],'config':self.config,'confirm_original':True})
             self.assertEqual(result.status_code,200,result.text)
             tree=next(payload for path,method,payload in calls if path=='git/trees')
-            self.assertEqual(len(tree['tree']),2)
+            self.assertEqual(len(tree['tree']),3)
             self.assertEqual(calls[-1][2],{'sha':'commit','force':False})
             self.assertEqual(vt.load_config(self.q),self.config)
             module=(Path(root)/self.path.rsplit('/',1)[0]/'luyen_tap.py').read_text()

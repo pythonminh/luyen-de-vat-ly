@@ -1,0 +1,37 @@
+{
+  "question_id": "L11C1B1-11-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 1. Dao động điều hòa/de.tex",
+  "fingerprint": "9d0dfa4a4a1ce56e4699ea009daf9798",
+  "config": {
+    "mode": "python",
+    "python_code": "import math\nimport random\n\ndef sinh_so_lieu():\n    ban_kinh = random.randint(3, 20)\n    he_so_omega = random.randint(1, 10)\n    return {'ban_kinh': ban_kinh, 'he_so_omega': he_so_omega}\n\ndef tinh_rotation(ban_kinh, he_so_omega):\n    return (2/he_so_omega,he_so_omega/2)\n",
+    "function_name": "tinh_rotation",
+    "parameters": [
+      {
+        "argument": "ban_kinh",
+        "slot": "v0",
+        "original": "15",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      },
+      {
+        "argument": "he_so_omega",
+        "slot": "v1",
+        "original": "2",
+        "min": "1",
+        "max": "1000",
+        "step": "1"
+      }
+    ],
+    "replacements": [],
+    "answer_template": "${answer1}\\,\\mathrm{s};\\ {answer2}\\,\\mathrm{Hz}$",
+    "solution_template": "$\\omega={he_so_omega}\\pi\\,\\mathrm{rad/s}$; $T=2\\pi/\\omega={answer1}\\,\\mathrm{s}$, $f=1/T={answer2}\\,\\mathrm{Hz}$.",
+    "distractors": [
+      "answer*2",
+      "answer/2",
+      "answer*3"
+    ]
+  },
+  "python_source": "import math\nimport random\n\ndef sinh_so_lieu():\n    ban_kinh = random.randint(3, 20)\n    he_so_omega = random.randint(1, 10)\n    return {'ban_kinh': ban_kinh, 'he_so_omega': he_so_omega}\n\ndef tinh_rotation(ban_kinh, he_so_omega):\n    return (2/he_so_omega,he_so_omega/2)\n"
+}
