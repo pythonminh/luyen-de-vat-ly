@@ -2,6 +2,13 @@
 
 # BEGIN 0ac40af36527781e34771c8a21ec4276
 import math
+import random
+
+# Nút Đổi đề gọi hàm này; không gọi AI.
+def sinh_so_lieu():
+    bien_do = random.choice([2, 3, 4, 5, 6, 8, 10])
+    he_so_omega = random.randint(1, 5)
+    return {"bien_do": bien_do, "he_so_omega": he_so_omega}
 
 # Gia tốc tại x = A√3/2, với ω = he_so_omega·π
 def tinh_gia_toc(bien_do, he_so_omega):
