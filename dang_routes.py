@@ -673,9 +673,9 @@ def member_dang():
         from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
         rw_js = REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
     dang_lab=dang or 'Cả bài'
-    body=("<div class='wrap'>"+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang_lab)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
+    body=("<div class='wrap'>"+_html_practice_link(path, dang)+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang_lab)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}{qdel_form}"
-          +_html_practice_link(path, dang)+matrix_html+form_open+"<div id='presentSlot'></div>"+tools+
+          +matrix_html+form_open+"<div id='presentSlot'></div>"+tools+
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
           "</div></div></div>"
@@ -3073,7 +3073,10 @@ def _html_practice_location(path, dang):
 def _html_practice_link(path, dang):
     url = '/member/html-practice?' + urllib.parse.urlencode({'path': path, 'dang': dang})
     label = '📂 Nhập / mở bài HTML có đổi số' if can_manage_bank() else '🎲 Mở bài HTML có đổi số'
-    return '<div class="toolbar"><a class="btn primary" href="' + html.escape(url, quote=True) + '">' + label + '</a></div>'
+    return ('<section id="htmlPracticeEntry" style="display:block!important;padding:18px;margin:0 0 16px;border:3px solid #2563eb;border-radius:12px;background:#eff6ff">'
+            '<strong style="display:block;font-size:20px;color:#123b70;margin-bottom:8px">🎲 BÀI HTML ĐỔI SỐ</strong>'
+            '<p style="margin:6px 0 12px">Nhập file HTML, lưu bài và mở chương trình luyện đổi số của dạng này.</p>'
+            '<a href="' + html.escape(url, quote=True) + '" style="display:inline-block!important;padding:12px 18px;background:#2563eb;color:#fff!important;border-radius:8px;font-weight:bold;text-decoration:none">' + label + '</a></section>')
 
 
 @app.route('/member/html-practice', methods=['GET', 'POST'])
