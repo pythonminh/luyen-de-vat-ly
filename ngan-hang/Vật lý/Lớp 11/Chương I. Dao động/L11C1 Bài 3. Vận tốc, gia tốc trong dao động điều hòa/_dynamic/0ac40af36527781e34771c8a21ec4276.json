@@ -1,0 +1,40 @@
+{
+  "question_id": "L11C1B3-31-TN",
+  "source": "ngan-hang/Vật lý/Lớp 11/Chương I. Dao động/L11C1 Bài 3. Vận tốc, gia tốc trong dao động điều hòa/de.tex",
+  "fingerprint": "0ac40af36527781e34771c8a21ec4276",
+  "config": {
+    "variables": [
+      {
+        "name": "v0",
+        "min": "4",
+        "max": "12",
+        "step": "1",
+        "relation": ""
+      },
+      {
+        "name": "v1",
+        "min": "1",
+        "max": "6",
+        "step": "1",
+        "relation": ""
+      },
+      {
+        "name": "v3",
+        "min": "1",
+        "max": "6",
+        "step": "1",
+        "relation": "v0/2"
+      }
+    ],
+    "formula": "-v1**2*v3",
+    "condition": "v3**2*3 <= v0**2",
+    "answer_template": "${answer}\\pi^{2}\\sqrt{3}\\,\\mathrm{cm/s^2}$",
+    "solution_template": "$A={v0}\\,\\mathrm{cm}$, $\\omega={v1}\\pi\\,\\mathrm{rad/s}$ và $x={v3}\\sqrt{3}\\,\\mathrm{cm}$. Dùng $a=-\\omega^2x$, suy ra $a=-({v1}\\pi)^2\\cdot {v3}\\sqrt{3}={answer}\\pi^2\\sqrt{3}\\,\\mathrm{cm/s^2}$.",
+    "distractors": [
+      "-answer",
+      "answer*2",
+      "answer/2"
+    ]
+  },
+  "python_source": "def cau_L11C1B3_31_TN_0ac40af36527(dung_so_goc=False):\n    for _ in range(100):\n        v0 = Fraction('5') if dung_so_goc else (Fraction('4') + Fraction('1') * randint(0, 8))\n        v1 = Fraction('2') if dung_so_goc else (Fraction('1') + Fraction('1') * randint(0, 5))\n        v3 = Fraction('5/2') if dung_so_goc else (v0 / Fraction('2'))\n        if not (v3 ** Fraction('2') * Fraction('3') <= v0 ** Fraction('2')):\n            if dung_so_goc: raise ValueError('Số liệu gốc không thỏa điều kiện.')\n            continue\n        answer = -v1 ** Fraction('2') * v3\n        return {'v0': v0, 'v1': v1, 'v3': v3, 'answer': answer}\n    raise ValueError('Không sinh được bộ số hợp lệ.')\n"
+}
