@@ -64,19 +64,22 @@ def groups_for(qs):
     from app import question_payload
     groups = {}
     for q in qs:
-        spec = classify(q)
+        from variable_templates import load_config, identity
+        config=load_config(q)
+        spec = {'template':'custom:'+identity(q),'params':[]} if config else classify(q)
         if spec:
             key = spec['template']
-            groups.setdefault(key, {'key': key, 'label': LABELS[key], 'items': []})['items'].append({**spec, 'original': question_payload(q)})
+            groups.setdefault(key, {'key': key, 'label': ('Đổi biến · '+str(q.get('id') or 'Câu riêng')) if config else LABELS[key], 'items': []})['items'].append({**spec, 'original': question_payload(q),'custom_config':config,'raw_question':q})
     return list(groups.values())
 
 def launcher(qs, path, dang, allowed):
-    count = sum(classify(q) is not None for q in qs)
+    from variable_templates import load_config
+    count = sum(classify(q) is not None or load_config(q) is not None for q in qs)
     if not count or not allowed:
         return ''
     from urllib.parse import urlencode
     url = '/member/dynamic-practice?' + urlencode({'path': path, 'dang': dang})
-    return '<div class="notice"><a class="btn primary" href="'+html.escape(url, quote=True)+'">🎲 Luyện bài động · gom mẫu tương tự</a> Đổi số tức thì, không cần gọi AI.</div>'
+    return '<div class="notice"><a class="btn primary" href="'+html.escape(url, quote=True)+'">🐍 Bài luyện tập Python</a> Đổi số tức thì, không cần gọi AI.</div>'
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'data', 'dynamic-practice.sqlite3')
 
@@ -100,7 +103,7 @@ def load_exercise(token, owner):
         return None
 
 def public_exercise(exercise):
-    return {k:v for k,v in exercise.items() if k not in {'answer','solution','options'}} | {'options':[{'text':o['text']} for o in exercise.get('options',[])]}
+    return {k:v for k,v in exercise.items() if k not in {'answer','answer_text','solution','options'}} | {'options':[{'text':o['text']} for o in exercise.get('options',[])]}
 
 def lesson_questions(path, dang):
     from app import parse_lesson_questions, read_tex, parse_questions, nest_developments
@@ -119,6 +122,15 @@ def register(app):
         from app import can_manage_bank
         if not can_manage_bank(): return jsonify(ok=False,error='Chỉ ADMIN được xem mã Python.'),403
         from pathlib import Path
+        if request.args.get('src'):
+            from app import read_tex,parse_questions,_safe_repo_file
+            from variable_templates import load_config,source_code
+            try:
+                src,_=_safe_repo_file(request.args['src']);_,tex=read_tex(src)
+                q=parse_questions(tex)[int(request.args['file_idx'])];q['src']=src
+                config=load_config(q)
+                if config: return jsonify(ok=True,code=source_code(q,config))
+            except (ValueError,KeyError,IndexError): return jsonify(ok=False,error='Không đọc được hàm.'),400
         return jsonify(ok=True,code=Path(__file__).with_name('dynamic_engine.py').read_text(encoding='utf-8'))
     from dynamic_engine import SPECS, generate, solve, fraction
 
@@ -142,15 +154,23 @@ def register(app):
             if bounds and not can_manage_bank(): return jsonify(ok=False,error='Chỉ giáo viên quản lý được cấu hình khoảng số.'),403
             previous=load_exercise(body.get('previous_token'),session.get('dp_owner'))
             last=previous[1]['params'] if previous and previous[0]==path and previous[1].get('template')==key else item['params']
-            params=item['params'] if original else generate(key,bounds,last)
-            exercise=solve(key,params)
+            if item.get('custom_config'):
+                from variable_templates import generate_custom
+                from app import html_question
+                exercise=generate_custom(item['raw_question'],item['custom_config'],original)
+                for field in ('text','solution'):
+                    exercise[field]=html_question(exercise[field],item['raw_question'].get('src'))
+                exercise['options']=[{**o,'text':html_question(o['text'],item['raw_question'].get('src'))} for o in exercise['options']]
+            else:
+                params=item['params'] if original else generate(key,bounds,last)
+                exercise=solve(key,params)
             q=item['original']
             if original:
                 exercise.update(text=q['text'],solution=q['solution'],html=True)
                 exercise['options']=q.get('options',[])
                 exercise['answer']=q.get('answer',exercise['answer'])
             if q['kind']=='TLN': exercise['options']=[]
-            exercise.update(kind=q['kind'],source_id=q.get('id',''),file_idx=q['file_idx'],template=key)
+            exercise.update(kind=q['kind'],source_id=q.get('id',''),source_path=q.get('src',''),file_idx=q['file_idx'],template=key)
             owner=session.get('dp_owner') or secrets.token_urlsafe(24)
             session['dp_owner']=owner
             token=save_exercise(owner,path,exercise)
@@ -203,7 +223,7 @@ def register(app):
         groups = groups_for(lesson_questions(path,dang))
         if not groups:
             return page('Bài động', '<p>Chưa có mẫu tính toán đã kiểm chứng cho các câu này.</p>')
-        safe_groups=[{'key':g['key'],'label':g['label'],'specs':SPECS[g['key']], 'items':[{'id':i['original']['id'],'file_idx':i['original']['file_idx']} for i in g['items']]} for g in groups]
+        safe_groups=[{'key':g['key'],'label':g['label'],'specs':SPECS.get(g['key'],[]), 'items':[{'id':i['original']['id'],'file_idx':i['original']['file_idx']} for i in g['items']]} for g in groups]
         initial=(0,0)
         wanted_src=request.args.get('src','')
         wanted_idx=request.args.get('file_idx','')
@@ -213,3 +233,6 @@ def register(app):
         packed = base64.b64encode(json.dumps({'initial':initial,'show_code':request.args.get('show_code')=='1','groups':safe_groups,'path':path,'dang':dang,'can_configure':can_manage_bank()}, ensure_ascii=False).encode()).decode()
         inner = '<section id="dynamicPractice"><header class="dp-brand">Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>\n<div class="dp-controls"><a class="btn" href="BACK">← Về dạng bài</a><select id="dpGroup" aria-label="Mẫu bài"></select><select id="dpSource" aria-label="Câu gốc"></select><button type="button" id="dpNew">Đổi đề bài mới</button><button type="button" id="dpOriginal">Về đề gốc</button><button type="button" id="dpFull">⛶ Toàn màn hình</button></div>\n<button type="button" id="dpConfigure" hidden>⚙ Cấu hình hàm Python</button><dialog id="dpConfig"><form method="dialog"><h3>Cấu hình sinh số</h3><p id="dpConfigName"></p><div id="dpBounds"></div><p>Các giá trị là số nguyên. Đề, đáp án và lời giải được Python tính đồng bộ. Cấu hình áp dụng trong lượt luyện hiện tại.</p><p id="dpConfigError" role="status"></p><button type="button" id="dpApply">Áp dụng và thử đổi đề</button><button type="submit">Đóng</button></form></dialog><button type="button" id="dpCodeButton" hidden>🐍 Xem hàm Python</button><dialog id="dpCodeDialog"><form method="dialog"><h3>Mã Python đang dùng để sinh và tính bài</h3><p>Các mẫu dùng chung hàm generate và solve; chọn nhánh theo tên mẫu.</p><pre id="dpCodeText"></pre><button type="submit">Đóng</button></form></dialog><p id="dpMeta"></p><div class="dp-grid"><article><h3>1. Đề bài</h3><div id="dpStem"></div><div id="dpOptions"></div><label id="dpInputLabel">Nhập kết quả chính xác (có thể nhập phân số)<input id="dpInput" autocomplete="off"></label><button type="button" id="dpCheck">Kiểm tra</button><p id="dpFeedback" role="status" aria-live="polite"></p></article>\n<article><h3>2. Công thức và kiến thức</h3><div id="dpFormula"></div></article><article><h3>3. Minh họa động</h3><div id="dpFigure"></div><button type="button" id="dpAnimate">▶ Chạy / Dừng</button></article><article><h3>4. Hướng dẫn và lời giải</h3><button type="button" id="dpReveal">Xem lời giải</button><div id="dpSolution" hidden></div></article></div></section>\n<link rel="stylesheet" href="/static/dynamic-practice.css"><script id="dpData" type="application/json">PACKED</script><script src="/static/dynamic-practice.js"></script>'
         return page('Luyện bài động', inner.replace('BACK', html.escape(dang_view_url(path, dang), quote=True)).replace('PACKED', packed))
+
+    from variable_templates import register as _register_variables
+    _register_variables(app)

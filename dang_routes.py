@@ -403,11 +403,15 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
     python_tools=''
     if not preview_only and (manage or can_practice(member_current(),src)):
         from dynamic_practice import classify
-        if classify(q):
+        from variable_templates import load_config
+        if classify(q) or load_config(q):
             args={'path':request.args.get('path') or src,'dang':request.args.get('dang') or '', 'src':src,'file_idx':fi}
             pyurl='/member/dynamic-practice?'+urllib.parse.urlencode(args)
             python_tools=f"<a class='btn mini primary' href='{_esc(pyurl)}'>🐍 Đổi số bằng Python</a>"
             if manage: python_tools+=f"<a class='btn mini' href='{_esc(pyurl+'&show_code=1')}'>🐍 Xem hàm Python</a>"
+    if manage:
+        vburl='/member/variable-builder?'+urllib.parse.urlencode({'src':src,'file_idx':fi})
+        python_tools+=f"<a class='btn mini vb-open' href='{_esc(vburl)}'>🐍 Tạo / lưu hàm đổi biến</a>"
     rw=''
     if manage:
         rw=(f"<details class='qtools-fold'><summary>🛠 Công cụ chỉnh sửa câu hỏi</summary><div class='rwbar'><button type='button' class='btn mini primary rwreshuf' data-drop='{drop_key}'>🤖 Đổi số bằng AI</button><button type='button' class='btn mini rwsim' data-drop='{drop_key}'>📘 Phát triển từ câu</button>"
@@ -680,9 +684,9 @@ def member_dang():
     if can_manage_bank():
         from admin_rewrite import REWRITE_CLIENT_JS
         from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
-        rw_js = REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
+        rw_js = REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS + '<script src="/static/variable-modal.js"></script>'
     from dynamic_practice import launcher
-    guest_note += launcher(selected, path, dang, can_do)
+    tabs += launcher(selected, path, dang, can_do)
     dang_lab=dang or 'Cả bài'
     body=("<div class='wrap'>"+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang_lab)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}{qdel_form}"
@@ -3073,3 +3077,4 @@ def make_catalog_rows_enhanced(response):
 
 from dynamic_practice import register as _register_dynamic_practice
 _register_dynamic_practice(app)
+
