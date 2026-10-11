@@ -672,6 +672,8 @@ def member_dang():
         from admin_rewrite import REWRITE_CLIENT_JS
         from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
         rw_js = REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
+    from dynamic_practice import launcher
+    guest_note += launcher(selected, path, dang, can_do)
     dang_lab=dang or 'Cả bài'
     body=("<div class='wrap'>"+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang_lab)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}{qdel_form}"
@@ -3059,3 +3061,6 @@ def make_catalog_rows_enhanced(response):
         response.set_data(body.replace('</body>',script+'</body>'))
     except Exception: pass
     return response
+
+from dynamic_practice import register as _register_dynamic_practice
+_register_dynamic_practice(app)
