@@ -1,0 +1,291 @@
+<!--hp-title:xJDhu5MgdGjhu4sgxJHhu5kgZOG7i2NoIC0gdGjhu51pIGdpYW4=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luyện Tập Đồ Thị Độ Dịch Chuyển - Thời Gian</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f1f5f9; color: #1e293b; line-height: 1.5; }
+    header { background: #0f172a; color: #ffffff; text-align: center; padding: 14px 16px; }
+    header h1 { font-size: 1.25rem; font-weight: 700; }
+    header p { font-size: 0.85rem; color: #94a3b8; margin-top: 4px; }
+    .container { max-width: 1100px; margin: 20px auto; padding: 0 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 820px) { .container { grid-template-columns: 1fr; } }
+    .card { background: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+    h2 { font-size: 1.1rem; color: #0f172a; margin-bottom: 14px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+    .graph-wrapper { display: flex; flex-direction: column; align-items: center; }
+    canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; max-width: 100%; height: auto; }
+    .note-box { width: 100%; background: #eff6ff; border-left: 4px solid #3b82f6; padding: 10px 14px; border-radius: 4px; margin-top: 14px; font-size: 0.9rem; }
+    .question-text { font-size: 1.05rem; margin-bottom: 16px; font-weight: 500; }
+    .options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+    .option-btn { width: 100%; text-align: left; padding: 12px 14px; border: 2px solid #e2e8f0; background: #ffffff; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
+    .option-btn:hover { border-color: #3b82f6; background: #f8fafc; }
+    .option-btn.selected { border-color: #2563eb; background: #eff6ff; font-weight: 600; }
+    .option-btn.correct { border-color: #16a34a; background: #dcfce7; color: #15803d; }
+    .option-btn.wrong { border-color: #dc2626; background: #fee2e2; color: #b91c1c; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    button.action-btn { padding: 10px 18px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-check { background: #2563eb; color: #ffffff; }
+    .btn-check:hover { background: #1d4ed8; }
+    .btn-new { background: #475569; color: #ffffff; }
+    .btn-new:hover { background: #334155; }
+    .btn-sol { background: #f8fafc; border: 1px solid #cbd5e1 !important; color: #334155; }
+    .btn-sol:hover { background: #e2e8f0; }
+    .feedback { min-height: 28px; font-size: 1rem; font-weight: 600; margin-bottom: 12px; }
+    .feedback.correct { color: #16a34a; }
+    .feedback.wrong { color: #dc2626; }
+    .solution-box { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; font-size: 0.95rem; margin-top: 10px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Lớp Học Thầy Minh · Zalo 0946111107</h1>
+    <p>lophocthayminh.onrender.com</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Đồ Thị Độ Dịch Chuyển - Thời Gian d(t)</h2>
+      <div class="graph-wrapper">
+        <canvas id="graphCanvas" width="460" height="300"></canvas>
+      </div>
+      <div class="note-box">
+        <strong>Nhận xét đồ thị d-t:</strong><br>
+        • Đường thẳng xiên dốc: độ dịch chuyển biến thiên đều theo thời gian &rarr; chuyển động thẳng đều.<br>
+        • Đoạn thẳng song song trục thời gian: vật không đổi vị trí &rarr; vật đứng yên (v = 0).
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Câu Hỏi Trắc Nghiệm</h2>
+      <div class="question-text" id="questionText">Đang tải...</div>
+
+      <div class="options" id="optionsContainer"></div>
+
+      <div class="actions">
+        <button class="action-btn btn-check" onclick="checkAnswer()">Kiểm tra</button>
+        <button class="action-btn btn-new" onclick="generateNewProblem()">Đổi đề bài mới</button>
+        <button class="action-btn btn-sol" onclick="toggleSolution()">Xem lời giải</button>
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+
+      <div class="solution-box" id="solutionBox"></div>
+    </section>
+  </main>
+
+  <script>
+    const defaultData = { t1: "t₁", t2: "t₂", t3: "t₃", d1: "d₁", isDefault: true };
+    let currentData = { ...defaultData };
+    let selectedOptionIndex = null;
+    let currentOptions = [];
+    let correctOptionIndex = 3;
+
+    function drawGraph(data) {
+      const cvs = document.getElementById('graphCanvas');
+      const ctx = cvs.getContext('2d');
+      const w = cvs.width, h = cvs.height;
+      
+      ctx.clearRect(0, 0, w, h);
+      
+      const ox = 50, oy = 250;
+      const axW = 370, axH = 205;
+      
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 0.8;
+      ctx.setLineDash([3, 3]);
+      for (let x = ox + 40; x < ox + axW; x += 40) {
+        ctx.beginPath(); ctx.moveTo(x, oy); ctx.lineTo(x, oy - axH); ctx.stroke();
+      }
+      for (let y = oy - 40; y > oy - axH; y -= 40) {
+        ctx.beginPath(); ctx.moveTo(ox, y); ctx.lineTo(ox + axW, y); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(ox + axW, oy);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ox + axW, oy);
+      ctx.lineTo(ox + axW - 8, oy - 4);
+      ctx.lineTo(ox + axW - 8, oy + 4);
+      ctx.fillStyle = '#1e293b';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(ox, oy - axH);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ox, oy - axH);
+      ctx.lineTo(ox - 4, oy - axH + 8);
+      ctx.lineTo(ox + 4, oy - axH + 8);
+      ctx.fillStyle = '#1e293b';
+      ctx.fill();
+
+      ctx.font = 'italic 15px system-ui';
+      ctx.fillStyle = '#0f172a';
+      ctx.fillText(data.isDefault ? 't' : 't (s)', ox + axW - 12, oy + 22);
+      ctx.fillText(data.isDefault ? 'd' : 'd (m)', ox - 24, oy - axH + 12);
+      ctx.fillText('0', ox - 14, oy + 16);
+
+      const p1 = { x: ox + 110, y: oy - 150 };
+      const p2 = { x: ox + 220, y: oy - 150 };
+      const p3 = { x: ox + 330, y: oy };
+
+      ctx.strokeStyle = '#64748b';
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1;
+      
+      ctx.beginPath();
+      ctx.moveTo(p1.x, oy); ctx.lineTo(p1.x, p1.y);
+      ctx.moveTo(p2.x, oy); ctx.lineTo(p2.x, p2.y);
+      ctx.moveTo(ox, p1.y); ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#1d4ed8';
+      [ { x: ox, y: oy }, p1, p2, p3 ].forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.font = '14px system-ui';
+      ctx.fillStyle = '#0f172a';
+      ctx.textAlign = 'center';
+      ctx.fillText(data.t1, p1.x, oy + 20);
+      ctx.fillText(data.t2, p2.x, oy + 20);
+      ctx.fillText(data.t3, p3.x, oy + 20);
+
+      ctx.textAlign = 'right';
+      ctx.fillText(data.d1, ox - 8, p1.y + 5);
+      ctx.textAlign = 'left';
+    }
+
+    function buildProblem() {
+      const { t1, t2, t3, isDefault } = currentData;
+      const unit = isDefault ? '' : ' s';
+
+      const qText = `Cho đồ thị dịch chuyển – thời gian của một vật gồm: đoạn từ 0 đến ${t1}${unit} là đường thẳng dốc lên, đoạn từ ${t1}${unit} đến ${t2}${unit} nằm ngang song song với trục thời gian, đoạn từ ${t2}${unit} đến ${t3}${unit} là đường thẳng dốc xuống. Trong những khoảng thời gian nào, vật chuyển động thẳng đều?`;
+      document.getElementById('questionText').innerText = qText;
+
+      const optA = `Trong khoảng thời gian từ 0 đến ${t1}${unit} và từ ${t1}${unit} đến ${t2}${unit}`;
+      const optB = `Trong khoảng thời gian từ ${t1}${unit} đến ${t2}${unit}`;
+      const optC = `Trong khoảng thời gian từ 0 đến ${t3}${unit}`;
+      const optD = `Trong khoảng thời gian từ 0 đến ${t1}${unit} và từ ${t2}${unit} đến ${t3}${unit}`;
+
+      const baseOpts = [
+        { text: optA, correct: false },
+        { text: optB, correct: false },
+        { text: optC, correct: false },
+        { text: optD, correct: true }
+      ];
+
+      if (isDefault) {
+        currentOptions = baseOpts;
+        correctOptionIndex = 3;
+      } else {
+        const shuffled = [...baseOpts].sort(() => Math.random() - 0.5);
+        currentOptions = shuffled;
+        correctOptionIndex = shuffled.findIndex(o => o.correct);
+      }
+
+      renderOptions();
+
+      document.getElementById('feedback').innerText = '';
+      document.getElementById('feedback').className = 'feedback';
+      document.getElementById('solutionBox').style.display = 'none';
+
+      const sol = `Trong khoảng thời gian từ ${t1}${unit} đến ${t2}${unit}, đồ thị nằm ngang nên vật đứng yên. Các khoảng từ 0 đến ${t1}${unit} và từ ${t2}${unit} đến ${t3}${unit} có đồ thị là đường thẳng nghiêng nên vật chuyển động thẳng đều.`;
+      document.getElementById('solutionBox').innerText = sol;
+
+      drawGraph(currentData);
+    }
+
+    function renderOptions() {
+      const container = document.getElementById('optionsContainer');
+      container.innerHTML = '';
+      const labels = ['A', 'B', 'C', 'D'];
+      selectedOptionIndex = null;
+
+      currentOptions.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.id = `opt-${idx}`;
+        btn.innerText = `${labels[idx]}. ${opt.text}`;
+        btn.onclick = () => selectOption(idx);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectOption(index) {
+      selectedOptionIndex = index;
+      document.querySelectorAll('.option-btn').forEach((btn, idx) => {
+        btn.classList.remove('selected', 'correct', 'wrong');
+        if (idx === index) btn.classList.add('selected');
+      });
+      document.getElementById('feedback').innerText = '';
+    }
+
+    function checkAnswer() {
+      if (selectedOptionIndex === null) {
+        const fb = document.getElementById('feedback');
+        fb.innerText = 'Vui lòng chọn một phương án A, B, C hoặc D!';
+        fb.className = 'feedback wrong';
+        return;
+      }
+
+      const fb = document.getElementById('feedback');
+      const selectedBtn = document.getElementById(`opt-${selectedOptionIndex}`);
+
+      if (selectedOptionIndex === correctOptionIndex) {
+        fb.innerText = 'Chính xác! Bạn đã chọn đúng.';
+        fb.className = 'feedback correct';
+        selectedBtn.classList.remove('selected');
+        selectedBtn.classList.add('correct');
+      } else {
+        fb.innerText = 'Chưa đúng, hãy thử suy nghĩ lại!';
+        fb.className = 'feedback wrong';
+        selectedBtn.classList.remove('selected');
+        selectedBtn.classList.add('wrong');
+      }
+    }
+
+    function toggleSolution() {
+      const box = document.getElementById('solutionBox');
+      box.style.display = box.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function generateNewProblem() {
+      const t1 = Math.floor(Math.random() * 4) + 2;
+      const t2 = t1 + Math.floor(Math.random() * 4) + 2;
+      const t3 = t2 + Math.floor(Math.random() * 4) + 2;
+      const d1 = (Math.floor(Math.random() * 5) + 3) * 10;
+
+      currentData = { t1, t2, t3, d1, isDefault: false };
+      buildProblem();
+    }
+
+    window.onload = () => {
+      buildProblem();
+    };
+  </script>
+</body>
+</html>
