@@ -3159,6 +3159,12 @@ def member_html_practice():
             source = local.read_text(encoding='utf-8') if local.is_file() else _fetch_bytes_remote(rel).decode('utf-8-sig')
         except Exception:
             return jsonify(ok=False, error='Dạng bài này chưa có bài HTML đã lưu.'), 404
+        # Expand common standalone exercise containers without changing their logic.
+        fit_style = '<style id="hpViewportFit">html,body{width:100%!important;max-width:none!important;margin:0!important}main,body>.container,body>.wrapper,body>.wrap,body>#app,body>#root{width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important;box-sizing:border-box!important}main.container{padding-left:clamp(10px,2vw,32px)!important;padding-right:clamp(10px,2vw,32px)!important}</style>'
+        if re.search(r'</head\s*>', source, re.I):
+            source = re.sub(r'</head\s*>', lambda match: fit_style + match.group(0), source, count=1, flags=re.I)
+        else:
+            source = fit_style + source
         response = jsonify(ok=True, source=source)
         response.headers['Cache-Control'] = 'no-store'
         return response
