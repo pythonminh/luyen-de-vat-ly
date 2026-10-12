@@ -1,0 +1,814 @@
+<!--hp-title:Y8OhYyBwaMOpcCB0b8OhbiB04buVIGjhu6Nw-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luyện Tập Quan Hệ & Phép Toán Tập Hợp - Thầy Minh</title>
+    <style>
+        :root {
+            --navy-primary: #102a45;
+            --navy-dark: #0a1b2d;
+            --navy-light: #1f3e63;
+            --accent-blue: #2563eb;
+            --accent-hover: #1d4ed8;
+            --success-color: #16a34a;
+            --danger-color: #dc2626;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header */
+        header {
+            background-color: var(--navy-primary);
+            color: #ffffff;
+            text-align: center;
+            padding: 14px 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .header-subtitle {
+            font-size: 0.85rem;
+            opacity: 0.85;
+            margin-top: 3px;
+        }
+
+        /* Main Container */
+        .main-wrapper {
+            max-width: 1150px;
+            width: 100%;
+            margin: 20px auto;
+            padding: 0 16px;
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1.15fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 880px) {
+            .main-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 22px;
+        }
+
+        .card-header {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--navy-primary);
+            border-bottom: 2px solid #eef2f6;
+            padding-bottom: 10px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Venn Diagram & Formula */
+        .venn-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px 12px;
+            margin-bottom: 18px;
+        }
+
+        .venn-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--navy-light);
+            margin-bottom: 10px;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .formula-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+            margin-top: 6px;
+        }
+
+        .formula-table th, .formula-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            text-align: left;
+        }
+
+        .formula-table th {
+            background-color: #f1f5f9;
+            color: var(--navy-primary);
+            font-weight: 600;
+        }
+
+        /* Right Column */
+        .problem-box {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 18px;
+            padding: 14px 18px;
+            background: #eff6ff;
+            border-left: 4px solid var(--accent-blue);
+            border-radius: 6px;
+        }
+
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            padding: 11px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            background: #ffffff;
+        }
+
+        .option-item:hover {
+            border-color: var(--navy-light);
+            background-color: #f8fafc;
+        }
+
+        .option-item.selected {
+            border-color: var(--accent-blue);
+            background-color: #eff6ff;
+        }
+
+        .option-item.correct-reveal {
+            border-color: var(--success-color);
+            background-color: #f0fdf4;
+            font-weight: 600;
+        }
+
+        .option-item.wrong-reveal {
+            border-color: var(--danger-color);
+            background-color: #fef2f2;
+        }
+
+        .opt-radio {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent-blue);
+        }
+
+        .opt-text {
+            font-size: 0.98rem;
+            cursor: pointer;
+        }
+
+        /* Action Buttons */
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s ease, opacity 0.15s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-blue);
+            color: #ffffff;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-refresh {
+            background-color: var(--navy-primary);
+            color: #ffffff;
+        }
+        .btn-refresh:hover {
+            background-color: var(--navy-dark);
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: var(--text-dark);
+        }
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+
+        /* Message Banner */
+        .feedback-msg {
+            padding: 11px 14px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .feedback-correct {
+            display: block;
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+        .feedback-wrong {
+            display: block;
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        /* Solution Box */
+        .solution-box {
+            display: none;
+            background-color: #fafaf9;
+            border: 1px solid #e7e5e4;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 0.93rem;
+            line-height: 1.6;
+        }
+
+        .solution-box.visible {
+            display: block;
+        }
+
+        .solution-step {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">Lớp Học Thầy Minh · Zalo 0946111107</div>
+        <div class="header-subtitle">lophocthayminh.onrender.com</div>
+    </header>
+
+    <main class="main-wrapper">
+        <!-- Cột Trái: Trực quan hình học & Bảng công thức -->
+        <section class="card">
+            <div class="card-header">
+                <span>Biểu Đồ Trực Quan & Công Thức</span>
+            </div>
+
+            <div class="venn-container">
+                <div class="venn-title" id="vennTitle">Biểu đồ Ven phân vùng các phần tử</div>
+                <div id="vennSvgWrapper" style="width: 100%; display: flex; justify-content: center;">
+                    <!-- SVG được render động tùy thuộc A có là tập con của B hay cắt nhau -->
+                </div>
+            </div>
+
+            <table class="formula-table">
+                <thead>
+                    <tr>
+                        <th>Khái niệm / Phép toán</th>
+                        <th>Ký hiệu</th>
+                        <th>Định nghĩa toán học</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Giao</strong> hai tập hợp</td>
+                        <td>A ∩ B</td>
+                        <td>{ x | x ∈ A và x ∈ B }</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hợp</strong> hai tập hợp</td>
+                        <td>A ∪ B</td>
+                        <td>{ x | x ∈ A hoặc x ∈ B }</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hiệu</strong> hai tập hợp</td>
+                        <td>A \ B</td>
+                        <td>{ x | x ∈ A và x ∉ B }</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hiệu</strong> của B và A</td>
+                        <td>B \ A</td>
+                        <td>{ x | x ∈ B và x ∉ A }</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tập con</strong> (Bao hàm)</td>
+                        <td>A ⊂ B</td>
+                        <td>∀x ∈ A ⇒ x ∈ B</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Cột Phải: Đề bài, trắc nghiệm và điều khiển -->
+        <section class="card">
+            <div class="card-header">
+                <span>Luyện Tập Trắc Nghiệm</span>
+                <span id="questionBadge" style="font-size: 0.85rem; font-weight: normal; color: var(--text-muted);">Đề bài gốc</span>
+            </div>
+
+            <div class="problem-box" id="problemContent">
+                <!-- Nội dung đề bài sẽ được nạp ở đây -->
+            </div>
+
+            <div class="options-grid" id="optionsContainer">
+                <!-- 4 Phương án A, B, C, D -->
+            </div>
+
+            <div id="feedbackBanner" class="feedback-msg"></div>
+
+            <div class="btn-group">
+                <button type="button" class="btn-primary" id="btnCheck">Kiểm tra</button>
+                <button type="button" class="btn-refresh" id="btnNext">« Đổi đề bài mới »</button>
+                <button type="button" class="btn-secondary" id="btnSolution">Xem lời giải</button>
+            </div>
+
+            <div class="solution-box" id="solutionDetails">
+                <!-- Lời giải các bước theo bộ số hiện tại -->
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let currentProblem = null;
+        let selectedOptionIndex = null;
+        let isAnswerChecked = false;
+
+        // Đề bài gốc đầu tiên chuẩn theo yêu cầu
+        const ORIGINAL_PROBLEM = {
+            setA: [1, 5],
+            setB: [1, 3, 5],
+            options: [
+                { text: "A ∩ B = {1; 3; 5}", isCorrect: false, reason: "Sai. A ∩ B = {1; 5} vì 3 ∉ A." },
+                { text: "A ∪ B = {1}", isCorrect: false, reason: "Sai. A ∪ B = {1; 3; 5} vì hợp phải chứa tất cả phần tử của cả hai tập." },
+                { text: "A ⊂ B", isCorrect: true, reason: "Đúng. Mọi phần tử của A ({1; 5}) đều thuộc B ({1; 3; 5})." },
+                { text: "B ⊂ A", isCorrect: false, reason: "Sai. Phần tử 3 ∈ B nhưng 3 ∉ A nên B không là tập con của A." }
+            ],
+            correctIndex: 2
+        };
+
+        // Format mảng số thành chuỗi tập hợp chuẩn: {1; 3; 5} hoặc ∅
+        function formatSet(arr) {
+            if (!arr || arr.length === 0) return "∅";
+            const sorted = [...new Set(arr)].sort((a, b) => a - b);
+            return "{" + sorted.join("; ") + "}";
+        }
+
+        // Lấy số ngẫu nhiên trong khoảng [min, max]
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // So sánh 2 tập hợp số bằng nhau hay không
+        function areSetsEqual(a, b) {
+            if (a.length !== b.length) return false;
+            const sa = [...new Set(a)].sort((x, y) => x - y);
+            const sb = [...new Set(b)].sort((x, y) => x - y);
+            return sa.every((val, idx) => val === sb[idx]);
+        }
+
+        // Hàm sinh tập hợp ngẫu nhiên đảm bảo đa dạng
+        function generateRandomSets() {
+            const universe = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            // Xáo trộn
+            const shuffled = [...universe].sort(() => 0.5 - Math.random());
+            
+            // Chọn ngẫu nhiên dạng quan hệ giữa A và B:
+            // 0: A là tập con của B (A ⊂ B)
+            // 1: B là tập con của A (B ⊂ A)
+            // 2: Cắt nhau thông thường (A ∩ B ≠ ∅, cả 2 bên đều có phần tử riêng)
+            // 3: Rời nhau (A ∩ B = ∅)
+            const relationType = getRandomInt(0, 3);
+            let setA = [], setB = [];
+
+            if (relationType === 0) {
+                // A con B
+                const bCount = getRandomInt(3, 5);
+                setB = shuffled.slice(0, bCount).sort((a, b) => a - b);
+                const aCount = getRandomInt(1, bCount - 1);
+                const shuffledB = [...setB].sort(() => 0.5 - Math.random());
+                setA = shuffledB.slice(0, aCount).sort((a, b) => a - b);
+            } else if (relationType === 1) {
+                // B con A
+                const aCount = getRandomInt(3, 5);
+                setA = shuffled.slice(0, aCount).sort((a, b) => a - b);
+                const bCount = getRandomInt(1, aCount - 1);
+                const shuffledA = [...setA].sort(() => 0.5 - Math.random());
+                setB = shuffledA.slice(0, bCount).sort((a, b) => a - b);
+            } else if (relationType === 2) {
+                // Giao nhau có phần tử chung và riêng
+                const commonCount = getRandomInt(1, 2);
+                const aOnlyCount = getRandomInt(1, 2);
+                const bOnlyCount = getRandomInt(1, 2);
+
+                const common = shuffled.slice(0, commonCount);
+                const aOnly = shuffled.slice(commonCount, commonCount + aOnlyCount);
+                const bOnly = shuffled.slice(commonCount + aOnlyCount, commonCount + aOnlyCount + bOnlyCount);
+
+                setA = [...common, ...aOnly].sort((a, b) => a - b);
+                setB = [...common, ...bOnly].sort((a, b) => a - b);
+            } else {
+                // Rời nhau
+                const aCount = getRandomInt(2, 3);
+                const bCount = getRandomInt(2, 3);
+                setA = shuffled.slice(0, aCount).sort((a, b) => a - b);
+                setB = shuffled.slice(aCount, aCount + bCount).sort((a, b) => a - b);
+            }
+
+            return { setA, setB };
+        }
+
+        // Tạo 1 phương án đúng và 3 phương án sai từ A và B
+        function generateProblemFromSets(setA, setB) {
+            // Tính toán giá trị lý thuyết chính xác
+            const inter = setA.filter(x => setB.includes(x)).sort((a, b) => a - b);
+            const union = [...new Set([...setA, ...setB])].sort((a, b) => a - b);
+            const aDiffB = setA.filter(x => !setB.includes(x)).sort((a, b) => a - b);
+            const bDiffA = setB.filter(x => !setA.includes(x)).sort((a, b) => a - b);
+            const isASubsetB = setA.every(x => setB.includes(x));
+            const isBSubsetA = setB.every(x => setA.includes(x));
+
+            // Danh sách các phát biểu ĐÚNG tiềm năng
+            const trueCandidates = [];
+            trueCandidates.push({
+                text: `A ∩ B = ${formatSet(inter)}`,
+                reason: `Đúng. Giao của A và B gồm các phần tử vừa thuộc A vừa thuộc B: ${formatSet(inter)}.`
+            });
+            trueCandidates.push({
+                text: `A ∪ B = ${formatSet(union)}`,
+                reason: `Đúng. Hợp của A và B gồm tất cả phần tử thuộc ít nhất một trong hai tập: ${formatSet(union)}.`
+            });
+            trueCandidates.push({
+                text: `A \\ B = ${formatSet(aDiffB)}`,
+                reason: `Đúng. Hiệu A \\ B gồm các phần tử thuộc A nhưng không thuộc B: ${formatSet(aDiffB)}.`
+            });
+            trueCandidates.push({
+                text: `B \\ A = ${formatSet(bDiffA)}`,
+                reason: `Đúng. Hiệu B \\ A gồm các phần tử thuộc B nhưng không thuộc A: ${formatSet(bDiffA)}.`
+            });
+            if (isASubsetB) {
+                trueCandidates.push({
+                    text: `A ⊂ B`,
+                    reason: `Đúng. Mọi phần tử của A (${formatSet(setA)}) đều thuộc B (${formatSet(setB)}).`
+                });
+            }
+            if (isBSubsetA) {
+                trueCandidates.push({
+                    text: `B ⊂ A`,
+                    reason: `Đúng. Mọi phần tử của B (${formatSet(setB)}) đều thuộc A (${formatSet(setA)}).`
+                });
+            }
+
+            // Chọn ngẫu nhiên 1 câu ĐÚNG
+            const chosenCorrect = trueCandidates[Math.floor(Math.random() * trueCandidates.length)];
+
+            // Danh sách các phát biểu SAI tiềm năng
+            const wrongCandidates = [];
+
+            // 1. Sai về tập con
+            if (!isASubsetB) {
+                const notInB = setA.find(x => !setB.includes(x));
+                wrongCandidates.push({
+                    text: `A ⊂ B`,
+                    reason: `Sai. Vì phần tử ${notInB} ∈ A nhưng ${notInB} ∉ B nên A không là tập con của B.`
+                });
+            }
+            if (!isBSubsetA) {
+                const notInA = setB.find(x => !setA.includes(x));
+                wrongCandidates.push({
+                    text: `B ⊂ A`,
+                    reason: `Sai. Vì phần tử ${notInA} ∈ B nhưng ${notInA} ∉ A nên B không là tập con của A.`
+                });
+            }
+
+            // 2. Sai về Giao (nhầm thành Hợp hoặc tập thiếu/thừa)
+            if (!areSetsEqual(inter, union)) {
+                wrongCandidates.push({
+                    text: `A ∩ B = ${formatSet(union)}`,
+                    reason: `Sai. Đây là hợp (A ∪ B), trong khi giao chính xác là A ∩ B = ${formatSet(inter)}.`
+                });
+            }
+            // Đảo giao và hiệu
+            if (!areSetsEqual(inter, aDiffB)) {
+                wrongCandidates.push({
+                    text: `A ∩ B = ${formatSet(aDiffB)}`,
+                    reason: `Sai. A ∩ B = ${formatSet(inter)}, còn ${formatSet(aDiffB)} là hiệu A \\ B.`
+                });
+            }
+
+            // 3. Sai về Hợp (nhầm thành Giao)
+            if (!areSetsEqual(union, inter)) {
+                wrongCandidates.push({
+                    text: `A ∪ B = ${formatSet(inter)}`,
+                    reason: `Sai. Đây là giao (A ∩ B), trong khi hợp chính xác là A ∪ B = ${formatSet(union)}.`
+                });
+            }
+
+            // 4. Sai về Hiệu A \ B
+            if (!areSetsEqual(aDiffB, bDiffA)) {
+                wrongCandidates.push({
+                    text: `A \\ B = ${formatSet(bDiffA)}`,
+                    reason: `Sai. Nhầm lẫn với B \\ A. Đúng phải là A \\ B = ${formatSet(aDiffB)}.`
+                });
+            }
+            if (!areSetsEqual(aDiffB, union)) {
+                wrongCandidates.push({
+                    text: `A \\ B = ${formatSet(union)}`,
+                    reason: `Sai. Hiệu A \\ B chỉ gồm các phần tử thuộc A mà không thuộc B: ${formatSet(aDiffB)}.`
+                });
+            }
+
+            // 5. Sai về Hiệu B \ A
+            if (!areSetsEqual(bDiffA, aDiffB)) {
+                wrongCandidates.push({
+                    text: `B \\ A = ${formatSet(aDiffB)}`,
+                    reason: `Sai. Nhầm lẫn với A \\ B. Đúng phải là B \\ A = ${formatSet(bDiffA)}.`
+                });
+            }
+
+            // Lọc ra các phương án sai không trùng với phương án đúng đã chọn
+            const uniqueWrongs = [];
+            const seenTexts = new Set([chosenCorrect.text]);
+
+            for (const item of wrongCandidates.sort(() => 0.5 - Math.random())) {
+                if (!seenTexts.has(item.text)) {
+                    seenTexts.add(item.text);
+                    uniqueWrongs.push(item);
+                }
+            }
+
+            // Dự phòng nếu chưa đủ 3 câu sai
+            if (uniqueWrongs.length < 3) {
+                const dummyNumber = (Math.max(...union, 0) + 1);
+                uniqueWrongs.push({
+                    text: `A ∩ B = {${dummyNumber}}`,
+                    reason: `Sai. Phần tử ${dummyNumber} không thuộc cả A lẫn B.`
+                });
+            }
+            if (uniqueWrongs.length < 3) {
+                uniqueWrongs.push({
+                    text: `A \\ B = ∅`,
+                    reason: `Sai. A \\ B = ${formatSet(aDiffB)}.`
+                });
+            }
+
+            // Chọn 3 phương án sai
+            const chosenWrongs = uniqueWrongs.slice(0, 3).map(w => ({ ...w, isCorrect: false }));
+            const correctOption = { ...chosenCorrect, isCorrect: true };
+
+            const allOptions = [correctOption, ...chosenWrongs].sort(() => 0.5 - Math.random());
+            const correctIndex = allOptions.findIndex(o => o.isCorrect);
+
+            return {
+                setA,
+                setB,
+                options: allOptions,
+                correctIndex
+            };
+        }
+
+        // Vẽ biểu đồ Ven chuẩn trực quan theo bộ số thực tế
+        function renderVennDiagram(setA, setB) {
+            const wrapper = document.getElementById("vennSvgWrapper");
+            const isASubB = setA.every(x => setB.includes(x)) && setA.length < setB.length;
+            const isBSubA = setB.every(x => setA.includes(x)) && setB.length < setA.length;
+            
+            const onlyA = setA.filter(x => !setB.includes(x));
+            const onlyB = setB.filter(x => !setA.includes(x));
+            const common = setA.filter(x => setB.includes(x));
+
+            let svgHtml = '';
+
+            if (isASubB) {
+                // A con B (lồng nhau)
+                svgHtml = `
+                    <svg viewBox="0 0 320 200" width="320" height="200">
+                        <ellipse cx="160" cy="100" rx="145" ry="90" fill="#e0f2fe" stroke="#0284c7" stroke-width="2.5" />
+                        <text x="35" y="38" font-weight="bold" fill="#0369a1" font-size="15">Tập B</text>
+
+                        <circle cx="115" cy="105" r="52" fill="#bbf7d0" stroke="#16a34a" stroke-width="2.5" opacity="0.9" />
+                        <text x="80" y="78" font-weight="bold" fill="#15803d" font-size="14">Tập A</text>
+
+                        <text x="115" y="115" text-anchor="middle" fill="#14532d" font-size="13" font-weight="bold">
+                            ${setA.join("; ") || "∅"}
+                        </text>
+                        <text x="225" y="105" text-anchor="middle" fill="#075985" font-size="13" font-weight="bold">
+                            ${onlyB.join("; ") || "∅"}
+                        </text>
+                    </svg>
+                `;
+            } else if (isBSubA) {
+                // B con A (lồng nhau)
+                svgHtml = `
+                    <svg viewBox="0 0 320 200" width="320" height="200">
+                        <ellipse cx="160" cy="100" rx="145" ry="90" fill="#bbf7d0" stroke="#16a34a" stroke-width="2.5" />
+                        <text x="35" y="38" font-weight="bold" fill="#15803d" font-size="15">Tập A</text>
+
+                        <circle cx="115" cy="105" r="52" fill="#e0f2fe" stroke="#0284c7" stroke-width="2.5" opacity="0.9" />
+                        <text x="80" y="78" font-weight="bold" fill="#0369a1" font-size="14">Tập B</text>
+
+                        <text x="115" y="115" text-anchor="middle" fill="#075985" font-size="13" font-weight="bold">
+                            ${setB.join("; ") || "∅"}
+                        </text>
+                        <text x="225" y="105" text-anchor="middle" fill="#14532d" font-size="13" font-weight="bold">
+                            ${onlyA.join("; ") || "∅"}
+                        </text>
+                    </svg>
+                `;
+            } else {
+                // Hai hình tròn giao nhau thông thường
+                svgHtml = `
+                    <svg viewBox="0 0 340 200" width="340" height="200">
+                        <!-- Vòng tròn A -->
+                        <circle cx="120" cy="100" r="75" fill="#fef08a" stroke="#ca8a04" stroke-width="2.5" opacity="0.65" />
+                        <!-- Vòng tròn B -->
+                        <circle cx="220" cy="100" r="75" fill="#bae6fd" stroke="#0284c7" stroke-width="2.5" opacity="0.65" />
+
+                        <!-- Tên Tập -->
+                        <text x="65" y="45" font-weight="bold" fill="#854d0e" font-size="15">A \\ B</text>
+                        <text x="170" y="40" text-anchor="middle" font-weight="bold" fill="#1e293b" font-size="14">A ∩ B</text>
+                        <text x="275" y="45" font-weight="bold" fill="#0369a1" font-size="15">B \\ A</text>
+
+                        <!-- Phần tử A \ B -->
+                        <text x="95" y="106" text-anchor="middle" fill="#713f12" font-size="13" font-weight="bold">
+                            ${onlyA.length > 0 ? onlyA.join("; ") : "∅"}
+                        </text>
+
+                        <!-- Phần tử A ∩ B -->
+                        <text x="170" y="106" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="bold">
+                            ${common.length > 0 ? common.join("; ") : "∅"}
+                        </text>
+
+                        <!-- Phần tử B \ A -->
+                        <text x="245" y="106" text-anchor="middle" fill="#0369a1" font-size="13" font-weight="bold">
+                            ${onlyB.length > 0 ? onlyB.join("; ") : "∅"}
+                        </text>
+                    </svg>
+                `;
+            }
+
+            wrapper.innerHTML = svgHtml;
+        }
+
+        function renderProblem(problem, isOriginal = false) {
+            currentProblem = problem;
+            selectedOptionIndex = null;
+            isAnswerChecked = false;
+
+            // Reset UI states
+            const feedback = document.getElementById("feedbackBanner");
+            feedback.style.display = "none";
+            feedback.className = "feedback-msg";
+            feedback.textContent = "";
+
+            const solutionBox = document.getElementById("solutionDetails");
+            solutionBox.classList.remove("visible");
+            solutionBox.innerHTML = "";
+
+            document.getElementById("questionBadge").textContent = isOriginal ? "Đề bài gốc" : "Đề đổi số ngẫu nhiên";
+
+            // Render Text đề bài
+            const textA = formatSet(problem.setA);
+            const textB = formatSet(problem.setB);
+            document.getElementById("problemContent").innerHTML = 
+                `Cho tập hợp $A = ${textA}$ và $B = ${textB}$. Hãy chọn khẳng định <strong>đúng</strong> trong các kết quả sau:`.replace(/\$/g, "");
+
+            // Vẽ lại biểu đồ Ven
+            renderVennDiagram(problem.setA, problem.setB);
+
+            // Render Options
+            const container = document.getElementById("optionsContainer");
+            container.innerHTML = "";
+
+            const labels = ["A", "B", "C", "D"];
+            problem.options.forEach((opt, idx) => {
+                const optDiv = document.createElement("div");
+                optDiv.className = "option-item";
+                optDiv.dataset.index = idx;
+
+                optDiv.innerHTML = `
+                    <input type="radio" name="set_mcq" class="opt-radio" id="opt_${idx}">
+                    <label class="opt-text" for="opt_${idx}">
+                        <strong>${labels[idx]}.</strong> ${opt.text}
+                    </label>
+                `;
+
+                optDiv.addEventListener("click", () => {
+                    if (isAnswerChecked) return;
+                    selectedOptionIndex = idx;
+                    document.querySelectorAll(".option-item").forEach(el => el.classList.remove("selected"));
+                    optDiv.classList.add("selected");
+                    optDiv.querySelector("input").checked = true;
+                });
+
+                container.appendChild(optDiv);
+            });
+        }
+
+        // Kiểm tra kết quả
+        document.getElementById("btnCheck").addEventListener("click", () => {
+            const feedback = document.getElementById("feedbackBanner");
+            if (selectedOptionIndex === null) {
+                feedback.className = "feedback-msg feedback-wrong";
+                feedback.textContent = "Vui lòng bấm chọn một phương án A, B, C hoặc D trước khi kiểm tra.";
+                feedback.style.display = "block";
+                return;
+            }
+
+            isAnswerChecked = true;
+            const items = document.querySelectorAll(".option-item");
+
+            if (selectedOptionIndex === currentProblem.correctIndex) {
+                feedback.className = "feedback-msg feedback-correct";
+                feedback.textContent = "Chính xác! Bạn đã chọn đúng đáp án.";
+                items[selectedOptionIndex].classList.add("correct-reveal");
+            } else {
+                feedback.className = "feedback-msg feedback-wrong";
+                feedback.textContent = "Chưa đúng! Hãy đọc kỹ biểu đồ và bấm «Xem lời giải» để kiểm tra lại các phép toán.";
+                items[selectedOptionIndex].classList.add("wrong-reveal");
+                items[currentProblem.correctIndex].classList.add("correct-reveal");
+            }
+            feedback.style.display = "block";
+        });
+
+        // Đổi đề bài mới
+        document.getElementById("btnNext").addEventListener("click", () => {
+            const { setA, setB } = generateRandomSets();
+            const newProblem = generateProblemFromSets(setA, setB);
+            renderProblem(newProblem, false);
+        });
+
+        // Xem lời giải chi tiết
+        document.getElementById("btnSolution").addEventListener("click", () => {
+            const solutionBox = document.getElementById("solutionDetails");
+            const labels = ["A", "B", "C", "D"];
+            const p = currentProblem;
+
+            let html = `<strong>Lời giải chi tiết:</strong><br>`;
+            html += `<div class="solution-step">Ta có $A = ${formatSet(p.setA)}$ và $B = ${formatSet(p.setB)}$.</div>`.replace(/\$/g, "");
+            html += `<div class="solution-step">Kiểm tra từng phương án dựa vào định nghĩa:</div><ul style="padding-left: 20px; margin-bottom: 8px;">`;
+
+            p.options.forEach((opt, idx) => {
+                html += `<li><strong>${labels[idx]}.</strong> ${opt.text} &rarr; <em>${opt.reason}</em></li>`;
+            });
+
+            html += `</ul>`;
+            html += `<div class="solution-step" style="color: var(--success-color); font-weight: 700;">&rArr; Kết luận: Phương án ${labels[p.correctIndex]} là khẳng định đúng.</div>`;
+
+            solutionBox.innerHTML = html;
+            solutionBox.classList.add("visible");
+        });
+
+        window.onload = function() {
+            renderProblem(ORIGINAL_PROBLEM, true);
+        };
+    </script>
+</body>
+</html>
