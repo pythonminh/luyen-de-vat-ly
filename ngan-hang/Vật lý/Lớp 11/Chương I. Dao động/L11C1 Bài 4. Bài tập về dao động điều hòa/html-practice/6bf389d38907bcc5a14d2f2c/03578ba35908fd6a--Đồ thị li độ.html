@@ -1,0 +1,451 @@
+<!--hp-title:xJDhu5MgdGjhu4sgbGkgxJHhu5k=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luyện Đọc Đồ Thị Dao Động Điều Hòa - Thầy Minh</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #1c1e21;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background-color: #0a192f;
+    color: #ffffff;
+    text-align: center;
+    padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .header-main {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .header-sub {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    margin-top: 3px;
+  }
+  .main-container {
+    max-width: 1240px;
+    width: 100%;
+    margin: 20px auto;
+    padding: 0 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    flex: 1;
+  }
+  @media (max-width: 900px) {
+    .main-container { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+  }
+  .card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0a192f;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+  }
+  canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+  }
+  .formula-box {
+    margin-top: 14px;
+    background-color: #f8fafc;
+    border: 1px dashed #94a3b8;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .formula-box b { color: #0f172a; }
+  .btn-refresh {
+    background-color: #0284c7;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background 0.2s;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+  .btn-refresh:hover { background-color: #0369a1; }
+  .problem-text {
+    font-size: 1rem;
+    line-height: 1.55;
+    margin-bottom: 16px;
+    background-color: #f1f5f9;
+    padding: 12px 14px;
+    border-left: 4px solid #0284c7;
+    border-radius: 4px;
+  }
+  .section-subtitle {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #334155;
+    margin: 14px 0 8px 0;
+  }
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .option-btn {
+    text-align: left;
+    padding: 10px 14px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 0.92rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .option-btn:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #0284c7;
+  }
+  .option-btn.correct {
+    background-color: #dcfce7 !important;
+    border-color: #16a34a !important;
+    color: #15803d;
+    font-weight: 700;
+  }
+  .option-btn.wrong {
+    background-color: #fee2e2 !important;
+    border-color: #dc2626 !important;
+    color: #b91c1c;
+  }
+  .input-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .input-group label {
+    font-size: 0.85rem;
+    color: #475569;
+    font-weight: 600;
+  }
+  .input-group input {
+    padding: 8px 10px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    outline: none;
+  }
+  .input-group input:focus { border-color: #0284c7; }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .btn-check {
+    flex: 1;
+    background-color: #16a34a;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-check:hover { background-color: #15803d; }
+  .btn-solution {
+    flex: 1;
+    background-color: #64748b;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-solution:hover { background-color: #475569; }
+  .alert-msg {
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: none;
+    margin-bottom: 12px;
+  }
+  .alert-msg.success {
+    display: block;
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+  .alert-msg.error {
+    display: block;
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+  .solution-box {
+    display: none;
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid #3b82f6;
+    border-radius: 6px;
+    padding: 14px;
+    font-size: 0.92rem;
+    line-height: 1.65;
+    margin-top: 10px;
+  }
+  .solution-box h4 {
+    color: #1e3a8a;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-main">Lớp Học Thầy Minh · Zalo 0946111107</div>
+  <div class="header-sub">lophocthayminh.onrender.com</div>
+</header>
+
+<div class="main-container">
+  <!-- Cột Trái: Đồ thị & Công thức -->
+  <div class="card">
+    <div class="card-title">Đồ Thị Li Độ – Thời Gian</div>
+    <canvas id="graphCanvas" width="600" height="350"></canvas>
+    
+    <div class="formula-box">
+      <b>Tóm tắt phương pháp đọc đồ thị:</b><br>
+      • <b>Biên độ $A$:</b> $A = x_{\max}$ (giá trị đỉnh cao nhất của đường cong).<br>
+      • <b>Chu kỳ $T$:</b> Thời gian giữa 2 đỉnh liên tiếp hoặc thời gian đi trọn vẹn 1 hình sin.<br>
+      • <b>Tần số góc $\omega$:</b> $\omega = \dfrac{2\pi}{T}\text{ (rad/s)}$.<br>
+      • <b>Pha ban đầu $\varphi$:</b> Xét tại $t = 0$: $x(0) = A\cos\varphi$. Chiều chuyển động suy ra dấu của $\varphi$.
+    </div>
+  </div>
+
+  <!-- Cột Phải: Đề bài & Tương tác -->
+  <div class="card">
+    <button class="btn-refresh" id="btnNewProblem" onclick="changeProblem()">« Đổi đề bài mới »</button>
+
+    <div class="problem-text" id="problemText">
+      Dựa vào đồ thị li độ – thời gian $x(t)$ của vật dao động điều hòa ở hình bên, hãy xác định biên độ $A$, chu kỳ $T$, pha ban đầu $\varphi$ và viết phương trình dao động của vật.
+    </div>
+
+    <!-- Tự luận nhập số -->
+    <div class="section-subtitle">1. Tự luận nhập thông số:</div>
+    <div class="input-grid">
+      <div class="input-group">
+        <label>Biên độ A (cm):</label>
+        <input type="number" id="inputA" step="any" placeholder="Ví dụ: 20">
+      </div>
+      <div class="input-group">
+        <label>Chu kỳ T (s):</label>
+        <input type="number" id="inputT" step="any" placeholder="Ví dụ: 3">
+      </div>
+      <div class="input-group">
+        <label>Tần số góc ω (rad/s):</label>
+        <input type="text" id="inputOmega" placeholder="Ví dụ: 2pi/3 hoặc 2.09">
+      </div>
+      <div class="input-group">
+        <label>Pha ban đầu φ (rad):</label>
+        <input type="text" id="inputPhi" placeholder="Ví dụ: 0, pi/2, -pi/3">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-check" onclick="checkInputs()">Kiểm tra đáp số</button>
+      <button class="btn-solution" onclick="toggleSolution()">« Xem lời giải »</button>
+    </div>
+
+    <div id="alertMsg" class="alert-msg"></div>
+
+    <!-- Trắc nghiệm phương trình -->
+    <div class="section-subtitle">2. Trắc nghiệm chọn phương trình dao động:</div>
+    <div class="options-grid" id="optionsContainer"></div>
+
+    <!-- Lời giải chi tiết -->
+    <div class="solution-box" id="solutionBox"></div>
+  </div>
+</div>
+
+<script>
+// Danh sách bộ đề: Đề đầu tiên là ĐỀ GỐC CHÍNH XÁC
+const problemTemplates = [
+  { A: 20, T: 3, phi: 0, tMax: 8, xMaxDisp: 25 },
+  { A: 10, T: 4, phi: Math.PI, tMax: 8, xMaxDisp: 15 },
+  { A: 15, T: 2, phi: -Math.PI / 2, tMax: 6, xMaxDisp: 20 },
+  { A: 8,  T: 2, phi: Math.PI / 2, tMax: 6, xMaxDisp: 12 },
+  { A: 12, T: 6, phi: Math.PI / 3, tMax: 8, xMaxDisp: 16 },
+  { A: 16, T: 4, phi: -Math.PI / 3, tMax: 8, xMaxDisp: 20 }
+];
+
+let currentIndex = 0;
+let currentProblem = problemTemplates[0];
+
+// Rút gọn phân số
+function gcd(a, b) {
+  a = Math.abs(a); b = Math.abs(b);
+  while (b) { let t = b; b = a % b; a = t; }
+  return a;
+}
+
+// Định dạng omega: 2pi / T
+function formatOmega(T) {
+  let num = 2, den = T;
+  let g = gcd(num, den);
+  num /= g; den /= g;
+  if (den === 1) return (num === 1 ? "π" : `${num}π`);
+  if (num === 1) return `π/${den}`;
+  return `${num}π/${den}`;
+}
+
+// Định dạng pha phi
+function formatPhi(phi) {
+  let frac = phi / Math.PI;
+  if (Math.abs(frac) < 1e-4) return "0";
+  if (Math.abs(frac - 1) < 1e-4) return "π";
+  if (Math.abs(frac + 1) < 1e-4) return "-π";
+  if (Math.abs(frac - 0.5) < 1e-4) return "π/2";
+  if (Math.abs(frac + 0.5) < 1e-4) return "-π/2";
+  if (Math.abs(frac - 1/3) < 1e-4) return "π/3";
+  if (Math.abs(frac + 1/3) < 1e-4) return "-π/3";
+  if (Math.abs(frac - 2/3) < 1e-4) return "2π/3";
+  if (Math.abs(frac + 2/3) < 1e-4) return "-2π/3";
+  return (frac > 0 ? "+" : "") + frac.toFixed(2) + "π";
+}
+
+// Vẽ đồ thị lên Canvas
+function drawGraph(p) {
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+
+  ctx.clearRect(0, 0, width, height);
+
+  const padLeft = 45, padRight = 35, padTop = 30, padBottom = 35;
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+
+  const tMin = 0, tMax = p.tMax;
+  const yMin = -p.xMaxDisp, yMax = p.xMaxDisp;
+
+  function toX(t) { return padLeft + ((t - tMin) / (tMax - tMin)) * plotW; }
+  function toY(x) { return padTop + ((yMax - x) / (yMax - yMin)) * plotH; }
+
+  // Vẽ lưới tọa độ mờ
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+
+  for (let t = 0; t <= tMax; t += (tMax <= 6 ? 1 : 2)) {
+    ctx.beginPath();
+    ctx.moveTo(toX(t), padTop);
+    ctx.lineTo(toX(t), padTop + plotH);
+    ctx.stroke();
+  }
+
+  [-p.A, 0, p.A].forEach(val => {
+    ctx.beginPath();
+    ctx.moveTo(padLeft, toY(val));
+    ctx.lineTo(padLeft + plotW, toY(val));
+    ctx.stroke();
+  });
+
+  // Đường gióng biên độ đỏ đứt nét (±A)
+  ctx.strokeStyle = '#b91c1c';
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 4]);
+  [p.A, -p.A].forEach(val => {
+    ctx.beginPath();
+    ctx.moveTo(padLeft, toY(val));
+    ctx.lineTo(toX(tMax), toY(val));
+    ctx.stroke();
+  });
+
+  // Vẽ trục tọa độ
+  ctx.setLineDash([]);
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 1.8;
+
+  // Trục Ox (t)
+  const yZero = toY(0);
+  ctx.beginPath();
+  ctx.moveTo(padLeft, yZero);
+  ctx.lineTo(width - 15, yZero);
+  ctx.stroke();
+
+  // Mũi tên trục t
+  ctx.beginPath();
+  ctx.moveTo(width - 15, yZero);
+  ctx.lineTo(width - 23, yZero - 4);
+  ctx.lineTo(width - 23, yZero + 4);
+  ctx.closePath();
+  ctx.fillStyle = '#000000';
+  ctx.fill();
+
+  // Trục Oy (x)
+  const xZero = toX(0);
+  ctx.beginPath();
+  ctx.moveTo(xZero, padTop + plotH);
+  ctx.lineTo(xZero, 12);
+  ctx.stroke();
+
+  // Mũi tên trục x
+  ctx.beginPath();
+  ctx.moveTo(xZero, 12);
+  ctx.lineTo(xZero - 4, 20);
+  ctx.lineTo(xZero + 4, 20);
+  ctx.closePath();
+  ctx.fill();
+
+  // Nhãn trục
+  ctx.font = '13px sans-serif';
+  ctx.fillStyle = '#000000';
+  ctx.fillText('t (s)', width - 28, yZero + 18);
+  ctx.fillText('x (cm)', xZero + 8, 16);
+  ctx.fillText('O', xZero - 14, yZero + 15);
+
+  // Số trên trục Oy
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(p.A, xZero - 6, toY(p.A));
+  ctx.fillText(-p.A, xZero - 6, toY(-p.A));
+
+  // Số trên trục Ox
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let t = 2; t <= tMax; t += 2) {
+    let xt = toX(t);
+    ctx.beginPath();
+    ctx.moveTo(xt, y
