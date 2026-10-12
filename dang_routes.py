@@ -3215,7 +3215,24 @@ const hpPreview=document.getElementById('hpPreview');if(hpPreview)hpPreview.oncl
     preview_meta = ('<meta property="og:title" content="' + html.escape(preview_title, quote=True) + '">'
                     '<meta property="og:description" content="' + html.escape(dang or 'Bài luyện tập đổi số', quote=True) + '">'
                     '<meta property="og:type" content="website">')
-    response = page(preview_title, body + script)
+    if selected:
+        toolbar = ('<header class="hp-toolbar"><a href="' + html.escape('/member/html-menu?' + urllib.parse.urlencode({'path':path}), quote=True) + '">← Kho bài</a>'
+                   '<strong>' + html.escape(selected_title) + '</strong>'
+                   '<button type="button" id="hpShare">Chia sẻ</button>'
+                   '<button type="button" id="hpFull">Mở rộng bài</button>'
+                   '<button type="button" id="hpManage" aria-expanded="false" aria-controls="hpDrawer" aria-label="Tùy chọn bài">⋯</button></header>')
+        drawer = ('<section id="hpDrawer" hidden><details><summary>Link học sinh</summary>'
+                  '<input id="hpLink" readonly aria-label="Link học sinh"><a id="hpOpenSaved" target="_blank" rel="noopener">Mở bài</a></details>'
+                  + note + editor + '</section>')
+        compact = toolbar + drawer + '<p id="hpStatus" role="status">Đang mở bài…</p><iframe id="hpFrame" title="Bài luyện tập đổi số" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe>'
+        style = r"""<style>*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:Arial,sans-serif;background:#f1f5f9}body{display:flex;flex-direction:column}.hp-toolbar{display:flex;align-items:center;gap:8px;flex-shrink:0;padding:8px 12px;background:#102746;color:white;min-height:48px}.hp-toolbar strong{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.hp-toolbar a,.hp-toolbar button{font:inherit;font-size:13px;color:white;border:1px solid #6b819e;border-radius:6px;background:transparent;text-decoration:none;padding:6px 9px;white-space:nowrap;cursor:pointer}#hpFrame{flex:1;min-height:0;width:100%;border:0;background:white}#hpDrawer{flex-shrink:0;max-height:45vh;overflow:auto;padding:10px 14px;border-bottom:1px solid #cbd5e1}#hpDrawer[hidden]{display:none}#hpDrawer details{margin:6px 0}#hpDrawer input,#hpDrawer textarea{max-width:100%}#hpLink{width:100%;padding:8px}#hpStatus{position:fixed;bottom:12px;left:12px;right:12px;width:fit-content;max-width:calc(100% - 24px);margin:0;padding:8px 12px;border-radius:8px;background:#102746;color:white;z-index:10000}#hpStatus[hidden]{display:none}body.hp-expanded #hpFrame{position:fixed;inset:0;height:100dvh;width:100vw;z-index:9998}body.hp-expanded #hpFull{position:fixed;right:8px;top:8px;z-index:9999;background:#102746}@media(max-width:540px){.hp-toolbar{gap:5px;padding:6px}.hp-toolbar strong{font-size:12px}.hp-toolbar a,.hp-toolbar button{font-size:12px;padding:6px}.hp-toolbar #hpFull{max-width:100px}}</style>"""
+        script = script.replace("hpFrame.srcdoc=d.source;hpStatus.textContent=", "hpFrame.srcdoc=d.source;hpStatus.hidden=true;hpStatus.textContent=")
+        script = script.replace("hpStatus.textContent=e.message;", "hpStatus.hidden=false;hpStatus.textContent=e.message;")
+        script = script.replace("document.getElementById('hpShare').onclick=async()=>{", "document.getElementById('hpShare').onclick=async()=>{hpStatus.hidden=false;setTimeout(()=>{hpStatus.hidden=true},4000);")
+        controls = "<script>document.getElementById('hpManage').onclick=function(){const drawer=document.getElementById('hpDrawer');drawer.hidden=!drawer.hidden;this.setAttribute('aria-expanded',String(!drawer.hidden));};</script>"
+        response = Response('<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + html.escape(preview_title) + '</title>' + style + '</head><body>' + compact + script + controls + '</body></html>', mimetype='text/html')
+    else:
+        response = page(preview_title, body + script)
     response.set_data(response.get_data(as_text=True).replace('</head>', preview_meta + '</head>', 1))
     response.headers['Cache-Control'] = 'no-store'
     return response
