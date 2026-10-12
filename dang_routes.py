@@ -3264,26 +3264,81 @@ def _html_practice_list_html(path, dang):
 
 @app.get('/member/html-menu')
 def member_html_menu():
+    """One searchable card per exercise type, using the existing HTML player."""
+    from app import dang_pairs_of
+    path = str(request.args.get('path') or '').strip()
+    member = member_current()
+    if path:
+        try:
+            _html_practice_location(path, '')
+        except ValueError:
+            return 'Bài không hợp lệ.', 400
+        if not can_view(member, path):
+            return redirect(login_url(request.full_path)) if not member else ('Bài này dành cho VIP.', 403)
+    lessons = index_data().get('lessons', [])
+    if path:
+        lessons = [x for x in lessons if str(x.get('path') or x.get('file') or '') == path]
+        if not lessons:
+            lessons = [{'path': path, 'BaiHoc': path.split('/')[-2]}]
+    cards = []
+    for lesson in lessons:
+        source = str(lesson.get('path') or lesson.get('file') or '')
+        if not source.endswith('.tex') or not can_view(member, source):
+            continue
+        pairs = dang_pairs_of(lesson)
+        if path:
+            questions = parse_lesson_questions(source)
+            names = list(dict.fromkeys(str(q.get('dang') or '').strip() for q in questions))
+            pairs = [(name, sum(str(q.get('dang') or '').strip() == name for q in questions)) for name in names]
+        for name, count in pairs:
+            cards.append({'path': source, 'dang': name, 'count': count,
+                          'subject': str(lesson.get('Mon') or ''), 'grade': str(lesson.get('Lop') or ''),
+                          'chapter': str(lesson.get('Chuong') or ''),
+                          'lesson': str(lesson.get('BaiHoc') or lesson.get('De') or source.split('/')[-2]),
+                          'kinds': (lesson.get('dang_kinds') or {}).get(name, {})})
+    seed = base64.b64encode(json.dumps(cards, ensure_ascii=False).encode()).decode()
+    body = r'''<div class="wrap"><header class="hg-brand">Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>
+    <h2>Kho luyện tập HTML</h2><p><a class="btn" href="/member">← Ngân hàng bài tập</a> <a class="btn" href="/member/html-menu">Tất cả dạng bài</a></p>
+    <div class="hg-layout"><aside class="hg-filters"><h3>Bộ lọc</h3><label>Lớp<select id="hgGrade"></select></label><label>Môn<select id="hgSubject"></select></label><label>Chương<select id="hgChapter"></select></label><label>Bài<select id="hgLesson"></select></label><label>HTML<select id="hgReady"><option value="">Tất cả</option><option value="yes">Đã có HTML</option><option value="no">Chưa có HTML</option></select></label><button id="hgReset" type="button">Xóa bộ lọc</button></aside>
+    <main><div class="hg-tools"><input id="hgSearch" type="search" placeholder="Tìm tên dạng bài…" aria-label="Tìm dạng bài"><button id="hgView" type="button">Danh sách</button></div><p id="hgCount" role="status"></p><div id="hgCards" class="hg-grid"></div><p id="hgEmpty" hidden>Không có dạng bài phù hợp.</p></main></div></div>
+    <style>.hg-brand{background:#102746;color:white;padding:15px;border-radius:10px;font-weight:700}.hg-brand small{display:block;font-weight:400;margin-top:5px}.hg-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px}.hg-filters{border:1px solid #dde4ee;padding:16px;border-radius:12px;align-self:start}.hg-filters label{display:block;margin:12px 0}.hg-filters select{display:block;width:100%;padding:8px;margin-top:5px}.hg-tools{display:flex;gap:10px}.hg-tools input{flex:1;min-width:0;padding:10px}.hg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}.hg-card{border:1px solid #d7dfe9;border-radius:12px;overflow:hidden;background:white}.hg-preview{height:150px;background:#eef4fc;position:relative;overflow:hidden}.hg-preview iframe{width:900px;height:600px;border:0;transform:scale(.25);transform-origin:top left;pointer-events:none}.hg-preview a{position:absolute;inset:0;display:grid;place-items:center;text-decoration:none;color:#20496f;font-size:38px}.hg-preview a.has-preview{color:transparent}.hg-info{padding:12px}.hg-info h3{font-size:16px;margin:0 0 8px}.hg-info p{font-size:12px;color:#54657c;margin:6px 0}.hg-tags{display:flex;flex-wrap:wrap;gap:4px;font-size:11px}.hg-tags span{border:1px solid #dce3ed;border-radius:20px;padding:3px 6px}.hg-open{display:inline-block;background:#165fc0;color:white!important;padding:8px 12px;border-radius:7px;text-decoration:none;margin-top:10px}.hg-grid.hg-list{display:block}.hg-list .hg-card{display:flex;margin-bottom:12px}.hg-list .hg-preview{width:220px;flex-shrink:0}.hg-info{min-width:0;overflow-wrap:anywhere}@media(min-width:1450px){.hg-layout{grid-template-columns:250px minmax(0,1fr)}}@media(max-width:700px){.hg-layout{grid-template-columns:1fr;gap:12px}.hg-filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hg-filters h3{grid-column:1/-1;margin:0}.hg-filters label{margin:0}.hg-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.hg-preview{height:115px}.hg-info{padding:9px}.hg-list .hg-preview{width:120px}}@media(max-width:380px){.hg-grid{grid-template-columns:1fr}}</style>
+    <script>(function(){
+    const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0)))),manager=MANAGER,$=id=>document.getElementById(id),filters=[['hgGrade','grade'],['hgSubject','subject'],['hgChapter','chapter'],['hgLesson','lesson']];
+    const E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fold=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
+    let list=false;const loaded=new Map();
+    function url(c,item){const q=new URLSearchParams({path:c.path,dang:c.dang});if(item){if(item.legacy)q.set('legacy','1');else q.set('item',item.name)}return '/member/html-practice?'+q}
+    function match(c,end=filters.length){return filters.slice(0,end).every(([id,key])=>!$(id).value||c[key]===$(id).value)}
+    function options(){filters.forEach(([id,key],i)=>{const old=$(id).value,values=[...new Set(data.filter(c=>match(c,i)).map(c=>c[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi',{numeric:true}));$(id).innerHTML='<option value="">Tất cả</option>'+values.map(v=>'<option value="'+E(v)+'">'+E(v)+'</option>').join('');if(values.includes(old))$(id).value=old})}
+    function load(path){if(loaded.has(path))return loaded.get(path);const promise=fetch('/member/html-gallery-items?'+new URLSearchParams({path})).then(async r=>{const d=await r.json();if(!r.ok||!d.ok)throw Error('Không đọc được HTML');return d.items});loaded.set(path,promise);return promise}
+    const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting)return;observer.unobserve(entry.target);const el=entry.target,c=data[Number(el.dataset.index)];load(c.path).then(items=>{const firstLoad=!c.items;c.items=items[c.dang]||[];const status=el.querySelector('.hg-status'),open=el.querySelector('.hg-open'),preview=el.querySelector('.hg-preview a');status.textContent=c.items.length?'Đã có HTML · '+c.items.length+' bài':'Chưa có HTML';if(c.items.length){open.textContent='Mở luyện tập';open.href=url(c,c.items.length===1?c.items[0]:null);preview.href=open.href;fetch(url(c,c.items[0])+'&content=1').then(r=>r.json()).then(d=>{if(!d.ok||!el.isConnected)return;const frame=document.createElement('iframe');frame.setAttribute('sandbox','');frame.setAttribute('aria-hidden','true');frame.tabIndex=-1;frame.srcdoc=d.source;el.querySelector('.hg-preview').prepend(frame);preview.classList.add('has-preview')}).catch(()=>{})}else if(!manager){open.removeAttribute('href');open.textContent='Chưa có HTML'}if(firstLoad&&$('hgReady').value)draw()}).catch(()=>{el.querySelector('.hg-status').textContent='Không tải được trạng thái HTML'})}),{rootMargin:'100px'});
+    function draw(){observer.disconnect();const search=fold($('hgSearch').value),ready=$('hgReady').value,rows=data.map((c,i)=>({c,i})).filter(({c})=>match(c)&&fold(c.dang+' '+c.lesson).includes(search)&&(!ready||(c.items&&(ready==='yes'?c.items.length:!c.items.length))));$('hgCount').textContent=rows.length+' dạng bài';$('hgEmpty').hidden=!!rows.length;$('hgCards').className='hg-grid'+(list?' hg-list':'');$('hgCards').innerHTML=rows.map(({c,i})=>{const target=url(c,c.items?.length===1?c.items[0]:null);return '<article class="hg-card" data-index="'+i+'"><div class="hg-preview"><a href="'+E(target)+'" aria-label="'+E(c.dang)+'">HTML</a></div><div class="hg-info"><h3>'+E(c.dang||'Chưa phân dạng')+'</h3><p>'+E(c.subject+' · Lớp '+c.grade+' · '+c.lesson)+'</p><div class="hg-tags">'+['TN','DS','TLN','TL'].map(k=>'<span>'+E(k==='DS'?'ĐS':k)+' '+Number(c.kinds[k]||0)+'</span>').join('')+'<span>'+Number(c.count)+' câu</span></div><p class="hg-status">'+(c.items?(c.items.length?'Đã có HTML · '+c.items.length+' bài':'Chưa có HTML'):'Đang kiểm tra HTML…')+'</p><a class="hg-open" href="'+E(target)+'">'+(c.items?.length?'Mở luyện tập':manager?'Thêm / Mở HTML':'Xem HTML')+'</a></div></article>'}).join('');document.querySelectorAll('.hg-card').forEach(el=>observer.observe(el))}
+    filters.forEach(([id])=>$(id).onchange=()=>{options();draw()});$('hgSearch').oninput=draw;$('hgReady').onchange=()=>{if($('hgReady').value)Promise.allSettled([...new Set(data.filter(c=>match(c)).map(c=>c.path))].map(p=>load(p).then(items=>data.filter(c=>c.path===p).forEach(c=>c.items=items[c.dang]||[])))).then(draw);draw()};$('hgView').onclick=()=>{list=!list;$('hgView').textContent=list?'Lưới':'Danh sách';draw()};$('hgReset').onclick=()=>{filters.forEach(([id])=>$(id).value='');$('hgReady').value='';$('hgSearch').value='';options();draw()};options();draw();
+    })();</script>'''.replace('SEED', seed).replace('MANAGER', 'true' if can_manage_bank() else 'false')
+    return page('Kho luyện tập HTML', body)
+
+
+@app.get('/member/html-gallery-items')
+def member_html_gallery_items():
     path = str(request.args.get('path') or '').strip()
     try:
-        _html_practice_location(path,'')
+        base = _html_practice_location(path, '').rsplit('/', 1)[0]
     except ValueError:
-        return 'Bài không hợp lệ.',400
-    if not can_view(member_current(),path):
-        return redirect(login_url(request.full_path))
-    qs = parse_lesson_questions(path)
-    dangs = list(dict.fromkeys(str(q.get('dang') or '').strip() for q in qs))
-    body = '<div class="wrap"><h2>📁 HTML đổi số</h2><a class="btn" href="/member/select?'+html.escape(urllib.parse.urlencode({'path':path}),quote=True)+'">← Menu bài</a>'
-    for dang in dangs:
-        listing = _html_practice_list_html(path,dang)
-        url = '/member/html-practice?' + urllib.parse.urlencode({'path':path,'dang':dang})
-        if '<li>' not in listing and not can_manage_bank():
-            continue
-        body += '<details style="margin:8px 0;border-bottom:1px solid #e2e8f0;padding:8px"><summary>'+html.escape(dang or 'Cả bài')+'</summary>'+listing
-        if can_manage_bank():
-            body += '<a href="'+html.escape(url,quote=True)+'">＋ Thêm bài</a>'
-        body += '</details>'
-    return page('HTML đổi số',body+'</div><style>.hp-list{list-style:none;padding:0}.hp-list li{padding:8px 0}.hp-list a{text-decoration:none}</style>')
+        return jsonify(ok=False, error='Bài không hợp lệ.'), 400
+    if not can_view(member_current(), path):
+        return jsonify(ok=False, error='Không có quyền xem bài.'), 403
+    parent = {e['name']: e for e in _html_directory_entries(base)}
+    names = list(dict.fromkeys(str(q.get('dang') or '').strip() for q in parse_lesson_questions(path)))
+    items = {}
+    for name in names:
+        legacy = _html_practice_location(path, name)
+        key = legacy.rsplit('/', 1)[1][:-5]
+        rows = []
+        if key in parent and parent[key].get('type') == 'dir':
+            rows = [{'name': e['name']} for e in _html_directory_entries(legacy[:-5]) if e.get('type') == 'file' and e['name'].endswith('.html')]
+        if key + '.html' in parent:
+            rows.insert(0, {'legacy': True})
+        items[name] = rows
+    return jsonify(ok=True, items=items)
 
 
 @app.after_request
@@ -3301,7 +3356,7 @@ def html_practice_on_lesson_menu(response):
                 if 'id="htmlLessonMenu"' not in body:
                     body=body.replace("<div class='wrap'>","<div class='wrap'>"+link,1)
         else:
-            script = """<script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('a[href^="/member/select?path="]').forEach(function(a){const u=new URL(a.href,location.origin),p=u.searchParams.get('path');if(!p)return;const b=document.createElement('a');b.className='btn';b.textContent='📁 HTML đổi số';b.href='/member/html-menu?path='+encodeURIComponent(p);a.insertAdjacentElement('afterend',b);});});</script>"""
+            script = """<script>document.addEventListener('DOMContentLoaded',function(){const nav=document.createElement('nav');nav.style.margin='12px 0';nav.innerHTML='<a class=\"btn primary\" href=\"/member/html-menu\">▦ Kho luyện tập HTML</a>';const wrap=document.querySelector('.wrap');if(wrap)wrap.prepend(nav);document.querySelectorAll('a[href^="/member/select?path="]').forEach(function(a){const u=new URL(a.href,location.origin),p=u.searchParams.get('path');if(!p)return;const b=document.createElement('a');b.className='btn';b.textContent='📁 HTML đổi số';b.href='/member/html-menu?path='+encodeURIComponent(p);a.insertAdjacentElement('afterend',b);});});</script>"""
             body=body.replace('</body>',script+'</body>',1)
         response.set_data(body)
         response.headers['Cache-Control']='no-store'
