@@ -512,6 +512,27 @@
       "password_sha256": "9def43a03c3e4d38f133e15215e2a5c470d016fad41145fd26e4596db1a42eda",
       "password_enc": "v1:uTzDHwG7rd6VNmoQRa8=",
       "updated_at": "2026-10-06 15:37:29"
+    },
+    {
+      "username": "M nguyên",
+      "name": "Nguyễn Đặng Minh Nguyên",
+      "phone": "0393610210",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "requested_package": {
+        "kind": "mon2",
+        "grades": [
+          "11"
+        ],
+        "subjects": [
+          "Toán",
+          "Vật lý"
+        ]
+      },
+      "package_status": "pending",
+      "password_sha256": "e13645e3b8ba3f8d3c8bb32765c8e32585da1e5ceccdbc4c973714c767656320",
+      "password_enc": "v1:wWuQTx-ypA=="
     }
   ]
 }
