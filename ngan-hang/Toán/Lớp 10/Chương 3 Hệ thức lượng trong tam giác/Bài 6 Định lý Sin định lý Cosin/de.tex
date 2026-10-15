@@ -5,4 +5,75 @@
 % Số câu: 0
 % App đọc file này trực tiếp — sửa rồi Commit trên GitHub
 % Ghi nguồn từng câu: \nguon{SGK} hoặc \nguon{Bài 1.2 SBT VL 12 KNTT} trong \begin{ex}...\end{ex}
+\dangbt{Chưa phân dạng}
+\begin{ex}
+Khi phân tích các tính chất của hàm số, hãy nhận xét các phát biểu sau:
+\choiceTF
+{Hàm số $y = \sin x$ là hàm số chẵn.}
+{Hàm số $y = \sqrt{x}$ đồng biến trên tập xác định của nó.}
+{Nếu hàm số $y=f(x)$ liên tục trên đoạn $[a,b]$ và $f(a)f(b) < 0$ thì phương trình $f(x)=0$ có ít nhất một nghiệm trên khoảng $(a,b)$.}
+{Hàm số $y = \frac{1}{x}$ có tiệm cận đứng là trục $Oy$ và tiệm cận ngang là trục $Ox$.}
+\loigiai
+a) Sai. Hàm số $y = \sin x$ là hàm số lẻ vì $\sin(-x) = -\sin x$ với mọi $x \in \mathbb{R}$.
+b) Đúng. Tập xác định của hàm số $y = \sqrt{x}$ là $[0, +\infty)$. Với mọi $x_1, x_2 \in [0, +\infty)$ mà $x_1 < x_2$, ta có $\sqrt{x_1} < \sqrt{x_2}$, nên hàm số đồng biến.
+c) Đúng. Đây là nội dung của định lý giá trị trung gian (định lý Bolzano) cho hàm số liên tục.
+d) Đúng. Ta có $\lim_{x \to 0^+} \frac{1}{x} = +\infty$ và $\lim_{x \to 0^-} \frac{1}{x} = -\infty$, nên đường thẳng $x=0$ (trục $Oy$) là tiệm cận đứng. Ta có $\lim_{x \to +\infty} \frac{1}{x} = 0$ và $\lim_{x \to -\infty} \frac{1}{x} = 0$, nên đường thẳng $y=0$ (trục $Ox$) là tiệm cận ngang.
+\end{ex}
 
+\dangbt{Chưa phân dạng}
+\begin{ex}
+Một vật dao động điều hòa với phương trình $x = 5\cos(4\pi t + \pi/3)$ cm. Tính tốc độ cực đại của vật (theo cm/s).
+\shortans{20$\pi$}
+\loigiai{Tốc độ cực đại của vật được tính bằng công thức $v_{max} = \omega A$.
+Từ phương trình dao động, ta có biên độ $A = 5$ cm và tần số góc $\omega = 4\pi$ rad/s.
+Thay số vào công thức, ta được $v_{max} = 4\pi \times 5 = 20\pi$ cm/s.}
+\end{ex}
+
+\dangbt{Chưa phân dạng}
+\begin{ex}
+Một con lắc đơn có chiều dài $l = 1$ m dao động điều hòa tại nơi có gia tốc trọng trường $g = 9,8$ m/s$^2$. Tính chu kì dao động của con lắc (theo s).
+\shortans{2$\pi/\sqrt{9,8}$}
+\loigiai{Chu kì dao động của con lắc đơn được tính bằng công thức $T = 2\pi\sqrt{\frac{l}{g}}$.
+Thay các giá trị đã cho vào công thức: $l = 1$ m, $g = 9,8$ m/s$^2$.
+$T = 2\pi\sqrt{\frac{1}{9,8}} = \frac{2\pi}{\sqrt{9,8}}$ s.}
+\end{ex}
+
+\dangbt{Chưa phân dạng}
+\begin{ex}
+Một mạch điện xoay chiều RLC nối tiếp có $R = 30$ $\Omega$, cuộn cảm thuần có cảm kháng $Z_L = 60$ $\Omega$ và tụ điện có dung kháng $Z_C = 20$ $\Omega$. Tính tổng trở của mạch (theo $\Omega$).
+\shortans{50}
+\loigiai{Tổng trở của mạch RLC nối tiếp được tính bằng công thức $Z = \sqrt{R^2 + (Z_L - Z_C)^2}$.
+Thay các giá trị đã cho vào công thức: $R = 30$ $\Omega$, $Z_L = 60$ $\Omega$, $Z_C = 20$ $\Omega$.
+$Z = \sqrt{30^2 + (60 - 20)^2} = \sqrt{30^2 + 40^2} = \sqrt{900 + 1600} = \sqrt{2500} = 50$ $\Omega$.}
+\end{ex}
+
+\dangbt{Chưa phân dạng}
+\begin{ex}
+Cho hàm số $y = \frac{2x+1}{x-1}$. Viết phương trình tiếp tuyến của đồ thị hàm số tại điểm có hoành độ $x_0 = 2$.
+\loigiai{
+Tập xác định của hàm số là $D = \mathbb{R} \setminus \{1\}$.
+Tại $x_0 = 2$, ta có $y_0 = \frac{2(2)+1}{2-1} = 5$.
+Đạo hàm của hàm số là $y' = \frac{2(x-1) - (2x+1)(1)}{(x-1)^2} = \frac{2x-2-2x-1}{(x-1)^2} = \frac{-3}{(x-1)^2}$.
+Hệ số góc của tiếp tuyến tại $x_0 = 2$ là $k = y'(2) = \frac{-3}{(2-1)^2} = -3$.
+Phương trình tiếp tuyến có dạng $y - y_0 = k(x - x_0)$.
+Thay số vào, ta được $y - 5 = -3(x - 2)$.
+$y - 5 = -3x + 6$.
+$y = -3x + 11$.
+Vậy phương trình tiếp tuyến của đồ thị hàm số tại điểm có hoành độ $x_0 = 2$ là $y = -3x + 11$.
+}
+\end{ex}
+
+\dangbt{Chưa phân dạng}
+\begin{ex}
+Tính tích phân $I = \int_{1}^{2} (3x^2 - 2x + 1) dx$.
+\loigiai{
+Ta có nguyên hàm của hàm số $f(x) = 3x^2 - 2x + 1$ là $F(x) = x^3 - x^2 + x$.
+Áp dụng công thức Newton-Leibniz, ta có:
+$I = F(2) - F(1)$
+$I = (2^3 - 2^2 + 2) - (1^3 - 1^2 + 1)$
+$I = (8 - 4 + 2) - (1 - 1 + 1)$
+$I = 6 - 1$
+$I = 5$.
+Vậy tích phân $I = \int_{1}^{2} (3x^2 - 2x + 1) dx = 5$.
+}
+\end{ex}
