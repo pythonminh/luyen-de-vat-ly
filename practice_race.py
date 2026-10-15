@@ -37,7 +37,10 @@ def db():
       room TEXT NOT NULL, user TEXT NOT NULL, name TEXT NOT NULL,
       questions TEXT NOT NULL, answers TEXT NOT NULL DEFAULT '{}',
       started REAL, finished REAL, correct INTEGER, elapsed REAL,
-      PRIMARY KEY(room,user));''')
+      PRIMARY KEY(room,user));
+    CREATE TABLE IF NOT EXISTS race_marks (
+      room TEXT NOT NULL, user TEXT NOT NULL, pos INTEGER NOT NULL, ok INTEGER NOT NULL,
+      PRIMARY KEY(room,user,pos));''')
     try:
         with c:
             yield c
@@ -85,7 +88,7 @@ def fingerprint(q):
     return hashlib.sha256(re.sub(r'\s+', '', value).encode()).hexdigest()
 
 
-def eligible(q):
+def auto_graded(q):
     kind = q.get('kind')
     if kind == 'TN':
         opts = q.get('options') or []
@@ -93,6 +96,10 @@ def eligible(q):
     if kind == 'DS':
         return len(q.get('statements') or []) == 4
     return kind == 'TLN' and bool(str(q.get('answer') or '').strip())
+
+
+def eligible(q):
+    return auto_graded(q) or (q.get('kind') in ('TL', 'TLN') and bool(str(q.get('text') or '').strip()))
 
 
 def bucket(q):
@@ -106,7 +113,7 @@ def build_pool(qs, count):
             unique.setdefault(fingerprint(q), copy.deepcopy(q))
     pool = list(unique.values())
     if len(pool) < count:
-        raise ValueError('Bài này có ' + str(len(pool)) + ' câu hợp lệ, không đủ ' + str(count) + ' câu/đề. Hãy giảm số câu hoặc chọn bài khác. Chỉ dùng TN, Đúng/Sai và trả lời ngắn có đáp án.')
+        raise ValueError('Bài này có ' + str(len(pool)) + ' câu hợp lệ, không đủ ' + str(count) + ' câu/đề. Hãy giảm số câu hoặc chọn bài khác. Có thể dùng câu tự luận hoặc chưa có đáp án; ADMIN sẽ chấm các câu này.')
     # Fixed blueprint shared by everyone; rare buckets are not silently replaced.
     groups = defaultdict(list)
     for q in pool:
@@ -139,11 +146,21 @@ def allocate(pool, blueprint, existing):
 
 
 def correct(q, answer):
+    if not auto_graded(q):
+        return False
     if q['kind'] == 'TN':
         return type(answer) is int and 0 <= answer < len(q['options']) and bool(q['options'][answer]['correct'])
     if q['kind'] == 'DS':
         return isinstance(answer, list) and len(answer) == 4 and all(type(a) is bool and a == bool(o.get('correct')) for a, o in zip(answer, q['statements']))
     return isinstance(answer, str) and len(answer) <= 100 and base.answer_equal(answer, q.get('answer'))
+
+
+def graded_result(c, code, player):
+    qs, answers = json.loads(player['questions']), json.loads(player['answers'])
+    marks = {r['pos']: bool(r['ok']) for r in c.execute('SELECT pos,ok FROM race_marks WHERE room=? AND user=?', (code, player['user']))}
+    pending = sum(not auto_graded(q) and i not in marks for i, q in enumerate(qs))
+    results = [correct(q, answers.get(str(i))) if auto_graded(q) else marks.get(i) for i, q in enumerate(qs)]
+    return sum(v is True for v in results), pending, results
 
 
 def finish(c, r, player, now):
@@ -158,7 +175,7 @@ def finish(c, r, player, now):
 
 def public_question(q):
     src = q.get('src')
-    out = {'kind': q['kind'], 'text': base.html_question(q.get('text', ''), src)}
+    out = {'kind': q['kind'], 'text': base.html_question(q.get('text', ''), src), 'manual': not auto_graded(q)}
     for key in ('options', 'statements'):
         if q.get(key):
             out[key] = [base.html_question(o.get('text', ''), src) for o in q[key]]
@@ -196,7 +213,7 @@ def race_from_selected():
     qs = base.parse_lesson_questions(path)
     selected = [q for q in qs if str(q.get('idx')) in set(ids)]
     if len(selected) != len(ids) or not any(eligible(q) for q in selected):
-        return base.page('Chọn câu thi đua', '<div class="wrap"><p>Các câu đã chọn chưa hợp lệ hoặc không có đáp án tự chấm. Hãy chọn TN, Đúng/Sai hoặc trả lời ngắn có đáp án.</p><a class="btn" href="' + html.escape(base.dang_view_url(path), quote=True) + '">← Quay lại chọn câu</a></div>'), 400
+        return base.page('Chọn câu thi đua', '<div class="wrap"><p>Không tìm thấy các câu đã tick trong bài. Hãy tải lại danh sách câu rồi chọn lại.</p><a class="btn" href="' + html.escape(base.dang_view_url(path), quote=True) + '">← Quay lại chọn câu</a></div>'), 400
     token = secrets.token_hex(12)
     session['race_pick'] = {'token': token, 'path': path, 'ids': ids}
     return redirect('/member/race?selection=' + token)
@@ -241,7 +258,7 @@ def race_home():
         selected = request.form.get('path') or request.args.get('path', '')
         lessons = [l for l in base.index_data().get('lessons', []) if l.get('path') and int(l.get('questions', l.get('count', 0)) or 0) > 0]
         options = '<option value="">— Chọn bài học để tạo phòng —</option>' + ''.join('<option value="' + html.escape(str(l['path']), quote=True) + '"' + (' selected' if l['path'] == selected else '') + '>' + html.escape(' · '.join(str(l.get(k) or '') for k in ('Mon','Lop','BaiHoc'))) + ' (' + str(l.get('questions', l.get('count', 0))) + ' câu)</option>' for l in lessons)
-        creation = '<section class="race-create"><h2>📺 ADMIN · Tạo phòng chiếu thi đua + QR</h2><p>Chọn bài rồi bấm tạo phòng. Hệ thống sẽ tự sinh mã phòng và mã QR cho học sinh quét.</p><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Tên phòng <input name="title" value="Thi đua luyện đề" maxlength="100" required></label><label>Bài học <select id="raceLesson" name="path" required>' + options + '</select></label><label>Số câu mỗi đề <input id="raceCount" name="count" type="number" min="1" max="60" value="5" required></label><label>Thời gian (phút) <input name="minutes" type="number" min="1" max="180" value="15" required></label><p id="racePoolInfo" role="status">Chọn bài để kiểm tra số câu và số học sinh có thể tham gia.</p><button id="raceCreate" class="btn primary" disabled>📺 Tạo phòng + Hiện mã QR</button></form><p>Mỗi học sinh nhận bộ câu riêng, không trùng câu với người khác, cùng cấu trúc dạng bài và mức độ. Tự luận cần chấm tay nên chưa đưa vào bảng xếp hạng.</p></section>' + _SETUP_JS
+        creation = '<section class="race-create"><h2>📺 ADMIN · Tạo phòng chiếu thi đua + QR</h2><p>Chọn bài rồi bấm tạo phòng. Hệ thống sẽ tự sinh mã phòng và mã QR cho học sinh quét.</p><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Tên phòng <input name="title" value="Thi đua luyện đề" maxlength="100" required></label><label>Bài học <select id="raceLesson" name="path" required>' + options + '</select></label><label>Số câu mỗi đề <input id="raceCount" name="count" type="number" min="1" max="60" value="5" required></label><label>Thời gian (phút) <input name="minutes" type="number" min="1" max="180" value="15" required></label><p id="racePoolInfo" role="status">Chọn bài để kiểm tra số câu và số học sinh có thể tham gia.</p><button id="raceCreate" class="btn primary" disabled>📺 Tạo phòng + Hiện mã QR</button></form><p>Mỗi học sinh nhận bộ câu riêng, không trùng câu với người khác, cùng cấu trúc dạng bài và mức độ. Câu tự luận hoặc thiếu đáp án vẫn làm được; ADMIN chấm xong mới xếp hạng chính thức.</p></section>' + _SETUP_JS
         if selection:
             pick = session.get('race_pick') or {}
             if pick.get('token') != selection:
@@ -249,9 +266,10 @@ def race_home():
             picked_path = str(pick.get('path') or '')
             picked_qs = source_questions(picked_path, selection)
             valid_count = len({fingerprint(q) for q in picked_qs if eligible(q)})
+            manual_count = sum(eligible(q) and not auto_graded(q) for q in picked_qs)
             start = creation.index('<label>Bài học')
             end = creation.index('</select></label>', start) + len('</select></label>')
-            picked_html = '<p><b>Đã chọn ' + str(len(picked_qs)) + ' câu · ' + str(valid_count) + ' câu hợp lệ để tự chấm.</b></p><p>Phòng chỉ lấy câu trong danh sách thầy đã tick.</p><input id="raceLesson" type="hidden" name="path" value="' + html.escape(picked_path, quote=True) + '"><input id="raceSelection" type="hidden" name="selection" value="' + selection + '"><p><a href="' + html.escape(base.dang_view_url(picked_path), quote=True) + '">← Chọn lại câu trong bài</a> · <a href="/member/race">Dùng toàn bộ bài khác</a></p>'
+            picked_html = '<p><b>Đã chọn ' + str(len(picked_qs)) + ' câu · ' + str(valid_count) + ' câu dùng được.</b></p><p>Trong đó ' + str(manual_count) + ' câu tự luận/thiếu đáp án sẽ do ADMIN chấm sau khi học sinh nộp. Phòng chỉ lấy câu trong danh sách thầy đã tick.</p><input id="raceLesson" type="hidden" name="path" value="' + html.escape(picked_path, quote=True) + '"><input id="raceSelection" type="hidden" name="selection" value="' + selection + '"><p><a href="' + html.escape(base.dang_view_url(picked_path), quote=True) + '">← Chọn lại câu trong bài</a> · <a href="/member/race">Dùng toàn bộ bài khác</a></p>'
             creation = creation[:start] + picked_html + creation[end:]
             creation = creation.replace('value="5" required', 'value="' + str(min(5, valid_count)) + '" required')
             creation = creation.replace('Chọn bài rồi bấm tạo phòng.', 'Các câu đã tick được chuyển sẵn vào phòng.')
@@ -274,7 +292,7 @@ def race_page(code):
             return base.page('Không tìm thấy phòng', '<div class="wrap"><h2>Mã phòng chưa tồn tại hoặc đã hết hiệu lực</h2><p>ADMIN cần tạo phòng trước, sau đó gửi mã hoặc QR mới cho học sinh.</p><a class="btn primary" href="/member/race">← Tạo phòng / Nhập mã khác</a></div>'), 404
         host = is_host(r, user)
     cfg = json.dumps({'code': code, 'csrf': csrf(), 'host': host, 'name': m.get('name') or ''}, ensure_ascii=True).replace('<', '\\u003c')
-    body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js"></script>'
+    body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div><div id="raceGrading"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp và chấm đủ. Câu thiếu đáp án/tự luận chờ ADMIN chấm. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js"></script>'
     if host:
         join_url = base.public_origin() + '/member/race/' + code
         qr = '<section id="raceQR" class="race-qr"><img src="/race/' + code + '/qr.svg" alt="Mã QR tham gia phòng ' + code + '" width="260" height="260"><div><h2>📱 Quét QR để tham gia</h2><p>MÃ PHÒNG</p><strong style="font:800 38px monospace;letter-spacing:4px">' + code + '</strong><p>Học sinh quét QR → nhập họ tên → chờ bắt đầu. Quét và tham gia trước khi ADMIN bấm bắt đầu.</p><input readonly aria-label="Link tham gia" value="' + html.escape(join_url, quote=True) + '" style="width:100%;padding:10px"></div></section><style>.race-qr{display:flex;gap:24px;align-items:center;border:2px solid #2563eb;border-radius:14px;background:white;padding:20px;margin:16px 0}.race-qr[hidden]{display:none}.race-qr img{max-width:42%;height:auto}.race-qr>div{flex:1;min-width:0}@media(max-width:600px){.race-qr{display:block;text-align:center}.race-qr img{max-width:100%;width:220px}}</style>'
@@ -286,7 +304,7 @@ def race_page(code):
 
 _SETUP_JS = '''<script>(function(){
 const lesson=document.getElementById('raceLesson'),count=document.getElementById('raceCount'),info=document.getElementById('racePoolInfo'),create=document.getElementById('raceCreate');let version=0;
-async function preview(){const mine=++version;create.disabled=true;if(!lesson.value){info.textContent='Chọn bài học để tạo phòng.';return}info.textContent='Đang kiểm tra ngân hàng câu hỏi…';try{const r=await fetch('/api/race-preview?'+new URLSearchParams({path:lesson.value,count:count.value,selection:(document.getElementById('raceSelection')||{}).value||''}),{cache:'no-store'}),d=await r.json();if(mine!==version)return;if(!r.ok||!d.ok)throw Error(d.error||'Không kiểm tra được bài');info.textContent='Có '+d.available+' câu hợp lệ · '+d.count+' câu/đề · Tối đa '+d.capacity+' học sinh với các đề không trùng câu.';create.disabled=d.capacity<1}catch(e){if(mine===version)info.textContent=e.message}}
+async function preview(){const mine=++version;create.disabled=true;if(!lesson.value){info.textContent='Chọn bài học để tạo phòng.';return}info.textContent='Đang kiểm tra ngân hàng câu hỏi…';try{const r=await fetch('/api/race-preview?'+new URLSearchParams({path:lesson.value,count:count.value,selection:(document.getElementById('raceSelection')||{}).value||''}),{cache:'no-store'}),d=await r.json();if(mine!==version)return;if(!r.ok||!d.ok)throw Error(d.error||'Không kiểm tra được bài');info.textContent='Có '+d.available+' câu dùng được ('+d.manual+' câu ADMIN chấm) · '+d.count+' câu/đề · Tối đa '+d.capacity+' học sinh với các đề không trùng câu.';create.disabled=d.capacity<1}catch(e){if(mine===version)info.textContent=e.message}}
 lesson.addEventListener('change',preview);count.addEventListener('change',preview);preview();})();</script>'''
 
 
@@ -300,7 +318,7 @@ def race_preview():
             raise ValueError('Số câu phải từ 1 đến 60.')
         qs = source_questions(request.args.get('path', ''), request.args.get('selection', ''))
         pool, blueprint, capacity = build_pool(qs, n)
-        return jsonify(ok=True, available=len(pool), count=n, capacity=capacity)
+        return jsonify(ok=True, available=len(pool), count=n, capacity=capacity, manual=sum(not auto_graded(q) for q in pool))
     except (ValueError, OSError) as exc:
         return jsonify(ok=False, error=str(exc)), 400
 
@@ -364,13 +382,26 @@ def race_api(code):
                     return jsonify(ok=False, error=str(exc)), 409
                 c.execute('INSERT INTO race_players(room,user,name,questions) VALUES (?,?,?,?)', (code, user, name, json.dumps(qs, ensure_ascii=False)))
                 player = c.execute('SELECT * FROM race_players WHERE room=? AND user=?', (code, user)).fetchone()
+        elif action == 'grade':
+            if not host:
+                abort(403)
+            target, pos, decision = data.get('player'), data.get('pos'), data.get('correct')
+            p = c.execute('SELECT * FROM race_players WHERE room=? AND user=?', (code, target)).fetchone() if isinstance(target, str) else None
+            if not p or p['finished'] is None or type(pos) is not int or type(decision) is not bool:
+                return jsonify(ok=False, error='Chỉ chấm bài đã nộp; hãy chọn câu và Đúng/Sai.'), 400
+            qs = json.loads(p['questions'])
+            if not 0 <= pos < len(qs) or auto_graded(qs[pos]):
+                return jsonify(ok=False, error='Câu này đã được chấm tự động.'), 400
+            c.execute('INSERT OR REPLACE INTO race_marks(room,user,pos,ok) VALUES (?,?,?,?)', (code, target, pos, int(decision)))
+            score, _, _ = graded_result(c, code, p)
+            c.execute('UPDATE race_players SET correct=? WHERE room=? AND user=?', (score, code, target))
         elif action in ('save', 'submit'):
             if not player or r['state'] != 'running':
                 return jsonify(ok=False, error='Chưa bắt đầu hoặc phòng đã kết thúc.'), 409
             if player['finished'] is None and now < r['started'] + r['duration']:
                 answers = data.get('answers')
                 n = len(json.loads(player['questions']))
-                if not isinstance(answers, dict) or len(json.dumps(answers)) > 16000 or any(k not in {str(i) for i in range(n)} for k in answers):
+                if not isinstance(answers, dict) or len(json.dumps(answers)) > 200000 or any(k not in {str(i) for i in range(n)} for k in answers) or any(isinstance(v, str) and len(v)>5000 for v in answers.values()):
                     abort(400)
                 c.execute('UPDATE race_players SET answers=? WHERE room=? AND user=?', (json.dumps(answers), code, user))
                 player = c.execute('SELECT * FROM race_players WHERE room=? AND user=?', (code, user)).fetchone()
@@ -389,20 +420,35 @@ def race_api(code):
         pool = json.loads(r['pool'])
         counts = Counter(bucket(q) for q in pool)
         capacity = min(counts[k] // n for k, n in blueprint.items())
-        ranking = [{'name': p['name'], 'me': p['user'] == user, 'done': p['finished'] is not None, 'correct': p['correct'], 'elapsed': p['elapsed'], 'answered': len(json.loads(p['answers']))} for p in players]
+        ranking = []
+        for p in players:
+            score, pending, _ = graded_result(c, code, p)
+            submitted = p['finished'] is not None
+            ranking.append({'name': p['name'], 'me': p['user'] == user, 'done': submitted and pending == 0, 'submitted': submitted, 'pending': pending if submitted else 0, 'correct': score if submitted else None, 'elapsed': p['elapsed'], 'answered': len(json.loads(p['answers']))})
+        ranking.sort(key=lambda p: (not p['done'], -(p['correct'] or 0), p['elapsed'] if p['elapsed'] is not None else float('inf'), p['name']))
         result = {'ok': True, 'host': host, 'state': r['state'], 'now': now, 'started': r['started'], 'duration': r['duration'], 'ranking': ranking, 'capacity': capacity, 'total': sum(blueprint.values()), 'joined': player is not None, 'shown': r['shown']}
         player = c.execute('SELECT * FROM race_players WHERE room=? AND user=?', (code, user)).fetchone()
         if player and r['state'] != 'waiting':
             qs = json.loads(player['questions'])
             result.update(questions=[public_question(q) for q in qs], answers=json.loads(player['answers']), finished=player['finished'] is not None)
             if r['state'] == 'closed':
-                result['review'] = [{'correct': correct(q, result['answers'].get(str(i))), 'solution': base.html_question(q.get('solution', ''), q.get('src'))} for i, q in enumerate(qs)]
+                _, _, decisions = graded_result(c, code, player)
+                result['review'] = [{'correct': decisions[i], 'solution': base.html_question(q.get('solution', ''), q.get('src'))} for i, q in enumerate(qs)]
         if host:
             # Project a separate, fixed reference exam. Never expose anyone else's private paper.
             reference = []
             for key, n in blueprint.items():
                 reference.extend([q for q in pool if bucket(q) == key][:n])
             result['reference'] = [public_question(q) for q in reference]
+            result['grading'] = []
+            for p in players:
+                if p['finished'] is None:
+                    continue
+                answers = json.loads(p['answers'])
+                _, _, decisions = graded_result(c, code, p)
+                for i, q in enumerate(json.loads(p['questions'])):
+                    if not auto_graded(q):
+                        result['grading'].append({'player':p['user'], 'name':p['name'], 'pos':i, 'text':base.html_question(q.get('text',''),q.get('src')), 'answer':str(answers.get(str(i)) or ''), 'solution':base.html_question(q.get('solution',''),q.get('src')), 'correct':decisions[i]})
         return jsonify(result)
 
 

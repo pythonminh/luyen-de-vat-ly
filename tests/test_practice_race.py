@@ -223,5 +223,41 @@ class RaceTests(unittest.TestCase):
         self.user = None
         self.assertEqual(self.client.post('/member/race/from-selected', data={'race_pick_csrf':'test-token','path':'lesson.tex','qid':['0']}).status_code, 403)
 
+    def test_blank_answer_and_essay_room_can_run_then_admin_grades(self):
+        manual = [{'idx':0,'kind':'TLN','text':'Tính BC.','answer':'','solution':'BC = √67.'},
+                  {'idx':1,'kind':'TL','text':'Giải tam giác ABC.','solution':'Lời giải mẫu.'}]
+        with patch.object(app, 'parse_lesson_questions', return_value=manual):
+            r = self.client.post('/member/race/from-selected', data={'race_pick_csrf':'test-token','path':'lesson.tex','qid':['0','1']})
+            self.assertEqual(r.status_code, 302)
+            token = r.location.split('selection=')[1]
+            page = self.client.get(r.location).get_data(as_text=True)
+            self.assertIn('2 câu tự luận/thiếu đáp án', page)
+            r = self.client.post('/member/race', data={'csrf':'test-token','path':'lesson.tex','selection':token,'count':'1','minutes':'1'})
+            self.code = r.location.rsplit('/',1)[-1]
+        self.user_as('alice'); self.assertEqual(self.post('join').status_code,200)
+        self.start(); self.user_as('alice')
+        self.assertTrue(self.get()['questions'][0]['manual'])
+        d = self.post('submit', answers={'0':'Bài làm tự luận của em.'}).get_json()
+        self.assertFalse(d['ranking'][0]['done'])
+        self.assertEqual(d['ranking'][0]['pending'],1)
+        self.assertNotIn('grading',d)
+        self.assertEqual(self.post('grade',player='alice',pos=0,correct=True).status_code,403)
+        self.user_as('teacher')
+        d = self.get();self.assertEqual(len(d['grading']),1)
+        self.assertEqual(d['grading'][0]['answer'],'Bài làm tự luận của em.')
+        elapsed = d['ranking'][0]['elapsed']
+        d = self.post('grade',player='alice',pos=0,correct=True).get_json()
+        self.assertEqual(d['ranking'][0]['correct'],1)
+        self.assertTrue(d['ranking'][0]['done'])
+        self.assertEqual(d['ranking'][0]['elapsed'],elapsed)
+        d = self.post('grade',player='alice',pos=0,correct=False).get_json()
+        self.assertEqual(d['ranking'][0]['correct'],0)
+
+    def test_blank_answer_is_not_guessed_from_solution(self):
+        q={'kind':'TLN','text':'Tính cạnh','answer':'','solution':'BC=√67'}
+        self.assertTrue(race.eligible(q))
+        self.assertFalse(race.auto_graded(q))
+        self.assertFalse(race.correct(q,'√67'))
+
 
 if __name__ == '__main__': unittest.main()

@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const cfg = window.RACE_CONFIG, $ = id => document.getElementById(id);
-  let state, questions = [], answers = {}, pos = 0, loaded = false, rendered = '', queue = Promise.resolve(), serverOffset = 0, submitting = false, saveTimer, controlsKey = '', joinName = cfg.name || '';
+  let state, questions = [], answers = {}, pos = 0, loaded = false, rendered = '', queue = Promise.resolve(), serverOffset = 0, submitting = false, saveTimer, controlsKey = '', gradingKey = '', joinName = cfg.name || '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clock = seconds => { seconds = Math.max(0, Math.floor(seconds)); return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0'); };
   const note = text => { $('raceNotice').textContent = text; };
@@ -53,11 +53,11 @@
     let rank = 0;
     $('raceRanks').innerHTML = '<table><thead><tr><th>Hạng</th><th>Người chơi</th><th>Đúng</th><th>Thời gian</th></tr></thead><tbody>' + state.ranking.map(p => {
       const place = p.done ? ++rank : '—';
-      return '<tr class="' + (p.me ? 'me' : '') + '"><td class="medal">' + (place === 1 ? '🥇 ' : place === 2 ? '🥈 ' : place === 3 ? '🥉 ' : '') + place + '</td><td>' + esc(p.name) + (p.me ? ' (bạn)' : '') + '</td><td>' + (p.done ? p.correct + '/' + state.total : p.answered + '/' + state.total + ' đã làm') + '</td><td>' + (p.done ? clock(p.elapsed) + '.' + String(Math.floor((p.elapsed % 1) * 100)).padStart(2, '0') : 'Đang chờ/làm') + '</td></tr>';
+      return '<tr class="' + (p.me ? 'me' : '') + '"><td class="medal">' + (place === 1 ? '🥇 ' : place === 2 ? '🥈 ' : place === 3 ? '🥉 ' : '') + place + '</td><td>' + esc(p.name) + (p.me ? ' (bạn)' : '') + '</td><td>' + (p.pending ? 'Chờ ADMIN chấm ' + p.pending + ' câu' : p.done ? p.correct + '/' + state.total : p.answered + '/' + state.total + ' đã làm') + '</td><td>' + ((p.submitted || p.done) ? clock(p.elapsed) + '.' + String(Math.floor((p.elapsed % 1) * 100)).padStart(2, '0') : 'Đang chờ/làm') + '</td></tr>';
     }).join('') + '</tbody></table>';
   }
   function drawQuestion(force = false) {
-    const key = [state.state, pos, !!state.finished, questions.length, cfg.host].join(':');
+    const key = [state.state, pos, !!state.finished, questions.length, cfg.host, JSON.stringify(state.review?.map(x=>x.correct))].join(':');
     if (!force && key === rendered) return;
     rendered = key;
     const panel = $('raceQuestion'), nav = $('raceNav'), actions = $('raceActions');
@@ -87,11 +87,11 @@
         label.append(span, select); panel.append(label);
       });
     } else {
-      const input = document.createElement('input'); input.type = 'text'; input.maxLength = 100; input.placeholder = 'Nhập đáp án'; input.value = answers[pos] ?? ''; input.disabled = !editable;
+      const input = document.createElement(q.manual ? 'textarea' : 'input'); if (!q.manual) input.type = 'text'; input.maxLength = q.manual ? 5000 : 100; input.rows = 5; input.style = 'width:100%;padding:12px;box-sizing:border-box'; input.placeholder = q.manual ? 'Nhập bài làm hoặc kết quả. ADMIN sẽ chấm câu này.' : 'Nhập đáp án'; input.value = answers[pos] ?? ''; input.disabled = !editable;
       input.setAttribute('aria-label', 'Đáp án câu ' + (pos + 1)); input.onchange = () => changed(input.value); input.oninput = () => { answers[pos] = input.value; clearTimeout(saveTimer); saveTimer = setTimeout(saveAnswers, 400); }; input.id = 'raceTextAnswer'; panel.append(input);
     }
     if (state.state === 'closed' && state.review?.[pos]) {
-      const review = document.createElement('div'); review.innerHTML = '<h3>' + (state.review[pos].correct ? '✅ Đúng' : 'Chưa đúng') + '</h3>' + state.review[pos].solution; panel.append(review);
+      const review = document.createElement('div'); review.innerHTML = '<h3>' + (state.review[pos].correct === null ? '⏳ Chờ ADMIN chấm' : state.review[pos].correct ? '✅ Đúng' : 'Chưa đúng') + '</h3>' + state.review[pos].solution; panel.append(review);
     }
     if (pos > 0) button('← Câu trước', async () => { pos--; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
     if (pos + 1 < questions.length) button('Câu tiếp →', async () => { pos++; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
@@ -106,6 +106,27 @@
     answers[pos] = value;
     saveAnswers();
     // Keep focus on the current input; refresh only navigation status next time.
+  }
+  function drawGrading() {
+    const el = $('raceGrading'); if (!cfg.host || !el) return;
+    const rows = state.grading || [], key = JSON.stringify(rows);
+    if (key === gradingKey) return;
+    gradingKey = key;
+    const wasOpen = el.firstElementChild?.open || false;
+    el.replaceChildren();
+    if (!rows.length) return;
+    const fold = document.createElement('details'), summary = document.createElement('summary');
+    fold.open = wasOpen; summary.textContent = '✍ ADMIN chấm bài · ' + rows.filter(r=>r.correct===null).length + ' câu chờ chấm'; fold.append(summary);
+    rows.forEach(r => {
+      const card = document.createElement('section'); card.style = 'border:1px solid #cbd5e1;padding:12px;margin:10px 0;border-radius:8px';
+      const text = document.createElement('div'); text.innerHTML = '<h3>' + esc(r.name) + ' · Câu ' + (r.pos+1) + '</h3>' + r.text + '<h4>Bài làm học sinh</h4><pre style="white-space:pre-wrap">' + esc(r.answer || '(Chưa trả lời)') + '</pre><details><summary>Lời giải tham khảo</summary>' + r.solution + '</details><p>' + (r.correct===null ? 'Chưa chấm' : r.correct ? 'Đã chấm: Đúng' : 'Đã chấm: Sai') + '</p>';
+      card.append(text);
+      button('✅ Đúng', async()=>update(await enqueue({action:'grade', player:r.player, pos:r.pos, correct:true})), card);
+      button('✕ Sai', async()=>update(await enqueue({action:'grade', player:r.player, pos:r.pos, correct:false})), card);
+      fold.append(card);
+    });
+    el.append(fold);
+    if (window.ldvlTypeset) window.ldvlTypeset(el);
   }
   function saveAnswers() {
     if (submitting || state?.finished || state?.state !== 'running') return Promise.resolve();
@@ -123,7 +144,7 @@
     const qr = $('raceQR'); if (qr) qr.hidden = d.state !== 'waiting';
     if (cfg.host) { questions = d.reference || []; pos = d.shown; }
     else if (d.questions) { questions = d.questions; if (!loaded || d.finished || d.state === 'closed') { answers = d.answers || {}; loaded = true; } }
-    controls(); drawRanks(); drawQuestion(); tick();
+    controls(); drawRanks(); drawQuestion(); drawGrading(); tick();
   }
   function tick() {
     if (!state) return;
