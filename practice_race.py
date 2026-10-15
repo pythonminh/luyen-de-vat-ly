@@ -45,9 +45,11 @@ def db():
 
 def who():
     m = base.member_current()
-    if not m:
-        abort(401)
-    return m, str(m.get('username') or '').strip().casefold()
+    if m:
+        return m, str(m.get('username') or '').strip().casefold()
+    if not session.get('race_guest'):
+        session['race_guest'] = secrets.token_urlsafe(24)
+    return {}, 'guest:' + session['race_guest']
 
 
 def csrf():
@@ -161,10 +163,9 @@ def public_question(q):
     return out
 
 
-@base.app.route('/member/race', methods=['GET', 'POST'])
+@base.app.route('/race', methods=['GET', 'POST'], strict_slashes=False)
+@base.app.route('/member/race', methods=['GET', 'POST'], strict_slashes=False)
 def race_home():
-    if not base.member_current():
-        return redirect(base.login_url('/member/race'))
     m, user = who()
     token = csrf()
     error = ''
@@ -201,21 +202,17 @@ def race_home():
         else:
             recent = c.execute('SELECT r.code,r.title,r.state FROM race_rooms r JOIN race_players p ON p.room=r.code WHERE p.user=? ORDER BY r.created DESC LIMIT 20', (user,)).fetchall()
     links = ''.join('<li><a href="/member/race/' + r['code'] + '">' + html.escape(r['title']) + ' · ' + r['code'] + '</a></li>' for r in recent)
-    body = '<div class="wrap race"><h1>🏁 Thi đua luyện đề</h1>' + error + '<form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Mã phòng <input name="code" maxlength="8" required placeholder="Nhập mã ADMIN cung cấp"></label><button class="btn primary">Vào phòng</button></form>' + creation + '<h2>Phòng của tôi</h2><ul>' + links + '</ul><a class="btn" href="/member">← Mục lục</a></div><style>.race{max-width:1000px}.race label{display:block;margin:12px 0}.race input,.race select{max-width:100%;padding:9px}.race select{width:100%}</style>'
+    body = '<div class="wrap race"><h1>🏁 Thi đua luyện đề</h1><p>Học sinh chỉ cần mã phòng và họ tên, không cần đăng nhập tài khoản.</p>' + error + '<form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Mã phòng <input name="code" maxlength="8" required placeholder="Nhập mã ADMIN cung cấp"></label><button class="btn primary">Vào phòng</button></form>' + creation + '<h2>Phòng của tôi</h2><ul>' + links + '</ul><a class="btn" href="/member">← Mục lục</a></div><style>.race{max-width:1000px}.race label{display:block;margin:12px 0}.race input,.race select{max-width:100%;padding:9px}.race select{width:100%}</style>'
     return base.page('Thi đua luyện đề', body)
 
 
-@base.app.get('/member/race/<code>')
+@base.app.get('/member/race/<code>', strict_slashes=False)
 def race_page(code):
-    if not base.member_current():
-        return redirect(base.login_url(request.path))
     m, user = who()
     with db() as c:
         r = room(c, code)
         host = is_host(r, user)
-        if not host and not base.can_practice(m, r['path']):
-            abort(403)
-    cfg = json.dumps({'code': code, 'csrf': csrf(), 'host': host}, ensure_ascii=True)
+    cfg = json.dumps({'code': code, 'csrf': csrf(), 'host': host, 'name': m.get('name') or ''}, ensure_ascii=True).replace('<', '\\u003c')
     body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js"></script>'
     response = base.page('Thi đua luyện đề', body)
     response.headers['Cache-Control'] = 'no-store'
@@ -233,8 +230,6 @@ def race_api(code):
         now = time.time()
         r = room(c, code)
         host = is_host(r, user)
-        if not host and not base.can_practice(m, r['path']):
-            abort(403)
         player = c.execute('SELECT * FROM race_players WHERE room=? AND user=?', (code, user)).fetchone()
         action = data.get('action') if request.method == 'POST' else None
         if action in ('start', 'close', 'show'):
@@ -256,16 +251,23 @@ def race_api(code):
             r = room(c, code)
         elif action == 'join':
             if host:
-                return jsonify(ok=False, error='ADMIN dùng màn hình điều khiển; thành viên đăng nhập tài khoản riêng.'), 400
+                return jsonify(ok=False, error='ADMIN dùng màn hình điều khiển; học sinh mở link trên thiết bị khác và ghi tên.'), 400
             if not player:
                 if r['state'] != 'waiting':
                     return jsonify(ok=False, error='Phòng đã bắt đầu hoặc đã đóng.'), 409
+                name = ' '.join(str(data.get('name') or m.get('name') or '').split())
+                if not 2 <= len(name) <= 80 or not name.isprintable():
+                    return jsonify(ok=False, error='Nhập tên học sinh từ 2 đến 80 ký tự.'), 400
+                original_name, suffix = name, 2
+                while c.execute('SELECT 1 FROM race_players WHERE room=? AND name=?', (code, name)).fetchone():
+                    name = original_name + ' (' + str(suffix) + ')'
+                    suffix += 1
                 existing = [json.loads(p[0]) for p in c.execute('SELECT questions FROM race_players WHERE room=?', (code,))]
                 try:
                     qs = allocate(json.loads(r['pool']), json.loads(r['blueprint']), existing)
                 except ValueError as exc:
                     return jsonify(ok=False, error=str(exc)), 409
-                c.execute('INSERT INTO race_players(room,user,name,questions) VALUES (?,?,?,?)', (code, user, str(m.get('name') or m.get('username'))[:100], json.dumps(qs, ensure_ascii=False)))
+                c.execute('INSERT INTO race_players(room,user,name,questions) VALUES (?,?,?,?)', (code, user, name, json.dumps(qs, ensure_ascii=False)))
                 player = c.execute('SELECT * FROM race_players WHERE room=? AND user=?', (code, user)).fetchone()
         elif action in ('save', 'submit'):
             if not player or r['state'] != 'running':
@@ -311,6 +313,6 @@ def race_api(code):
 
 @base.app.after_request
 def race_no_cache(response):
-    if request.path.startswith('/api/race/') or request.path.startswith('/member/race'):
+    if request.path.startswith('/api/race/') or request.path.startswith('/member/race') or request.path.rstrip('/') == '/race':
         response.headers['Cache-Control'] = 'no-store, private'
     return response

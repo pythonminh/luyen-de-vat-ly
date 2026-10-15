@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const cfg = window.RACE_CONFIG, $ = id => document.getElementById(id);
-  let state, questions = [], answers = {}, pos = 0, loaded = false, rendered = '', queue = Promise.resolve(), serverOffset = 0, submitting = false, saveTimer;
+  let state, questions = [], answers = {}, pos = 0, loaded = false, rendered = '', queue = Promise.resolve(), serverOffset = 0, submitting = false, saveTimer, controlsKey = '', joinName = cfg.name || '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clock = seconds => { seconds = Math.max(0, Math.floor(seconds)); return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0'); };
   const note = text => { $('raceNotice').textContent = text; };
@@ -28,6 +28,9 @@
     parent.append(b); return b;
   }
   function controls() {
+    const key = [state.state, state.joined, cfg.host ? state.ranking.length : '', state.capacity].join(':');
+    if (key === controlsKey) return;
+    controlsKey = key;
     const el = $('raceControls'); el.replaceChildren();
     if (cfg.host) {
       const link = location.origin + '/member/race/' + cfg.code;
@@ -36,7 +39,14 @@
       if (state.state === 'waiting') button('▶ Bắt đầu đồng loạt', async () => update(await enqueue({action:'start'})), el);
       if (state.state !== 'closed') button('■ Kết thúc phòng', async () => { if (confirm('Kết thúc và chấm bài tất cả thành viên?')) update(await enqueue({action:'close'})); }, el);
     } else if (!state.joined && state.state === 'waiting') {
-      button('🏁 Tham gia · Nhận đề riêng', async () => update(await enqueue({action:'join'})), el);
+      const label = document.createElement('label'), input = document.createElement('input');
+      label.textContent = 'Tên học sinh: ';
+      input.type = 'text'; input.id = 'racePlayerName'; input.maxLength = 80; input.minLength = 2; input.autocomplete = 'name'; input.placeholder = 'Nhập họ tên để tham gia'; input.value = joinName;
+      input.oninput = () => { joinName = input.value; }; label.append(input); el.append(label);
+      button('🏁 Vào làm bài · Nhận đề riêng', async () => {
+        if (joinName.trim().length < 2) { input.focus(); throw Error('Em hãy nhập họ tên trước khi tham gia.'); }
+        update(await enqueue({action:'join', name:joinName.trim()}));
+      }, el);
     }
   }
   function drawRanks() {

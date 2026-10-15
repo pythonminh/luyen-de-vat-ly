@@ -24,7 +24,7 @@ class RaceTests(unittest.TestCase):
         self.path_patch.start()
         self.user = {'username': 'teacher', 'name': 'Thầy', 'account_type': 'ADMIN'}
         self.patches = [patch.object(app, 'member_current', side_effect=lambda: self.user),
-                        patch.object(app, 'can_manage_bank', side_effect=lambda: self.user['username'] == 'teacher'),
+                        patch.object(app, 'can_manage_bank', side_effect=lambda: bool(self.user and self.user['username'] == 'teacher')),
                         patch.object(app, 'can_practice', return_value=True),
                         patch.object(app, 'parse_lesson_questions', return_value=bank())]
         for p in self.patches: p.start()
@@ -127,6 +127,44 @@ class RaceTests(unittest.TestCase):
     def test_join_after_start_refused(self):
         self.user_as('alice'); self.post('join'); self.start(); self.user_as('late')
         self.assertEqual(self.post('join').status_code, 409)
+
+    def test_guest_enters_with_name_without_login_or_vip(self):
+        self.user = None
+        for url in ('/member/race', '/member/race/', '/race', '/race/', '/member/race/' + self.code, '/member/race/' + self.code + '/'):
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+        self.assertEqual(self.post('join').status_code, 400)
+        with patch.object(app, 'can_practice', return_value=False):
+            self.assertEqual(self.post('join', name='Nguyễn Văn An').status_code, 200)
+            self.assertEqual(self.post('start').status_code, 403)
+            self.assertEqual(self.post('close').status_code, 403)
+            self.start(); self.user = None
+            d = self.get(); self.assertEqual(len(d['questions']), 5)
+            self.assertTrue(d['joined'])
+            paper = d['questions']
+            self.assertEqual(self.post('save', answers={'0':0}).status_code, 200)
+            self.assertEqual(self.get()['answers'], {'0':0})
+            self.assertEqual(self.get()['questions'], paper)
+            self.assertEqual(self.post('submit', answers={'0':0}).status_code, 200)
+
+    def test_guests_with_same_name_are_separate_players(self):
+        self.user = None
+        self.client.get('/member/race/' + self.code)
+        self.assertEqual(self.post('join', name='An').status_code, 200)
+        other = app.app.test_client()
+        other.get('/member/race/' + self.code)
+        with other.session_transaction() as s: token = s['race_csrf']
+        r = other.post('/api/race/' + self.code, json={'action':'join','name':'An'}, headers={'X-Race-CSRF':token})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual({p['name'] for p in r.get_json()['ranking']}, {'An','An (2)'})
+        self.start(); self.user = None
+        mine = self.get()['questions']
+        theirs = other.get('/api/race/' + self.code).get_json()['questions']
+        self.assertTrue({q['text'] for q in mine}.isdisjoint(q['text'] for q in theirs))
+
+    def test_guest_cannot_create_room(self):
+        self.user = None
+        r = self.client.post('/member/race', data={'csrf':'test-token','path':'lesson.tex','count':'5','minutes':'1'})
+        self.assertEqual(r.status_code, 403)
 
 
 if __name__ == '__main__': unittest.main()
