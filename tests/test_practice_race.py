@@ -231,7 +231,7 @@ class RaceTests(unittest.TestCase):
             self.assertEqual(r.status_code, 302)
             token = r.location.split('selection=')[1]
             page = self.client.get(r.location).get_data(as_text=True)
-            self.assertIn('2 câu tự luận/thiếu đáp án', page)
+            self.assertIn('2 câu cần ADMIN chấm nếu dùng chế độ ngân hàng', page)
             r = self.client.post('/member/race', data={'csrf':'test-token','path':'lesson.tex','selection':token,'count':'1','minutes':'1'})
             self.code = r.location.rsplit('/',1)[-1]
         self.user_as('alice'); self.assertEqual(self.post('join').status_code,200)

@@ -36,6 +36,8 @@
       const link = location.origin + '/member/race/' + cfg.code;
       const code = document.createElement('strong'); code.textContent = 'Mã phòng: ' + cfg.code + ' · ' + state.ranking.length + '/' + state.capacity + ' người · ' + state.total + ' câu'; el.append(code);
       button('Sao chép link tham gia', async () => { try { await navigator.clipboard.writeText(link); note('Đã sao chép link.'); } catch (_) { window.prompt('Link tham gia', link); } }, el);
+      if (state.mode === 'numeric') button('🎲 Đổi số đề minh họa', async () => update(await enqueue({action:'variant'})), el);
+      if (state.state === 'closed') button('Tạo phòng mới · Đổi số', async () => { const d = await enqueue({action:'new_round'}); location.href = d.redirect; }, el);
       if (state.state === 'waiting') button('▶ Bắt đầu đồng loạt', async () => update(await enqueue({action:'start'})), el);
       if (state.state !== 'closed') button('■ Kết thúc phòng', async () => { if (confirm('Kết thúc và chấm bài tất cả thành viên?')) update(await enqueue({action:'close'})); }, el);
     } else if (!state.joined && state.state === 'waiting') {
@@ -87,7 +89,7 @@
         label.append(span, select); panel.append(label);
       });
     } else {
-      const input = document.createElement(q.manual ? 'textarea' : 'input'); if (!q.manual) input.type = 'text'; input.maxLength = q.manual ? 5000 : 100; input.rows = 5; input.style = 'width:100%;padding:12px;box-sizing:border-box'; input.placeholder = q.manual ? 'Nhập bài làm hoặc kết quả. ADMIN sẽ chấm câu này.' : 'Nhập đáp án'; input.value = answers[pos] ?? ''; input.disabled = !editable;
+      const input = document.createElement(q.manual ? 'textarea' : 'input'); if (!q.manual) input.type = 'text'; input.maxLength = q.manual ? 5000 : q.numeric ? 1500 : 100; input.rows = 5; input.style = 'width:100%;padding:12px;box-sizing:border-box'; input.placeholder = q.manual ? 'Nhập bài làm hoặc kết quả. ADMIN sẽ chấm câu này.' : 'Nhập đáp án'; input.value = answers[pos] ?? ''; input.disabled = !editable;
       input.setAttribute('aria-label', 'Đáp án câu ' + (pos + 1)); input.onchange = () => changed(input.value); input.oninput = () => { answers[pos] = input.value; clearTimeout(saveTimer); saveTimer = setTimeout(saveAnswers, 400); }; input.id = 'raceTextAnswer'; panel.append(input);
     }
     if (state.state === 'closed' && state.review?.[pos]) {
@@ -142,7 +144,7 @@
     if (!d.ok) throw Error(d.error || 'Không đọc được phòng.');
     state = d; serverOffset = d.now * 1000 - Date.now();
     const qr = $('raceQR'); if (qr) qr.hidden = d.state !== 'waiting';
-    if (cfg.host) { questions = d.reference || []; pos = d.shown; }
+    if (cfg.host) { if (JSON.stringify(questions) !== JSON.stringify(d.reference || [])) rendered = ''; questions = d.reference || []; pos = d.shown; }
     else if (d.questions) { questions = d.questions; if (!loaded || d.finished || d.state === 'closed') { answers = d.answers || {}; loaded = true; } }
     controls(); drawRanks(); drawQuestion(); drawGrading(); tick();
   }

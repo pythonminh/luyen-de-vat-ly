@@ -1,4 +1,5 @@
-"""Timed, server-graded practice rooms with disjoint, stratified question sets."""
+"""Timed, server-graded practice rooms with numeric or bank question sets."""
+import race_variants as variants
 import copy
 import hashlib
 import html
@@ -40,7 +41,8 @@ def db():
       PRIMARY KEY(room,user));
     CREATE TABLE IF NOT EXISTS race_marks (
       room TEXT NOT NULL, user TEXT NOT NULL, pos INTEGER NOT NULL, ok INTEGER NOT NULL,
-      PRIMARY KEY(room,user,pos));''')
+      PRIMARY KEY(room,user,pos));
+    CREATE TABLE IF NOT EXISTS race_meta(room TEXT PRIMARY KEY, config TEXT NOT NULL);''')
     try:
         with c:
             yield c
@@ -89,6 +91,8 @@ def fingerprint(q):
 
 
 def auto_graded(q):
+    if q.get('_race_answer_components') or '_race_saved_answer' in q:
+        return True
     kind = q.get('kind')
     if kind == 'TN':
         opts = q.get('options') or []
@@ -145,7 +149,39 @@ def allocate(pool, blueprint, existing):
     return selected
 
 
+def numeric_pool(qs, count):
+    pool = []
+    for i, q in enumerate(qs):
+        config = variants.spec(q)
+        if not config:
+            raise ValueError('Câu ' + str(i+1) + ' chưa có bộ đổi số. Hãy chọn các câu Cosin–Sin được hỗ trợ hoặc chọn chế độ lấy câu từ ngân hàng.')
+        item = copy.deepcopy(q)
+        item['_race_variant_spec'] = config
+        pool.append(item)
+    if not 1 <= count <= len(pool):
+        raise ValueError('Số câu mỗi đề phải không vượt số câu đã chọn.')
+    pool = RNG.sample(pool, count) if count < len(pool) else pool
+    return pool, dict(Counter(bucket(q) for q in pool)), 200
+
+
+def numeric_allocate(pool, existing):
+    if len(existing) >= 200:
+        raise ValueError('Phòng đã đủ 200 học sinh.')
+    used = {fingerprint(q) for paper in existing for q in paper}
+    paper = []
+    for seed in pool:
+        for _ in range(100):
+            q = variants.generate(seed)
+            if fingerprint(q) not in used:
+                used.add(fingerprint(q)); paper.append(q); break
+        else:
+            raise ValueError('Đã hết bộ số khác nhau cho câu này. Hãy tạo lượt mới.')
+    return paper
+
+
 def correct(q, answer):
+    if q.get("_race_answer_components") or ("_race_saved_answer" in q and q.get("kind") != "TN"):
+        return isinstance(answer, str) and variants.matches(q, answer)
     if not auto_graded(q):
         return False
     if q['kind'] == 'TN':
@@ -175,7 +211,7 @@ def finish(c, r, player, now):
 
 def public_question(q):
     src = q.get('src')
-    out = {'kind': q['kind'], 'text': base.html_question(q.get('text', ''), src), 'manual': not auto_graded(q)}
+    out = {'kind': q['kind'], 'text': base.html_question(q.get('text', ''), src), 'manual': not auto_graded(q), 'numeric': bool(q.get('_race_answer_components'))}
     for key in ('options', 'statements'):
         if q.get(key):
             out[key] = [base.html_question(o.get('text', ''), src) for o in q[key]]
@@ -245,11 +281,13 @@ def race_home():
                 if not 1 <= count <= 60 or not 60 <= duration <= 10800:
                     raise ValueError('Chọn 1–60 câu và thời gian 1–180 phút.')
                 qs = source_questions(path, selection)
-                pool, blueprint, capacity = build_pool(qs, count)
+                mode = request.form.get('mode', 'pool')
+                pool, blueprint, capacity = numeric_pool(qs, count) if mode == 'numeric' else build_pool(qs, count)
                 code = secrets.token_hex(4).upper()
                 with db() as c:
                     c.execute('INSERT INTO race_rooms(code,owner,title,path,pool,blueprint,duration,state,created) VALUES (?,?,?,?,?,?,?,?,?)',
                               (code, user, request.form.get('title', 'Thi đua luyện đề')[:100], path, json.dumps(pool, ensure_ascii=False), json.dumps(blueprint, ensure_ascii=False), duration, 'waiting', time.time()))
+                    c.execute('INSERT INTO race_meta VALUES (?,?)', (code, json.dumps({'mode':mode, 'reference':numeric_allocate(pool, []) if mode == 'numeric' else []}, ensure_ascii=False)))
                 return redirect('/member/race/' + code)
             except (ValueError, OSError) as exc:
                 error = '<p class="err">' + html.escape(str(exc)) + '</p>'
@@ -258,7 +296,7 @@ def race_home():
         selected = request.form.get('path') or request.args.get('path', '')
         lessons = [l for l in base.index_data().get('lessons', []) if l.get('path') and int(l.get('questions', l.get('count', 0)) or 0) > 0]
         options = '<option value="">— Chọn bài học để tạo phòng —</option>' + ''.join('<option value="' + html.escape(str(l['path']), quote=True) + '"' + (' selected' if l['path'] == selected else '') + '>' + html.escape(' · '.join(str(l.get(k) or '') for k in ('Mon','Lop','BaiHoc'))) + ' (' + str(l.get('questions', l.get('count', 0))) + ' câu)</option>' for l in lessons)
-        creation = '<section class="race-create"><h2>📺 ADMIN · Tạo phòng chiếu thi đua + QR</h2><p>Chọn bài rồi bấm tạo phòng. Hệ thống sẽ tự sinh mã phòng và mã QR cho học sinh quét.</p><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Tên phòng <input name="title" value="Thi đua luyện đề" maxlength="100" required></label><label>Bài học <select id="raceLesson" name="path" required>' + options + '</select></label><label>Số câu mỗi đề <input id="raceCount" name="count" type="number" min="1" max="60" value="5" required></label><label>Thời gian (phút) <input name="minutes" type="number" min="1" max="180" value="15" required></label><p id="racePoolInfo" role="status">Chọn bài để kiểm tra số câu và số học sinh có thể tham gia.</p><button id="raceCreate" class="btn primary" disabled>📺 Tạo phòng + Hiện mã QR</button></form><p>Mỗi học sinh nhận bộ câu riêng, không trùng câu với người khác, cùng cấu trúc dạng bài và mức độ. Câu tự luận hoặc thiếu đáp án vẫn làm được; ADMIN chấm xong mới xếp hạng chính thức.</p></section>' + _SETUP_JS
+        creation = '<section class="race-create"><h2>📺 ADMIN · Tạo phòng chiếu thi đua + QR</h2><p>Chọn bài rồi bấm tạo phòng. Hệ thống sẽ tự sinh mã phòng và mã QR cho học sinh quét.</p><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Tên phòng <input name="title" value="Thi đua luyện đề" maxlength="100" required></label><label>Bài học <select id="raceLesson" name="path" required>' + options + '</select></label><label>Chế độ <select id="raceMode" name="mode"><option value="numeric" selected>Đổi số riêng từng học sinh · chấm tự động</option><option value="pool">Lấy câu khác nhau từ ngân hàng</option></select></label><label>Số câu mỗi đề <input id="raceCount" name="count" type="number" min="1" max="60" value="5" required></label><label>Thời gian (phút) <input name="minutes" type="number" min="1" max="180" value="15" required></label><p id="racePoolInfo" role="status">Chọn bài để kiểm tra số câu và số học sinh có thể tham gia.</p><button id="raceCreate" class="btn primary" disabled>📺 Tạo phòng + Hiện mã QR</button></form><p>Chế độ đổi số: cùng dạng câu, mỗi học sinh nhận dữ kiện riêng và đáp án được tính lại. Chế độ ngân hàng: lấy các câu có sẵn khác nhau. Câu tự luận hoặc thiếu đáp án vẫn làm được; ADMIN chấm xong mới xếp hạng chính thức.</p></section>' + _SETUP_JS
         if selection:
             pick = session.get('race_pick') or {}
             if pick.get('token') != selection:
@@ -269,9 +307,9 @@ def race_home():
             manual_count = sum(eligible(q) and not auto_graded(q) for q in picked_qs)
             start = creation.index('<label>Bài học')
             end = creation.index('</select></label>', start) + len('</select></label>')
-            picked_html = '<p><b>Đã chọn ' + str(len(picked_qs)) + ' câu · ' + str(valid_count) + ' câu dùng được.</b></p><p>Trong đó ' + str(manual_count) + ' câu tự luận/thiếu đáp án sẽ do ADMIN chấm sau khi học sinh nộp. Phòng chỉ lấy câu trong danh sách thầy đã tick.</p><input id="raceLesson" type="hidden" name="path" value="' + html.escape(picked_path, quote=True) + '"><input id="raceSelection" type="hidden" name="selection" value="' + selection + '"><p><a href="' + html.escape(base.dang_view_url(picked_path), quote=True) + '">← Chọn lại câu trong bài</a> · <a href="/member/race">Dùng toàn bộ bài khác</a></p>'
+            picked_html = '<p><b>Đã chọn ' + str(len(picked_qs)) + ' câu · ' + str(valid_count) + ' câu dùng được.</b></p><p>Trong đó ' + str(manual_count) + ' câu cần ADMIN chấm nếu dùng chế độ ngân hàng. Chế độ đổi số tính lại đáp án và chấm tự động. Phòng chỉ lấy câu trong danh sách thầy đã tick.</p><input id="raceLesson" type="hidden" name="path" value="' + html.escape(picked_path, quote=True) + '"><input id="raceSelection" type="hidden" name="selection" value="' + selection + '"><p><a href="' + html.escape(base.dang_view_url(picked_path), quote=True) + '">← Chọn lại câu trong bài</a> · <a href="/member/race">Dùng toàn bộ bài khác</a></p>'
             creation = creation[:start] + picked_html + creation[end:]
-            creation = creation.replace('value="5" required', 'value="' + str(min(5, valid_count)) + '" required')
+            creation = creation.replace('value="5" required', 'value="' + str(min(60, valid_count) if all(variants.spec(q) for q in picked_qs) else min(5, valid_count)) + '" required')
             creation = creation.replace('Chọn bài rồi bấm tạo phòng.', 'Các câu đã tick được chuyển sẵn vào phòng.')
     with db() as c:
         if base.can_manage_bank():
@@ -304,8 +342,8 @@ def race_page(code):
 
 _SETUP_JS = '''<script>(function(){
 const lesson=document.getElementById('raceLesson'),count=document.getElementById('raceCount'),info=document.getElementById('racePoolInfo'),create=document.getElementById('raceCreate');let version=0;
-async function preview(){const mine=++version;create.disabled=true;if(!lesson.value){info.textContent='Chọn bài học để tạo phòng.';return}info.textContent='Đang kiểm tra ngân hàng câu hỏi…';try{const r=await fetch('/api/race-preview?'+new URLSearchParams({path:lesson.value,count:count.value,selection:(document.getElementById('raceSelection')||{}).value||''}),{cache:'no-store'}),d=await r.json();if(mine!==version)return;if(!r.ok||!d.ok)throw Error(d.error||'Không kiểm tra được bài');info.textContent='Có '+d.available+' câu dùng được ('+d.manual+' câu ADMIN chấm) · '+d.count+' câu/đề · Tối đa '+d.capacity+' học sinh với các đề không trùng câu.';create.disabled=d.capacity<1}catch(e){if(mine===version)info.textContent=e.message}}
-lesson.addEventListener('change',preview);count.addEventListener('change',preview);preview();})();</script>'''
+async function preview(){const mine=++version;create.disabled=true;if(!lesson.value){info.textContent='Chọn bài học để tạo phòng.';return}info.textContent='Đang kiểm tra ngân hàng câu hỏi…';try{const r=await fetch('/api/race-preview?'+new URLSearchParams({path:lesson.value,count:count.value,mode:document.getElementById('raceMode').value,selection:(document.getElementById('raceSelection')||{}).value||''}),{cache:'no-store'}),d=await r.json();if(mine!==version)return;if(!r.ok||!d.ok)throw Error(d.error||'Không kiểm tra được bài');info.textContent=d.mode==='numeric'?'Đổi số riêng · '+d.count+' câu/đề · chấm tự động · tối đa 200 học sinh.':'Có '+d.available+' câu dùng được ('+d.manual+' câu ADMIN chấm) · '+d.count+' câu/đề · Tối đa '+d.capacity+' học sinh với các đề không trùng câu.';create.disabled=d.capacity<1}catch(e){if(mine===version)info.textContent=e.message}}
+document.getElementById('raceMode').addEventListener('change',preview);lesson.addEventListener('change',preview);count.addEventListener('change',preview);preview();})();</script>'''
 
 
 @base.app.get('/api/race-preview')
@@ -317,8 +355,9 @@ def race_preview():
         if not 1 <= n <= 60:
             raise ValueError('Số câu phải từ 1 đến 60.')
         qs = source_questions(request.args.get('path', ''), request.args.get('selection', ''))
-        pool, blueprint, capacity = build_pool(qs, n)
-        return jsonify(ok=True, available=len(pool), count=n, capacity=capacity, manual=sum(not auto_graded(q) for q in pool))
+        mode = request.args.get('mode', 'pool')
+        pool, blueprint, capacity = numeric_pool(qs, n) if mode == 'numeric' else build_pool(qs, n)
+        return jsonify(ok=True, mode=mode, available=len(pool), count=n, capacity=capacity, manual=0 if mode == 'numeric' else sum(not auto_graded(q) for q in pool))
     except (ValueError, OSError) as exc:
         return jsonify(ok=False, error=str(exc)), 400
 
@@ -343,9 +382,28 @@ def race_api(code):
         now = time.time()
         r = room(c, code)
         host = is_host(r, user)
+        meta_row = c.execute('SELECT config FROM race_meta WHERE room=?', (code,)).fetchone()
+        meta = json.loads(meta_row[0]) if meta_row else {'mode':'pool'}
+        numeric = meta.get('mode') == 'numeric'
         player = c.execute('SELECT * FROM race_players WHERE room=? AND user=?', (code, user)).fetchone()
         action = data.get('action') if request.method == 'POST' else None
-        if action in ('start', 'close', 'show'):
+        if action == 'new_round':
+            if not host: abort(403)
+            if r['state'] != 'closed':
+                return jsonify(ok=False, error='Kết thúc lượt hiện tại trước khi tạo lượt mới.'), 409
+            newcode = secrets.token_hex(4).upper()
+            c.execute('INSERT INTO race_rooms(code,owner,title,path,pool,blueprint,duration,state,created) VALUES (?,?,?,?,?,?,?,?,?)',
+                      (newcode, user, r['title'], r['path'], r['pool'], r['blueprint'], r['duration'], 'waiting', now))
+            if numeric:
+                meta['reference'] = numeric_allocate(json.loads(r['pool']), [meta.get('reference', [])])
+            c.execute('INSERT INTO race_meta VALUES (?,?)', (newcode, json.dumps(meta, ensure_ascii=False)))
+            return jsonify(ok=True, redirect='/member/race/'+newcode)
+        elif action == 'variant':
+            if not host: abort(403)
+            if not numeric: return jsonify(ok=False, error='Phòng này dùng câu cố định. Hãy tạo phòng ở chế độ đổi số.'), 400
+            meta['reference'] = numeric_allocate(json.loads(r['pool']), [meta.get('reference', [])])
+            c.execute('INSERT OR REPLACE INTO race_meta VALUES (?,?)', (code, json.dumps(meta, ensure_ascii=False)))
+        elif action in ('start', 'close', 'show'):
             if not host:
                 abort(403)
             if action == 'start' and r['state'] == 'waiting':
@@ -377,7 +435,7 @@ def race_api(code):
                     suffix += 1
                 existing = [json.loads(p[0]) for p in c.execute('SELECT questions FROM race_players WHERE room=?', (code,))]
                 try:
-                    qs = allocate(json.loads(r['pool']), json.loads(r['blueprint']), existing)
+                    qs = numeric_allocate(json.loads(r['pool']), existing) if numeric else allocate(json.loads(r['pool']), json.loads(r['blueprint']), existing)
                 except ValueError as exc:
                     return jsonify(ok=False, error=str(exc)), 409
                 c.execute('INSERT INTO race_players(room,user,name,questions) VALUES (?,?,?,?)', (code, user, name, json.dumps(qs, ensure_ascii=False)))
@@ -419,14 +477,14 @@ def race_api(code):
         blueprint = json.loads(r['blueprint'])
         pool = json.loads(r['pool'])
         counts = Counter(bucket(q) for q in pool)
-        capacity = min(counts[k] // n for k, n in blueprint.items())
+        capacity = 200 if numeric else min(counts[k] // n for k, n in blueprint.items())
         ranking = []
         for p in players:
             score, pending, _ = graded_result(c, code, p)
             submitted = p['finished'] is not None
             ranking.append({'name': p['name'], 'me': p['user'] == user, 'done': submitted and pending == 0, 'submitted': submitted, 'pending': pending if submitted else 0, 'correct': score if submitted else None, 'elapsed': p['elapsed'], 'answered': len(json.loads(p['answers']))})
         ranking.sort(key=lambda p: (not p['done'], -(p['correct'] or 0), p['elapsed'] if p['elapsed'] is not None else float('inf'), p['name']))
-        result = {'ok': True, 'host': host, 'state': r['state'], 'now': now, 'started': r['started'], 'duration': r['duration'], 'ranking': ranking, 'capacity': capacity, 'total': sum(blueprint.values()), 'joined': player is not None, 'shown': r['shown']}
+        result = {'ok': True, 'mode':meta.get('mode','pool'), 'host': host, 'state': r['state'], 'now': now, 'started': r['started'], 'duration': r['duration'], 'ranking': ranking, 'capacity': capacity, 'total': sum(blueprint.values()), 'joined': player is not None, 'shown': r['shown']}
         player = c.execute('SELECT * FROM race_players WHERE room=? AND user=?', (code, user)).fetchone()
         if player and r['state'] != 'waiting':
             qs = json.loads(player['questions'])
@@ -439,7 +497,7 @@ def race_api(code):
             reference = []
             for key, n in blueprint.items():
                 reference.extend([q for q in pool if bucket(q) == key][:n])
-            result['reference'] = [public_question(q) for q in reference]
+            result['reference'] = [public_question(q) for q in (meta['reference'] if numeric else reference)]
             result['grading'] = []
             for p in players:
                 if p['finished'] is None:
