@@ -1,0 +1,487 @@
+<!--hp-title:dMOsbmggbmhp4buHdCBsxrDhu6NuZyDEkeG7gyB0aGF5IMSR4buVaSBuaGnhu4d0IMSR4buZ-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luyện Tập Vật Lí - Nhiệt Lượng Đun Sôi Nước</title>
+<style>
+  :root {
+    --navy-primary: #1a2a4a;
+    --navy-header: #0f1b2d;
+    --accent-blue: #2563eb;
+    --accent-hover: #1d4ed8;
+    --bg-light: #f4f6fa;
+    --card-bg: #ffffff;
+    --text-dark: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #cbd5e1;
+    --success: #16a34a;
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+  body { background-color: var(--bg-light); color: var(--text-dark); min-height: 100vh; display: flex; flex-direction: column; }
+  header {
+    background-color: var(--navy-header);
+    color: #ffffff;
+    padding: 16px 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .header-title { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px; }
+  .header-sub { font-size: 0.85rem; color: #93c5fd; margin-top: 4px; }
+  .container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 16px;
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+    gap: 20px;
+    flex: 1;
+    width: 100%;
+  }
+  @media (max-width: 860px) {
+    .container { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+  }
+  .card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--navy-primary);
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .formula-box {
+    background: #eff6ff;
+    border-left: 4px solid var(--accent-blue);
+    padding: 14px 16px;
+    border-radius: 4px;
+    margin-bottom: 18px;
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+  .param-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+    font-size: 0.95rem;
+  }
+  .param-table th, .param-table td {
+    border: 1px solid var(--border-color);
+    padding: 10px 12px;
+    text-align: left;
+  }
+  .param-table th { background: #f8fafc; color: var(--navy-primary); font-weight: 600; }
+  .diagram-container {
+    margin-top: 20px;
+    text-align: center;
+    background: #f8fafc;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  svg { max-width: 100%; height: auto; }
+  .problem-text {
+    font-size: 1.12rem;
+    line-height: 1.7;
+    margin-bottom: 20px;
+    font-weight: 500;
+    background: #fafafa;
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid #0284c7;
+  }
+  .btn-group { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+  button {
+    cursor: pointer;
+    border: none;
+    outline: none;
+    border-radius: 6px;
+    padding: 10px 18px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+  }
+  .btn-new { background: #0284c7; color: white; }
+  .btn-new:hover { background: #0369a1; }
+  .btn-check { background: var(--success); color: white; }
+  .btn-check:hover { background: #15803d; }
+  .btn-solution { background: #475569; color: white; }
+  .btn-solution:hover { background: #334155; }
+  .quiz-section { margin-bottom: 24px; }
+  .section-label { font-size: 0.95rem; font-weight: 700; color: #334155; margin-bottom: 10px; }
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 520px) {
+    .options-grid { grid-template-columns: 1fr; }
+  }
+  .option-btn {
+    text-align: left;
+    background: #ffffff;
+    border: 1.5px solid var(--border-color);
+    color: var(--text-dark);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  .option-btn:hover { border-color: var(--accent-blue); background: #f0f7ff; }
+  .option-btn.selected-correct {
+    background: #dcfce7 !important;
+    border-color: var(--success) !important;
+    color: #166534 !important;
+    font-weight: 700;
+  }
+  .option-btn.selected-incorrect {
+    background: #fee2e2 !important;
+    border-color: var(--danger) !important;
+    color: #991b1b !important;
+  }
+  .input-section {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .input-field {
+    padding: 10px 14px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    outline: none;
+    width: 160px;
+  }
+  .input-field:focus { border-color: var(--accent-blue); }
+  .unit-text { font-weight: 600; color: #475569; font-size: 1rem; }
+  .feedback {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: 10px;
+    min-height: 24px;
+  }
+  .feedback.success { color: var(--success); }
+  .feedback.error { color: var(--danger); }
+  .solution-box {
+    margin-top: 18px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 16px;
+    display: none;
+    line-height: 1.7;
+    font-size: 0.98rem;
+  }
+  .solution-box.show { display: block; animation: fadeIn 0.3s ease; }
+  .step { margin-bottom: 8px; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">Lớp Học Thầy Minh · Zalo 0946111107</div>
+  <div class="header-sub">lophocthayminh.onrender.com</div>
+</header>
+
+<div class="container">
+  <!-- CỘT TRÁI: BẢNG CÔNG THỨC & SƠ ĐỒ THÔNG SỐ -->
+  <div class="card">
+    <div class="card-title">
+      <span>Bảng Công Thức &amp; Thông Số</span>
+    </div>
+
+    <div class="formula-box">
+      <strong>Công thức nhiệt lượng đun sôi:</strong><br>
+      Q = m · c · Δt = m · c · (t₂ - t₁)
+    </div>
+
+    <table class="param-table">
+      <thead>
+        <tr>
+          <th>Đại lượng</th>
+          <th>Kí hiệu</th>
+          <th>Giá trị đang xét</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Khối lượng nước</td>
+          <td>m</td>
+          <td id="lbl-m">1 kg</td>
+        </tr>
+        <tr>
+          <td>Nhiệt dung riêng của nước</td>
+          <td>c</td>
+          <td id="lbl-c">4,2 kJ/kg.K</td>
+        </tr>
+        <tr>
+          <td>Nhiệt độ ban đầu</td>
+          <td>t₁</td>
+          <td id="lbl-t1">37 ℃</td>
+        </tr>
+        <tr>
+          <td>Nhiệt độ sôi (t₂)</td>
+          <td>t₂</td>
+          <td>100 ℃</td>
+        </tr>
+        <tr>
+          <td>Độ tăng nhiệt độ</td>
+          <td>Δt = t₂ - t₁</td>
+          <td id="lbl-dt">63 ℃ (hoặc 63 K)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 420 160" width="100%">
+        <!-- Nước ban đầu -->
+        <rect x="25" y="45" width="105" height="75" rx="6" fill="#bfdbfe" stroke="#3b82f6" stroke-width="2"/>
+        <text x="77" y="75" font-size="13" font-weight="bold" fill="#1e3a8a" text-anchor="middle">Nước lỏng</text>
+        <text x="77" y="98" font-size="14" font-weight="bold" fill="#1d4ed8" text-anchor="middle" id="svg-t1">t₁ = 37℃</text>
+
+        <!-- Mũi tên truyền nhiệt Q -->
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#ea580c"/>
+          </marker>
+        </defs>
+        <path d="M 145 82 L 255 82" stroke="#ea580c" stroke-width="3" marker-end="url(#arrow)"/>
+        <text x="200" y="70" font-size="13" font-weight="bold" fill="#ea580c" text-anchor="middle">Thu nhiệt lượng Q</text>
+        <text x="200" y="103" font-size="11" fill="#475569" text-anchor="middle">Q = m·c·(t₂ - t₁)</text>
+
+        <!-- Nước sôi -->
+        <rect x="270" y="45" width="105" height="75" rx="6" fill="#fed7aa" stroke="#f97316" stroke-width="2"/>
+        <text x="322" y="75" font-size="13" font-weight="bold" fill="#9a3412" text-anchor="middle">Nước sôi</text>
+        <text x="322" y="98" font-size="14" font-weight="bold" fill="#c2410c" text-anchor="middle">t₂ = 100℃</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- CỘT PHẢI: ĐỀ BÀI, ĐỔI ĐỀ & TƯƠNG TÁC LUYỆN TẬP -->
+  <div class="card">
+    <div class="card-title">
+      <span>Luyện Tập Giải Bài</span>
+      <button class="btn-new" onclick="generateNewProblem()">« Đổi đề bài mới »</button>
+    </div>
+
+    <div class="problem-text" id="problem-display">
+      Nhiệt lượng cần để đun sôi nước ở nhiệt độ 37⁰C, biết nhiệt dung riêng của nước xấp xỉ bằng 4,2 kJ/kg.K là bao nhiêu kJ? (Giả sử xét cho 1 kg nước)
+    </div>
+
+    <!-- TỰ LUẬN NHẬP SỐ -->
+    <div class="section-label">1. Tự luận: Nhập kết quả tính được</div>
+    <div class="input-section">
+      <input type="number" step="any" id="user-input" class="input-field" placeholder="Nhập số..." />
+      <span class="unit-text">kJ</span>
+      <button class="btn-check" onclick="checkInputAnswer()">Kiểm tra</button>
+    </div>
+    <div id="input-feedback" class="feedback"></div>
+
+    <!-- TRẮC NGHIỆM -->
+    <div class="quiz-section">
+      <div class="section-label">2. Trắc nghiệm: Bấm chọn một phương án</div>
+      <div class="options-grid" id="options-container">
+        <!-- Phương án ABCD sinh tự động -->
+      </div>
+      <div id="choice-feedback" class="feedback"></div>
+    </div>
+
+    <!-- NÚT XEM LỜI GIẢI CHI TIẾT -->
+    <div>
+      <button class="btn-solution" onclick="toggleSolution()">« Xem lời giải »</button>
+    </div>
+
+    <div class="solution-box" id="solution-box">
+      <!-- Cập nhật theo đúng dữ liệu hiện hành -->
+    </div>
+  </div>
+</div>
+
+<script>
+let currentData = {
+  m: 1,      // kg
+  t1: 37,    // độ C
+  t2: 100,   // độ C
+  c: 4.2,    // kJ/kg.K
+  ans: 264.6 // kJ
+};
+
+let currentOptions = [];
+
+function round1(val) {
+  return Math.round(val * 10) / 10;
+}
+
+function updateUI() {
+  const dt = currentData.t2 - currentData.t1;
+  const cStr = String(currentData.c).replace('.', ',');
+  
+  // Cập nhật bảng công thức và sơ đồ bên trái
+  document.getElementById('lbl-m').innerText = `${currentData.m} kg`;
+  document.getElementById('lbl-c').innerText = `${cStr} kJ/kg.K`;
+  document.getElementById('lbl-t1').innerText = `${currentData.t1} ℃`;
+  document.getElementById('lbl-dt').innerText = `${dt} ℃ (hoặc ${dt} K)`;
+  document.getElementById('svg-t1').textContent = `t₁ = ${currentData.t1}℃`;
+
+  // Cập nhật văn bản đề bài bên phải
+  document.getElementById('problem-display').innerText = 
+    `Nhiệt lượng cần để đun sôi nước ở nhiệt độ ${currentData.t1}⁰C, biết nhiệt dung riêng của nước xấp xỉ bằng ${cStr} kJ/kg.K là bao nhiêu kJ? (Giả sử xét cho ${currentData.m} kg nước)`;
+
+  // Reset feedback và ô nhập
+  document.getElementById('user-input').value = '';
+  document.getElementById('input-feedback').innerText = '';
+  document.getElementById('input-feedback').className = 'feedback';
+  document.getElementById('choice-feedback').innerText = '';
+  document.getElementById('choice-feedback').className = 'feedback';
+
+  // Cập nhật lời giải
+  const solBox = document.getElementById('solution-box');
+  solBox.className = 'solution-box';
+  solBox.innerHTML = `
+    <div class="step"><strong>Lời giải chi tiết:</strong></div>
+    <div class="step">- Nhiệt độ sôi của nước dưới áp suất tiêu chuẩn: t₂ = ${currentData.t2} °C.</div>
+    <div class="step">- Độ tăng nhiệt độ của nước: 
+      Δt = t₂ - t₁ = ${currentData.t2} - ${currentData.t1} = ${dt} °C (hoặc ${dt} K).
+    </div>
+    <div class="step">- Nhiệt lượng cần thiết để đun sôi khối lượng m = ${currentData.m} kg nước:
+      Q = m · c · Δt = ${currentData.m} × ${cStr} × (${currentData.t2} - ${currentData.t1}) = ${currentData.m} × ${cStr} × ${dt} = ${String(currentData.ans).replace('.', ',')} kJ.
+    </div>
+    <div class="step"><strong>Kết luận:</strong> Nhiệt lượng cần cung cấp là <strong>${String(currentData.ans).replace('.', ',')} kJ</strong>.</div>
+  `;
+
+  // Sinh các phương án trắc nghiệm theo số liệu mới
+  generateOptions();
+}
+
+function generateOptions() {
+  const correct = currentData.ans;
+  const dt = currentData.t2 - currentData.t1;
+  const c = currentData.c;
+  const m = currentData.m;
+
+  let d1 = round1(m * c * (100 + currentData.t1));
+  let d2 = round1(m * c * currentData.t1);
+  let d3 = round1(correct + 15.5);
+  if (d1 === correct) d1 = round1(correct + 25.2);
+  if (d2 === correct) d2 = round1(correct - 20.0);
+
+  let pool = [
+    { text: `${String(correct).replace('.', ',')} kJ`, isCorrect: true, val: correct },
+    { text: `${String(d1).replace('.', ',')} kJ`, isCorrect: false, val: d1 },
+    { text: `${String(d2).replace('.', ',')} kJ`, isCorrect: false, val: d2 },
+    { text: `${String(d3).replace('.', ',')} kJ`, isCorrect: false, val: d3 }
+  ];
+
+  pool.sort(() => Math.random() - 0.5);
+
+  const labels = ['A', 'B', 'C', 'D'];
+  currentOptions = pool.map((item, idx) => ({
+    ...item,
+    label: labels[idx]
+  }));
+
+  const container = document.getElementById('options-container');
+  container.innerHTML = '';
+  currentOptions.forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.id = `opt-btn-${idx}`;
+    btn.innerHTML = `<strong>${opt.label}.</strong> ${opt.text}`;
+    btn.onclick = () => selectOption(idx);
+    container.appendChild(btn);
+  });
+}
+
+function selectOption(index) {
+  const chosen = currentOptions[index];
+  const fb = document.getElementById('choice-feedback');
+  
+  currentOptions.forEach((_, i) => {
+    const b = document.getElementById(`opt-btn-${i}`);
+    b.classList.remove('selected-correct', 'selected-incorrect');
+  });
+
+  const selectedBtn = document.getElementById(`opt-btn-${index}`);
+  if (chosen.isCorrect) {
+    selectedBtn.classList.add('selected-correct');
+    fb.innerText = `Chính xác! Phương án ${chosen.label} là đáp án đúng.`;
+    fb.className = 'feedback success';
+  } else {
+    selectedBtn.classList.add('selected-incorrect');
+    fb.innerText = `Chưa đúng! Em hãy kiểm tra lại phép tính.`;
+    fb.className = 'feedback error';
+  }
+}
+
+function checkInputAnswer() {
+  const val = parseFloat(document.getElementById('user-input').value.replace(',', '.'));
+  const fb = document.getElementById('input-feedback');
+  if (isNaN(val)) {
+    fb.innerText = 'Vui lòng nhập một giá trị số!';
+    fb.className = 'feedback error';
+    return;
+  }
+  if (Math.abs(val - currentData.ans) < 0.15) {
+    fb.innerText = 'Chính xác! Em đã tính đúng đáp án.';
+    fb.className = 'feedback success';
+  } else {
+    fb.innerText = 'Chưa đúng, hãy thử kiểm tra lại các bước tính!';
+    fb.className = 'feedback error';
+  }
+}
+
+function toggleSolution() {
+  const box = document.getElementById('solution-box');
+  box.classList.toggle('show');
+}
+
+function generateNewProblem() {
+  const temperatures = [20, 25, 28, 30, 32, 35, 40, 45, 50];
+  const masses = [1, 2, 1.5, 2.5, 3];
+  
+  let newT1 = temperatures[Math.floor(Math.random() * temperatures.length)];
+  let newM = masses[Math.floor(Math.random() * masses.length)];
+  while (newT1 === currentData.t1 && newM === currentData.m) {
+    newT1 = temperatures[Math.floor(Math.random() * temperatures.length)];
+  }
+
+  const c = 4.2;
+  const t2 = 100;
+  const dt = t2 - newT1;
+  const ans = round1(newM * c * dt);
+
+  currentData = {
+    m: newM,
+    t1: newT1,
+    t2: t2,
+    c: c,
+    ans: ans
+  };
+
+  updateUI();
+}
+
+window.onload = function() {
+  updateUI();
+};
+</script>
+
+</body>
+</html>
