@@ -49,6 +49,10 @@ def spec(q):
     value = triangle_spec(q)
     if value:
         return value
+    from race_set_variants import spec as set_spec
+    value = set_spec(q)
+    if value:
+        return value
     try:
         from variable_templates import load_config
         config = load_config(q)
@@ -154,6 +158,9 @@ def generate(q, original=False):
     if not s:
         raise ValueError('Câu này chưa có hàm đổi số đã kiểm tra.')
     out=copy.deepcopy(q)
+    if s['engine']=='sets':
+        from race_set_variants import generate as generate_sets
+        return generate_sets(q, s, original)
     if s['engine']=='saved':
         from variable_templates import generate_custom
         ex=generate_custom(q,s['config'],original=original)
@@ -216,6 +223,9 @@ def parse_expression(text, degrees=True):
 
 
 def matches(q, answer):
+    if q.get('_race_set_answer'):
+        from race_set_variants import matches as set_matches
+        return set_matches(q, answer)
     if '_race_saved_answer' in q:
         from python_questions import same_answer
         try:return bool(same_answer(answer,q['_race_saved_answer']))

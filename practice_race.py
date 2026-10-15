@@ -91,7 +91,7 @@ def fingerprint(q):
 
 
 def auto_graded(q):
-    if q.get('_race_answer_components') or '_race_saved_answer' in q:
+    if q.get('_race_set_answer') or q.get('_race_answer_components') or '_race_saved_answer' in q:
         return True
     kind = q.get('kind')
     if kind == 'TN':
@@ -154,7 +154,7 @@ def numeric_pool(qs, count):
     for i, q in enumerate(qs):
         config = variants.spec(q)
         if not config:
-            raise ValueError('Câu ' + str(i+1) + ' chưa có bộ đổi số. Hãy chọn các câu Cosin–Sin được hỗ trợ hoặc chọn chế độ lấy câu từ ngân hàng.')
+            raise ValueError('Câu ' + str(i+1) + ' chưa có bộ đổi số. Hãy chọn các câu đã có bộ đổi số, hoặc chọn chế độ lấy câu từ ngân hàng. Hiện đã hỗ trợ bài Cosin–Sin và 7 câu Tham số về tập hợp và khoảng đã kiểm tra.')
         item = copy.deepcopy(q)
         item['_race_variant_spec'] = config
         pool.append(item)
@@ -180,7 +180,7 @@ def numeric_allocate(pool, existing):
 
 
 def correct(q, answer):
-    if q.get("_race_answer_components") or ("_race_saved_answer" in q and q.get("kind") != "TN"):
+    if q.get("_race_set_answer") or q.get("_race_answer_components") or ("_race_saved_answer" in q and q.get("kind") != "TN"):
         return isinstance(answer, str) and variants.matches(q, answer)
     if not auto_graded(q):
         return False
@@ -220,6 +220,8 @@ def response_label(q, answer):
 
 
 def expected_label(q):
+    if q.get('_race_answer_display'):
+        return q['_race_answer_display']
     if q.get('_race_answer_components'):
         return '$' + r';\quad '.join(variants.fmt(variants.parse_expression(v, False)) for v in q['_race_answer_components']) + '$'
     if q['kind'] == 'TN':
@@ -231,7 +233,7 @@ def expected_label(q):
 
 def public_question(q):
     src = q.get('src')
-    out = {'kind': q['kind'], 'text': base.html_question(q.get('text', ''), src), 'manual': not auto_graded(q), 'numeric': bool(q.get('_race_answer_components'))}
+    out = {'kind': q['kind'], 'text': base.html_question(q.get('text', ''), src), 'manual': not auto_graded(q), 'numeric': bool(q.get('_race_answer_components') or q.get('_race_set_answer'))}
     for key in ('options', 'statements'):
         if q.get(key):
             out[key] = [base.html_question(o.get('text', ''), src) for o in q[key]]

@@ -1,0 +1,37 @@
+[
+  {
+    "idx": 0,
+    "text": "Cho $2$ tập khác rỗng $A=(m-1 ; 4]$; $B=(-2 ; 2 m+2)$, $m \\in \\mathbb{R}$. Tìm $m$ nguyên dương để $A \\subset B$.",
+    "kind": "TL"
+  },
+  {
+    "idx": 1,
+    "text": "Cho $A=\\left[m-3 ; \\dfrac{m+2}{4}\\right)$, $B=(-\\infty ;-1) \\cup [2 ;+\\infty)$. Xác định $m$ để $(A \\cap B=\\varnothing)$.",
+    "kind": "TL"
+  },
+  {
+    "idx": 2,
+    "text": "Cho hai tập hợp $A=[m+1;2m-1]$, $B=(0;6)$. Có bao nhiêu giá trị $m$ nguyên để $A \\subset B$?",
+    "kind": "TLN"
+  },
+  {
+    "idx": 3,
+    "text": "Cho tập hợp $A=(0 ;+\\infty)$ và $B=\\left\\{x \\in \\mathbb{R} \\mid m x^2-6 x+m-8=0\\right\\}$, $m$ là tham số. Xác định $m$, biết rằng tập $B$ có đúng hai tập con và $B \\subset A$.",
+    "kind": "TL"
+  },
+  {
+    "idx": 4,
+    "text": "Cho tập hợp $A=[4 ; 7]$ và $B=(2a-1 ; 3a+5]$ khác tập rỗng, với $a \\in \\mathbb{R}$. Gọi $S$ là tập hợp các giá trị nguyên của $a$ để $A \\subset B$. Có bao nhiêu tập con của $S$?",
+    "kind": "TLN"
+  },
+  {
+    "idx": 5,
+    "text": "Cho số thực $m<0$ và hai tập hợp $A=(-\\infty ; 9m), B=\\left(\\dfrac{4}{m};+\\infty\\right)$. Biết tất cả các giá trị thực của tham số $m \\in (a,b)$ để $A \\cap B \\neq \\varnothing$.\nKhi đó giá trị của $b-a$ bằng (kết quả làm tròn đến hàng phần trăm).",
+    "kind": "TLN"
+  },
+  {
+    "idx": 6,
+    "text": "\\begin{tikzpicture}[>=stealth, scale=1]\n    % Trục số biểu diễn tập A\n    \\draw[->, thick] (-0.5, 2) -- (7, 2) node[right] {$\\mathbb{R}$};\n    \\node[left] at (-0.5, 2) {Tập $A$:};\n    \n    % Vạch và điểm trên tập A\n    \\draw[thick] (1, 1.85) -- (1, 2.15);\n    \\draw[thick] (5, 1.85) -- (5, 2.15);\n    \\node[above] at (1, 2.15) {$1$};\n    \\node[above] at (5, 2.15) {$5$};\n    \\node at (1, 2) {$($};\n    \\node at (5, 2) {$)$};\n    \\draw[ultra thick, blue] (1.1, 2) -- (4.9, 2);\n    \\node[blue, above] at (3, 2.15) {$A = (1; 5)$};\n\n    % Trục số biểu diễn B con A\n    \\draw[->, thick] (-0.5, 0) -- (7, 0) node[right] {$\\mathbb{R}$};\n    \\node[left] at (-0.5, 0) {Điều kiện $B \\subset A$:};\n    \n    % Vị trí của A trên trục dưới (mờ)\n    \\draw[dashed, gray] (1, 0) -- (1, 2);\n    \\draw[dashed, gray] (5, 0) -- (5, 2);\n    \\node[below, gray] at (1, -0.1) {$1$};\n    \\node[below, gray] at (5, -0.1) {$5$};\n    \\node[gray] at (1, 0) {$($};\n    \\node[gray] at (5, 0) {$)$};\n\n    % Tập B nằm trong A\n    \\draw[thick] (2, -0.15) -- (2, 0.15);\n    \\draw[thick] (4, -0.15) -- (4, 0.15);\n    \\node[red] at (2, 0) {$($};\n    \\node[red] at (4, 0) {$)$};\n    \\draw[ultra thick, red] (2.1, 0) -- (3.9, 0);\n    \\node[red, above] at (3, 0.1) {$B = (m; 4m-1)$};\n    \\node[below, red] at (2, -0.1) {$m$};\n    \\node[below, red] at (4, -0.1) {$4m-1$};\n\n    % Mũi tên so sánh điều kiện\n    \\draw[->, thick, teal] (1.8, -0.6) -- (1.1, -0.6) node[midway, below] {$1 \\le m$};\n    \\draw[->, thick, teal] (4.2, -0.6) -- (4.9, -0.6) node[midway, below] {$4m-1 \\le 5$};\n\\end{tikzpicture}\nCho hai tập hợp khác rỗng $A=(1;5)$ và $B=(m;4m-1) \\neq \\varnothing$, $m \\in \\mathbb{R}$. Có bao nhiêu giá trị nguyên của tham số $m$ để $B \\subset A$.",
+    "kind": "TLN"
+  }
+]
