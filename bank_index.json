@@ -2,8 +2,8 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 187,
-  "total_questions": 12266,
+  "total_files": 188,
+  "total_questions": 12272,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -38,6 +38,29 @@
           "TN": 0,
           "DS": 0,
           "TLN": 8,
+          "TL": 0
+        }
+      }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương 3: Hệ thức lượng trong tam giác/Bài 6: Định lý Cosin và Định lý Sin/de/de.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương 3: Hệ thức lượng trong tam giác/Bài 6: Định lý Cosin và Định lý Sin/de/de.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương 3: Hệ thức lượng trong tam giác/Bài 6: Định lý Cosin và Định lý Sin/de/de.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương 3: Hệ thức lượng trong tam giác",
+      "BaiHoc": "Bài 6: Định lý Cosin và Định lý Sin",
+      "De": "Bài 6: Định lý Cosin và Định lý Sin",
+      "questions": 6,
+      "count": 6,
+      "dang": {
+        "Chưa phân dạng": 6
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 6,
           "TL": 0
         }
       }
