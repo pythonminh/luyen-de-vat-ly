@@ -92,6 +92,15 @@ class SetVariantTests(unittest.TestCase):
                     self.assertEqual(float(sp.Rational(ans['value'])),round(math.sqrt(float(p['t']/p['k'])),2))
 
 class SetRoomFlowTests(race_tests.RaceTests):
+    def test_lesson_dropdown_uses_only_the_named_file(self):
+        selected=[{**q,'src':'sets.tex'} for q in QUESTIONS]
+        other={'idx':99,'kind':'TL','text':'Câu chưa hỗ trợ từ file khác','src':'other.tex'}
+        with patch.object(app,'parse_lesson_questions',return_value=[other]+selected):
+            preview=self.client.get('/api/race-preview?path=sets.tex&mode=numeric&count=5').get_json()
+            self.assertTrue(preview['ok'],preview)
+            self.assertEqual(preview['count'],5)
+            self.assertEqual(len(race.source_questions('sets.tex')),7)
+
     def test_screenshot_lesson_creates_and_grades_each_paper(self):
         with patch.object(app,'parse_lesson_questions',return_value=QUESTIONS):
             preview=self.client.get('/api/race-preview?path=sets.tex&mode=numeric&count=7').get_json()

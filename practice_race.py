@@ -248,6 +248,11 @@ def selected_race_button():
 
 def source_questions(path, selection=''):
     qs = base.parse_lesson_questions(path)
+    if not selection and any(q.get('src') for q in qs):
+        # The dropdown names one file; the shared lesson parser reads the folder.
+        # Keep global indices for compatibility with the checked-question flow.
+        selected_path = str(path).replace('\\', '/')
+        qs = [q for q in qs if str(q.get('src') or '').replace('\\', '/') == selected_path]
     if selection:
         pick = session.get('race_pick') or {}
         if pick.get('token') != selection or pick.get('path') != path:
