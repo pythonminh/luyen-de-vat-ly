@@ -2548,6 +2548,7 @@ def api_photo_prompt():
         text=text,
         prompt=still,
         motion=motion,
+        canva=_CANVA_PRACTICE.replace("[DÁN LATEX VÀO ĐÂY]", text),
         gemini="https://gemini.google.com/app",
     )
 
