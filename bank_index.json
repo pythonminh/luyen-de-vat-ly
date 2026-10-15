@@ -28,17 +28,17 @@
       "Chuong": "Chương 3: Hệ thức lượng trong tam giác",
       "BaiHoc": "Bài 5: Giá trị lượng giác của 1 góc từ 0 đến 180 độ.",
       "De": "Bài 5: Giá trị lượng giác của 1 góc từ 0 đến 180 độ.",
-      "questions": 9,
-      "count": 9,
+      "questions": 10,
+      "count": 10,
       "dang": {
-        "Chưa phân dạng": 9
+        "Chưa phân dạng": 10
       },
       "dang_kinds": {
         "Chưa phân dạng": {
           "TN": 0,
           "DS": 0,
           "TLN": 8,
-          "TL": 1
+          "TL": 2
         }
       }
     },
