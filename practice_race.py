@@ -209,6 +209,26 @@ def finish(c, r, player, now):
               (now, score, elapsed, r['code'], player['user']))
 
 
+def response_label(q, answer):
+    if answer is None or answer == '':
+        return '(Chưa trả lời)'
+    if q['kind'] == 'TN' and type(answer) is int and 0 <= answer < 4:
+        return 'ABCD'[answer]
+    if q['kind'] == 'DS' and isinstance(answer, list):
+        return '; '.join(('abcd'[i] + ') ' + ('Đúng' if v is True else 'Sai' if v is False else 'Chưa chọn')) for i, v in enumerate(answer[:4]))
+    return str(answer)
+
+
+def expected_label(q):
+    if q.get('_race_answer_components'):
+        return '$' + r';\quad '.join(variants.fmt(variants.parse_expression(v, False)) for v in q['_race_answer_components']) + '$'
+    if q['kind'] == 'TN':
+        return '; '.join('ABCD'[i] for i,o in enumerate(q.get('options', [])) if o.get('correct'))
+    if q['kind'] == 'DS':
+        return response_label(q, [bool(o.get('correct')) for o in q.get('statements', [])])
+    return str(q.get('_race_saved_answer') or q.get('answer') or 'Xem lời giải / ADMIN chấm')
+
+
 def public_question(q):
     src = q.get('src')
     out = {'kind': q['kind'], 'text': base.html_question(q.get('text', ''), src), 'manual': not auto_graded(q), 'numeric': bool(q.get('_race_answer_components'))}
@@ -330,7 +350,7 @@ def race_page(code):
             return base.page('Không tìm thấy phòng', '<div class="wrap"><h2>Mã phòng chưa tồn tại hoặc đã hết hiệu lực</h2><p>ADMIN cần tạo phòng trước, sau đó gửi mã hoặc QR mới cho học sinh.</p><a class="btn primary" href="/member/race">← Tạo phòng / Nhập mã khác</a></div>'), 404
         host = is_host(r, user)
     cfg = json.dumps({'code': code, 'csrf': csrf(), 'host': host, 'name': m.get('name') or ''}, ensure_ascii=True).replace('<', '\\u003c')
-    body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div><div id="raceGrading"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp và chấm đủ. Câu thiếu đáp án/tự luận chờ ADMIN chấm. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js"></script>'
+    body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div><div id="raceGrading"></div><div id="raceResults"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp và chấm đủ. Câu thiếu đáp án/tự luận chờ ADMIN chấm. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js"></script>'
     if host:
         join_url = base.public_origin() + '/member/race/' + code
         qr = '<section id="raceQR" class="race-qr"><img src="/race/' + code + '/qr.svg" alt="Mã QR tham gia phòng ' + code + '" width="260" height="260"><div><h2>📱 Quét QR để tham gia</h2><p>MÃ PHÒNG</p><strong style="font:800 38px monospace;letter-spacing:4px">' + code + '</strong><p>Học sinh quét QR → nhập họ tên → chờ bắt đầu. Quét và tham gia trước khi ADMIN bấm bắt đầu.</p><input readonly aria-label="Link tham gia" value="' + html.escape(join_url, quote=True) + '" style="width:100%;padding:10px"></div></section><style>.race-qr{display:flex;gap:24px;align-items:center;border:2px solid #2563eb;border-radius:14px;background:white;padding:20px;margin:16px 0}.race-qr[hidden]{display:none}.race-qr img{max-width:42%;height:auto}.race-qr>div{flex:1;min-width:0}@media(max-width:600px){.race-qr{display:block;text-align:center}.race-qr img{max-width:100%;width:220px}}</style>'
@@ -479,8 +499,10 @@ def race_api(code):
         counts = Counter(bucket(q) for q in pool)
         capacity = 200 if numeric else min(counts[k] // n for k, n in blueprint.items())
         ranking = []
+        assessments = {}
         for p in players:
-            score, pending, _ = graded_result(c, code, p)
+            score, pending, decisions = graded_result(c, code, p)
+            assessments[p['user']] = (score, pending, decisions)
             submitted = p['finished'] is not None
             ranking.append({'name': p['name'], 'me': p['user'] == user, 'done': submitted and pending == 0, 'submitted': submitted, 'pending': pending if submitted else 0, 'correct': score if submitted else None, 'elapsed': p['elapsed'], 'answered': len(json.loads(p['answers']))})
         ranking.sort(key=lambda p: (not p['done'], -(p['correct'] or 0), p['elapsed'] if p['elapsed'] is not None else float('inf'), p['name']))
@@ -499,11 +521,17 @@ def race_api(code):
                 reference.extend([q for q in pool if bucket(q) == key][:n])
             result['reference'] = [public_question(q) for q in (meta['reference'] if numeric else reference)]
             result['grading'] = []
+            result['results'] = []
             for p in players:
                 if p['finished'] is None:
                     continue
                 answers = json.loads(p['answers'])
-                _, _, decisions = graded_result(c, code, p)
+                score, pending, decisions = assessments[p['user']]
+                result['results'].append({'name':p['name'], 'score':score, 'pending':pending, 'elapsed':p['elapsed'], 'questions':[
+                    {'question':public_question(q), 'answer':response_label(q, answers.get(str(i))),
+                     'expected':base.html_question(expected_label(q), q.get('src')),
+                     'solution':base.html_question(q.get('solution', ''), q.get('src')), 'correct':decisions[i]}
+                    for i,q in enumerate(json.loads(p['questions']))]})
                 for i, q in enumerate(json.loads(p['questions'])):
                     if not auto_graded(q):
                         result['grading'].append({'player':p['user'], 'name':p['name'], 'pos':i, 'text':base.html_question(q.get('text',''),q.get('src')), 'answer':str(answers.get(str(i)) or ''), 'solution':base.html_question(q.get('solution',''),q.get('src')), 'correct':decisions[i]})

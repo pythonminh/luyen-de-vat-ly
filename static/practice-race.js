@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const cfg = window.RACE_CONFIG, $ = id => document.getElementById(id);
-  let state, questions = [], answers = {}, pos = 0, loaded = false, rendered = '', queue = Promise.resolve(), serverOffset = 0, submitting = false, saveTimer, controlsKey = '', gradingKey = '', joinName = cfg.name || '';
+  let state, questions = [], answers = {}, pos = 0, loaded = false, rendered = '', queue = Promise.resolve(), serverOffset = 0, submitting = false, saveTimer, controlsKey = '', gradingKey = '', resultsKey = '', joinName = cfg.name || '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clock = seconds => { seconds = Math.max(0, Math.floor(seconds)); return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0'); };
   const note = text => { $('raceNotice').textContent = text; };
@@ -67,10 +67,11 @@
     if (state.state === 'waiting' && !cfg.host) { panel.textContent = state.joined ? 'Đã nhận chỗ. Chờ ADMIN bắt đầu; đề sẽ hiện khi đồng hồ chạy.' : 'Bấm Tham gia để nhận một đề riêng.'; return; }
     if (!questions.length) { panel.textContent = 'Phòng đã bắt đầu hoặc kết thúc. Chỉ thành viên đã tham gia mới có bài làm.'; return; }
     const editable = !cfg.host && state.state === 'running' && !state.finished && !submitting;
+    const followingHost = !cfg.host && state.state === 'running';
     questions.forEach((q, i) => { const b = button((i === pos ? '▶ ' : '') + (i + 1) + (answers[i] !== undefined ? ' ✓' : ''), async () => {
       pos = i; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true);
-    }, nav); b.setAttribute('aria-label', 'Câu ' + (i + 1)); });
-    const q = questions[pos];
+    }, nav); b.disabled = followingHost; b.setAttribute('aria-label', 'Câu ' + (i + 1)); });
+    const q = questions[pos], answerPos = pos;
     panel.innerHTML = '<h3>' + (cfg.host ? '📺 Đề minh họa · ' : '') + 'Câu ' + (pos + 1) + '/' + questions.length + '</h3><div>' + q.text + '</div>';
     if (q.kind === 'TN') {
       q.options.forEach((text, i) => {
@@ -90,13 +91,14 @@
       });
     } else {
       const input = document.createElement(q.manual ? 'textarea' : 'input'); if (!q.manual) input.type = 'text'; input.maxLength = q.manual ? 5000 : q.numeric ? 1500 : 100; input.rows = 5; input.style = 'width:100%;padding:12px;box-sizing:border-box'; input.placeholder = q.manual ? 'Nhập bài làm hoặc kết quả. ADMIN sẽ chấm câu này.' : 'Nhập đáp án'; input.value = answers[pos] ?? ''; input.disabled = !editable;
-      input.setAttribute('aria-label', 'Đáp án câu ' + (pos + 1)); input.onchange = () => changed(input.value); input.oninput = () => { answers[pos] = input.value; clearTimeout(saveTimer); saveTimer = setTimeout(saveAnswers, 400); }; input.id = 'raceTextAnswer'; panel.append(input);
+      input.setAttribute('aria-label', 'Đáp án câu ' + (pos + 1)); input.onchange = () => changed(input.value, answerPos); input.oninput = () => { answers[answerPos] = input.value; clearTimeout(saveTimer); saveTimer = setTimeout(saveAnswers, 400); }; input.id = 'raceTextAnswer'; panel.append(input);
     }
     if (state.state === 'closed' && state.review?.[pos]) {
       const review = document.createElement('div'); review.innerHTML = '<h3>' + (state.review[pos].correct === null ? '⏳ Chờ ADMIN chấm' : state.review[pos].correct ? '✅ Đúng' : 'Chưa đúng') + '</h3>' + state.review[pos].solution; panel.append(review);
     }
-    if (pos > 0) button('← Câu trước', async () => { pos--; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
-    if (pos + 1 < questions.length) button('Câu tiếp →', async () => { pos++; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
+    if (!followingHost && pos > 0) button('← Câu trước', async () => { pos--; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
+    if (!followingHost && pos + 1 < questions.length) button('Câu tiếp →', async () => { pos++; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
+    if (followingHost) { const message = document.createElement('p'); message.textContent = '📺 Đang theo câu ADMIN chiếu · mỗi em có số liệu riêng.'; actions.append(message); }
     if (editable) {
       button('💾 Lưu lại', saveAnswers, actions);
       button('🏁 Nộp bài', submit, actions).classList.add('primary');
@@ -104,8 +106,8 @@
     if (state.finished) { const p = document.createElement('p'); p.textContent = 'Đã nộp bài. Kết quả được ghi trên bảng xếp hạng; lời giải mở khi phòng kết thúc.'; actions.append(p); }
     typeset();
   }
-  function changed(value) {
-    answers[pos] = value;
+  function changed(value, index = pos) {
+    answers[index] = value;
     saveAnswers();
     // Keep focus on the current input; refresh only navigation status next time.
   }
@@ -130,6 +132,32 @@
     el.append(fold);
     if (window.ldvlTypeset) window.ldvlTypeset(el);
   }
+  function drawResults() {
+    const el = $('raceResults'); if (!cfg.host || !el) return;
+    const rows = state.results || [], key = JSON.stringify(rows);
+    if (key === resultsKey) return;
+    resultsKey = key;
+    const wasOpen = el.firstElementChild?.open || false;
+    el.replaceChildren();
+    if (!rows.length) return;
+    const fold = document.createElement('details'), summary = document.createElement('summary');
+    fold.open = wasOpen; summary.textContent = '📋 Kết quả từng học sinh · ' + rows.length + ' bài đã nộp'; fold.append(summary);
+    rows.forEach(row => {
+      const card = document.createElement('details'), heading = document.createElement('summary');
+      heading.textContent = row.name + ' · ' + row.score + '/' + row.questions.length + ' đúng · ' + clock(row.elapsed) + (row.pending ? ' · ' + row.pending + ' câu chờ chấm' : '');
+      card.append(heading);
+      row.questions.forEach((item, i) => {
+        const part = document.createElement('section'); part.style = 'border:1px solid #cbd5e1;padding:12px;margin:10px 0';
+        const q = item.question;
+        const options = (q.options || q.statements || []).map((t,j) => '<p><b>' + (q.options ? 'ABCD'[j] : 'abcd'[j]) + '.</b> ' + t + '</p>').join('');
+        part.innerHTML = '<h4>Câu ' + (i+1) + ' · ' + (item.correct === null ? '⏳ Chờ chấm' : item.correct ? '✅ Đúng' : '❌ Sai') + '</h4><div>' + q.text + '</div>' + options + '<p><b>Học sinh trả lời:</b> ' + esc(item.answer) + '</p><p><b>Đáp án của đề này:</b> ' + item.expected + '</p><div><b>Lời giải:</b> ' + item.solution + '</div>';
+        card.append(part);
+      });
+      fold.append(card);
+    });
+    el.append(fold);
+    if (window.ldvlTypeset) window.ldvlTypeset(el);
+  }
   function saveAnswers() {
     if (submitting || state?.finished || state?.state !== 'running') return Promise.resolve();
     return enqueue({action:'save', answers:JSON.parse(JSON.stringify(answers))}).then(() => note('Đã lưu câu trả lời.')).catch(e => note('Chưa lưu: ' + e.message + ' Bấm Lưu lại hoặc Nộp bài để thử lại.'));
@@ -145,8 +173,8 @@
     state = d; serverOffset = d.now * 1000 - Date.now();
     const qr = $('raceQR'); if (qr) qr.hidden = d.state !== 'waiting';
     if (cfg.host) { if (JSON.stringify(questions) !== JSON.stringify(d.reference || [])) rendered = ''; questions = d.reference || []; pos = d.shown; }
-    else if (d.questions) { questions = d.questions; if (!loaded || d.finished || d.state === 'closed') { answers = d.answers || {}; loaded = true; } }
-    controls(); drawRanks(); drawQuestion(); drawGrading(); tick();
+    else if (d.questions) { questions = d.questions; if (d.state === 'running' && Number.isInteger(d.shown) && d.shown >= 0 && d.shown < questions.length) pos = d.shown; if (!loaded || d.finished || d.state === 'closed') { answers = d.answers || {}; loaded = true; } }
+    controls(); drawRanks(); drawQuestion(); drawGrading(); drawResults(); tick();
   }
   function tick() {
     if (!state) return;
