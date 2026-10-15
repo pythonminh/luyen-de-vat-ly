@@ -61,7 +61,7 @@ def csrf():
 
 
 def check_csrf():
-    value = request.headers.get('X-Race-CSRF', '') or request.form.get('csrf', '')
+    value = request.headers.get('X-Race-CSRF', '') or request.form.get('csrf', '') or request.form.get('race_pick_csrf', '')
     if not value or not secrets.compare_digest(value, session.get('race_csrf', '')):
         abort(403)
 
@@ -165,12 +165,50 @@ def public_question(q):
     return out
 
 
+def selected_race_button():
+    if not base.can_manage_bank():
+        return ''
+    return '<button type="submit" form="questionForm" formaction="/member/race/from-selected" formmethod="post" name="race_pick_csrf" value="' + html.escape(csrf(), quote=True) + '" class="btn primary" onclick="if(!document.querySelector(\'input[name=qid]:checked\')){alert(\'Tick các câu muốn dùng trước khi tạo phòng.\');return false;}">🏁 Tạo phòng thi đua từ câu đã chọn</button>'
+
+
+def source_questions(path, selection=''):
+    qs = base.parse_lesson_questions(path)
+    if selection:
+        pick = session.get('race_pick') or {}
+        if pick.get('token') != selection or pick.get('path') != path:
+            raise ValueError('Lựa chọn câu đã thay đổi. Quay lại bài, tick câu và tạo phòng lại.')
+        ids = set(pick.get('ids') or [])
+        qs = [q for q in qs if str(q.get('idx')) in ids]
+        if len(qs) != len(ids):
+            raise ValueError('Ngân hàng câu hỏi đã thay đổi. Hãy chọn lại câu trước khi tạo phòng.')
+    return qs
+
+
+@base.app.post('/member/race/from-selected')
+def race_from_selected():
+    if not base.can_manage_bank():
+        abort(403)
+    check_csrf()
+    path = request.form.get('path', '')
+    ids = list(dict.fromkeys(request.form.getlist('qid')))
+    if not ids or len(ids) > 120:
+        return base.page('Chọn câu thi đua', '<div class="wrap"><p>Hãy chọn từ 1 đến 120 câu để tạo phòng.</p><a class="btn" href="' + html.escape(base.dang_view_url(path), quote=True) + '">← Quay lại chọn câu</a></div>'), 400
+    qs = base.parse_lesson_questions(path)
+    selected = [q for q in qs if str(q.get('idx')) in set(ids)]
+    if len(selected) != len(ids) or not any(eligible(q) for q in selected):
+        return base.page('Chọn câu thi đua', '<div class="wrap"><p>Các câu đã chọn chưa hợp lệ hoặc không có đáp án tự chấm. Hãy chọn TN, Đúng/Sai hoặc trả lời ngắn có đáp án.</p><a class="btn" href="' + html.escape(base.dang_view_url(path), quote=True) + '">← Quay lại chọn câu</a></div>'), 400
+    token = secrets.token_hex(12)
+    session['race_pick'] = {'token': token, 'path': path, 'ids': ids}
+    return redirect('/member/race?selection=' + token)
+
+
 @base.app.route('/race', methods=['GET', 'POST'], strict_slashes=False)
 @base.app.route('/member/race', methods=['GET', 'POST'], strict_slashes=False)
 def race_home():
     m, user = who()
     token = csrf()
     error = ''
+    selection = request.form.get('selection') or request.args.get('selection', '')
     if request.method == 'POST':
         check_csrf()
         if request.form.get('code'):
@@ -189,7 +227,7 @@ def race_home():
                 duration = int(request.form.get('minutes', '15')) * 60
                 if not 1 <= count <= 60 or not 60 <= duration <= 10800:
                     raise ValueError('Chọn 1–60 câu và thời gian 1–180 phút.')
-                qs = base.parse_lesson_questions(path)
+                qs = source_questions(path, selection)
                 pool, blueprint, capacity = build_pool(qs, count)
                 code = secrets.token_hex(4).upper()
                 with db() as c:
@@ -204,6 +242,19 @@ def race_home():
         lessons = [l for l in base.index_data().get('lessons', []) if l.get('path') and int(l.get('questions', l.get('count', 0)) or 0) > 0]
         options = '<option value="">— Chọn bài học để tạo phòng —</option>' + ''.join('<option value="' + html.escape(str(l['path']), quote=True) + '"' + (' selected' if l['path'] == selected else '') + '>' + html.escape(' · '.join(str(l.get(k) or '') for k in ('Mon','Lop','BaiHoc'))) + ' (' + str(l.get('questions', l.get('count', 0))) + ' câu)</option>' for l in lessons)
         creation = '<section class="race-create"><h2>📺 ADMIN · Tạo phòng chiếu thi đua + QR</h2><p>Chọn bài rồi bấm tạo phòng. Hệ thống sẽ tự sinh mã phòng và mã QR cho học sinh quét.</p><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Tên phòng <input name="title" value="Thi đua luyện đề" maxlength="100" required></label><label>Bài học <select id="raceLesson" name="path" required>' + options + '</select></label><label>Số câu mỗi đề <input id="raceCount" name="count" type="number" min="1" max="60" value="5" required></label><label>Thời gian (phút) <input name="minutes" type="number" min="1" max="180" value="15" required></label><p id="racePoolInfo" role="status">Chọn bài để kiểm tra số câu và số học sinh có thể tham gia.</p><button id="raceCreate" class="btn primary" disabled>📺 Tạo phòng + Hiện mã QR</button></form><p>Mỗi học sinh nhận bộ câu riêng, không trùng câu với người khác, cùng cấu trúc dạng bài và mức độ. Tự luận cần chấm tay nên chưa đưa vào bảng xếp hạng.</p></section>' + _SETUP_JS
+        if selection:
+            pick = session.get('race_pick') or {}
+            if pick.get('token') != selection:
+                return base.page('Chọn lại câu', '<div class="wrap"><p>Lựa chọn đã thay đổi hoặc hết hiệu lực. Quay lại bài để chọn câu.</p><a class="btn" href="/member">← Ngân hàng câu hỏi</a></div>'), 400
+            picked_path = str(pick.get('path') or '')
+            picked_qs = source_questions(picked_path, selection)
+            valid_count = len({fingerprint(q) for q in picked_qs if eligible(q)})
+            start = creation.index('<label>Bài học')
+            end = creation.index('</select></label>', start) + len('</select></label>')
+            picked_html = '<p><b>Đã chọn ' + str(len(picked_qs)) + ' câu · ' + str(valid_count) + ' câu hợp lệ để tự chấm.</b></p><p>Phòng chỉ lấy câu trong danh sách thầy đã tick.</p><input id="raceLesson" type="hidden" name="path" value="' + html.escape(picked_path, quote=True) + '"><input id="raceSelection" type="hidden" name="selection" value="' + selection + '"><p><a href="' + html.escape(base.dang_view_url(picked_path), quote=True) + '">← Chọn lại câu trong bài</a> · <a href="/member/race">Dùng toàn bộ bài khác</a></p>'
+            creation = creation[:start] + picked_html + creation[end:]
+            creation = creation.replace('value="5" required', 'value="' + str(min(5, valid_count)) + '" required')
+            creation = creation.replace('Chọn bài rồi bấm tạo phòng.', 'Các câu đã tick được chuyển sẵn vào phòng.')
     with db() as c:
         if base.can_manage_bank():
             recent = c.execute('SELECT code,title,state FROM race_rooms WHERE owner=? ORDER BY created DESC LIMIT 20', (user,)).fetchall()
@@ -235,7 +286,7 @@ def race_page(code):
 
 _SETUP_JS = '''<script>(function(){
 const lesson=document.getElementById('raceLesson'),count=document.getElementById('raceCount'),info=document.getElementById('racePoolInfo'),create=document.getElementById('raceCreate');let version=0;
-async function preview(){const mine=++version;create.disabled=true;if(!lesson.value){info.textContent='Chọn bài học để tạo phòng.';return}info.textContent='Đang kiểm tra ngân hàng câu hỏi…';try{const r=await fetch('/api/race-preview?'+new URLSearchParams({path:lesson.value,count:count.value}),{cache:'no-store'}),d=await r.json();if(mine!==version)return;if(!r.ok||!d.ok)throw Error(d.error||'Không kiểm tra được bài');info.textContent='Có '+d.available+' câu hợp lệ · '+d.count+' câu/đề · Tối đa '+d.capacity+' học sinh với các đề không trùng câu.';create.disabled=d.capacity<1}catch(e){if(mine===version)info.textContent=e.message}}
+async function preview(){const mine=++version;create.disabled=true;if(!lesson.value){info.textContent='Chọn bài học để tạo phòng.';return}info.textContent='Đang kiểm tra ngân hàng câu hỏi…';try{const r=await fetch('/api/race-preview?'+new URLSearchParams({path:lesson.value,count:count.value,selection:(document.getElementById('raceSelection')||{}).value||''}),{cache:'no-store'}),d=await r.json();if(mine!==version)return;if(!r.ok||!d.ok)throw Error(d.error||'Không kiểm tra được bài');info.textContent='Có '+d.available+' câu hợp lệ · '+d.count+' câu/đề · Tối đa '+d.capacity+' học sinh với các đề không trùng câu.';create.disabled=d.capacity<1}catch(e){if(mine===version)info.textContent=e.message}}
 lesson.addEventListener('change',preview);count.addEventListener('change',preview);preview();})();</script>'''
 
 
@@ -247,7 +298,7 @@ def race_preview():
         n = int(request.args.get('count', '5'))
         if not 1 <= n <= 60:
             raise ValueError('Số câu phải từ 1 đến 60.')
-        qs = base.parse_lesson_questions(request.args.get('path', ''))
+        qs = source_questions(request.args.get('path', ''), request.args.get('selection', ''))
         pool, blueprint, capacity = build_pool(qs, n)
         return jsonify(ok=True, available=len(pool), count=n, capacity=capacity)
     except (ValueError, OSError) as exc:

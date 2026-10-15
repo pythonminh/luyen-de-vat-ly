@@ -197,5 +197,31 @@ class RaceTests(unittest.TestCase):
             self.assertIn(b'<svg', r.data)
             self.assertTrue(encoder.call_args.args[0].endswith('/member/race/' + self.code))
 
+    def test_selected_questions_flow_uses_only_checked_questions(self):
+        r = self.client.post('/member/race/from-selected', data={'race_pick_csrf':'test-token','path':'lesson.tex','qid':['0','1','2','3','4','5','6','7','8','9']})
+        self.assertEqual(r.status_code, 302)
+        token = r.location.split('selection=')[1]
+        page = self.client.get(r.location).get_data(as_text=True)
+        self.assertIn('Đã chọn 10 câu', page)
+        self.assertIn('name="selection" value="' + token + '"', page)
+        d = self.client.get('/api/race-preview?path=lesson.tex&count=5&selection=' + token).get_json()
+        self.assertEqual(d['available'], 10)
+        self.assertEqual(d['capacity'], 2)
+        r = self.client.post('/member/race', data={'csrf':'test-token','path':'lesson.tex','selection':token,'count':'5','minutes':'1'})
+        self.assertEqual(r.status_code, 302)
+        code = r.location.rsplit('/',1)[-1]
+        with race.db() as c:
+            pool = json.loads(c.execute('SELECT pool FROM race_rooms WHERE code=?',(code,)).fetchone()[0])
+        self.assertEqual({q['idx'] for q in pool}, set(range(10)))
+
+    def test_selected_questions_reject_tampering_and_guests(self):
+        r = self.client.post('/member/race/from-selected', data={'race_pick_csrf':'test-token','path':'lesson.tex','qid':['99999']})
+        self.assertEqual(r.status_code, 400)
+        r = self.client.post('/member/race/from-selected', data={'path':'lesson.tex','qid':['0']})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(self.client.get('/api/race-preview?path=lesson.tex&count=1&selection=forged').status_code, 400)
+        self.user = None
+        self.assertEqual(self.client.post('/member/race/from-selected', data={'race_pick_csrf':'test-token','path':'lesson.tex','qid':['0']}).status_code, 403)
+
 
 if __name__ == '__main__': unittest.main()

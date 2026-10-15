@@ -614,11 +614,13 @@ def member_dang():
         form_open="<div class='guestview'>"
         form_close="</div>"
     elif admin_view:
+        from practice_race import selected_race_button
         guest_note="<div class='notice'>🔐 ADMIN · xem đáp án và lời giải ngay trên từng thẻ, không cần làm bài.</div>"
         tools=(kindbar+
           "<div class='photobar'><button type='button' class='btn aiPhotoBtn'>📷 Chụp hình</button><span>Chụp hoặc chọn ảnh đề — máy nhận dạng chữ rồi viết lại prompt.</span></div>"
           "<div class='toolbar'>"
           "<button type='button' class='btn primary' id='qPresentBtn'>📺 Chiếu câu đã chọn</button>"
+          +selected_race_button()+
           "<button type='submit' form='questionForm' name='practice_mode' value='number_mix' class='btn' style='border-color:#2563eb;color:#1d4ed8;font-weight:800' onclick='if(!document.querySelector(\"input[name=qid]:checked\")){alert(\"Hãy chọn ít nhất 2 câu để tạo bộ Luyện đổi số.\");return false;}if(document.querySelectorAll(\"input[name=qid]:checked\").length<2){alert(\"Hãy chọn từ 2 câu trở lên để tạo bộ luyện nhiều câu.\");return false;}'>🎲 Luyện đổi số từ câu đã chọn</button>"
           "<button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
