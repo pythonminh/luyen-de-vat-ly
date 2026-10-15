@@ -74,17 +74,17 @@
       "Chuong": "Chương 3: Hệ thức lượng trong tam giác",
       "BaiHoc": "Bài 6: Định lý Cosin và Định lý Sin",
       "De": "Bài 6: Định lý Cosin và Định lý Sin",
-      "questions": 6,
-      "count": 6,
+      "questions": 7,
+      "count": 7,
       "dang": {
-        "Chưa phân dạng": 6
+        "Chưa phân dạng": 7
       },
       "dang_kinds": {
         "Chưa phân dạng": {
           "TN": 0,
           "DS": 0,
           "TLN": 6,
-          "TL": 0
+          "TL": 1
         }
       }
     },
