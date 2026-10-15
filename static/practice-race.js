@@ -5,6 +5,35 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clock = seconds => { seconds = Math.max(0, Math.floor(seconds)); return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0'); };
   const note = text => { $('raceNotice').textContent = text; };
+  const raceRoot = document.querySelector?.('.wrap.race');
+  document.body?.classList.add('race-page');
+  let fitPending = false;
+  function fitMath() {
+    if (!raceRoot?.querySelectorAll) return;
+    raceRoot.querySelectorAll('mjx-container').forEach(math => {
+      math.style.fontSize = '100%';
+      const parent = math.parentElement, formula = math.querySelector('mjx-math') || math;
+      if (!parent || !formula.getBoundingClientRect) return;
+      const available = Math.min(parent.clientWidth || 0, raceRoot.clientWidth - 20);
+      const width = formula.getBoundingClientRect().width;
+      if (available > 0 && width > available) math.style.fontSize = Math.max(1, Math.floor(available / width * 99)) + '%';
+    });
+  }
+  function scheduleFit() {
+    if (fitPending) return;
+    fitPending = true;
+    const next = window.requestAnimationFrame || (fn => setTimeout(fn, 0));
+    next(() => { fitPending = false; fitMath(); });
+  }
+  if (raceRoot) {
+    if (window.MutationObserver) new MutationObserver(scheduleFit).observe(raceRoot, {childList:true, subtree:true});
+    raceRoot.addEventListener('toggle', scheduleFit, true);
+    window.addEventListener('resize', scheduleFit);
+    window.addEventListener('load', scheduleFit);
+    window.addEventListener('orientationchange', scheduleFit);
+    document.fonts?.addEventListener('loadingdone', scheduleFit);
+    scheduleFit();
+  }
   function typeset() {
     if (window.ldvlArmTikz) window.ldvlArmTikz($('raceQuestion'));
     if (window.ldvlSplitPics) window.ldvlSplitPics($('raceQuestion'));
@@ -104,7 +133,7 @@
       button('🏁 Nộp bài', submit, actions).classList.add('primary');
     }
     if (state.finished) { const p = document.createElement('p'); p.textContent = 'Đã nộp bài. Kết quả được ghi trên bảng xếp hạng; lời giải mở khi phòng kết thúc.'; actions.append(p); }
-    typeset();
+    typeset(); scheduleFit();
   }
   function changed(value, index = pos) {
     answers[index] = value;
@@ -131,6 +160,7 @@
     });
     el.append(fold);
     if (window.ldvlTypeset) window.ldvlTypeset(el);
+    scheduleFit();
   }
   function drawResults() {
     const el = $('raceResults'); if (!cfg.host || !el) return;
@@ -157,6 +187,7 @@
     });
     el.append(fold);
     if (window.ldvlTypeset) window.ldvlTypeset(el);
+    scheduleFit();
   }
   function saveAnswers() {
     if (submitting || state?.finished || state?.state !== 'running') return Promise.resolve();
