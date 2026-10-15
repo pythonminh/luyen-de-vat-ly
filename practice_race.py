@@ -10,6 +10,7 @@ import secrets
 import sqlite3
 import time
 from collections import Counter, defaultdict
+from contextlib import contextmanager
 from pathlib import Path
 
 from flask import abort, jsonify, redirect, request, session
@@ -19,6 +20,7 @@ DB_PATH = Path(os.environ.get('PRACTICE_RACE_DB', str(base.ROOT / 'data' / 'prac
 RNG = random.SystemRandom()
 
 
+@contextmanager
 def db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     c = sqlite3.connect(str(DB_PATH), timeout=20)
@@ -34,7 +36,11 @@ def db():
       questions TEXT NOT NULL, answers TEXT NOT NULL DEFAULT '{}',
       started REAL, finished REAL, correct INTEGER, elapsed REAL,
       PRIMARY KEY(room,user));''')
-    return c
+    try:
+        with c:
+            yield c
+    finally:
+        c.close()
 
 
 def who():
