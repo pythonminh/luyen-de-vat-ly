@@ -1,0 +1,692 @@
+<!--hp-title:4buQbmcgYsahbSDEkeG6s25nIG5oaeG7h3Q=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luyện tập Nén đẳng nhiệt trong xi lanh - Lớp Học Thầy Minh</title>
+<style>
+  :root {
+    --navy: #0f172a;
+    --navy-header: #1e293b;
+    --blue: #2563eb;
+    --blue-hover: #1d4ed8;
+    --green: #16a34a;
+    --red: #dc2626;
+    --bg: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  header {
+    background-color: var(--navy);
+    color: #ffffff;
+    text-align: center;
+    padding: 16px 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  header .title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  header .subtitle {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 16px;
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 24px;
+  }
+
+  @media (max-width: 860px) {
+    .container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
+
+  .card-header {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 10px;
+  }
+
+  .state-box {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .state-col {
+    flex: 1;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 14px;
+    border-left: 4px solid var(--blue);
+  }
+
+  .state-col h4 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+    color: #0f172a;
+  }
+
+  .state-val {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+    color: #334155;
+  }
+
+  .state-val strong {
+    color: var(--blue);
+  }
+
+  .formula-box {
+    background: #eff6ff;
+    border: 1px dashed #93c5fd;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .formula-title {
+    font-weight: 600;
+    color: #1e40af;
+    margin-bottom: 6px;
+  }
+
+  .formula-math {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1e3a8a;
+  }
+
+  .formula-sub {
+    font-size: 0.9rem;
+    color: #3b82f6;
+    margin-top: 4px;
+  }
+
+  .diagram-container {
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  .problem-text {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    background: #fafafa;
+    border-left: 4px solid #f59e0b;
+    padding: 14px;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 9px 18px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background-color: var(--blue);
+    color: #fff;
+  }
+  .btn-primary:hover {
+    background-color: var(--blue-hover);
+  }
+
+  .btn-secondary {
+    background-color: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+  }
+  .btn-secondary:hover {
+    background-color: #e2e8f0;
+  }
+
+  .btn-change {
+    background-color: #059669;
+    color: #ffffff;
+    margin-bottom: 20px;
+  }
+  .btn-change:hover {
+    background-color: #047857;
+  }
+
+  .input-section {
+    margin: 20px 0;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+  }
+
+  .input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .input-group label {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .input-group input {
+    width: 120px;
+    padding: 8px 12px;
+    font-size: 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    outline: none;
+  }
+  .input-group input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.2);
+  }
+
+  .mcq-section {
+    margin: 20px 0;
+  }
+
+  .mcq-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #334155;
+  }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  @media (max-width: 500px) {
+    .options-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .option-btn {
+    text-align: left;
+    padding: 12px 14px;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .option-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+  }
+
+  .option-btn.selected-correct {
+    background: #dcfce7;
+    border-color: var(--green);
+    color: #14532d;
+  }
+
+  .option-btn.selected-wrong {
+    background: #fee2e2;
+    border-color: var(--red);
+    color: #7f1d1d;
+  }
+
+  .feedback {
+    font-weight: 600;
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: none;
+  }
+
+  .feedback.success {
+    display: block;
+    background-color: #dcfce7;
+    color: var(--green);
+    border: 1px solid #86efac;
+  }
+
+  .feedback.error {
+    display: block;
+    background-color: #fee2e2;
+    color: var(--red);
+    border: 1px solid #fca5a5;
+  }
+
+  .solution-box {
+    margin-top: 20px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: none;
+  }
+
+  .solution-box.visible {
+    display: block;
+  }
+
+  .solution-title {
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 8px;
+  }
+
+  .solution-step {
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+    color: #475569;
+  }
+
+  .solution-res {
+    margin-top: 10px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">Lớp Học Thầy Minh · Zalo 0946111107</div>
+  <div class="subtitle">lophocthayminh.onrender.com</div>
+</header>
+
+<div class="container">
+  <!-- CỘT TRÁI -->
+  <div class="card">
+    <div class="card-header">
+      <span>📐</span> Bảng thông số & Mô hình xi lanh
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-title">Định luật Boyle-Mariotte (T = const)</div>
+      <div class="formula-math">P₁ · V₁ = P₂ · V₂ &hArr; P₁ · (S · L₁) = P₂ · (S · L₂)</div>
+      <div class="formula-sub">Triệt tiêu S: P₁ · L₁ = P₂ · L₂ &rArr; L₂ = (P₁ · L₁) / P₂</div>
+    </div>
+
+    <div class="state-box">
+      <div class="state-col">
+        <h4>Trạng thái 1</h4>
+        <div class="state-val">Chiều dài L₁ = <strong id="param-l1">20</strong> cm</div>
+        <div class="state-val">Đường kính D = <strong id="param-d">10</strong> cm</div>
+        <div class="state-val">Áp suất P₁ = <strong id="param-p1">1,2</strong> atm</div>
+      </div>
+      <div class="state-col">
+        <h4>Trạng thái 2</h4>
+        <div class="state-val">Chiều dài L₂ = <strong>?</strong> cm</div>
+        <div class="state-val">Đường kính D = <strong id="param-d2">10</strong> cm</div>
+        <div class="state-val">Áp suất P₂ = <strong id="param-p2">4,8</strong> atm</div>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <svg id="svg-diagram" width="100%" height="220" viewBox="0 0 340 220">
+        <!-- Xi lanh 1 (Nằm ngang) -->
+        <text x="10" y="22" font-size="12" font-weight="bold" fill="#1e293b">Trạng thái 1 (Ban đầu):</text>
+        <rect x="20" y="32" width="280" height="50" fill="#f8fafc" stroke="#334155" stroke-width="2" rx="3"/>
+        <line x1="20" y1="32" x2="20" y2="82" stroke="#334155" stroke-width="5"/>
+        <rect id="cyl-gas-1" x="22" y="34" width="220" height="46" fill="#93c5fd" opacity="0.6"/>
+        <rect id="cyl-piston-1" x="242" y="30" width="10" height="54" fill="#475569" rx="2"/>
+        <rect id="cyl-rod-1" x="252" y="53" width="55" height="8" fill="#94a3b8"/>
+        <!-- Kích thước TT1 -->
+        <text id="svg-txt-p1" x="120" y="60" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e3a8a">P₁ = 1,2 atm</text>
+        <line x1="22" y1="92" x2="242" y2="92" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)" marker-start="url(#arrow)"/>
+        <text id="svg-txt-l1" x="132" y="105" text-anchor="middle" font-size="11" fill="#2563eb">L₁ = 20 cm (D = 10 cm)</text>
+
+        <!-- Xi lanh 2 (Sau khi nén) -->
+        <text x="10" y="132" font-size="12" font-weight="bold" fill="#1e293b">Trạng thái 2 (Nén đẳng nhiệt):</text>
+        <rect x="20" y="142" width="280" height="50" fill="#f8fafc" stroke="#334155" stroke-width="2" rx="3"/>
+        <line x1="20" y1="142" x2="20" y2="192" stroke="#334155" stroke-width="5"/>
+        <rect id="cyl-gas-2" x="22" y="144" width="55" height="46" fill="#60a5fa" opacity="0.85"/>
+        <rect id="cyl-piston-2" x="77" y="140" width="10" height="54" fill="#475569" rx="2"/>
+        <rect id="cyl-rod-2" x="87" y="163" width="215" height="8" fill="#94a3b8"/>
+        <!-- Lực nén F -->
+        <path d="M 280 167 L 220 167" stroke="#dc2626" stroke-width="2.5"/>
+        <polygon points="215,167 225,162 225,172" fill="#dc2626"/>
+        <text x="250" y="157" text-anchor="middle" font-size="10" font-weight="bold" fill="#dc2626">Lực nén</text>
+        <!-- Kích thước TT2 -->
+        <text id="svg-txt-p2" x="50" y="170" text-anchor="middle" font-size="10" font-weight="bold" fill="#1e3a8a">P₂=4,8</text>
+        <line id="svg-line-l2" x1="22" y1="202" x2="77" y2="202" stroke="#d97706" stroke-width="1.5"/>
+        <text id="svg-txt-l2" x="50" y="215" text-anchor="middle" font-size="11" fill="#d97706" font-weight="bold">L₂ = ? cm</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- CỘT PHẢI -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <div class="card-header" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">
+        <span>📝</span> Bài tập rèn luyện
+      </div>
+      <button class="btn btn-change" id="btn-reload" onclick="generateNewProblem()">🔄 Đổi đề bài mới</button>
+    </div>
+
+    <div class="problem-text" id="problem-display">
+      Một lượng khí lý tưởng được chứa trong một xi lanh có chiều dài ban đầu là <strong>20</strong> cm và đường kính trong là <strong>10</strong> cm. Áp suất ban đầu của khí là <strong>1,2</strong> atm. Sau đó, khí được nén đẳng nhiệt sao cho áp suất tăng lên <strong>4,8</strong> atm. Tính chiều dài cuối cùng của cột khí trong xi lanh theo cm.
+    </div>
+
+    <!-- Tự luận -->
+    <div class="input-section">
+      <div class="input-group">
+        <label for="answer-input">Nhập kết quả L₂ (cm):</label>
+        <input type="number" id="answer-input" step="any" placeholder="Nhập số...">
+        <button class="btn btn-primary" onclick="checkNumberAnswer()">Kiểm tra</button>
+      </div>
+      <div id="number-feedback" class="feedback"></div>
+    </div>
+
+    <!-- Trắc nghiệm -->
+    <div class="mcq-section">
+      <div class="mcq-title">Hoặc chọn phương án trắc nghiệm:</div>
+      <div class="options-grid" id="options-container"></div>
+      <div id="mcq-feedback" class="feedback"></div>
+    </div>
+
+    <!-- Lời giải -->
+    <div style="margin-top: 20px;">
+      <button class="btn btn-secondary" onclick="toggleSolution()">📖 Xem lời giải chi tiết</button>
+    </div>
+
+    <div class="solution-box" id="solution-box">
+      <div class="solution-title">Hướng dẫn giải:</div>
+      <div class="solution-step" id="sol-step-1">
+        Thể tích ban đầu của khí là V₁ = S · L₁, trong đó S là diện tích đáy xi lanh và L₁ là chiều dài ban đầu của cột khí.
+      </div>
+      <div class="solution-step" id="sol-step-2">
+        Diện tích đáy xi lanh là S = π · (D/2)² = π · (10/2)² = π · 5² = 25π cm².
+      </div>
+      <div class="solution-step" id="sol-step-3">
+        Thể tích ban đầu V₁ = 25π · 20 = 500π cm³.
+      </div>
+      <div class="solution-step" id="sol-step-4">
+        Vì quá trình nén là đẳng nhiệt, ta áp dụng định luật Boyle-Mariotte:
+        <br><code>P₁ · V₁ = P₂ · V₂</code>
+        <br>Trong đó:
+        <br>P₁ = 1,2 atm, V₁ = 500π cm³
+        <br>P₂ = 4,8 atm, V₂ = S · L₂ = 25π · L₂
+      </div>
+      <div class="solution-step" id="sol-step-5">
+        Thay các giá trị vào phương trình:
+        <br><code>1,2 · 500π = 4,8 · 25π · L₂</code>
+        <br>Chia cả hai vế cho 25π:
+        <br><code>1,2 · (500π)/(25π) = 4,8 · L₂</code> &rArr; <code>1,2 · 20 = 4,8 · L₂</code> &rArr; <code>24 = 4,8 · L₂</code>
+      </div>
+      <div class="solution-step" id="sol-step-6">
+        Tính L₂:
+        <br><code>L₂ = 24 / 4,8 = 5 cm.</code>
+      </div>
+      <div class="solution-res" id="solution-final">Vậy, chiều dài cuối cùng của cột khí là 5 cm.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentProblem = {
+    l1: 20,
+    d: 10,
+    p1: 1.2,
+    p2: 4.8,
+    l2: 5,
+    options: []
+  };
+
+  function formatNum(num) {
+    return num.toString().replace('.', ',');
+  }
+
+  function initOriginalMCQ() {
+    currentProblem.options = [
+      { label: 'A', value: 5, isCorrect: true },
+      { label: 'B', value: 8, isCorrect: false },
+      { label: 'C', value: 4, isCorrect: false },
+      { label: 'D', value: 10, isCorrect: false }
+    ];
+  }
+
+  function updateUI() {
+    // 1. Cập nhật tham số khối trái
+    document.getElementById('param-l1').innerText = formatNum(currentProblem.l1);
+    document.getElementById('param-d').innerText = formatNum(currentProblem.d);
+    document.getElementById('param-p1').innerText = formatNum(currentProblem.p1);
+    document.getElementById('param-d2').innerText = formatNum(currentProblem.d);
+    document.getElementById('param-p2').innerText = formatNum(currentProblem.p2);
+
+    // Cập nhật đồ họa SVG
+    document.getElementById('svg-txt-p1').textContent = `P₁ = ${formatNum(currentProblem.p1)} atm`;
+    document.getElementById('svg-txt-l1').textContent = `L₁ = ${formatNum(currentProblem.l1)} cm (D = ${formatNum(currentProblem.d)} cm)`;
+    document.getElementById('svg-txt-p2').textContent = `P₂=${formatNum(currentProblem.p2)}`;
+
+    // Tỉ lệ hình vẽ
+    const maxBarWidth = 230;
+    const ratio = Math.max(0.18, Math.min(0.85, currentProblem.l2 / currentProblem.l1));
+    const gas2Width = Math.round(maxBarWidth * ratio);
+    const piston2X = 22 + gas2Width;
+    const rod2Width = 295 - (piston2X + 10);
+
+    document.getElementById('cyl-gas-2').setAttribute('width', gas2Width);
+    document.getElementById('cyl-piston-2').setAttribute('x', piston2X);
+    document.getElementById('cyl-rod-2').setAttribute('x', piston2X + 10);
+    document.getElementById('cyl-rod-2').setAttribute('width', Math.max(10, rod2Width));
+
+    document.getElementById('svg-line-l2').setAttribute('x2', piston2X);
+    document.getElementById('svg-txt-l2').setAttribute('x', 22 + gas2Width / 2);
+
+    // 2. Cập nhật đề bài
+    document.getElementById('problem-display').innerHTML = 
+      `Một lượng khí lý tưởng được chứa trong một xi lanh có chiều dài ban đầu là <strong>${formatNum(currentProblem.l1)}</strong> cm ` +
+      `và đường kính trong là <strong>${formatNum(currentProblem.d)}</strong> cm. Áp suất ban đầu của khí là <strong>${formatNum(currentProblem.p1)}</strong> atm. ` +
+      `Sau đó, khí được nén đẳng nhiệt sao cho áp suất tăng lên <strong>${formatNum(currentProblem.p2)}</strong> atm. Tính chiều dài cuối cùng của cột khí trong xi lanh theo cm.`;
+
+    // 3. Render trắc nghiệm
+    renderMCQ();
+
+    // 4. Lời giải chi tiết
+    const r = currentProblem.d / 2;
+    const s_coef = r * r; // S = s_coef * pi
+    const v1_coef = Math.round(s_coef * currentProblem.l1 * 100) / 100;
+    const p1_x_l1 = Math.round(currentProblem.p1 * currentProblem.l1 * 100) / 100;
+
+    document.getElementById('sol-step-1').innerHTML = 
+      `Thể tích ban đầu của khí là V₁ = S · L₁, trong đó S là diện tích đáy xi lanh và L₁ là chiều dài ban đầu của cột khí.`;
+    document.getElementById('sol-step-2').innerHTML = 
+      `Diện tích đáy xi lanh là S = π · (D/2)² = π · (${formatNum(currentProblem.d)}/2)² = π · ${formatNum(r)}² = ${formatNum(s_coef)}π cm².`;
+    document.getElementById('sol-step-3').innerHTML = 
+      `Thể tích ban đầu V₁ = ${formatNum(s_coef)}π · ${formatNum(currentProblem.l1)} = ${formatNum(v1_coef)}π cm³.`;
+    document.getElementById('sol-step-4').innerHTML = 
+      `Vì quá trình nén là đẳng nhiệt, ta áp dụng định luật Boyle-Mariotte:<br><code>P₁ · V₁ = P₂ · V₂</code><br>Trong đó:<br>P₁ = ${formatNum(currentProblem.p1)} atm, V₁ = ${formatNum(v1_coef)}π cm³<br>P₂ = ${formatNum(currentProblem.p2)} atm, V₂ = S · L₂ = ${formatNum(s_coef)}π · L₂`;
+    document.getElementById('sol-step-5').innerHTML = 
+      `Thay các giá trị vào phương trình:<br><code>${formatNum(currentProblem.p1)} · ${formatNum(v1_coef)}π = ${formatNum(currentProblem.p2)} · ${formatNum(s_coef)}π · L₂</code><br>Chia cả hai vế cho ${formatNum(s_coef)}π:<br><code>${formatNum(currentProblem.p1)} · (${formatNum(v1_coef)}π)/(${formatNum(s_coef)}π) = ${formatNum(currentProblem.p2)} · L₂</code> &rArr; <code>${formatNum(currentProblem.p1)} · ${formatNum(currentProblem.l1)} = ${formatNum(currentProblem.p2)} · L₂</code> &rArr; <code>${formatNum(p1_x_l1)} = ${formatNum(currentProblem.p2)} · L₂</code>`;
+    document.getElementById('sol-step-6').innerHTML = 
+      `Tính L₂:<br><code>L₂ = (${formatNum(p1_x_l1)}) / (${formatNum(currentProblem.p2)}) = ${formatNum(currentProblem.l2)} cm.</code>`;
+    document.getElementById('solution-final').innerText = 
+      `Vậy, chiều dài cuối cùng của cột khí là ${formatNum(currentProblem.l2)} cm.`;
+
+    // Reset trạng thái
+    document.getElementById('answer-input').value = '';
+    const numFb = document.getElementById('number-feedback');
+    numFb.className = 'feedback';
+    numFb.style.display = 'none';
+
+    const mcqFb = document.getElementById('mcq-feedback');
+    mcqFb.className = 'feedback';
+    mcqFb.style.display = 'none';
+
+    document.getElementById('solution-box').classList.remove('visible');
+  }
+
+  function renderMCQ() {
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+
+    currentProblem.options.forEach((opt, index) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.innerHTML = `<strong>${opt.label}.</strong> ${formatNum(opt.value)} cm`;
+      btn.onclick = () => checkMCQAnswer(index, btn);
+      container.appendChild(btn);
+    });
+  }
+
+  function checkNumberAnswer() {
+    const inputVal = document.getElementById('answer-input').value.trim().replace(',', '.');
+    const fb = document.getElementById('number-feedback');
+
+    if (!inputVal) {
+      fb.className = 'feedback error';
+      fb.innerText = 'Vui lòng nhập một giá trị số!';
+      fb.style.display = 'block';
+      return;
+    }
+
+    const userNum = parseFloat(inputVal);
+    if (Math.abs(userNum - currentProblem.l2) < 0.01) {
+      fb.className = 'feedback success';
+      fb.innerText = 'Chính xác! Bạn đã tính đúng chiều dài L₂.';
+    } else {
+      fb.className = 'feedback error';
+      fb.innerText = 'Chưa đúng, hãy kiểm tra lại phép tính nhé!';
+    }
+  }
+
+  function checkMCQAnswer(index, btnElement) {
+    const isCorrect = currentProblem.options[index].isCorrect;
+    const buttons = document.querySelectorAll('.option-btn');
+    const fb = document.getElementById('mcq-feedback');
+
+    buttons.forEach(b => {
+      b.classList.remove('selected-correct', 'selected-wrong');
+    });
+
+    if (isCorrect) {
+      btnElement.classList.add('selected-correct');
+      fb.className = 'feedback success';
+      fb.innerText = `Chính xác! Phương án ${currentProblem.options[index].label} là đáp án đúng.`;
+    } else {
+      btnElement.classList.add('selected-wrong');
+      fb.className = 'feedback error';
+      fb.innerText = `Phương án ${currentProblem.options[index].label} chưa đúng. Hãy tính lại nhé!`;
+    }
+  }
+
+  function generateNewProblem() {
+    const presets = [
+      { l1: 20, d: 10, p1: 1.2, p2: 4.8 },
+      { l1: 30, d: 8,  p1: 1.0, p2: 3.0 },
+      { l1: 24, d: 12, p1: 1.5, p2: 4.5 },
+      { l1: 40, d: 10, p1: 1.2, p2: 4.8 },
+      { l1: 25, d: 6,  p1: 2.0, p2: 5.0 },
+      { l1: 16, d: 14, p1: 1.5, p2: 6.0 },
+      { l1: 36, d: 10, p1: 1.0, p2: 4.0 },
+      { l1: 32, d: 8,  p1: 1.5, p2: 6.0 },
+      { l1: 28, d: 12, p1: 1.2, p2: 4.2 },
+      { l1: 45, d: 10, p1: 1.0, p2: 5.0 },
+      { l1: 18, d: 6,  p1: 1.5, p2: 4.5 },
+      { l1: 50, d: 16, p1: 1.2, p2: 6.0 }
+    ];
+
+    let filtered = presets.filter(p => !(p.l1 === currentProblem.l1 && p.p1 === currentProblem.p1 && p.p2 === currentProblem.p2 && p.d === currentProblem.d));
+    let chosen = filtered[Math.floor(Math.random() * filtered.length)];
+
+    let l1 = chosen.l1;
+    let d = chosen.d;
+    let p1 = chosen.p1;
+    let p2 = chosen.p2;
+    let l2 = Math.round((p1 * l1 / p2) * 100) / 100;
+
+    let dist1 = Math.round((p2 * l1 / p1) * 10) / 10;
+    let dist2 = Math.round((l2 * 1.5) * 10) / 10;
+    let dist3 = Math.max(1, Math.round((l2 - (l2 > 4 ? 3 : 1)) * 10) / 10);
+
+    let rawVals = [l2];
+    [dist1, dist2, dist3, Math.round((l1 * 0.5) * 10) / 10, Math.round((l2 + 4) * 10) / 10].forEach(val => {
+      if (rawVals.length < 4 && !rawVals.includes(val) && val > 0) {
+        rawVals.push(val);
+      }
+    });
+
+    while (rawVals.length < 4) {
+      let extra = Math.round((l2 + rawVals.length * 2) * 10) / 10;
+      if (!rawVals.includes(extra)) rawVals.push(extra);
+    }
+
+    rawVals.sort(() => Math.random() - 0.5);
+
+    const labels = ['A', 'B', 'C', 'D'];
+    let options = rawVals.map((val, idx) => ({
+      label: labels[idx],
+      value: val,
+      isCorrect: (val === l2)
+    }));
+
+    currentProblem = {
+      l1: l1,
+      d: d,
+      p1: p1,
+      p2: p2,
+      l2: l2,
+      options: options
+    };
+
+    updateUI();
+  }
+
+  function toggleSolution() {
+    const box = document.getElementById('solution-box');
+    box.classList.toggle('visible');
+  }
+
+  initOriginalMCQ();
+  updateUI();
+</script>
+
+</body>
+</html>
