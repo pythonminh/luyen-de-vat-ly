@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import html
+import io
 import json
 import os
 import random
@@ -12,8 +13,9 @@ import time
 from collections import Counter, defaultdict
 from contextlib import contextmanager
 from pathlib import Path
+import segno
 
-from flask import abort, jsonify, redirect, request, session
+from flask import Response, abort, jsonify, redirect, request, session
 import app as base
 
 DB_PATH = Path(os.environ.get('PRACTICE_RACE_DB', str(base.ROOT / 'data' / 'practice-race.sqlite3')))
@@ -104,7 +106,7 @@ def build_pool(qs, count):
             unique.setdefault(fingerprint(q), copy.deepcopy(q))
     pool = list(unique.values())
     if len(pool) < count:
-        raise ValueError('Không đủ câu hợp lệ để tạo đề. Chỉ dùng TN, Đúng/Sai và trả lời ngắn có đáp án.')
+        raise ValueError('Bài này có ' + str(len(pool)) + ' câu hợp lệ, không đủ ' + str(count) + ' câu/đề. Hãy giảm số câu hoặc chọn bài khác. Chỉ dùng TN, Đúng/Sai và trả lời ngắn có đáp án.')
     # Fixed blueprint shared by everyone; rare buckets are not silently replaced.
     groups = defaultdict(list)
     for q in pool:
@@ -172,37 +174,43 @@ def race_home():
     if request.method == 'POST':
         check_csrf()
         if request.form.get('code'):
-            return redirect('/member/race/' + re.sub('[^A-Z0-9]', '', request.form['code'].upper())[:8])
-        if not base.can_manage_bank():
-            abort(403)
-        path = request.form.get('path', '')
-        try:
-            count = int(request.form.get('count', '10'))
-            duration = int(request.form.get('minutes', '15')) * 60
-            if not 1 <= count <= 60 or not 60 <= duration <= 10800:
-                raise ValueError('Chọn 1–60 câu và thời gian 1–180 phút.')
-            qs = base.parse_lesson_questions(path)
-            pool, blueprint, capacity = build_pool(qs, count)
-            code = secrets.token_hex(4).upper()
+            code = re.sub('[^A-Z0-9]', '', request.form['code'].upper())[:8]
             with db() as c:
-                c.execute('INSERT INTO race_rooms(code,owner,title,path,pool,blueprint,duration,state,created) VALUES (?,?,?,?,?,?,?,?,?)',
-                          (code, user, request.form.get('title', 'Thi đua luyện đề')[:100], path, json.dumps(pool, ensure_ascii=False), json.dumps(blueprint, ensure_ascii=False), duration, 'waiting', time.time()))
-            return redirect('/member/race/' + code)
-        except (ValueError, OSError) as exc:
-            error = '<p class="err">' + html.escape(str(exc)) + '</p>'
-    creation = ''
+                exists = c.execute('SELECT 1 FROM race_rooms WHERE code=?', (code,)).fetchone()
+            if exists:
+                return redirect('/member/race/' + code)
+            error = '<p class="err">Mã phòng chưa tồn tại. ADMIN cần tạo phòng trước rồi gửi mã hoặc QR cho học sinh. Không tự nhập một mã bất kỳ để tạo phòng.</p>'
+        elif not base.can_manage_bank():
+            abort(403)
+        if not request.form.get('code'):
+            path = request.form.get('path', '')
+            try:
+                count = int(request.form.get('count', '10'))
+                duration = int(request.form.get('minutes', '15')) * 60
+                if not 1 <= count <= 60 or not 60 <= duration <= 10800:
+                    raise ValueError('Chọn 1–60 câu và thời gian 1–180 phút.')
+                qs = base.parse_lesson_questions(path)
+                pool, blueprint, capacity = build_pool(qs, count)
+                code = secrets.token_hex(4).upper()
+                with db() as c:
+                    c.execute('INSERT INTO race_rooms(code,owner,title,path,pool,blueprint,duration,state,created) VALUES (?,?,?,?,?,?,?,?,?)',
+                              (code, user, request.form.get('title', 'Thi đua luyện đề')[:100], path, json.dumps(pool, ensure_ascii=False), json.dumps(blueprint, ensure_ascii=False), duration, 'waiting', time.time()))
+                return redirect('/member/race/' + code)
+            except (ValueError, OSError) as exc:
+                error = '<p class="err">' + html.escape(str(exc)) + '</p>'
+    creation = '<p><a class="btn" href="' + html.escape(base.login_url('/member/race'), quote=True) + '">ADMIN: Đăng nhập để tạo phòng + QR</a></p>'
     if base.can_manage_bank():
-        selected = request.args.get('path', '')
-        lessons = base.index_data().get('lessons', [])
-        options = ''.join('<option value="' + html.escape(str(l.get('path', '')), quote=True) + '"' + (' selected' if l.get('path') == selected else '') + '>' + html.escape(str(l.get('path', ''))) + '</option>' for l in lessons if l.get('path'))
-        creation = '<h2>ADMIN · Tạo phòng</h2><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Tên phòng <input name="title" value="Thi đua luyện đề" maxlength="100" required></label><label>Bài học <select name="path" required>' + options + '</select></label><label>Số câu mỗi đề <input name="count" type="number" min="1" max="60" value="10" required></label><label>Thời gian (phút) <input name="minutes" type="number" min="1" max="180" value="15" required></label><button class="btn primary">Tạo phòng thi đua</button></form><p>Mỗi thành viên nhận bộ câu riêng, không trùng câu với người khác, cùng cấu trúc dạng bài và mức độ. Tự luận cần chấm tay nên chưa đưa vào bảng xếp hạng.</p>'
+        selected = request.form.get('path') or request.args.get('path', '')
+        lessons = [l for l in base.index_data().get('lessons', []) if l.get('path') and int(l.get('questions', l.get('count', 0)) or 0) > 0]
+        options = '<option value="">— Chọn bài học để tạo phòng —</option>' + ''.join('<option value="' + html.escape(str(l['path']), quote=True) + '"' + (' selected' if l['path'] == selected else '') + '>' + html.escape(' · '.join(str(l.get(k) or '') for k in ('Mon','Lop','BaiHoc'))) + ' (' + str(l.get('questions', l.get('count', 0))) + ' câu)</option>' for l in lessons)
+        creation = '<section class="race-create"><h2>📺 ADMIN · Tạo phòng chiếu thi đua + QR</h2><p>Chọn bài rồi bấm tạo phòng. Hệ thống sẽ tự sinh mã phòng và mã QR cho học sinh quét.</p><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Tên phòng <input name="title" value="Thi đua luyện đề" maxlength="100" required></label><label>Bài học <select id="raceLesson" name="path" required>' + options + '</select></label><label>Số câu mỗi đề <input id="raceCount" name="count" type="number" min="1" max="60" value="5" required></label><label>Thời gian (phút) <input name="minutes" type="number" min="1" max="180" value="15" required></label><p id="racePoolInfo" role="status">Chọn bài để kiểm tra số câu và số học sinh có thể tham gia.</p><button id="raceCreate" class="btn primary" disabled>📺 Tạo phòng + Hiện mã QR</button></form><p>Mỗi học sinh nhận bộ câu riêng, không trùng câu với người khác, cùng cấu trúc dạng bài và mức độ. Tự luận cần chấm tay nên chưa đưa vào bảng xếp hạng.</p></section>' + _SETUP_JS
     with db() as c:
         if base.can_manage_bank():
             recent = c.execute('SELECT code,title,state FROM race_rooms WHERE owner=? ORDER BY created DESC LIMIT 20', (user,)).fetchall()
         else:
             recent = c.execute('SELECT r.code,r.title,r.state FROM race_rooms r JOIN race_players p ON p.room=r.code WHERE p.user=? ORDER BY r.created DESC LIMIT 20', (user,)).fetchall()
     links = ''.join('<li><a href="/member/race/' + r['code'] + '">' + html.escape(r['title']) + ' · ' + r['code'] + '</a></li>' for r in recent)
-    body = '<div class="wrap race"><h1>🏁 Thi đua luyện đề</h1><p>Học sinh chỉ cần mã phòng và họ tên, không cần đăng nhập tài khoản.</p>' + error + '<form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Mã phòng <input name="code" maxlength="8" required placeholder="Nhập mã ADMIN cung cấp"></label><button class="btn primary">Vào phòng</button></form>' + creation + '<h2>Phòng của tôi</h2><ul>' + links + '</ul><a class="btn" href="/member">← Mục lục</a></div><style>.race{max-width:1000px}.race label{display:block;margin:12px 0}.race input,.race select{max-width:100%;padding:9px}.race select{width:100%}</style>'
+    body = '<div class="wrap race"><h1>🏁 Thi đua luyện đề</h1><p>Học sinh chỉ cần mã phòng và họ tên, không cần đăng nhập tài khoản.</p>' + error + creation + '<section class="race-join"><h2>👨‍🎓 Học sinh · Vào phòng đã tạo</h2><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Mã phòng <input name="code" maxlength="8" required placeholder="Nhập đúng mã ADMIN cung cấp"></label><button class="btn primary">Vào phòng</button></form></section>' + '<h2>Phòng của tôi</h2><ul>' + links + '</ul><a class="btn" href="/member">← Mục lục</a></div><style>.race{max-width:1000px}.race label{display:block;margin:12px 0}.race input,.race select{max-width:100%;padding:9px}.race select{width:100%}.race-create{border:2px solid #2563eb;background:#eff6ff;padding:20px;border-radius:12px;margin:16px 0}.race-join{border:1px solid #cbd5e1;padding:20px;border-radius:12px;margin:16px 0}</style>'
     return base.page('Thi đua luyện đề', body)
 
 
@@ -210,13 +218,49 @@ def race_home():
 def race_page(code):
     m, user = who()
     with db() as c:
-        r = room(c, code)
+        r = c.execute('SELECT * FROM race_rooms WHERE code=?', (code,)).fetchone()
+        if not r:
+            return base.page('Không tìm thấy phòng', '<div class="wrap"><h2>Mã phòng chưa tồn tại hoặc đã hết hiệu lực</h2><p>ADMIN cần tạo phòng trước, sau đó gửi mã hoặc QR mới cho học sinh.</p><a class="btn primary" href="/member/race">← Tạo phòng / Nhập mã khác</a></div>'), 404
         host = is_host(r, user)
     cfg = json.dumps({'code': code, 'csrf': csrf(), 'host': host, 'name': m.get('name') or ''}, ensure_ascii=True).replace('<', '\\u003c')
     body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js"></script>'
+    if host:
+        join_url = base.public_origin() + '/member/race/' + code
+        qr = '<section id="raceQR" class="race-qr"><img src="/race/' + code + '/qr.svg" alt="Mã QR tham gia phòng ' + code + '" width="260" height="260"><div><h2>📱 Quét QR để tham gia</h2><p>MÃ PHÒNG</p><strong style="font:800 38px monospace;letter-spacing:4px">' + code + '</strong><p>Học sinh quét QR → nhập họ tên → chờ bắt đầu. Quét và tham gia trước khi ADMIN bấm bắt đầu.</p><input readonly aria-label="Link tham gia" value="' + html.escape(join_url, quote=True) + '" style="width:100%;padding:10px"></div></section><style>.race-qr{display:flex;gap:24px;align-items:center;border:2px solid #2563eb;border-radius:14px;background:white;padding:20px;margin:16px 0}.race-qr[hidden]{display:none}.race-qr img{max-width:42%;height:auto}.race-qr>div{flex:1;min-width:0}@media(max-width:600px){.race-qr{display:block;text-align:center}.race-qr img{max-width:100%;width:220px}}</style>'
+        body = body.replace('<div id="raceControls"></div>', qr + '<div id="raceControls"></div>')
     response = base.page('Thi đua luyện đề', body)
     response.headers['Cache-Control'] = 'no-store'
     return response
+
+
+_SETUP_JS = '''<script>(function(){
+const lesson=document.getElementById('raceLesson'),count=document.getElementById('raceCount'),info=document.getElementById('racePoolInfo'),create=document.getElementById('raceCreate');let version=0;
+async function preview(){const mine=++version;create.disabled=true;if(!lesson.value){info.textContent='Chọn bài học để tạo phòng.';return}info.textContent='Đang kiểm tra ngân hàng câu hỏi…';try{const r=await fetch('/api/race-preview?'+new URLSearchParams({path:lesson.value,count:count.value}),{cache:'no-store'}),d=await r.json();if(mine!==version)return;if(!r.ok||!d.ok)throw Error(d.error||'Không kiểm tra được bài');info.textContent='Có '+d.available+' câu hợp lệ · '+d.count+' câu/đề · Tối đa '+d.capacity+' học sinh với các đề không trùng câu.';create.disabled=d.capacity<1}catch(e){if(mine===version)info.textContent=e.message}}
+lesson.addEventListener('change',preview);count.addEventListener('change',preview);preview();})();</script>'''
+
+
+@base.app.get('/api/race-preview')
+def race_preview():
+    if not base.can_manage_bank():
+        abort(403)
+    try:
+        n = int(request.args.get('count', '5'))
+        if not 1 <= n <= 60:
+            raise ValueError('Số câu phải từ 1 đến 60.')
+        qs = base.parse_lesson_questions(request.args.get('path', ''))
+        pool, blueprint, capacity = build_pool(qs, n)
+        return jsonify(ok=True, available=len(pool), count=n, capacity=capacity)
+    except (ValueError, OSError) as exc:
+        return jsonify(ok=False, error=str(exc)), 400
+
+
+@base.app.get('/race/<code>/qr.svg')
+def race_qr(code):
+    with db() as c:
+        room(c, code)
+    out = io.BytesIO()
+    segno.make(base.public_origin() + '/member/race/' + code, error='m').save(out, kind='svg', scale=8, border=4, dark='#102746', light='white')
+    return Response(out.getvalue(), mimetype='image/svg+xml', headers={'Cache-Control':'no-store'})
 
 
 @base.app.route('/api/race/<code>', methods=['GET', 'POST'])

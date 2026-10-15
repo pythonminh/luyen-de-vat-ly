@@ -120,6 +120,7 @@
   function update(d) {
     if (!d.ok) throw Error(d.error || 'Không đọc được phòng.');
     state = d; serverOffset = d.now * 1000 - Date.now();
+    const qr = $('raceQR'); if (qr) qr.hidden = d.state !== 'waiting';
     if (cfg.host) { questions = d.reference || []; pos = d.shown; }
     else if (d.questions) { questions = d.questions; if (!loaded || d.finished || d.state === 'closed') { answers = d.answers || {}; loaded = true; } }
     controls(); drawRanks(); drawQuestion(); tick();

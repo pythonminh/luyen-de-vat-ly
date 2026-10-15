@@ -166,5 +166,36 @@ class RaceTests(unittest.TestCase):
         r = self.client.post('/member/race', data={'csrf':'test-token','path':'lesson.tex','count':'5','minutes':'1'})
         self.assertEqual(r.status_code, 403)
 
+    def test_admin_creation_is_first_and_preview_checks_capacity(self):
+        page = self.client.get('/member/race').get_data(as_text=True)
+        self.assertLess(page.index('ADMIN · Tạo phòng'), page.index('Học sinh · Vào phòng'))
+        d = self.client.get('/api/race-preview?path=lesson.tex&count=5').get_json()
+        self.assertEqual(d['available'], 40)
+        self.assertEqual(d['capacity'], 8)
+        self.assertEqual(self.client.get('/api/race-preview?path=lesson.tex&count=60').status_code, 400)
+        self.user = None
+        self.assertEqual(self.client.get('/api/race-preview?path=lesson.tex&count=5').status_code, 403)
+
+    def test_invalid_join_code_has_help_instead_of_raw_404(self):
+        self.user = None
+        r = self.client.post('/race', data={'code':'1234','csrf':'test-token'})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('Mã phòng chưa tồn tại', r.get_data(as_text=True))
+        r = self.client.get('/member/race/1234')
+        self.assertEqual(r.status_code, 404)
+        self.assertIn('Tạo phòng / Nhập mã khác', r.get_data(as_text=True))
+
+    def test_qr_encodes_room_join_url_and_guest_can_fetch_it(self):
+        page = self.client.get('/member/race/' + self.code).get_data(as_text=True)
+        self.assertIn('/race/' + self.code + '/qr.svg', page)
+        self.user = None
+        real = race.segno.make
+        with patch.object(race.segno, 'make', wraps=real) as encoder:
+            r = self.client.get('/race/' + self.code + '/qr.svg')
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.mimetype, 'image/svg+xml')
+            self.assertIn(b'<svg', r.data)
+            self.assertTrue(encoder.call_args.args[0].endswith('/member/race/' + self.code))
+
 
 if __name__ == '__main__': unittest.main()
