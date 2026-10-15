@@ -2166,6 +2166,25 @@ Làm đúng kiểu chương trình luyện đổi số:
 - Trắc nghiệm: bốn phương án A B C D. Khi đổi số, phương án và đáp án đúng phải tính lại. Học sinh bấm phương án để kiểm tra.
 - Đơn vị giữ nguyên. Không đổi bản chất bài. Không bịa hiện tượng khác.
 
+QUY TẮC HIỂN THỊ CÔNG THỨC OFFLINE — BẮT BUỘC:
+- LaTeX trong nội dung gốc chỉ là dữ liệu đầu vào. Chuyển TOÀN BỘ công thức trong đề, kiến thức, phương án, hình và lời giải thành MathML gốc của trình duyệt hoặc HTML/CSS với <sup>, <sub> và phân số CSS. Không dùng MathJax, KaTeX, CDN hay tài nguyên mạng.
+- Không để lộ mã LaTeX hoặc dấu phân cách công thức trên màn hình. Không đặt công thức LaTeX thô vào innerHTML/textContent rồi cho rằng trình duyệt tự hiểu.
+- Ví dụ hiển thị bằng HTML: ΔU = Q + A; A = −p·ΔV (A là công khí nhận); ΔV (m<sup>3</sup>) = ΔV (L)·10<sup>−3</sup>; S<sub>ABC</sub> = ½·AB·BC·sin B.
+- Công thức sinh động bằng JavaScript cũng phải tạo đúng HTML/MathML sau MỖI lần đổi đề và mở lời giải. Đặc biệt không làm mất dấu gạch chéo ngược do escape chuỗi JavaScript.
+- Phân số, căn, chỉ số và số mũ phải đọc rõ trên điện thoại, không tràn khung.
+
+TÍNH ĐÚNG VÀ GIỮ NGUYÊN ĐỀ:
+- Giữ đúng loại câu gốc: TN mới có 4 phương án; trả lời ngắn chỉ có ô nhập; Đúng/Sai giữ từng mệnh đề; tự luận có lời giải. Không tự thêm trắc nghiệm cho câu trả lời ngắn.
+- Tính đáp án, phương án, số trên hình và lời giải từ cùng một bộ biến. Không thay số bằng thao tác thay chuỗi đơn thuần.
+- Không làm tròn ở bước trung gian. Chỉ làm tròn kết quả cuối nếu đề yêu cầu; nếu không, dùng phân số hoặc biểu thức chính xác khi cần.
+- Lý thuyết không đủ biến để đổi số thì thông báo rõ. Nếu thiếu hình hoặc dữ kiện thiết yếu, nêu cụ thể phần thiếu và không tự bịa đáp án hay dựng một bài khác.
+- Định luật I nhiệt động lực học: dùng ΔU = Q + A, với A là công khí nhận. Khí giãn nở đẳng áp có A = −p·ΔV. Giải thích dấu nhất quán trong toàn bộ bài.
+
+TỰ KIỂM TRA TRƯỚC KHI TRẢ MÃ:
+- Kiểm tra đáp án gốc bằng phép tính độc lập; nếu mâu thuẫn đáp án cung cấp thì báo rõ ngay trong trang.
+- Kiểm tra ít nhất 20 bộ số hợp lệ: dữ kiện đủ, đáp án đúng, lời giải khớp, TN có đúng một đáp án và không trùng phương án sau định dạng.
+- Kiểm tra các nút Đổi đề, Kiểm tra, Xem lời giải; mở offline vẫn có công thức hiển thị hoàn chỉnh, không còn ký hiệu LaTeX thô.
+
 NỘI DUNG GỐC:
 --------------------------------
 [DÁN LATEX VÀO ĐÂY]
