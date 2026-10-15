@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 187,
+  "total_files": 188,
   "total_questions": 12266,
   "lessons": [
     {
@@ -6376,6 +6376,19 @@
           "TL": 6
         }
       }
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương 3 Hệ thức lượng trong tam giác/Bài 6 Định lý Sin định lý Cosin/de.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương 3 Hệ thức lượng trong tam giác/Bài 6 Định lý Sin định lý Cosin/de.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương 3 Hệ thức lượng trong tam giác/Bài 6 Định lý Sin định lý Cosin/de.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương 3 Hệ thức lượng trong tam giác",
+      "BaiHoc": "Bài 6 Định lý Sin định lý Cosin",
+      "De": "Bài 6 Định lý Sin định lý Cosin",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
