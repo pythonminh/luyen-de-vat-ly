@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 186,
+  "total_files": 187,
   "total_questions": 12258,
   "lessons": [
     {
@@ -14,6 +14,20 @@
       "Chuong": "",
       "BaiHoc": "",
       "De": "",
+      "questions": 0,
+      "count": 0,
+      "dang": {},
+      "dang_kinds": {}
+    },
+    {
+      "id": "ngan-hang/Toán/Lớp 10/Chương 3: Hệ thức lượng trong tam giác/Bài 5: Giá trị lượng giác của 1 góc từ 0 đến 180 độ./de.tex",
+      "file": "ngan-hang/Toán/Lớp 10/Chương 3: Hệ thức lượng trong tam giác/Bài 5: Giá trị lượng giác của 1 góc từ 0 đến 180 độ./de.tex",
+      "path": "ngan-hang/Toán/Lớp 10/Chương 3: Hệ thức lượng trong tam giác/Bài 5: Giá trị lượng giác của 1 góc từ 0 đến 180 độ./de.tex",
+      "Mon": "Toán",
+      "Lop": "10",
+      "Chuong": "Chương 3: Hệ thức lượng trong tam giác",
+      "BaiHoc": "Bài 5: Giá trị lượng giác của 1 góc từ 0 đến 180 độ.",
+      "De": "Bài 5: Giá trị lượng giác của 1 góc từ 0 đến 180 độ.",
       "questions": 0,
       "count": 0,
       "dang": {},
