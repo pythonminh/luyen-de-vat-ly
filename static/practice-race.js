@@ -111,7 +111,7 @@
     if (!d.ok) throw Error(d.error || 'Không đọc được phòng.');
     state = d; serverOffset = d.now * 1000 - Date.now();
     if (cfg.host) { questions = d.reference || []; pos = d.shown; }
-    else if (d.questions) { questions = d.questions; if (!loaded) { answers = d.answers || {}; loaded = true; } }
+    else if (d.questions) { questions = d.questions; if (!loaded || d.finished || d.state === 'closed') { answers = d.answers || {}; loaded = true; } }
     controls(); drawRanks(); drawQuestion(); tick();
   }
   function tick() {
