@@ -892,6 +892,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
             "<a href='/admin' title='Quản trị'>🏠 Quản trị</a>",
             "<details class='top-tools'><summary>☰ Công cụ</summary><div class='top-tools-list'>",
             "<a href='/member/ai'>🤖 Gemini</a>",
+            "<a href='/member/race'>🏁 Thi đua luyện đề</a>",
             "<a href='/xem'>📺 Chiếu</a>",
             "<button type='button' class='aiPhotoBtn'>📷 Chụp</button>",
             f"<a href='{html.escape(github_folder_url(), quote=True)}' target='_blank' rel='noopener'>🐙 GitHub</a>",
@@ -906,6 +907,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
             who = _who_chip("👤 " + nm, _class_label(m))
         nav.append("<a href='/member/goi' title='Gói'>🎫</a>")
         nav.append("<a href='/member/ai' title='Gemini'>🤖</a>")
+        nav.append("<a href='/member/race' title='Thi đua luyện đề'>🏁 Thi đua</a>")
         nav.append("<a href='/member/logout' title='Thoát'>🚪</a>")
     else:
         nav += [
@@ -5357,6 +5359,7 @@ import admin_classify  # noqa: E402,F401
 import admin_slim  # noqa: E402,F401
 import admin_rewrite  # noqa: E402,F401
 import live_present  # noqa: E402,F401
+import practice_race  # noqa: E402,F401
 try:
     import membership as _membership  # noqa: F401
     _membership.attach_routes()
