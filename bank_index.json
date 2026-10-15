@@ -3,7 +3,7 @@
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
   "total_files": 187,
-  "total_questions": 12258,
+  "total_questions": 12266,
   "lessons": [
     {
       "id": "ngan-hang/_Chua_phan_loai/de.tex",
@@ -28,10 +28,19 @@
       "Chuong": "Chương 3: Hệ thức lượng trong tam giác",
       "BaiHoc": "Bài 5: Giá trị lượng giác của 1 góc từ 0 đến 180 độ.",
       "De": "Bài 5: Giá trị lượng giác của 1 góc từ 0 đến 180 độ.",
-      "questions": 0,
-      "count": 0,
-      "dang": {},
-      "dang_kinds": {}
+      "questions": 8,
+      "count": 8,
+      "dang": {
+        "Chưa phân dạng": 8
+      },
+      "dang_kinds": {
+        "Chưa phân dạng": {
+          "TN": 0,
+          "DS": 0,
+          "TLN": 8,
+          "TL": 0
+        }
+      }
     },
     {
       "id": "ngan-hang/Toán/Lớp 10/Chương I. Mệnh đề và tập hợp/Bài 1. Mệnh đề/dang-menh-de-chua-bien.tex",
