@@ -22,7 +22,7 @@
   function scheduleFit() {
     if (fitPending) return;
     fitPending = true;
-    const next = window.requestAnimationFrame || (fn => setTimeout(fn, 0));
+    const next = window.requestAnimationFrame ? fn => window.requestAnimationFrame(fn) : fn => setTimeout(fn, 0);
     next(() => { fitPending = false; fitMath(); });
   }
   if (raceRoot) {
