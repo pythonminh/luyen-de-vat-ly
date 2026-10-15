@@ -1,1 +1,153 @@
 
+\begin{bt}
+Cho tam giác \(ABC\) có \(AB=7\), \(AC=9\), \(\widehat{A}=60^\circ\). Tính độ dài cạnh \(BC\).
+\shortans{}
+\loigiai{
+Áp dụng định lý cosin:
+\[
+BC^2=AB^2+AC^2-2\cdot AB\cdot AC\cos A
+=7^2+9^2-2\cdot 7\cdot 9\cdot \cos 60^\circ
+=49+81-126\cdot \frac12=67.
+\]
+Suy ra
+\[
+BC=\sqrt{67}.
+\]
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(AB=10\), \(AC=6\), \(BC=8\). Tính \(\widehat{A}\).
+\shortans{}
+\loigiai{
+Đặt \(a=BC=8,\; b=CA=6,\; c=AB=10\). Theo định lý cosin:
+\[
+a^2=b^2+c^2-2bc\cos A
+\Rightarrow 64=36+100-2\cdot 6\cdot 10\cos A.
+\]
+\[
+120\cos A=72\Rightarrow \cos A=\frac{3}{5}.
+\]
+Vậy
+\[
+\widehat{A}=\arccos\!\left(\frac35\right)\approx 53{,}13^\circ.
+\]
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(BC=12\), \(\widehat{A}=30^\circ\), \(\widehat{B}=45^\circ\). Tính cạnh \(CA\).
+\shortans{}
+\loigiai{
+Đặt \(a=BC=12,\; b=CA\). Theo định lý sin:
+\[
+\frac{a}{\sin A}=\frac{b}{\sin B}
+\Rightarrow b=a\cdot \frac{\sin B}{\sin A}
+=12\cdot \frac{\sin 45^\circ}{\sin 30^\circ}
+=12\cdot \frac{\frac{\sqrt2}{2}}{\frac12}
+=12\sqrt2.
+\]
+Vậy \(CA=12\sqrt2\).
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(AB=5\), \(AC=7\), \(BC=9\).
+\begin{enumerate}
+\item Tính \(\widehat{A}\).
+\item Tính diện tích tam giác \(ABC\).
+\end{enumerate}
+\shortans{}
+\loigiai{
+Đặt \(a=BC=9,\; b=CA=7,\; c=AB=5\).
+
+Theo định lý cosin:
+\[
+\cos A=\frac{b^2+c^2-a^2}{2bc}
+=\frac{49+25-81}{2\cdot 7\cdot 5}
+=-\frac{1}{10}.
+\]
+Suy ra \(\widehat{A}=\arccos(-0{,}1)\approx 95{,}74^\circ\).
+
+Diện tích:
+\[
+S=\frac12 bc\sin A=\frac12\cdot 7\cdot 5\cdot \sin A.
+\]
+Mà
+\[
+\sin A=\sqrt{1-\cos^2A}=\sqrt{1-\frac1{100}}=\frac{3\sqrt{11}}{10}.
+\]
+Nên
+\[
+S=\frac{35}{2}\cdot \frac{3\sqrt{11}}{10}
+=\frac{21\sqrt{11}}{4}.
+\]
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(AB=8\), \(AC=10\), \(\widehat{A}=120^\circ\).
+\begin{enumerate}
+\item Tính \(BC\).
+\item Tính bán kính đường tròn ngoại tiếp \(R\).
+\end{enumerate}
+\shortans{}
+\loigiai{
+Đặt \(a=BC,\; b=CA=10,\; c=AB=8\).
+
+Theo định lý cosin:
+\[
+a^2=b^2+c^2-2bc\cos A
+=10^2+8^2-2\cdot 10\cdot 8\cos 120^\circ
+=100+64-160\cdot\left(-\frac12\right)=244.
+\]
+\[
+a=2\sqrt{61}.
+\]
+
+Theo định lý sin mở rộng:
+\[
+\frac{a}{\sin A}=2R
+\Rightarrow
+R=\frac{a}{2\sin A}
+=\frac{2\sqrt{61}}{2\sin 120^\circ}
+=\frac{2\sqrt{61}}{2\cdot \frac{\sqrt3}{2}}
+=\frac{2\sqrt{183}}{3}.
+\]
+}
+\end{bt}
+
+\begin{bt}
+(Trường hợp mơ hồ của định lý sin) Cho \(a=8,\; b=10,\; \widehat{A}=30^\circ\).
+Hỏi có bao nhiêu tam giác thỏa mãn? Tính các góc có thể có của tam giác.
+\shortans{}
+\loigiai{
+Theo định lý sin:
+\[
+\frac{a}{\sin A}=\frac{b}{\sin B}
+\Rightarrow \sin B=\frac{b\sin A}{a}
+=\frac{10\cdot \sin 30^\circ}{8}
+=\frac{10\cdot \frac12}{8}
+=\frac{5}{8}.
+\]
+Do đó:
+\[
+B_1=\arcsin\!\left(\frac58\right)\approx 38{,}68^\circ,\qquad
+B_2=180^\circ-B_1\approx 141{,}32^\circ.
+\]
+Kiểm tra:
+\[
+A+B_1=30^\circ+38{,}68^\circ<180^\circ \Rightarrow \text{nhận}.
+\]
+\[
+A+B_2=30^\circ+141{,}32^\circ<180^\circ \Rightarrow \text{nhận}.
+\]
+Vậy có \(2\) tam giác.
+
+Các góc còn lại:
+\[
+C_1=180^\circ-A-B_1\approx 111{,}32^\circ,\quad
+C_2=180^\circ-A-B_2\approx 8{,}68^\circ.
+\]
+}
+\end{bt}
