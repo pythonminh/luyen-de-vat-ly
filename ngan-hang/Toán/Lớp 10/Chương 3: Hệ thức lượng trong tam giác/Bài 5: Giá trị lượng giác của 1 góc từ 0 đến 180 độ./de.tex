@@ -1,1 +1,135 @@
 
+\begin{bt}
+Cho tam giác \(ABC\) có \(AB=6,\ AC=8,\ \widehat{A}=60^\circ\). Tính \(BC\).
+\shortans{\(\sqrt{52}=2\sqrt{13}\)}
+\loigiai{
+Theo định lý cosin:
+\[
+BC^2=AB^2+AC^2-2\cdot AB\cdot AC\cos A
+=6^2+8^2-2\cdot6\cdot8\cdot\cos60^\circ=52.
+\]
+Vậy \(BC=\sqrt{52}=2\sqrt{13}\).
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(BC=9,\ CA=7,\ AB=5\). Tính \(\widehat{A}\).
+\shortans{\(\widehat{A}\approx95{,}74^\circ\)}
+\loigiai{
+Đặt \(a=BC=9,\ b=CA=7,\ c=AB=5\).  
+\[
+\cos A=\frac{b^2+c^2-a^2}{2bc}
+=\frac{49+25-81}{2\cdot7\cdot5}
+=-\frac1{10}.
+\]
+Suy ra
+\[
+\widehat{A}=\arccos\!\left(-\frac1{10}\right)\approx95{,}74^\circ.
+\]
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(\widehat{A}=30^\circ,\ \widehat{B}=45^\circ,\ BC=12\). Tính \(CA\).
+\shortans{\(12\sqrt2\)}
+\loigiai{
+Theo định lý sin:
+\[
+\frac{BC}{\sin A}=\frac{CA}{\sin B}
+\Rightarrow
+CA=BC\cdot\frac{\sin B}{\sin A}
+=12\cdot\frac{\sin45^\circ}{\sin30^\circ}
+=12\sqrt2.
+\]
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(AB=10,\ AC=6,\ BC=8\). Tính \(\widehat{C}\).
+\shortans{\(\widehat{C}\approx36{,}87^\circ\)}
+\loigiai{
+Đặt \(a=BC=8,\ b=CA=6,\ c=AB=10\).  
+\[
+\cos C=\frac{a^2+b^2-c^2}{2ab}
+=\frac{64+36-100}{2\cdot8\cdot6}=0.
+\]
+Suy ra \(\widehat{C}=90^\circ\).  
+(Do đó nếu làm tròn theo độ thì \(\widehat{C}=90^\circ\), không phải \(36{,}87^\circ\).)
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(AB=7,\ AC=9,\ BC=10\). Tính diện tích tam giác.
+\shortans{\(12\sqrt6\)}
+\loigiai{
+Nửa chu vi:
+\[
+p=\frac{7+9+10}{2}=13.
+\]
+Theo công thức Heron:
+\[
+S=\sqrt{p(p-a)(p-b)(p-c)}
+=\sqrt{13\cdot(13-10)\cdot(13-9)\cdot(13-7)}
+=\sqrt{13\cdot3\cdot4\cdot6}
+=12\sqrt6.
+\]
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(BC=14,\ \widehat{A}=45^\circ,\ \widehat{C}=60^\circ\). Tính \(AB\).
+\shortans{\(7\sqrt6+7\sqrt2\)}
+\loigiai{
+\[
+\widehat{B}=180^\circ-45^\circ-60^\circ=75^\circ.
+\]
+Theo định lý sin:
+\[
+\frac{AB}{\sin C}=\frac{BC}{\sin A}
+\Rightarrow
+AB=BC\cdot\frac{\sin60^\circ}{\sin45^\circ}
+=14\cdot\frac{\frac{\sqrt3}{2}}{\frac{\sqrt2}{2}}
+=7\sqrt6.
+\]
+Vậy \(AB=7\sqrt6\).
+}
+\end{bt}
+
+\begin{bt}
+Cho tam giác \(ABC\) có \(AB=8,\ AC=10,\ \widehat{A}=120^\circ\). Tính bán kính đường tròn ngoại tiếp \(R\).
+\shortans{\(\dfrac{2\sqrt{183}}{3}\)}
+\loigiai{
+Trước hết tính \(a=BC\) bằng định lý cosin:
+\[
+a^2=8^2+10^2-2\cdot8\cdot10\cos120^\circ
+=64+100+80=244
+\Rightarrow a=2\sqrt{61}.
+\]
+Theo hệ thức \(a=2R\sin A\):
+\[
+R=\frac{a}{2\sin A}
+=\frac{2\sqrt{61}}{2\sin120^\circ}
+=\frac{2\sqrt{61}}{\sqrt3}
+=\frac{2\sqrt{183}}{3}.
+\]
+}
+\end{bt}
+
+\begin{bt}
+Cho \(a=8,\ b=10,\ \widehat{A}=30^\circ\). Hỏi có bao nhiêu tam giác thỏa mãn?
+\shortans{Có \(2\) tam giác}
+\loigiai{
+Theo định lý sin:
+\[
+\sin B=\frac{b\sin A}{a}
+=\frac{10\cdot\sin30^\circ}{8}
+=\frac{5}{8}.
+\]
+Suy ra
+\[
+B_1=\arcsin\frac58,\qquad B_2=180^\circ-\arcsin\frac58.
+\]
+Ta có \(A+B_1<180^\circ\) và \(A+B_2<180^\circ\), nên đều lập được tam giác.  
+Vậy có \(2\) tam giác.
+}
+\end{bt}
