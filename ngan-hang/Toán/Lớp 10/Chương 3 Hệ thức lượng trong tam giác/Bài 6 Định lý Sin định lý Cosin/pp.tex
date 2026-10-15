@@ -1,0 +1,151 @@
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương 3 Hệ thức lượng trong tam giác
+% Bài: Bài 6 Định lý Sin định lý Cosin
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
+\input{../../../../_lenh/lythuyet.tex}
+
+Tuyệt vời! Dưới đây là bản chỉnh sửa file `pp.tex` theo yêu cầu, tập trung vào việc phân dạng cụ thể và đưa ra phương pháp giải chi tiết cho từng dạng, tránh các bước chung chung.
+
+```latex
+% Môn: Toán
+% Lớp: 10
+% Chương: Chương 3 Hệ thức lượng trong tam giác
+% Bài: Bài 6 Định lý Sin định lý Cosin
+% Loại: Dạng mẫu
+% File riêng, không trộn vào de.tex
+\subsection{Dạng bài tập mẫu}
+
+\subsubsection{Dạng 1. Tính độ dài cạnh hoặc góc trong tam giác khi biết các yếu tố khác}
+\begin{phuongphap}
+Để tính độ dài cạnh hoặc số đo góc trong tam giác, ta thực hiện các bước sau:
+\begin{enumerate}
+    \item \textbf{Xác định các yếu tố đã biết và cần tìm:}
+    \begin{itemize}
+        \item Nếu biết hai cạnh và góc xen giữa, hoặc ba cạnh: Sử dụng Định lý Cosin.
+        \item Nếu biết một cạnh và hai góc kề, hoặc hai cạnh và một góc đối diện với một trong hai cạnh đó: Sử dụng Định lý Sin.
+    \end{itemize}
+    \item \textbf{Áp dụng công thức phù hợp:}
+    \begin{itemize}
+        \item \textbf{Định lý Cosin:} Trong tam giác $ABC$ với các cạnh $a, b, c$ và các góc đối diện $A, B, C$:
+        \begin{itemize}
+            \item Để tính cạnh: $a^2 = b^2 + c^2 - 2bc \cos A$; $b^2 = a^2 + c^2 - 2ac \cos B$; $c^2 = a^2 + b^2 - 2ab \cos C$.
+            \item Để tính góc: $\cos A = \frac{b^2 + c^2 - a^2}{2bc}$; $\cos B = \frac{a^2 + c^2 - b^2}{2ac}$; $\cos C = \frac{a^2 + b^2 - c^2}{2ab}$.
+        \end{itemize}
+        \item \textbf{Định lý Sin:} Trong tam giác $ABC$ với các cạnh $a, b, c$, các góc đối diện $A, B, C$ và bán kính đường tròn ngoại tiếp $R$:
+        $\frac{a}{\sin A} = \frac{b}{\sin B} = \frac{c}{\sin C} = 2R$.
+    \end{itemize}
+    \item \textbf{Thực hiện tính toán và kiểm tra đơn vị:}
+    \begin{itemize}
+        \item Đảm bảo các đơn vị độ dài (cm, m,...) và đơn vị góc (độ, radian) là nhất quán.
+        \item Khi tính góc bằng Định lý Cosin, giá trị $\cos A$ phải nằm trong khoảng $[-1, 1]$. Nếu $\cos A > 0$, góc $A$ là góc nhọn; nếu $\cos A < 0$, góc $A$ là góc tù; nếu $\cos A = 0$, góc $A$ là góc vuông.
+        \item Khi tính góc bằng Định lý Sin, cần lưu ý trường hợp có hai giá trị góc thỏa mãn (ví dụ: $\sin x = k$ có thể có $x = \alpha$ hoặc $x = 180^\circ - \alpha$). Cần dựa vào các yếu tố khác của tam giác (ví dụ: tổng ba góc bằng $180^\circ$, cạnh đối diện với góc lớn hơn thì lớn hơn) để chọn giá trị đúng.
+    \end{itemize}
+\end{enumerate}
+\end{phuongphap}
+\begin{vidumau}
+Cho tam giác $ABC$ có $AB = 5$ cm, $AC = 8$ cm và góc $A = 60^\circ$. Tính độ dài cạnh $BC$.
+\loigiai{
+Áp dụng Định lý Cosin cho cạnh $BC$ trong tam giác $ABC$:
+$BC^2 = AB^2 + AC^2 - 2 \cdot AB \cdot AC \cdot \cos A$
+$BC^2 = 5^2 + 8^2 - 2 \cdot 5 \cdot 8 \cdot \cos 60^\circ$
+$BC^2 = 25 + 64 - 2 \cdot 5 \cdot 8 \cdot \frac{1}{2}$
+$BC^2 = 89 - 40$
+$BC^2 = 49$
+$BC = \sqrt{49} = 7$ cm.
+Vậy độ dài cạnh $BC$ là $7$ cm.
+}
+\end{vidumau}
+
+\subsubsection{Dạng 2. Tính diện tích tam giác}
+\begin{phuongphap}
+Để tính diện tích tam giác, ta có thể sử dụng các công thức sau:
+\begin{enumerate}
+    \item \textbf{Xác định các yếu tố đã biết:}
+    \begin{itemize}
+        \item Nếu biết độ dài hai cạnh và góc xen giữa: Sử dụng công thức $S = \frac{1}{2}ab\sin C$.
+        \item Nếu biết độ dài ba cạnh: Sử dụng công thức Heron.
+        \item Nếu biết một cạnh và chiều cao tương ứng: Sử dụng công thức $S = \frac{1}{2}ah_a$.
+        \item Nếu biết ba cạnh và bán kính đường tròn ngoại tiếp $R$: Sử dụng công thức $S = \frac{abc}{4R}$.
+        \item Nếu biết ba cạnh và bán kính đường tròn nội tiếp $r$: Sử dụng công thức $S = pr$, với $p$ là nửa chu vi.
+    \end{itemize}
+    \item \textbf{Áp dụng công thức phù hợp:}
+    \begin{itemize}
+        \item \textbf{Công thức diện tích theo hai cạnh và góc xen giữa:}
+        $S = \frac{1}{2}ab\sin C = \frac{1}{2}bc\sin A = \frac{1}{2}ca\sin B$.
+        \item \textbf{Công thức Heron (khi biết ba cạnh $a, b, c$):}
+        Tính nửa chu vi $p = \frac{a+b+c}{2}$.
+        $S = \sqrt{p(p-a)(p-b)(p-c)}$.
+        \item \textbf{Công thức diện tích liên quan đến bán kính đường tròn ngoại tiếp $R$:}
+        $S = \frac{abc}{4R}$.
+        \item \textbf{Công thức diện tích liên quan đến bán kính đường tròn nội tiếp $r$:}
+        $S = pr$, với $p = \frac{a+b+c}{2}$.
+    \end{itemize}
+    \item \textbf{Thực hiện tính toán và kiểm tra đơn vị:}
+    \begin{itemize}
+        \item Đảm bảo các đơn vị độ dài là nhất quán. Đơn vị diện tích sẽ là bình phương của đơn vị độ dài (ví dụ: cm$^2$, m$^2$).
+        \item Giá trị $\sin$ của một góc trong tam giác luôn dương (vì góc trong tam giác từ $0^\circ$ đến $180^\circ$).
+        \item Khi sử dụng công thức Heron, cần đảm bảo ba cạnh tạo thành một tam giác (tổng hai cạnh bất kỳ lớn hơn cạnh còn lại).
+    \end{itemize}
+\end{enumerate}
+\end{phuongphap}
+\begin{vidumau}
+Cho tam giác $ABC$ có $AB = 6$ cm, $AC = 10$ cm và góc $A = 30^\circ$. Tính diện tích tam giác $ABC$.
+\loigiai{
+Áp dụng công thức tính diện tích tam giác theo hai cạnh và góc xen giữa:
+$S = \frac{1}{2} \cdot AB \cdot AC \cdot \sin A$
+$S = \frac{1}{2} \cdot 6 \cdot 10 \cdot \sin 30^\circ$
+$S = \frac{1}{2} \cdot 60 \cdot \frac{1}{2}$
+$S = 30 \cdot \frac{1}{2}$
+$S = 15$ cm$^2$.
+Vậy diện tích tam giác $ABC$ là $15$ cm$^2$.
+}
+\end{vidumau}
+
+\subsubsection{Dạng 3. Tính bán kính đường tròn ngoại tiếp và nội tiếp tam giác}
+\begin{phuongphap}
+Để tính bán kính đường tròn ngoại tiếp ($R$) và nội tiếp ($r$) của tam giác, ta thực hiện các bước sau:
+\begin{enumerate}
+    \item \textbf{Xác định các yếu tố đã biết và cần tìm:}
+    \begin{itemize}
+        \item Để tính $R$: Cần biết độ dài một cạnh và góc đối diện, hoặc ba cạnh và diện tích.
+        \item Để tính $r$: Cần biết diện tích và nửa chu vi.
+    \end{itemize}
+    \item \textbf{Áp dụng công thức phù hợp:}
+    \begin{itemize}
+        \item \textbf{Bán kính đường tròn ngoại tiếp $R$:}
+        \begin{itemize}
+            \item Từ Định lý Sin: $R = \frac{a}{2\sin A} = \frac{b}{2\sin B} = \frac{c}{2\sin C}$.
+            \item Từ công thức diện tích: $R = \frac{abc}{4S}$, trong đó $S$ là diện tích tam giác.
+        \end{itemize}
+        \item \textbf{Bán kính đường tròn nội tiếp $r$:}
+        $r = \frac{S}{p}$, trong đó $S$ là diện tích tam giác và $p = \frac{a+b+c}{2}$ là nửa chu vi.
+    \end{itemize}
+    \item \textbf{Thực hiện tính toán và kiểm tra đơn vị:}
+    \begin{itemize}
+        \item Đảm bảo các đơn vị độ dài và góc là nhất quán. Đơn vị của $R$ và $r$ sẽ là đơn vị độ dài (ví dụ: cm, m).
+        \item Để tính $R$ hoặc $r$, thường cần tính diện tích $S$ trước (sử dụng các công thức diện tích đã nêu ở Dạng 2).
+        \item Khi sử dụng công thức $R = \frac{a}{2\sin A}$, cần đảm bảo $\sin A \neq 0$.
+    \end{itemize}
+\end{enumerate}
+\end{phuongphap}
+\begin{vidumau}
+Cho tam giác $ABC$ có $a = 3$ cm, $b = 4$ cm, $c = 5$ cm. Tính bán kính đường tròn ngoại tiếp $R$ và bán kính đường tròn nội tiếp $r$ của tam giác $ABC$.
+\loigiai{
+Đầu tiên, ta nhận thấy $3^2 + 4^2 = 9 + 16 = 25 = 5^2$, nên tam giác $ABC$ là tam giác vuông tại $C$.
+\begin{enumerate}
+    \item \textbf{Tính diện tích $S$:}
+    Vì là tam giác vuông, $S = \frac{1}{2}ab = \frac{1}{2} \cdot 3 \cdot 4 = 6$ cm$^2$.
+    \item \textbf{Tính bán kính đường tròn ngoại tiếp $R$:}
+    Trong tam giác vuông, bán kính đường tròn ngoại tiếp bằng một nửa cạnh huyền.
+    $R = \frac{c}{2} = \frac{5}{2} = 2.5$ cm.
+    Hoặc dùng công thức $R = \frac{abc}{4S} = \frac{3 \cdot 4 \cdot 5}{4 \cdot 6} = \frac{60}{24} = 2.5$ cm.
+    \item \textbf{Tính nửa chu vi $p$:}
+    $p = \frac{a+b+c}{2} = \frac{3+4+5}{2} = \frac{12}{2} = 6$ cm.
+    \item \textbf{Tính bán kính đường tròn nội tiếp $r$:}
+    $r = \frac{S}{p} = \frac{6}{6} = 1$ cm.
+\end{enumerate}
+Vậy bán kính đường tròn ngoại tiếp $R = 2.5$ cm và bán kính đường tròn nội tiếp $r = 1$ cm.
+}
+\end{vidumau}
