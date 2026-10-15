@@ -1,0 +1,352 @@
+<!--hp-title:xJHhurNuZyBuaGnhu4d0-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luyện Tập Vật Lí - Thầy Minh</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+  body { background-color: #f4f6f9; color: #333; line-height: 1.6; }
+  header { background-color: #0b2545; color: #ffffff; text-align: center; padding: 16px 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  header .sub { font-size: 13px; color: #8da9c4; }
+  
+  .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; }
+  @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+  
+  .card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+  .card h2 { font-size: 17px; color: #0b2545; margin-bottom: 14px; border-bottom: 2px solid #eef2f6; padding-bottom: 8px; }
+  
+  /* Bảng công thức & Mô phỏng */
+  .formula-box { background: #eef4f8; border-left: 4px solid #134074; padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; }
+  .formula-title { font-weight: 600; color: #0b2545; font-size: 14px; margin-bottom: 6px; }
+  .formula-math { font-size: 18px; font-weight: bold; color: #d90429; text-align: center; margin: 8px 0; }
+  
+  .param-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+  .param-table th, .param-table td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+  .param-table th { background: #f8fafc; color: #475569; }
+  .param-table tr:nth-child(even) { background: #fdfdfd; }
+  .val-highlight { font-weight: bold; color: #0b2545; }
+  
+  .diagram-container { text-align: center; margin: 16px 0; background: #fafbfc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; }
+  
+  /* Cột phải: đề bài & tương tác */
+  .question-box { font-size: 16px; font-weight: 500; margin-bottom: 18px; line-height: 1.7; color: #1e293b; background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; }
+  .actions { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  button { cursor: pointer; font-size: 14px; font-weight: 600; padding: 9px 16px; border-radius: 6px; border: none; transition: 0.2s; }
+  .btn-new { background-color: #134074; color: #fff; }
+  .btn-new:hover { background-color: #0b2545; }
+  .btn-check { background-color: #2b9348; color: #fff; }
+  .btn-check:hover { background-color: #1b6a32; }
+  .btn-solution { background-color: #64748b; color: #fff; }
+  .btn-solution:hover { background-color: #475569; }
+  
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  @media (max-width: 480px) { .options-grid { grid-template-columns: 1fr; } }
+  .option-btn { background: #fff; border: 1.5px solid #cbd5e1; padding: 10px 14px; border-radius: 8px; text-align: left; font-size: 15px; color: #334155; }
+  .option-btn:hover { border-color: #134074; background: #f0f7ff; }
+  .option-btn.selected { border-color: #134074; background: #e0eefe; font-weight: 600; }
+  .option-btn.correct-choice { background-color: #d1fae5; border-color: #10b981; color: #065f46; font-weight: bold; }
+  .option-btn.wrong-choice { background-color: #fee2e2; border-color: #ef4444; color: #991b1b; }
+  
+  .input-section { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .input-section input { width: 140px; padding: 8px 12px; font-size: 15px; border: 1.5px solid #cbd5e1; border-radius: 6px; outline: none; }
+  .input-section input:focus { border-color: #134074; }
+  
+  .feedback { padding: 10px 14px; border-radius: 6px; font-size: 14px; font-weight: 600; margin-bottom: 16px; display: none; }
+  .feedback.success { display: block; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+  .feedback.error { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  
+  .solution-box { display: none; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; font-size: 14px; color: #78350f; }
+  .solution-box.visible { display: block; }
+  .solution-step { margin-bottom: 6px; }
+  .solution-step:last-child { margin-bottom: 0; font-weight: bold; color: #92400e; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Lớp Học Thầy Minh · Zalo 0946111107</h1>
+  <div class="sub">lophocthayminh.onrender.com</div>
+</header>
+
+<div class="container">
+  <!-- CỘT TRÁI: CÔNG THỨC & SỐ LIỆU ĐANG HIỆN -->
+  <div class="card">
+    <h2>BẢNG THÔNG SỐ & CÔNG THỨC</h2>
+    <div class="formula-box">
+      <div class="formula-title">Định luật Bôi-lơ – Ma-ri-ốt (Quá trình đẳng nhiệt T = const):</div>
+      <div class="formula-math">p₁ · V₁ = p₂ · V₂</div>
+      <div style="text-align: center; font-size: 14px; color: #475569;">
+        Suy ra: <strong>p₂ = (p₁ · V₁) / V₂</strong>
+      </div>
+    </div>
+
+    <!-- Minh họa xilanh khí -->
+    <div class="diagram-container">
+      <svg width="280" height="130" viewBox="0 0 280 130">
+        <!-- Trạng thái 1 -->
+        <rect x="20" y="20" width="100" height="70" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
+        <rect id="gas1" x="22" y="22" width="50" height="66" fill="#93c5fd" opacity="0.8"/>
+        <line x1="72" y1="20" x2="72" y2="90" stroke="#1e293b" stroke-width="4"/>
+        <line x1="72" y1="55" x2="115" y2="55" stroke="#1e293b" stroke-width="4"/>
+        <text x="70" y="110" font-size="12" text-anchor="middle" fill="#334155" font-weight="bold">Trạng thái 1</text>
+        
+        <!-- Trạng thái 2 -->
+        <rect x="155" y="20" width="105" height="70" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
+        <rect id="gas2" x="157" y="22" width="85" height="66" fill="#bfdbfe" opacity="0.6"/>
+        <line x1="242" y1="20" x2="242" y2="90" stroke="#1e293b" stroke-width="4"/>
+        <line x1="242" y1="55" x2="258" y2="55" stroke="#1e293b" stroke-width="4"/>
+        <text x="205" y="110" font-size="12" text-anchor="middle" fill="#334155" font-weight="bold">Trạng thái 2 (Giãn)</text>
+      </svg>
+    </div>
+
+    <table class="param-table">
+      <thead>
+        <tr>
+          <th>Đại lượng</th>
+          <th>Kí hiệu</th>
+          <th>Giá trị hiện tại</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Áp suất ban đầu</td>
+          <td>p₁</td>
+          <td class="val-highlight" id="tb-p1">125 kPa</td>
+        </tr>
+        <tr>
+          <td>Thể tích ban đầu</td>
+          <td>V₁</td>
+          <td class="val-highlight" id="tb-v1">5 lít</td>
+        </tr>
+        <tr>
+          <td>Thể tích sau</td>
+          <td>V₂</td>
+          <td class="val-highlight" id="tb-v2">25 lít</td>
+        </tr>
+        <tr>
+          <td>Áp suất sau (cần tìm)</td>
+          <td>p₂</td>
+          <td class="val-highlight" id="tb-p2" style="color: #d90429;">? kPa</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CỘT PHẢI: ĐỀ BÀI VÀ TRẮC NGHIỆM -->
+  <div class="card">
+    <h2>LUYỆN TẬP VÀ ĐỔI SỐ</h2>
+    
+    <div class="actions">
+      <button class="btn-new" onclick="generateNewProblem()">« Đổi đề bài mới »</button>
+      <button class="btn-solution" onclick="toggleSolution()">Xem lời giải</button>
+    </div>
+
+    <div class="question-box" id="question-text">
+      Trong dạng “Khối khí chịu áp suất của cột chất lỏng”, Khí có áp suất 125 kPa, thể tích 5 lít giãn đẳng nhiệt đến 25 lít. Áp suất sau là
+    </div>
+
+    <!-- Nhập tự luận -->
+    <div class="input-section">
+      <label for="num-ans" style="font-size: 14px; font-weight: 500;">Nhập kết quả (kPa):</label>
+      <input type="number" id="num-ans" placeholder="Ví dụ: 25" step="any">
+      <button class="btn-check" onclick="checkNumberInput()">Kiểm tra</button>
+    </div>
+
+    <!-- Chọn 4 phương án -->
+    <div style="font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px;">Hoặc chọn một phương án A, B, C, D:</div>
+    <div class="options-grid" id="options-container">
+      <!-- Tự động kết xuất phương án -->
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <div class="solution-box" id="solution-box">
+      <!-- Tự động kết xuất lời giải -->
+    </div>
+  </div>
+</div>
+
+<script>
+  // Dữ liệu gốc ban đầu
+  const defaultData = {
+    p1: 125,
+    v1: 5,
+    v2: 25,
+    p2: 25
+  };
+
+  let current = { ...defaultData };
+  let currentOptions = [];
+  let correctOptionLetter = 'A';
+
+  // Khởi tạo ban đầu khớp chính xác đề gốc
+  function initDefault() {
+    current = { p1: 125, v1: 5, v2: 25, p2: 25 };
+    currentOptions = [
+      { letter: 'A', value: 25, text: 'A. 25 kPa', isCorrect: true },
+      { letter: 'B', value: 625, text: 'B. 625 kPa', isCorrect: false },
+      { letter: 'C', value: 125, text: 'C. 125 kPa', isCorrect: false },
+      { letter: 'D', value: 5, text: 'D. 5 kPa', isCorrect: false }
+    ];
+    correctOptionLetter = 'A';
+    renderUI();
+  }
+
+  // Đổi đề mới với số liệu thay đổi, tính lại p2 và các phương án
+  function generateNewProblem() {
+    const sampleSets = [
+      { p1: 150, v1: 4, v2: 12 },
+      { p1: 120, v1: 3, v2: 18 },
+      { p1: 200, v1: 2, v2: 10 },
+      { p1: 180, v1: 5, v2: 30 },
+      { p1: 240, v1: 2.5, v2: 10 },
+      { p1: 160, v1: 4, v2: 32 },
+      { p1: 100, v1: 6, v2: 25 },
+      { p1: 300, v1: 2, v2: 15 },
+      { p1: 140, v1: 5, v2: 20 },
+      { p1: 210, v1: 3, v2: 14 }
+    ];
+
+    const candidates = sampleSets.filter(s => s.p1 !== current.p1 || s.v1 !== current.v1 || s.v2 !== current.v2);
+    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+
+    current.p1 = chosen.p1;
+    current.v1 = chosen.v1;
+    current.v2 = chosen.v2;
+    current.p2 = Math.round((chosen.p1 * chosen.v1 / chosen.v2) * 100) / 100;
+
+    // Sinh các phương án nhiễu theo bẫy quen thuộc
+    let dist1 = Math.round((current.p1 * current.v2 / current.v1) * 100) / 100;
+    let dist2 = current.p1;
+    let dist3 = Math.round((current.v1) * 100) / 100;
+
+    if (dist3 === current.p2 || dist3 === dist1 || dist3 === dist2) {
+      dist3 = Math.round((current.p2 / 2) * 100) / 100;
+    }
+
+    const distractors = [dist1, dist2, dist3];
+    const letters = ['A', 'B', 'C', 'D'];
+    const correctIdx = Math.floor(Math.random() * 4);
+    correctOptionLetter = letters[correctIdx];
+
+    currentOptions = [];
+    let dIdx = 0;
+    for (let i = 0; i < 4; i++) {
+      if (i === correctIdx) {
+        currentOptions.push({
+          letter: letters[i],
+          value: current.p2,
+          text: `${letters[i]}. ${current.p2} kPa`,
+          isCorrect: true
+        });
+      } else {
+        currentOptions.push({
+          letter: letters[i],
+          value: distractors[dIdx],
+          text: `${letters[i]}. ${distractors[dIdx]} kPa`,
+          isCorrect: false
+        });
+        dIdx++;
+      }
+    }
+
+    renderUI();
+  }
+
+  function renderUI() {
+    hideFeedback();
+    document.getElementById('solution-box').classList.remove('visible');
+    document.getElementById('num-ans').value = '';
+
+    document.getElementById('tb-p1').innerText = current.p1 + ' kPa';
+    document.getElementById('tb-v1').innerText = current.v1 + ' lít';
+    document.getElementById('tb-v2').innerText = current.v2 + ' lít';
+    document.getElementById('tb-p2').innerText = '? kPa';
+
+    document.getElementById('question-text').innerText = 
+      `Trong dạng “Khối khí chịu áp suất của cột chất lỏng”, Khí có áp suất ${current.p1} kPa, thể tích ${current.v1} lít giãn đẳng nhiệt đến ${current.v2} lít. Áp suất sau là`;
+
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+    currentOptions.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.id = 'opt-' + opt.letter;
+      btn.innerText = opt.text;
+      btn.onclick = () => selectOption(opt);
+      container.appendChild(btn);
+    });
+
+    const solBox = document.getElementById('solution-box');
+    solBox.innerHTML = `
+      <div class="solution-step"><strong>Hướng dẫn giải chi tiết:</strong></div>
+      <div class="solution-step">• Quá trình dãn đẳng nhiệt tuân theo định luật Bôi-lơ – Ma-ri-ốt: <code>p₁ · V₁ = p₂ · V₂</code></div>
+      <div class="solution-step">• Áp suất của khối khí lúc sau là:</div>
+      <div class="solution-step" style="font-size: 15px; margin: 8px 0; padding-left: 10px;">
+        <code>p₂ = (p₁ · V₁) / V₂ = (${current.p1} · ${current.v1}) / ${current.v2} = ${current.p2} kPa</code>
+      </div>
+      <div class="solution-step"><strong>Đáp án đúng: ${correctOptionLetter}. (${current.p2} kPa)</strong></div>
+    `;
+  }
+
+  function selectOption(opt) {
+    const feedback = document.getElementById('feedback');
+    const allBtns = document.querySelectorAll('.option-btn');
+    allBtns.forEach(b => b.classList.remove('selected', 'correct-choice', 'wrong-choice'));
+
+    const btn = document.getElementById('opt-' + opt.letter);
+    if (opt.isCorrect) {
+      btn.classList.add('correct-choice');
+      feedback.className = 'feedback success';
+      feedback.innerText = 'Chính xác! Đáp án ' + opt.letter + ' là đáp án đúng.';
+      document.getElementById('tb-p2').innerText = current.p2 + ' kPa';
+    } else {
+      btn.classList.add('wrong-choice');
+      feedback.className = 'feedback error';
+      feedback.innerText = 'Chưa đúng rồi! Hãy thử tính lại hoặc bấm "Xem lời giải".';
+    }
+  }
+
+  function checkNumberInput() {
+    const val = parseFloat(document.getElementById('num-ans').value);
+    const feedback = document.getElementById('feedback');
+    if (isNaN(val)) {
+      feedback.className = 'feedback error';
+      feedback.innerText = 'Vui lòng nhập một giá trị số!';
+      return;
+    }
+
+    if (Math.abs(val - current.p2) < 0.01) {
+      feedback.className = 'feedback success';
+      feedback.innerText = `Chính xác! Áp suất sau là ${current.p2} kPa.`;
+      document.getElementById('tb-p2').innerText = current.p2 + ' kPa';
+      const optBtn = document.getElementById('opt-' + correctOptionLetter);
+      if (optBtn) optBtn.classList.add('correct-choice');
+    } else {
+      feedback.className = 'feedback error';
+      feedback.innerText = 'Chưa đúng! Kết quả bạn nhập chưa chính xác.';
+    }
+  }
+
+  function toggleSolution() {
+    const solBox = document.getElementById('solution-box');
+    solBox.classList.toggle('visible');
+    if (solBox.classList.contains('visible')) {
+      document.getElementById('tb-p2').innerText = current.p2 + ' kPa';
+    }
+  }
+
+  function hideFeedback() {
+    const feedback = document.getElementById('feedback');
+    feedback.className = 'feedback';
+    feedback.innerText = '';
+  }
+
+  window.onload = initDefault;
+</script>
+
+</body>
+</html>
