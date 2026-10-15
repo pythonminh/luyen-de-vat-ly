@@ -1,0 +1,849 @@
+<!--hp-title:xJDhu4tuaCBsw70gQ29zaW4gdMOtbmggxJHhu5kgZMOgaSBj4bqhbmg=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lớp Học Thầy Minh - Luyện Tập Định Lý Cosin</title>
+  <style>
+    :root {
+      --primary-navy: #0f2b5c;
+      --accent-blue: #1d4ed8;
+      --bg-light: #f8fafc;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warn: #ea580c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-light);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Thanh thương hiệu */
+    .brand-header {
+      background: var(--primary-navy);
+      color: #ffffff;
+      text-align: center;
+      padding: 14px 20px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .brand-sub {
+      font-size: 0.85rem;
+      color: #93c5fd;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    /* Layout chính */
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 16px;
+      width: 100%;
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .badge-pill {
+      align-self: flex-start;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    /* Khung vẽ tam giác */
+    .canvas-wrap {
+      width: 100%;
+      background: #fafafa;
+      border-radius: 10px;
+      border: 1px dashed #cbd5e1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    canvas {
+      width: 100%;
+      height: 280px;
+      display: block;
+    }
+
+    /* Hộp công thức */
+    .formula-box {
+      background: #eff6ff;
+      border-left: 4px solid var(--accent-blue);
+      border-radius: 6px;
+      padding: 12px 16px;
+    }
+    .formula-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+      margin-bottom: 4px;
+    }
+    .formula-content {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #1e3a8a;
+      text-align: center;
+      padding: 6px 0;
+    }
+
+    /* Đề bài */
+    .problem-box {
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 1.15rem;
+      line-height: 1.6;
+      border: 1px solid #e2e8f0;
+    }
+    .highlight-val {
+      font-weight: 700;
+      color: #0f2b5c;
+    }
+
+    /* Trắc nghiệm ABCD */
+    .mcq-label {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+    .mcq-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 500px) {
+      .mcq-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .mcq-btn {
+      background: #ffffff;
+      border: 2px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      color: var(--text-main);
+    }
+    .mcq-btn:hover {
+      border-color: var(--accent-blue);
+      background: #f8fafc;
+    }
+    .mcq-btn.correct {
+      background: #dcfce7 !important;
+      border-color: var(--success) !important;
+      color: #14532d !important;
+    }
+    .mcq-btn.wrong {
+      background: #fee2e2 !important;
+      border-color: var(--danger) !important;
+      color: #7f1d1d !important;
+    }
+
+    /* Nhập số ngắn */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .input-field {
+      flex: 1;
+      min-width: 140px;
+      padding: 11px 14px;
+      font-size: 1rem;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .input-field:focus {
+      border-color: var(--accent-blue);
+    }
+
+    /* Các nút hành động */
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 11px 18px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: var(--accent-blue);
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #1e40af;
+    }
+    .btn-outline {
+      background: #f8fafc;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-outline:hover {
+      background: #e2e8f0;
+    }
+    .btn-orange {
+      background: #ea580c;
+      color: #ffffff;
+    }
+    .btn-orange:hover {
+      background: #c2410c;
+    }
+
+    /* Thông báo phản hồi */
+    .feedback {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: none;
+    }
+    .feedback.success {
+      display: block;
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .feedback.danger {
+      display: block;
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    /* Khung lời giải chi tiết */
+    .solution-box {
+      display: none;
+      background: #faf5ff;
+      border: 1px solid #e9d5ff;
+      border-radius: 10px;
+      padding: 16px;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    .solution-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #6b21a8;
+      margin-bottom: 10px;
+    }
+    .step-line {
+      margin-bottom: 8px;
+      font-size: 0.96rem;
+      line-height: 1.5;
+      color: #3b0764;
+    }
+    .step-math {
+      background: #ffffff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px dashed #d8b4fe;
+      margin: 6px 0 10px 0;
+      font-family: "Courier New", Courier, monospace;
+      font-weight: 600;
+      color: #1e1b4b;
+    }
+
+    .action-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Thanh thương hiệu cố định chuẩn -->
+  <header class="brand-header">
+    <div class="brand-title">
+      <span>Lớp Học Thầy Minh · Zalo 0946111107</span>
+    </div>
+    <div class="brand-sub">lophocthayminh.onrender.com</div>
+  </header>
+
+  <!-- Khung luyện tập 2 cột -->
+  <main class="container">
+    
+    <!-- CỘT TRÁI: Hình vẽ trực quan & Công thức -->
+    <section class="card">
+      <div class="badge-pill">Hình Minh Họa Trực Quan</div>
+      
+      <div class="canvas-wrap">
+        <canvas id="triangleCanvas" width="500" height="280"></canvas>
+      </div>
+
+      <div class="formula-box">
+        <div class="formula-title">Định lý côsin trong tam giác ABC:</div>
+        <div class="formula-content">
+          BC² = AB² + AC² - 2 · AB · AC · cos(A)
+        </div>
+        <div style="font-size: 0.85rem; color: #475569; text-align: center; margin-top: 4px;">
+          (hay: <i>a² = b² + c² - 2bc · cos A</i>)
+        </div>
+      </div>
+    </section>
+
+    <!-- CỘT PHẢI: Đề bài, Trắc nghiệm, Nhập số, Đổi đề -->
+    <section class="card">
+      <div class="badge-pill">Bài Tập Tương Tác</div>
+
+      <div class="problem-box" id="problemText">
+        <!-- Đề bài sinh bởi JS -->
+      </div>
+
+      <!-- Trắc nghiệm ABCD -->
+      <div>
+        <div class="mcq-label">Cách 1: Chọn một trong bốn phương án</div>
+        <div class="mcq-grid" id="mcqOptions" style="margin-top: 8px;">
+          <!-- Nút ABCD sinh bởi JS -->
+        </div>
+      </div>
+
+      <!-- Ô nhập đáp án số tự do -->
+      <div>
+        <div class="mcq-label">Cách 2: Nhập số thập phân (làm tròn 1 chữ số, ví dụ 7.2)</div>
+        <div class="input-row" style="margin-top: 8px;">
+          <input type="number" step="0.1" class="input-field" id="userValInput" placeholder="Nhập độ dài BC...">
+          <button class="btn btn-primary" id="checkValBtn">Kiểm tra</button>
+        </div>
+      </div>
+
+      <!-- Thông báo kết quả -->
+      <div id="feedbackBox" class="feedback"></div>
+
+      <!-- Thanh nút bấm hành động -->
+      <div class="action-bar">
+        <button class="btn btn-orange" id="newProblemBtn">
+          🔄 Đổi đề bài mới
+        </button>
+        <button class="btn btn-outline" id="toggleSolutionBtn">
+          👁️ Xem lời giải chi tiết
+        </button>
+      </div>
+
+      <!-- Lời giải chi tiết động -->
+      <div class="solution-box" id="solutionBox">
+        <!-- Lời giải các bước sinh bởi JS -->
+      </div>
+
+    </section>
+  </main>
+
+  <script>
+    // Bộ dữ liệu khởi tạo mặc định khớp 100% đề bài gốc
+    const initialProblem = {
+      c: 6,       // AB
+      b: 8,       // AC
+      angleA: 60, // độ
+    };
+
+    let currentProblem = { ...initialProblem };
+    let calculatedData = {};
+    let isSolutionOpen = false;
+
+    // Bộ góc đẹp thường gặp trong bài toán giải tam giác
+    const niceAngles = [30, 45, 60, 90, 120, 135, 150];
+
+    // Hàm rút gọn căn bậc 2: sqrt(n) -> k*sqrt(m)
+    function simplifySqrt(n) {
+      n = Math.round(n);
+      let maxSquare = 1;
+      for (let i = 2; i * i <= n; i++) {
+        if (n % (i * i) === 0) {
+          maxSquare = i * i;
+        }
+      }
+      let outside = Math.sqrt(maxSquare);
+      let inside = n / maxSquare;
+
+      if (inside === 1) return `${outside}`;
+      if (outside === 1) return `√${inside}`;
+      return `${outside}√${inside}`;
+    }
+
+    // Giá trị cos lượng giác chính xác dạng chuỗi hiển thị
+    function getCosDisplay(deg) {
+      if (deg === 30) return { val: Math.cos(Math.PI / 6), text: "√3/2 ≈ 0.866" };
+      if (deg === 45) return { val: Math.cos(Math.PI / 4), text: "√2/2 ≈ 0.707" };
+      if (deg === 60) return { val: 0.5, text: "1/2 = 0.5" };
+      if (deg === 90) return { val: 0, text: "0" };
+      if (deg === 120) return { val: -0.5, text: "-1/2 = -0.5" };
+      if (deg === 135) return { val: -Math.cos(Math.PI / 4), text: "-√2/2 ≈ -0.707" };
+      if (deg === 150) return { val: -Math.cos(Math.PI / 6), text: "-√3/2 ≈ -0.866" };
+      let rad = deg * Math.PI / 180;
+      return { val: Math.cos(rad), text: Math.cos(rad).toFixed(3) };
+    }
+
+    // Tính toán số liệu hiện tại
+    function computeProblemData() {
+      const { c, b, angleA } = currentProblem;
+      const cosObj = getCosDisplay(angleA);
+      const radA = angleA * Math.PI / 180;
+      const cosVal = Math.cos(radA);
+
+      // BC^2 = b^2 + c^2 - 2*b*c*cos(A)
+      const b2 = b * b;
+      const c2 = c * c;
+      const term2bc = 2 * b * c;
+      const bc2 = b2 + c2 - term2bc * cosVal;
+      const a = Math.sqrt(bc2);
+      const aRound1 = Math.round(a * 10) / 10;
+      const aRound2 = Math.round(a * 100) / 100;
+
+      // Căn rút gọn nếu bc2 xấp xỉ số nguyên
+      const isIntegerBc2 = Math.abs(bc2 - Math.round(bc2)) < 0.001;
+      const sqrtDisplay = isIntegerBc2 ? simplifySqrt(Math.round(bc2)) : null;
+
+      calculatedData = {
+        c,
+        b,
+        angleA,
+        b2,
+        c2,
+        term2bc,
+        cosObj,
+        cosVal,
+        bc2: Math.round(bc2 * 100) / 100,
+        bc2Int: isIntegerBc2 ? Math.round(bc2) : null,
+        a,
+        aRound1,
+        aRound2,
+        sqrtDisplay
+      };
+    }
+
+    // Cập nhật giao diện đề bài
+    function renderProblemText() {
+      const { c, b, angleA } = currentProblem;
+      const el = document.getElementById("problemText");
+      el.innerHTML = `Cho tam giác <b>ABC</b> có 
+        <b>AB = <span class="highlight-val">${c}</span></b>, 
+        <b>AC = <span class="highlight-val">${b}</span></b>, và 
+        <b>Â = <span class="highlight-val">${angleA}°</span></b>. 
+        <br>Tính độ dài cạnh <b>BC</b>.`;
+    }
+
+    // Tạo các phương án trắc nghiệm A, B, C, D
+    function renderMCQ() {
+      const grid = document.getElementById("mcqOptions");
+      grid.innerHTML = "";
+
+      const { a, aRound1, bc2Int, sqrtDisplay } = calculatedData;
+
+      // Chuỗi phương án đúng
+      let correctLabel = "";
+      if (sqrtDisplay && sqrtDisplay !== `${Math.round(a)}`) {
+        correctLabel = `${sqrtDisplay} (≈ ${aRound1.toFixed(1)})`;
+      } else {
+        correctLabel = `${aRound1.toFixed(1)}`;
+      }
+
+      // Tạo 3 phương án nhiễu logic toán học
+      let distractors = new Set();
+
+      // Nhiễu 1: nhầm dấu cộng thay vì dấu trừ: b^2 + c^2 + 2bc*cosA
+      let falseBc2Plus = currentProblem.b**2 + currentProblem.c**2 + (2 * currentProblem.b * currentProblem.c * calculatedData.cosVal);
+      let falseA1 = Math.sqrt(Math.max(1, falseBc2Plus));
+      distractors.add((Math.round(falseA1 * 10) / 10).toFixed(1));
+
+      // Nhiễu 2: quên căn bậc 2 hoặc nhầm định lý Pitago thuần
+      let pythagoras = Math.sqrt(currentProblem.b**2 + currentProblem.c**2);
+      distractors.add((Math.round(pythagoras * 10) / 10).toFixed(1));
+
+      // Nhiễu 3: lệch ± 1.5 đơn vị
+      let shiftVal = (aRound1 + 1.8).toFixed(1);
+      distractors.add(shiftVal);
+
+      let shiftVal2 = Math.max(1, (aRound1 - 1.4)).toFixed(1);
+      distractors.add(shiftVal2);
+
+      // Lọc bỏ nếu vô tình trùng đáp án đúng
+      distractors.delete(correctLabel);
+      distractors.delete(aRound1.toFixed(1));
+
+      let distractorList = Array.from(distractors).slice(0, 3);
+      while (distractorList.length < 3) {
+        distractorList.push((aRound1 + distractorList.length + 1).toFixed(1));
+      }
+
+      let options = [
+        { text: correctLabel, isCorrect: true },
+        { text: distractorList[0], isCorrect: false },
+        { text: distractorList[1], isCorrect: false },
+        { text: distractorList[2], isCorrect: false }
+      ];
+
+      // Đảo ngẫu nhiên vị trí
+      options.sort(() => Math.random() - 0.5);
+
+      const labels = ['A', 'B', 'C', 'D'];
+      options.forEach((opt, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "mcq-btn";
+        btn.innerHTML = `<b>${labels[idx]}.</b> ${opt.text}`;
+        btn.onclick = () => handleSelectOption(btn, opt.isCorrect);
+        grid.appendChild(btn);
+      });
+    }
+
+    // Xử lý khi bấm nút trắc nghiệm
+    function handleSelectOption(btn, isCorrect) {
+      const feedback = document.getElementById("feedbackBox");
+      const allBtns = document.querySelectorAll(".mcq-btn");
+
+      allBtns.forEach(b => b.classList.remove("correct", "wrong"));
+
+      if (isCorrect) {
+        btn.classList.add("correct");
+        feedback.className = "feedback success";
+        feedback.innerHTML = "🎉 <b>Chính xác!</b> Bạn đã chọn đúng đáp án.";
+      } else {
+        btn.classList.add("wrong");
+        feedback.className = "feedback danger";
+        feedback.innerHTML = "❌ <b>Chưa chính xác!</b> Hãy kiểm tra lại công thức định lý cosin hoặc bấm 'Xem lời giải chi tiết'.";
+      }
+    }
+
+    // Xử lý kiểm tra khi nhập số tự do
+    document.getElementById("checkValBtn").addEventListener("click", () => {
+      const userVal = parseFloat(document.getElementById("userValInput").value);
+      const feedback = document.getElementById("feedbackBox");
+
+      if (isNaN(userVal)) {
+        feedback.className = "feedback danger";
+        feedback.innerHTML = "⚠️ Vui lòng nhập một số hợp lệ!";
+        return;
+      }
+
+      const { a, aRound1 } = calculatedData;
+      // Cho phép dung sai 0.15 đối với số làm tròn
+      if (Math.abs(userVal - a) <= 0.18 || Math.abs(userVal - aRound1) <= 0.1) {
+        feedback.className = "feedback success";
+        feedback.innerHTML = `🎉 <b>Rất tốt!</b> Kết quả BC ≈ ${userVal} là đáp án chính xác.`;
+      } else {
+        feedback.className = "feedback danger";
+        feedback.innerHTML = `❌ <b>Chưa đúng!</b> Giá trị bạn nhập là ${userVal}. Hãy thử lại hoặc bấm xem chi tiết từng bước.`;
+      }
+    });
+
+    // Cập nhật lời giải chi tiết
+    function renderSolution() {
+      const { c, b, angleA, b2, c2, term2bc, cosObj, bc2, bc2Int, a, aRound1, aRound2, sqrtDisplay } = calculatedData;
+      const box = document.getElementById("solutionBox");
+
+      let rootStep = "";
+      if (sqrtDisplay && sqrtDisplay !== `${Math.round(a)}`) {
+        rootStep = `BC = √(${bc2Int}) = <b>${sqrtDisplay}</b> ≈ <b>${aRound1}</b>`;
+      } else {
+        rootStep = `BC = √(${bc2}) ≈ <b>${aRound1}</b>`;
+      }
+
+      box.innerHTML = `
+        <div class="solution-title">📌 Lời Giải Chi Tiết Từng Bước:</div>
+        <div class="step-line"><b>Bước 1:</b> Viết công thức Định lý cosin cho cạnh đối diện góc A:</div>
+        <div class="step-math">BC² = AB² + AC² - 2 · AB · AC · cos(A)</div>
+
+        <div class="step-line"><b>Bước 2:</b> Thay số liệu hiện tại vào biểu thức:</div>
+        <div class="step-math">
+          BC² = ${c}² + ${b}² - 2 · ${c} · ${b} · cos(${angleA}°)<br>
+          BC² = ${c2} + ${b2} - ${term2bc} · (${cosObj.text})<br>
+          BC² = ${c2 + b2} - ${Math.round(term2bc * cosObj.val * 100) / 100} = <b>${bc2}</b>
+        </div>
+
+        <div class="step-line"><b>Bước 3:</b> Lấy căn bậc hai tính cạnh BC:</div>
+        <div class="step-math">${rootStep}</div>
+        <div class="step-line"><b>Kết luận:</b> Cạnh <b>BC ≈ ${aRound1}</b>.</div>
+      `;
+    }
+
+    // Vẽ tam giác động trên Canvas HTML5
+    function drawTriangle() {
+      const canvas = document.getElementById("triangleCanvas");
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      const { c, b, angleA } = currentProblem;
+      const radA = angleA * Math.PI / 180;
+
+      // Đặt đỉnh A tại vị trí thích hợp
+      // A ở bên trái: Ax, Ay
+      // Cạnh c (AB) nằm ngang dọc theo phương x
+      // Cạnh b (AC) tạo góc angleA so với c (hướng lên trên)
+      
+      const padX = 70;
+      const padY = 50;
+      const maxDrawW = w - 140;
+      const maxDrawH = h - 90;
+
+      // Tọa độ tương đối chưa scale
+      // Cho A = (0, 0)
+      // B = (c, 0)
+      // C = (b * cos(A), b * sin(A))
+      const bx = c;
+      const by = 0;
+      const cx = b * Math.cos(radA);
+      const cy = b * Math.sin(radA);
+
+      const minX = Math.min(0, bx, cx);
+      const maxX = Math.max(0, bx, cx);
+      const minY = Math.min(0, by, cy);
+      const maxY = Math.max(0, by, cy);
+
+      const spanX = maxX - minX || 1;
+      const spanY = maxY - minY || 1;
+
+      const scale = Math.min(maxDrawW / spanX, maxDrawH / spanY);
+
+      // Chuyển sang tọa độ màn hình canvas (trục Y hướng xuống)
+      function toScreen(x, y) {
+        return {
+          x: padX + (x - minX) * scale,
+          y: h - padY - (y - minY) * scale
+        };
+      }
+
+      const pA = toScreen(0, 0);
+      const pB = toScreen(bx, by);
+      const pC = toScreen(cx, cy);
+
+      // Vẽ lưới tọa độ nhạt làm nền giấy kẻ ô
+      ctx.strokeStyle = "#f1f5f9";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 25) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 25) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // 1. Vẽ vùng tô màu tam giác nhạt
+      ctx.beginPath();
+      ctx.moveTo(pA.x, pA.y);
+      ctx.lineTo(pB.x, pB.y);
+      ctx.lineTo(pC.x, pC.y);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(59, 130, 246, 0.08)";
+      ctx.fill();
+
+      // 2. Vẽ cung góc A
+      const arcRadius = 28;
+      ctx.beginPath();
+      // vector AB hướng sang phải: góc 0 (theo chiều ngược kim đồng hồ màn hình là -0)
+      // vector AC hướng lên: góc tương ứng
+      const angleAB = Math.atan2(pB.y - pA.y, pB.x - pA.x);
+      const angleAC = Math.atan2(pC.y - pA.y, pC.x - pA.x);
+
+      ctx.beginPath();
+      ctx.arc(pA.x, pA.y, arcRadius, Math.min(angleAB, angleAC), Math.max(angleAB, angleAC));
+      ctx.strokeStyle = "#16a34a";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Nhãn góc A
+      ctx.fillStyle = "#15803d";
+      ctx.font = "bold 13px Arial";
+      const midAngle = (angleAB + angleAC) / 2;
+      const labelArcX = pA.x + Math.cos(midAngle) * 44;
+      const labelArcY = pA.y + Math.sin(midAngle) * 44;
+      ctx.fillText(`${angleA}°`, labelArcX - 12, labelArcY + 4);
+
+      // 3. Vẽ 3 cạnh tam giác
+      ctx.beginPath();
+      ctx.moveTo(pA.x, pA.y);
+      ctx.lineTo(pB.x, pB.y);
+      ctx.lineTo(pC.x, pC.y);
+      ctx.closePath();
+      ctx.strokeStyle = "#1e293b";
+      ctx.lineWidth = 3;
+      ctx.lineJoin = "round";
+      ctx.stroke();
+
+      // 4. Vẽ các đỉnh A, B, C (chấm tròn)
+      const points = [
+        { pt: pA, name: "A", alignX: -18, alignY: 6 },
+        { pt: pB, name: "B", alignX: 10, alignY: 6 },
+        { pt: pC, name: "C", alignX: -5, alignY: -12 }
+      ];
+
+      points.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.pt.x, p.pt.y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = "#1d4ed8";
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+
+        ctx.fillStyle = "#0f2b5c";
+        ctx.font = "bold 16px Arial";
+        ctx.fillText(p.name, p.pt.x + p.alignX, p.pt.y + p.alignY);
+      });
+
+      // 5. Hiển thị nhãn kích thước trên từng cạnh
+      ctx.font = "bold 13px Arial";
+
+      // Cạnh AB = c
+      const midAB = { x: (pA.x + pB.x) / 2, y: (pA.y + pB.y) / 2 };
+      ctx.fillStyle = "#0f172a";
+      ctx.fillText(`c = ${c}`, midAB.x - 16, midAB.y + 20);
+
+      // Cạnh AC = b
+      const midAC = { x: (pA.x + pC.x) / 2, y: (pA.y + pC.y) / 2 };
+      ctx.fillStyle = "#0f172a";
+      ctx.fillText(`b = ${b}`, midAC.x - 38, midAC.y - 6);
+
+      // Cạnh BC = a (Cần tính, đặt dấu ? hoặc giá trị)
+      const midBC = { x: (pB.x + pC.x) / 2, y: (pB.y + pC.y) / 2 };
+      ctx.fillStyle = "#dc2626";
+      ctx.fillText(`a = BC = ?`, midBC.x + 12, midBC.y - 2);
+    }
+
+    // Đổi bộ số ngẫu nhiên mới
+    function generateNewProblem() {
+      // Chọn góc đẹp ngẫu nhiên
+      const randomAngle = niceAngles[Math.floor(Math.random() * niceAngles.length)];
+
+      // Chọn 2 cạnh nguyên từ 3 đến 12 (tránh để c == b liên tục để đề phong phú)
+      let randC = Math.floor(Math.random() * 9) + 4; // 4..12
+      let randB = Math.floor(Math.random() * 9) + 4; // 4..12
+      if (randC === randB) {
+        randB += 2;
+      }
+
+      currentProblem = {
+        c: randC,
+        b: randB,
+        angleA: randomAngle
+      };
+
+      updateAll();
+
+      // Reset feedback và input
+      const feedback = document.getElementById("feedbackBox");
+      feedback.className = "feedback";
+      feedback.style.display = "none";
+      document.getElementById("userValInput").value = "";
+
+      // Đóng lời giải nếu đang mở
+      isSolutionOpen = false;
+      document.getElementById("solutionBox").style.display = "none";
+      document.getElementById("toggleSolutionBtn").innerHTML = "👁️ Xem lời giải chi tiết";
+    }
+
+    // Toggle khung xem lời giải
+    document.getElementById("toggleSolutionBtn").addEventListener("click", () => {
+      isSolutionOpen = !isSolutionOpen;
+      const box = document.getElementById("solutionBox");
+      const btn = document.getElementById("toggleSolutionBtn");
+      if (isSolutionOpen) {
+        box.style.display = "block";
+        btn.innerHTML = "🙈 Ẩn lời giải chi tiết";
+      } else {
+        box.style.display = "none";
+        btn.innerHTML = "👁️ Xem lời giải chi tiết";
+      }
+    });
+
+    // Nút đổi đề
+    document.getElementById("newProblemBtn").addEventListener("click", generateNewProblem);
+
+    // Cập nhật toàn bộ các khối
+    function updateAll() {
+      computeProblemData();
+      renderProblemText();
+      renderMCQ();
+      renderSolution();
+      drawTriangle();
+    }
+
+    // Khởi chạy ban đầu với dữ liệu gốc chính xác
+    window.onload = function() {
+      updateAll();
+    };
+
+    // Tự động vẽ lại canvas khi thay đổi kích thước màn hình
+    window.addEventListener("resize", () => {
+      drawTriangle();
+    });
+  </script>
+</body>
+</html>
