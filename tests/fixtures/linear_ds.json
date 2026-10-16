@@ -1,0 +1,72 @@
+[
+  {
+    "idx": 0,
+    "stt": 1,
+    "id": "T10C2B3-01-DS",
+    "cau": 1,
+    "line": 14,
+    "dang": "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm",
+    "level": "H",
+    "kind": "DS",
+    "nguon": "",
+    "develop_from": "",
+    "text": "Cho bất phương trình bậc nhất hai ẩn $x-2y+2 \\leq 0$.",
+    "solution": "\\begin{itemchoice}\n\\item (Đúng) $(1;4)$ là nghiệm của bất phương trình $x-2y+2 \\leq 0$. (Vì): Thay $(1;4)$ vào bất phương trình: $1 - 2(4) + 2 = 1 - 8 + 2 = -5$. Vì $-5 \\leq 0$ nên $(1;4)$ là nghiệm của bất phương trình\n\\item (Sai) $(0;3)$ không là nghiệm của bất phương trình $x-2y+2 \\leq 0$. (Vì): Thay $(0;3)$ vào bất phương trình: $0 - 2(3) + 2 = 0 - 6 + 2 = -4$. Vì $-4 \\leq 0$ nên $(0;3)$ là nghiệm của bất phương trình\n\\item (Sai) Đường thẳng $d \\colon x-2y+2=0$ đi qua hai điểm $A(0;-1)$ và $B(2;0)$. (Vì): Thay tọa độ điểm $A(0;-1)$ vào phương trình đường thẳng $d \\colon x-2y+2=0$: $0 - 2(-1) + 2 = 2 + 2 = 4 \\neq 0$. Điểm $A(0;-1)$ không thuộc đường thẳng $d$. Thay tọa độ điểm $B(2;0)$ vào phương trình đường thẳng $d \\colon x-2y+2=0$: $2 - 2(0) + 2 = 2 + 2 = 4 \\neq 0$. Điểm $B(2;0)$ không thuộc đường thẳng $d$\n\\item (Đúng) Miền nghiệm của bất phương trình $x-2y+2 \\leq 0$ là nửa mặt phẳng kể cả bờ $x-2y+2=0$, không chứa điểm $(0;0)$. (Vì): ường thẳng $d \\colon x-2y+2=0$ là bờ của nửa mặt phẳng. Thay tọa độ điểm $(0;0)$ vào biểu thức $x-2y+2$: $0 - 2(0) + 2 = 2$. Vì $2 \\gt  0$ và bất phương trình là $x-2y+2 \\leq 0$, nên miền nghiệm là nửa mặt phẳng không chứa điểm $(0;0)$ và bao gồm cả đường thẳng $d$\n\\end{itemchoice}",
+    "raw": "\\begin{ex}\n% ID: T10C2B3-01-DS\n% Mức: TH\nCho bất phương trình bậc nhất hai ẩn $x-2y+2 \\leq 0$.\n\\choiceTF\n{\\True $(1;4)$ là nghiệm của bất phương trình $x-2y+2 \\leq 0$}\n{$(0;3)$ không là nghiệm của bất phương trình $x-2y+2 \\leq 0$}\n{Đường thẳng $d \\colon x-2y+2=0$ đi qua hai điểm $A(0;-1)$ và $B(2;0)$}\n{\\True Miền nghiệm của bất phương trình $x-2y+2 \\leq 0$ là nửa mặt phẳng kể cả bờ $x-2y+2=0$, không chứa điểm $(0;0)$}\n\\loigiai{\n\\begin{itemchoice}\n\\item (Đúng) $(1;4)$ là nghiệm của bất phương trình $x-2y+2 \\leq 0$. (Vì): Thay $(1;4)$ vào bất phương trình: $1 - 2(4) + 2 = 1 - 8 + 2 = -5$. Vì $-5 \\leq 0$ nên $(1;4)$ là nghiệm của bất phương trình\n\\item (Sai) $(0;3)$ không là nghiệm của bất phương trình $x-2y+2 \\leq 0$. (Vì): Thay $(0;3)$ vào bất phương trình: $0 - 2(3) + 2 = 0 - 6 + 2 = -4$. Vì $-4 \\leq 0$ nên $(0;3)$ là nghiệm của bất phương trình\n\\item (Sai) Đường thẳng $d \\colon x-2y+2=0$ đi qua hai điểm $A(0;-1)$ và $B(2;0)$. (Vì): Thay tọa độ điểm $A(0;-1)$ vào phương trình đường thẳng $d \\colon x-2y+2=0$: $0 - 2(-1) + 2 = 2 + 2 = 4 \\neq 0$. Điểm $A(0;-1)$ không thuộc đường thẳng $d$. Thay tọa độ điểm $B(2;0)$ vào phương trình đường thẳng $d \\colon x-2y+2=0$: $2 - 2(0) + 2 = 2 + 2 = 4 \\neq 0$. Điểm $B(2;0)$ không thuộc đường thẳng $d$\n\\item (Đúng) Miền nghiệm của bất phương trình $x-2y+2 \\leq 0$ là nửa mặt phẳng kể cả bờ $x-2y+2=0$, không chứa điểm $(0;0)$. (Vì): ường thẳng $d \\colon x-2y+2=0$ là bờ của nửa mặt phẳng. Thay tọa độ điểm $(0;0)$ vào biểu thức $x-2y+2$: $0 - 2(0) + 2 = 2$. Vì $2 \\gt  0$ và bất phương trình là $x-2y+2 \\leq 0$, nên miền nghiệm là nửa mặt phẳng không chứa điểm $(0;0)$ và bao gồm cả đường thẳng $d$\n\\end{itemchoice}\n}\n\\end{ex}",
+    "statements": [
+      {
+        "text": "$(1;4)$ là nghiệm của bất phương trình $x-2y+2 \\leq 0$",
+        "correct": true
+      },
+      {
+        "text": "$(0;3)$ không là nghiệm của bất phương trình $x-2y+2 \\leq 0$",
+        "correct": false
+      },
+      {
+        "text": "Đường thẳng $d \\colon x-2y+2=0$ đi qua hai điểm $A(0;-1)$ và $B(2;0)$",
+        "correct": false
+      },
+      {
+        "text": "Miền nghiệm của bất phương trình $x-2y+2 \\leq 0$ là nửa mặt phẳng kể cả bờ $x-2y+2=0$, không chứa điểm $(0;0)$",
+        "correct": true
+      }
+    ],
+    "src": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/de.tex",
+    "file_idx": 0
+  },
+  {
+    "idx": 5,
+    "stt": 6,
+    "id": "T10C2B3-02-TN",
+    "cau": 6,
+    "line": 115,
+    "dang": "Nhận biết bất phương trình bậc nhất hai ẩn và nghiệm",
+    "level": "H",
+    "kind": "DS",
+    "nguon": "",
+    "develop_from": "",
+    "text": "Bất phương trình nào sau đây là bất phương trình bậc nhất hai ẩn?",
+    "solution": "\\begin{itemchoice}\n\\item (Sai) $x^2+y^2 \\leq 1$. (Vì): Bất phương trình $x^2+y^2 \\leq 1$ chứa các số hạng bậc hai ($x^2$ và $y^2$), do đó không phải là bất phương trình bậc nhất hai ẩn\n\\item (Sai) $2x-y^3 \\gt  0$. (Vì): Bất phương trình $2x-y^3 \\gt  0$ chứa số hạng bậc ba ($y^3$), do đó không phải là bất phương trình bậc nhất hai ẩn\n\\item (Đúng) $x-y \\leq 0$. (Vì): Bất phương trình $x-y \\leq 0$ có dạng $ax+by \\leq c$ với $a=1$, $b=-1$, $c=0$. Các hệ số $a$ và $b$ không đồng thời bằng 0, do đó đây là bất phương trình bậc nhất hai ẩn\n\\item (Sai) $-\\dfrac{2}{5} x-5^2 y \\leq-\\sqrt{15}$.\n\\end{itemchoice}",
+    "raw": "\\begin{ex}\n% ID: T10C2B3-02-TN\n% Mức: TH\nBất phương trình nào sau đây là bất phương trình bậc nhất hai ẩn?\n\\choiceTF\n{$x^2+y^2 \\leq 1$}\n{$2x-y^3 \\gt  0$}\n{\\True $x-y \\leq 0$}\n{$-\\dfrac{2}{5} x-5^2 y \\leq-\\sqrt{15}$}\n\\loigiai{\n\\begin{itemchoice}\n\\item (Sai) $x^2+y^2 \\leq 1$. (Vì): Bất phương trình $x^2+y^2 \\leq 1$ chứa các số hạng bậc hai ($x^2$ và $y^2$), do đó không phải là bất phương trình bậc nhất hai ẩn\n\\item (Sai) $2x-y^3 \\gt  0$. (Vì): Bất phương trình $2x-y^3 \\gt  0$ chứa số hạng bậc ba ($y^3$), do đó không phải là bất phương trình bậc nhất hai ẩn\n\\item (Đúng) $x-y \\leq 0$. (Vì): Bất phương trình $x-y \\leq 0$ có dạng $ax+by \\leq c$ với $a=1$, $b=-1$, $c=0$. Các hệ số $a$ và $b$ không đồng thời bằng 0, do đó đây là bất phương trình bậc nhất hai ẩn\n\\item (Sai) $-\\dfrac{2}{5} x-5^2 y \\leq-\\sqrt{15}$.\n\\end{itemchoice}\n}\n\\end{ex}",
+    "statements": [
+      {
+        "text": "$x^2+y^2 \\leq 1$",
+        "correct": false
+      },
+      {
+        "text": "$2x-y^3 \\gt  0$",
+        "correct": false
+      },
+      {
+        "text": "$x-y \\leq 0$",
+        "correct": true
+      },
+      {
+        "text": "$-\\dfrac{2}{5} x-5^2 y \\leq-\\sqrt{15}$",
+        "correct": false
+      }
+    ],
+    "src": "ngan-hang/Toán/Lớp 10/Chương II. Bất phương trình và hệ bất phương trình bậc nhất hai ẩn/Bài 3. Bất phương trình bậc nhất hai ẩn/de.tex",
+    "file_idx": 5
+  }
+]

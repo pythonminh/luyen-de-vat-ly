@@ -169,7 +169,7 @@ def numeric_pool(qs, count, strict=True):
         if not config and not strict:
             continue
         if not config:
-            raise ValueError('Câu ' + str(i+1) + ' chưa có bộ đổi số. Hãy chọn các câu đã có bộ đổi số, hoặc chọn chế độ lấy câu từ ngân hàng. Hiện đã hỗ trợ bài Cosin–Sin và 7 câu Tham số về tập hợp và khoảng đã kiểm tra.')
+            raise ValueError('Câu ' + str(i+1) + ' chưa có bộ đổi số. Hãy chọn các câu đã có bộ đổi số, hoặc chọn chế độ lấy câu từ ngân hàng. Hiện đã hỗ trợ bài Cosin–Sin, 7 câu Tham số về tập hợp và khoảng, cùng 2 câu Đúng–Sai về nhận biết và xét nghiệm bất phương trình bậc nhất hai ẩn.')
         item = copy.deepcopy(q)
         item['_race_variant_spec'] = config
         pool.append(item)

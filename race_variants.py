@@ -47,6 +47,10 @@ def triangle_spec(q):
 
 
 def spec(q):
+    from race_linear_ds import spec as linear_spec
+    value = linear_spec(q)
+    if value:
+        return value
     value = triangle_spec(q)
     if value:
         return value
@@ -192,6 +196,9 @@ def generate(q, original=False):
     if not s:
         raise ValueError('Câu này chưa có hàm đổi số đã kiểm tra.')
     out=copy.deepcopy(q)
+    if s['engine']=='linear_ds':
+        from race_linear_ds import generate as generate_linear
+        return generate_linear(q, s, original)
     if s['engine']=='sets':
         from race_set_variants import generate as generate_sets
         return decimalize(generate_sets(q, s, original))
