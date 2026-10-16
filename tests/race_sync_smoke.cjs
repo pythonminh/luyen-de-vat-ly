@@ -14,11 +14,14 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
   await settle();
   assert(ids.raceQuestion.innerHTML.includes('AB=13'));
-  assert(ids.raceNav.children.every(b=>b.disabled));
+  assert(ids.raceNav.children.every(b=>!b.disabled));
+  await ids.raceNav.children[1].onclick(); await poll();
+  assert(ids.raceQuestion.innerHTML.includes('BC=24')); // Polling must not undo free navigation.
+  await ids.raceNav.children[0].onclick();
   const first=ids.raceQuestion.children[0]; first.value='sqrt(67)'; first.oninput();
   shown=1; await poll();
   assert(ids.raceQuestion.innerHTML.includes('BC=24'));
-  assert(!ids.raceActions.children.some(b=>b.textContent==='Câu tiếp →'));
+  assert(ids.raceActions.children.some(b=>b.textContent==='← Câu trước'));
   // A delayed blur from the old input must still save the first question.
   first.onchange(); await settle();
   assert.equal(draft['0'],'sqrt(67)'); assert.equal(draft['1'],undefined);

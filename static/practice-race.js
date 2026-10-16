@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const cfg = window.RACE_CONFIG, $ = id => document.getElementById(id);
+  let lastHostShown;
   let state, questions = [], answers = {}, pos = 0, loaded = false, rendered = '', queue = Promise.resolve(), serverOffset = 0, submitting = false, saveTimer, controlsKey = '', gradingKey = '', resultsKey = '', joinName = cfg.name || '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clock = seconds => { seconds = Math.max(0, Math.floor(seconds)); return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0'); };
@@ -103,10 +104,9 @@
     if (state.state === 'waiting' && !cfg.host) { panel.textContent = state.joined ? 'Đã nhận chỗ. Chờ ADMIN bắt đầu; đề sẽ hiện khi đồng hồ chạy.' : 'Bấm Tham gia để nhận một đề riêng.'; return; }
     if (!questions.length) { panel.textContent = 'Phòng đã bắt đầu hoặc kết thúc. Chỉ thành viên đã tham gia mới có bài làm.'; return; }
     const editable = !cfg.host && state.state === 'running' && !state.finished && !submitting;
-    const followingHost = !cfg.host && state.state === 'running';
     questions.forEach((q, i) => { const b = button((i === pos ? '▶ ' : '') + (i + 1) + (answers[i] !== undefined ? ' ✓' : ''), async () => {
       pos = i; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true);
-    }, nav); b.disabled = followingHost; b.setAttribute('aria-label', 'Câu ' + (i + 1)); });
+    }, nav); b.setAttribute('aria-label', 'Câu ' + (i + 1)); });
     const q = questions[pos], answerPos = pos;
     panel.innerHTML = '<h3>' + (cfg.host ? '📺 Đề minh họa · ' : '') + 'Câu ' + (pos + 1) + '/' + questions.length + '</h3><div>' + q.text + '</div>';
     if (q.kind === 'TN') {
@@ -114,7 +114,7 @@
         const label = document.createElement('label'), input = document.createElement('input'), span = document.createElement('span');
         input.type = 'radio'; input.name = 'raceAnswer'; input.value = String(i); input.checked = answers[pos] === i; input.disabled = !editable;
         span.innerHTML = '<b>' + 'ABCD'[i] + '.</b> ' + text;
-        input.onchange = () => changed(i); label.append(input, span); panel.append(label);
+        input.onchange = () => changed(i, answerPos); label.append(input, span); panel.append(label);
       });
     } else if (q.kind === 'DS') {
       q.statements.forEach((text, i) => {
@@ -122,7 +122,7 @@
         span.innerHTML = '<b>' + 'abcd'[i] + ')</b> ' + text;
         select.innerHTML = '<option value="">Chọn</option><option value="1">Đúng</option><option value="0">Sai</option>';
         select.value = Array.isArray(answers[pos]) && typeof answers[pos][i] === 'boolean' ? (answers[pos][i] ? '1' : '0') : ''; select.disabled = !editable;
-        select.onchange = () => { const a = Array.isArray(answers[pos]) ? [...answers[pos]] : [null,null,null,null]; a[i] = select.value === '' ? null : select.value === '1'; changed(a); };
+        select.onchange = () => { const a = Array.isArray(answers[answerPos]) ? [...answers[answerPos]] : [null,null,null,null]; a[i] = select.value === '' ? null : select.value === '1'; changed(a, answerPos); };
         label.append(span, select); panel.append(label);
       });
     } else if (!q.manual && q.components > 1) {
@@ -152,9 +152,9 @@
       const comparison = item.parts?.length ? '<div class="race-review-scroll"><table><thead><tr><th>Kết quả</th><th>Em đã nhập</th><th>Đáp án đúng</th></tr></thead><tbody>' + item.parts.map(part => '<tr><th>' + esc(part.label) + '</th><td>' + esc(part.answer) + '</td><td>' + part.expected + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="race-review-pair"><div class="race-review-answer"><b>Em đã chọn / nhập</b><div>' + (item.answer || '(Chưa trả lời)') + '</div></div><div class="race-review-expected"><b>Đáp án đúng của đề em</b><div>' + (item.expected || 'Xem lời giải') + '</div></div></div>';
       review.innerHTML = '<h3>' + (item.correct === null ? '⏳ Chờ ADMIN chấm' : item.correct ? '✅ Đúng' : '❌ Chưa đúng') + '</h3>' + comparison + adviceHTML(item.advice) + '<details class="race-solution"><summary>Xem lời giải từng bước</summary><div>' + item.solution + '</div></details>'; panel.append(review);
     }
-    if (!followingHost && pos > 0) button('← Câu trước', async () => { pos--; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
-    if (!followingHost && pos + 1 < questions.length) button('Câu tiếp →', async () => { pos++; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
-    if (followingHost) { const message = document.createElement('p'); message.textContent = '📺 Đang theo câu ADMIN chiếu · mỗi em có số liệu riêng.'; actions.append(message); }
+    if (pos > 0) button('← Câu trước', async () => { pos--; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
+    if (pos + 1 < questions.length) button('Câu tiếp →', async () => { pos++; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
+    if (!cfg.host && state.state === 'running') { const message = document.createElement('p'); message.textContent = 'Em có thể tự chuyển câu. Khi ADMIN chuyển câu chiếu, màn hình sẽ chuyển theo; đáp án đã nhập được giữ lại.'; actions.append(message); }
     if (editable) {
       button('💾 Lưu lại', saveAnswers, actions);
       button('🏁 Nộp bài', submit, actions).classList.add('primary');
@@ -240,7 +240,7 @@
     state = d; serverOffset = d.now * 1000 - Date.now();
     const qr = $('raceQR'); if (qr) qr.hidden = d.state !== 'waiting';
     if (cfg.host) { if (JSON.stringify(questions) !== JSON.stringify(d.reference || [])) rendered = ''; questions = d.reference || []; pos = d.shown; }
-    else if (d.questions) { questions = d.questions; if (d.state === 'running' && Number.isInteger(d.shown) && d.shown >= 0 && d.shown < questions.length) pos = d.shown; if (!loaded || d.finished || d.state === 'closed') { answers = d.answers || {}; loaded = true; } }
+    else if (d.questions) { questions = d.questions; if (d.state === 'running' && Number.isInteger(d.shown) && d.shown >= 0 && d.shown < questions.length) { if (lastHostShown !== d.shown) pos = d.shown; lastHostShown = d.shown; } if (!loaded || d.finished || d.state === 'closed') { answers = d.answers || {}; loaded = true; } }
     controls(); drawRanks(); drawQuestion(); drawGrading(); drawResults(); tick();
   }
   function tick() {
