@@ -182,7 +182,7 @@ def decimalize(q):
     q['_race_rounded_components'] = rounded
     q['_race_decimal_places'] = 2
     q['_race_answer_display'] = '$' + r';\quad '.join(v.replace('.', '{,}') for v in rounded) + '$'
-    q['text'] += '\n' + DECIMAL_HINT
+    q['_race_answer_hint'] = DECIMAL_HINT
     q['solution'] = str(q.get('solution') or '') + '\nKết quả nhập (đã làm tròn): ' + q['_race_answer_display'] + '.'
     return q
 

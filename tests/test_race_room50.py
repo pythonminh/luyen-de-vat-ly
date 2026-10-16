@@ -1,0 +1,40 @@
+import json
+import unittest
+from unittest.mock import patch
+from test_practice_race import RaceTests
+from test_race_variants import questions
+import practice_race as race
+
+class Room50Tests(unittest.TestCase):
+    setUp = RaceTests.setUp
+    tearDown = RaceTests.tearDown
+    user_as = RaceTests.user_as
+    post = RaceTests.post
+    get = RaceTests.get
+    start = RaceTests.start
+
+    def test_single_question_mixed_lesson_and_fifty_guests(self):
+        qs = [questions()[0], {'kind':'TL','text':'Chứng minh chưa hỗ trợ.'}]
+        with patch.object(race.base, 'parse_lesson_questions', return_value=qs):
+            preview = self.client.get('/api/race-preview?path=lesson.tex&count=1&mode=numeric')
+            self.assertEqual(preview.status_code, 200)
+            r = self.client.post('/member/race', data={'csrf':'test-token','path':'lesson.tex','count':'1','minutes':'15','mode':'numeric'})
+        self.assertEqual(r.status_code, 302)
+        self.code = r.location.rsplit('/', 1)[-1]
+        self.user = None
+        for i in range(50):
+            guest = race.base.app.test_client()
+            with guest.session_transaction() as s: s['race_csrf'] = 'test-token'
+            r = guest.post('/api/race/'+self.code, json={'action':'join','name':'Học sinh '+str(i+1)}, headers={'X-Race-CSRF':'test-token'})
+            self.assertEqual(r.status_code, 200, r.get_data(as_text=True))
+        with race.db() as c:
+            papers = [json.loads(row[0]) for row in c.execute('SELECT questions FROM race_players WHERE room=?',(self.code,))]
+        self.assertEqual(len(papers), 50)
+        self.assertEqual(len({race.fingerprint(p[0]) for p in papers}), 50)
+        for p in papers:
+            q = p[0]
+            self.assertTrue(race.correct(q, ';'.join(q['_race_rounded_components']).replace('.', ',')))
+            rendered = race.public_question(q)['text']
+            self.assertIn('class="race-answer-hint"', rendered)
+            self.assertNotIn(race.variants.DECIMAL_HINT, q['text'])
+        with self.assertRaises(ValueError): race.numeric_pool(qs, 1, strict=True)

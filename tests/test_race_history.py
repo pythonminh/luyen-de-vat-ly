@@ -129,7 +129,7 @@ class DecimalTests(unittest.TestCase):
         q={'kind':'TLN','text':'Tính kết quả.','solution':'Lời giải.','_race_answer_components':['sqrt(67)','-1/8','2']}
         q=variants.decimalize(q)
         self.assertEqual(q['_race_rounded_components'],['8.19','-0.13','2'])
-        self.assertIn('dấu phẩy (,)',q['text']);self.assertIn('8{,}19',q['_race_answer_display'])
+        self.assertIn('dấu phẩy (,)',q['_race_answer_hint']);self.assertIn('8{,}19',q['_race_answer_display'])
         self.assertTrue(variants.matches(q,'8,19;-0,13;2'))
         self.assertTrue(variants.matches(q,'8.19;-0.13;2'))
         self.assertFalse(variants.matches(q,'8,18;-0,13;2'))
@@ -140,7 +140,7 @@ class DecimalTests(unittest.TestCase):
     def test_triangle_prompt_no_longer_requires_unrounded_expression(self):
         q={'kind':'TLN','text':r'Cho tam giác ABC có AB=7, AC=9, A=60. Tính BC.'}
         q=variants.generate(q,True)
-        self.assertIn('làm tròn đến 2',q['text'])
+        self.assertIn('làm tròn đến 2',q['_race_answer_hint'])
         self.assertNotIn('không tự làm tròn',q['text'])
         self.assertTrue(race.correct(q,'8,19'));self.assertFalse(race.correct(q,'8,18'))
 

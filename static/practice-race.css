@@ -48,3 +48,5 @@
   .racegrid section,.racegrid aside{padding:8px}
   #raceQuestion{font-size:14px}
 }
+
+.race-answer-hint{display:block;width:fit-content;max-width:min(360px,100%);margin:8px 0 8px auto;color:#b91c1c;font-size:11px;line-height:1.35;font-weight:400;text-align:left;overflow-wrap:anywhere}
