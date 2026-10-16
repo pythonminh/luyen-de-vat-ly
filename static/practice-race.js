@@ -7,14 +7,16 @@
   const note = text => { $('raceNotice').textContent = text; };
   const raceRoot = document.querySelector?.('.wrap.race');
   document.body?.classList.add('race-page');
-  let fitPending = false;
+  let fitPending = false, mathSizes = new WeakMap();
   function fitMath() {
     if (!raceRoot?.querySelectorAll) return;
     raceRoot.querySelectorAll('mjx-container').forEach(math => {
-      math.style.fontSize = '100%';
       const parent = math.parentElement, formula = math.querySelector('mjx-math') || math;
       if (!parent || !formula.getBoundingClientRect) return;
       const available = Math.min(parent.clientWidth || 0, raceRoot.clientWidth - 20);
+      if (available <= 0 || mathSizes.get(math) === available) return;
+      mathSizes.set(math, available);
+      math.style.fontSize = '100%';
       const width = formula.getBoundingClientRect().width;
       if (available > 0 && width > available) math.style.fontSize = Math.max(1, Math.floor(available / width * 99)) + '%';
     });
@@ -31,7 +33,7 @@
     window.addEventListener('resize', scheduleFit);
     window.addEventListener('load', scheduleFit);
     window.addEventListener('orientationchange', scheduleFit);
-    document.fonts?.addEventListener('loadingdone', scheduleFit);
+    document.fonts?.addEventListener('loadingdone', () => { mathSizes = new WeakMap(); scheduleFit(); });
     scheduleFit();
   }
   function typeset() {
@@ -143,7 +145,9 @@
       input.setAttribute('aria-label', 'Đáp án câu ' + (pos + 1)); input.onchange = () => changed(input.value, answerPos); input.oninput = () => { answers[answerPos] = input.value; clearTimeout(saveTimer); saveTimer = setTimeout(saveAnswers, 400); }; input.id = 'raceTextAnswer'; panel.append(input);
     }
     if (state.state === 'closed' && state.review?.[pos]) {
-      const review = document.createElement('div'); review.innerHTML = '<h3>' + (state.review[pos].correct === null ? '⏳ Chờ ADMIN chấm' : state.review[pos].correct ? '✅ Đúng' : 'Chưa đúng') + '</h3>' + state.review[pos].solution; panel.append(review);
+      const item = state.review[pos], review = document.createElement('div'); review.className = 'race-student-review';
+      const comparison = item.parts?.length ? '<div class="race-review-scroll"><table><thead><tr><th>Kết quả</th><th>Em đã nhập</th><th>Đáp án đúng</th></tr></thead><tbody>' + item.parts.map(part => '<tr><th>' + esc(part.label) + '</th><td>' + esc(part.answer) + '</td><td>' + part.expected + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="race-review-answer"><b>Em đã chọn / nhập</b><div>' + (item.answer || '(Chưa trả lời)') + '</div></div><div class="race-review-expected"><b>Đáp án đúng của đề em</b><div>' + (item.expected || 'Xem lời giải') + '</div></div>';
+      review.innerHTML = '<h3>' + (item.correct === null ? '⏳ Chờ ADMIN chấm' : item.correct ? '✅ Đúng' : '❌ Chưa đúng') + '</h3>' + comparison + '<h4>Lời giải đề của em</h4>' + item.solution; panel.append(review);
     }
     if (!followingHost && pos > 0) button('← Câu trước', async () => { pos--; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
     if (!followingHost && pos + 1 < questions.length) button('Câu tiếp →', async () => { pos++; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
@@ -182,17 +186,22 @@
     if (window.ldvlTypeset) window.ldvlTypeset(el);
     scheduleFit();
   }
+  let resultFold, resultSummary;
+  const resultCards = new Map();
   function drawResults() {
     const el = $('raceResults'); if (!cfg.host || !el) return;
     const rows = state.results || [], key = JSON.stringify(rows);
     if (key === resultsKey) return;
     resultsKey = key;
-    const wasOpen = el.firstElementChild?.open || false;
-    el.replaceChildren();
-    if (!rows.length) return;
-    const fold = document.createElement('details'), summary = document.createElement('summary');
-    fold.open = wasOpen; summary.textContent = '📋 Kết quả từng học sinh · ' + rows.length + ' bài đã nộp'; fold.append(summary);
+    if (!rows.length) { el.replaceChildren(); resultFold = null; resultCards.clear(); return; }
+    if (!resultFold) {
+      resultFold = document.createElement('details'); resultSummary = document.createElement('summary');
+      resultFold.append(resultSummary); el.append(resultFold);
+    }
+    resultSummary.textContent = '📋 Kết quả từng học sinh · ' + rows.length + ' bài đã nộp';
     rows.forEach(row => {
+      const id = row.player || row.name, signature = JSON.stringify(row), previous = resultCards.get(id);
+      if (previous?.signature === signature) return;
       const card = document.createElement('details'), heading = document.createElement('summary');
       heading.textContent = row.name + ' · ' + row.score + '/' + row.questions.length + ' đúng · ' + clock(row.elapsed) + (row.pending ? ' · ' + row.pending + ' câu chờ chấm' : '');
       card.append(heading);
@@ -203,10 +212,14 @@
         part.innerHTML = '<h4>Câu ' + (i+1) + ' · ' + (item.correct === null ? '⏳ Chờ chấm' : item.correct ? '✅ Đúng' : '❌ Sai') + '</h4><div>' + q.text + '</div>' + options + '<p><b>Học sinh trả lời:</b> ' + esc(item.answer) + '</p><p><b>Đáp án của đề này:</b> ' + item.expected + '</p><div><b>Lời giải:</b> ' + item.solution + '</div>';
         card.append(part);
       });
-      fold.append(card);
+      card.open = previous?.card.open || false;
+      if (previous) previous.card.replaceWith(card); else resultFold.append(card);
+      resultCards.set(id, {card, signature});
+      if (window.ldvlArmTikz) window.ldvlArmTikz(card);
+      if (window.ldvlSplitPics) window.ldvlSplitPics(card);
+      if (window.ldvlTypeset) window.ldvlTypeset(card);
+      else if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise([card]).then(scheduleFit).catch(() => {});
     });
-    el.append(fold);
-    if (window.ldvlTypeset) window.ldvlTypeset(el);
     scheduleFit();
   }
   function saveAnswers() {

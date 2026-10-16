@@ -246,6 +246,27 @@ def expected_label(q):
     return str(q.get('_race_saved_answer') or q.get('answer') or 'Xem lời giải / ADMIN chấm')
 
 
+def student_review(q, answer, decision):
+    src = q.get('src')
+    chosen = html.escape(response_label(q, answer))
+    expected = base.html_question(expected_label(q), src)
+    if q['kind'] == 'TN':
+        options = q.get('options', [])
+        if type(answer) is int and 0 <= answer < len(options):
+            chosen = 'ABCD'[answer] + '. ' + base.html_question(options[answer].get('text', ''), src)
+        expected = '<br>'.join('ABCD'[i] + '. ' + base.html_question(o.get('text', ''), src) for i, o in enumerate(options) if o.get('correct')) or expected
+    parts = []
+    values = q.get('_race_rounded_components') or q.get('_race_answer_components') or []
+    if len(values) > 1:
+        labels = public_question(q)['component_labels']
+        entered = str(answer or '').split(';')
+        for i, value in enumerate(values):
+            parts.append({'label':labels[i], 'answer':entered[i].strip() if i < len(entered) and entered[i].strip() else '(Chưa trả lời)',
+                          'expected':base.html_question('$' + str(value).replace('.', '{,}') + '$', src) if q.get('_race_rounded_components') else base.html_question('$' + variants.fmt(variants.parse_expression(value, False)) + '$', src)})
+    return {'correct':decision, 'answer':chosen, 'expected':expected, 'parts':parts,
+            'solution':base.html_question(q.get('solution', ''), src)}
+
+
 def public_question(q):
     src = q.get('src')
     text = q.get('text', '')
@@ -381,7 +402,7 @@ def race_home():
     body = '<div class="wrap race"><h1>🏁 Thi đua luyện đề</h1><p>Học sinh chỉ cần mã phòng và họ tên, không cần đăng nhập tài khoản.</p>' + error + creation + '<section class="race-join"><h2>👨‍🎓 Học sinh · Vào phòng đã tạo</h2><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Mã phòng <input name="code" maxlength="8" required placeholder="Nhập đúng mã ADMIN cung cấp"></label><button class="btn primary">Vào phòng</button></form></section>' + '<p><a class="btn primary" href="/member/race/history">📚 Lịch sử bài làm học sinh</a></p><h2>Phòng của tôi</h2><ul>' + links + '</ul><a class="btn" href="/member">← Mục lục</a></div><style>.race{max-width:1000px}.race label{display:block;margin:12px 0}.race input,.race select{max-width:100%;padding:9px}.race select{width:100%}.race-create{border:2px solid #2563eb;background:#eff6ff;padding:20px;border-radius:12px;margin:16px 0}.race-join{border:1px solid #cbd5e1;padding:20px;border-radius:12px;margin:16px 0}</style>'
     if not base.can_manage_bank():
         body = body.replace('<p><a class="btn primary" href="/member/race/history">📚 Lịch sử bài làm học sinh</a></p>', '')
-    body += '<link rel="stylesheet" href="/static/practice-race.css?v=parts2">'
+    body += '<link rel="stylesheet" href="/static/practice-race.css?v=review2">'
     return base.page('Thi đua luyện đề', body)
 
 
@@ -394,14 +415,14 @@ def race_page(code):
             return base.page('Không tìm thấy phòng', '<div class="wrap"><h2>Mã phòng chưa tồn tại hoặc đã hết hiệu lực</h2><p>ADMIN cần tạo phòng trước, sau đó gửi mã hoặc QR mới cho học sinh.</p><a class="btn primary" href="/member/race">← Tạo phòng / Nhập mã khác</a></div>'), 404
         host = is_host(r, user)
     cfg = json.dumps({'code': code, 'csrf': csrf(), 'host': host, 'name': m.get('name') or ''}, ensure_ascii=True).replace('<', '\\u003c')
-    body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><a class="btn" href="/member/race/history">📚 Lịch sử</a><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div><div id="raceGrading"></div><div id="raceResults"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp và chấm đủ. Câu thiếu đáp án/tự luận chờ ADMIN chấm. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js?v=parts2"></script>'
+    body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><a class="btn" href="/member/race/history">📚 Lịch sử</a><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div><div id="raceGrading"></div><div id="raceResults"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp và chấm đủ. Câu thiếu đáp án/tự luận chờ ADMIN chấm. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js?v=review2"></script>'
     if not host:
         body = body.replace('<a class="btn" href="/member/race/history">📚 Lịch sử</a>', '')
     if host:
         join_url = base.public_origin() + '/member/race/' + code
         qr = '<section id="raceQR" class="race-qr"><img src="/race/' + code + '/qr.svg" alt="Mã QR tham gia phòng ' + code + '" width="260" height="260"><div><h2>📱 Quét QR để tham gia</h2><p>MÃ PHÒNG</p><strong style="font:800 38px monospace;letter-spacing:4px">' + code + '</strong><p>Học sinh quét QR → nhập họ tên → chờ bắt đầu. Quét và tham gia trước khi ADMIN bấm bắt đầu.</p><input readonly aria-label="Link tham gia" value="' + html.escape(join_url, quote=True) + '" style="width:100%;padding:10px"></div></section><style>.race-qr{display:flex;gap:24px;align-items:center;border:2px solid #2563eb;border-radius:14px;background:white;padding:20px;margin:16px 0}.race-qr[hidden]{display:none}.race-qr img{max-width:42%;height:auto}.race-qr>div{flex:1;min-width:0}@media(max-width:600px){.race-qr{display:block;text-align:center}.race-qr img{max-width:100%;width:220px}}</style>'
         body = body.replace('<div id="raceControls"></div>', qr + '<div id="raceControls"></div>')
-    body += '<link rel="stylesheet" href="/static/practice-race.css?v=parts2">'
+    body += '<link rel="stylesheet" href="/static/practice-race.css?v=review2">'
     response = base.page('Thi đua luyện đề', body)
     response.headers['Cache-Control'] = 'no-store'
     return response
@@ -571,7 +592,7 @@ def race_api(code):
             result.update(questions=[public_question(q) for q in qs], answers=json.loads(player['answers']), finished=player['finished'] is not None)
             if r['state'] == 'closed':
                 _, _, decisions = graded_result(c, code, player)
-                result['review'] = [{'correct': decisions[i], 'solution': base.html_question(q.get('solution', ''), q.get('src'))} for i, q in enumerate(qs)]
+                result['review'] = [student_review(q, json.loads(player['answers']).get(str(i)), decisions[i]) for i, q in enumerate(qs)]
         if host:
             # Project a separate, fixed reference exam. Never expose anyone else's private paper.
             reference = []
@@ -585,7 +606,7 @@ def race_api(code):
                     continue
                 answers = json.loads(p['answers'])
                 score, pending, decisions = assessments[p['user']]
-                result['results'].append({'name':p['name'], 'score':score, 'pending':pending, 'elapsed':p['elapsed'], 'started_at':p['started'], 'submitted_at':p['finished'], 'questions':[
+                result['results'].append({'player':p['user'], 'name':p['name'], 'score':score, 'pending':pending, 'elapsed':p['elapsed'], 'started_at':p['started'], 'submitted_at':p['finished'], 'questions':[
                     {'question':public_question(q), 'answer':response_label(q, answers.get(str(i))),
                      'expected':base.html_question(expected_label(q), q.get('src')),
                      'solution':base.html_question(q.get('solution', ''), q.get('src')), 'correct':decisions[i]}

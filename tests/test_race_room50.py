@@ -48,3 +48,28 @@ class Room50Tests(unittest.TestCase):
         self.assertNotIn('dùng dấu chấm phẩy', public['text'])
         q['text'] += '\n' + race.variants.DECIMAL_HINT
         self.assertEqual(race.public_question(q), public)
+
+    def test_review_shows_own_answer_only_after_close(self):
+        self.user_as('alice')
+        self.post('join', name='Alice')
+        self.start()
+        self.user_as('alice')
+        before = self.get()
+        self.assertNotIn('review', before)
+        self.post('submit', answers={'0':0})
+        self.assertNotIn('review', self.get())
+        self.user_as('teacher')
+        self.post('close')
+        self.user_as('alice')
+        d = self.get()
+        item = d['review'][0]
+        self.assertTrue(item['answer'].startswith('A. '))
+        self.assertIn('expected', item)
+        self.assertIn('solution', item)
+        q = race.variants.generate(questions()[3], original=True)
+        parts = race.student_review(q, ';8,19', False)['parts']
+        self.assertEqual(parts[0]['answer'], '(Chưa trả lời)')
+        self.assertEqual(parts[1]['answer'], '8,19')
+        self.assertEqual(parts[1]['label'], 'S')
+        self.assertTrue(parts[0]['expected'])
+        self.assertIn('&lt;script&gt;', race.student_review({'kind':'TL','text':'x'}, '<script>', None)['answer'])

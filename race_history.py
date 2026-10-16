@@ -145,7 +145,7 @@ def import_backup():
 
 
 def page(title,body):
-    return base.page(title,body+'<link rel="stylesheet" href="/static/practice-race.css?v=parts2"><style>.history-student{border:1px solid #cbd5e1;border-radius:9px;padding:10px;margin:10px 0;background:#fff}.history-student>summary{cursor:pointer;font-weight:700}.history-student section{border-top:1px solid #ddd;padding:12px 0}.race table{width:100%;border-collapse:collapse}.race td,.race th{padding:8px;border-bottom:1px solid #ddd;text-align:left}.race form{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.race label{display:flex;flex-direction:column}.race summary{overflow-wrap:anywhere}</style>')
+    return base.page(title,body+'<link rel="stylesheet" href="/static/practice-race.css?v=review2"><style>.history-student{border:1px solid #cbd5e1;border-radius:9px;padding:10px;margin:10px 0;background:#fff}.history-student>summary{cursor:pointer;font-weight:700}.history-student section{border-top:1px solid #ddd;padding:12px 0}.race table{width:100%;border-collapse:collapse}.race td,.race th{padding:8px;border-bottom:1px solid #ddd;text-align:left}.race form{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.race label{display:flex;flex-direction:column}.race summary{overflow-wrap:anywhere}</style>')
 
 
 def register():

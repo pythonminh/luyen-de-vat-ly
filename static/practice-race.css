@@ -83,3 +83,5 @@
   #raceQuestion .race-component-fields input{padding:9px;height:42px}
 }
 @media(max-width:320px){#raceQuestion .race-component-fields{grid-template-columns:1fr}}
+
+.race-student-review{margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0}.race-student-review h3{font-size:16px}.race-student-review h4{font-size:14px;color:#475569;margin:18px 0 8px}.race-review-answer,.race-review-expected{padding:10px 12px;border-radius:8px;margin:8px 0;background:#f1f5f9}.race-review-expected{background:#ecfdf5}.race-student-review b{font-size:12px;color:#475569}.race-review-scroll{max-width:100%;overflow-x:auto}.race-student-review table{font-size:14px}.race-student-review thead{background:#f1f5f9}.race-student-review td:last-child{background:#ecfdf5}
