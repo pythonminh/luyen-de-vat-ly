@@ -120,6 +120,24 @@
         select.onchange = () => { const a = Array.isArray(answers[pos]) ? [...answers[pos]] : [null,null,null,null]; a[i] = select.value === '' ? null : select.value === '1'; changed(a); };
         label.append(span, select); panel.append(label);
       });
+    } else if (!q.manual && q.components > 1) {
+      const fields = document.createElement('div'); fields.className = 'race-component-fields';
+      const values = String(answers[answerPos] ?? '').split(';');
+      const inputs = [];
+      const collect = () => inputs.map(input => input.value.trim()).join(';');
+      for (let i = 0; i < q.components; i++) {
+        const label = document.createElement('label'), caption = document.createElement('span'), input = document.createElement('input');
+        caption.textContent = (q.component_labels || [])[i] || 'Kết quả ' + (i + 1);
+        input.type = 'text'; input.id = 'raceAnswerPart' + i; input.maxLength = 300;
+        input.placeholder = q.decimal_places === 2 ? 'Ví dụ: 8,19' : 'Nhập kết quả';
+        input.value = values[i] || ''; input.disabled = !editable;
+        input.setAttribute('aria-label', 'Câu ' + (pos + 1) + ' · ' + caption.textContent);
+        inputs.push(input);
+        input.oninput = () => { answers[answerPos] = collect(); clearTimeout(saveTimer); saveTimer = setTimeout(saveAnswers, 400); };
+        input.onchange = () => changed(collect(), answerPos);
+        label.append(caption, input); fields.append(label);
+      }
+      panel.append(fields);
     } else {
       const input = document.createElement(q.manual ? 'textarea' : 'input'); if (!q.manual) input.type = 'text'; input.maxLength = q.manual ? 5000 : q.numeric ? 1500 : 100; input.rows = 5; input.style = 'width:100%;padding:12px;box-sizing:border-box'; input.placeholder = q.manual ? 'Nhập bài làm hoặc kết quả. ADMIN sẽ chấm câu này.' : q.decimal_places === 2 ? 'Dùng dấu phẩy: 8,19; nhiều kết quả ngăn bằng ;' : 'Nhập đáp án'; input.value = answers[pos] ?? ''; input.disabled = !editable;
       input.setAttribute('aria-label', 'Đáp án câu ' + (pos + 1)); input.onchange = () => changed(input.value, answerPos); input.oninput = () => { answers[answerPos] = input.value; clearTimeout(saveTimer); saveTimer = setTimeout(saveAnswers, 400); }; input.id = 'raceTextAnswer'; panel.append(input);

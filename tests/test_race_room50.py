@@ -38,3 +38,13 @@ class Room50Tests(unittest.TestCase):
             self.assertIn('class="race-answer-hint"', rendered)
             self.assertNotIn(race.variants.DECIMAL_HINT, q['text'])
         with self.assertRaises(ValueError): race.numeric_pool(qs, 1, strict=True)
+
+    def test_multiple_result_labels_and_legacy_paper(self):
+        q = race.variants.generate(questions()[3], original=True)
+        public = race.public_question(q)
+        self.assertEqual(public['components'], 2)
+        self.assertEqual(public['component_labels'], ['A (độ)', 'S'])
+        self.assertNotIn('Nhập theo thứ tự:', public['text'])
+        self.assertNotIn('dùng dấu chấm phẩy', public['text'])
+        q['text'] += '\n' + race.variants.DECIMAL_HINT
+        self.assertEqual(race.public_question(q), public)
