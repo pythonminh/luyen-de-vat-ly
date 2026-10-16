@@ -73,3 +73,16 @@ class Room50Tests(unittest.TestCase):
         self.assertEqual(parts[1]['label'], 'S')
         self.assertTrue(parts[0]['expected'])
         self.assertIn('&lt;script&gt;', race.student_review({'kind':'TL','text':'x'}, '<script>', None)['answer'])
+
+    def test_advice_for_wrong_blank_correct_and_pending(self):
+        q = race.variants.generate(questions()[3], original=True)
+        wrong = race.student_review(q, '1;2', False)
+        self.assertTrue(any('arccos' in tip for tip in wrong['advice']))
+        self.assertTrue(any('2 chữ số' in tip for tip in wrong['advice']))
+        self.assertTrue(any('đủ các ô' in tip for tip in wrong['advice']))
+        blank = race.student_review(q, ';', False)
+        self.assertIn('chưa trả lời', blank['advice'][0])
+        self.assertEqual(race.student_review(q, '1;2', True)['advice'], [])
+        self.assertEqual(race.student_review(q, '1;2', None)['advice'], [])
+        tn = {'kind':'TN','text':'x','options':[{'text':'1','correct':True}]}
+        self.assertNotIn('chưa trả lời', race.student_advice(tn, 0, False)[0])

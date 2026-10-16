@@ -7,7 +7,7 @@ class Element {
 }
 const ids=Object.fromEntries(['raceNotice','raceControls','raceClock','raceNav','raceQuestion','raceActions','raceRanks','raceFull'].map(id=>[id,new Element()]));
 let shown=0, phase='running', poll, draft={}, calls=[];
-const response=()=>({ok:true,host:false,state:phase,mode:'numeric',now:100,started:90,duration:60,ranking:[],capacity:200,total:2,joined:true,shown,review:phase==='closed'?[{correct:false,parts:[{label:'A (độ)',answer:'60',expected:'55,42'},{label:'S',answer:'8,19',expected:'12,34'}],solution:'Lời giải riêng'}]:undefined,questions:[{kind:'TLN',text:'Riêng em: AB=13',numeric:true,components:2,decimal_places:2,component_labels:['A (độ)','S']},{kind:'TLN',text:'Riêng em: BC=24',numeric:true}],answers:{...draft},finished:false});
+const response=()=>({ok:true,host:false,state:phase,mode:'numeric',now:100,started:90,duration:60,ranking:[],capacity:200,total:2,joined:true,shown,review:phase==='closed'?[{correct:false,advice:['Kiểm tra công thức và đơn vị.'],parts:[{label:'A (độ)',answer:'60',expected:'55,42'},{label:'S',answer:'8,19',expected:'12,34'}],solution:'Lời giải riêng'}]:undefined,questions:[{kind:'TLN',text:'Riêng em: AB=13',numeric:true,components:2,decimal_places:2,component_labels:['A (độ)','S']},{kind:'TLN',text:'Riêng em: BC=24',numeric:true}],answers:{...draft},finished:false});
 const sandbox={console,document:{getElementById:id=>ids[id],createElement:tag=>new Element(tag),addEventListener(){}},window:{RACE_CONFIG:{code:'CODE',csrf:'csrf',host:false}},location:{origin:'http://example.com'},navigator:{},confirm:()=>true,setInterval(fn,ms){if(ms===3000)poll=fn;},setTimeout(){return 1;},clearTimeout(){},fetch:async(url,opt)=>{const p=opt.body?JSON.parse(opt.body):null;calls.push(p);if(p?.answers)draft=p.answers;return {ok:true,json:async()=>response()};}};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/practice-race.js'),'utf8'),sandbox);
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
@@ -33,6 +33,6 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
   const review=ids.raceQuestion.children[1].innerHTML;
   assert(review.includes('Em đã nhập')); assert(review.includes('Đáp án đúng'));
   assert(review.includes('8,19')); assert(review.includes('12,34'));
-  assert(review.includes('Lời giải riêng'));
+  assert(review.includes('Lời giải riêng')); assert(review.includes('Kiểm tra công thức và đơn vị.')); assert(review.includes('race-solution')); 
   console.log('PASS: separate labeled fields preserve commas, blank positions, drafts, late blur and read-only review');
 })().catch(e=>{console.error(e);process.exit(1);});

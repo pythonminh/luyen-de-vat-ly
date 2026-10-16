@@ -91,6 +91,9 @@
       return '<tr class="' + (p.me ? 'me' : '') + '"><td class="medal">' + (place === 1 ? '🥇 ' : place === 2 ? '🥈 ' : place === 3 ? '🥉 ' : '') + place + '</td><td>' + esc(p.name) + (p.me ? ' (bạn)' : '') + '</td><td>' + (p.pending ? 'Chờ ADMIN chấm ' + p.pending + ' câu' : p.done ? p.correct + '/' + state.total : p.answered + '/' + state.total + ' đã làm') + '</td><td>' + ((p.submitted || p.done) ? clock(p.elapsed) + '.' + String(Math.floor((p.elapsed % 1) * 100)).padStart(2, '0') : 'Đang chờ/làm') + '</td></tr>';
     }).join('') + '</tbody></table>';
   }
+  function adviceHTML(tips) {
+    return tips?.length ? '<aside class="race-advice"><strong>Gợi ý để em làm tốt hơn</strong><ul>' + tips.map(tip => '<li>' + esc(tip) + '</li>').join('') + '</ul></aside>' : '';
+  }
   function drawQuestion(force = false) {
     const key = [state.state, pos, !!state.finished, questions.length, cfg.host, JSON.stringify(state.review?.map(x=>x.correct))].join(':');
     if (!force && key === rendered) return;
@@ -145,9 +148,9 @@
       input.setAttribute('aria-label', 'Đáp án câu ' + (pos + 1)); input.onchange = () => changed(input.value, answerPos); input.oninput = () => { answers[answerPos] = input.value; clearTimeout(saveTimer); saveTimer = setTimeout(saveAnswers, 400); }; input.id = 'raceTextAnswer'; panel.append(input);
     }
     if (state.state === 'closed' && state.review?.[pos]) {
-      const item = state.review[pos], review = document.createElement('div'); review.className = 'race-student-review';
-      const comparison = item.parts?.length ? '<div class="race-review-scroll"><table><thead><tr><th>Kết quả</th><th>Em đã nhập</th><th>Đáp án đúng</th></tr></thead><tbody>' + item.parts.map(part => '<tr><th>' + esc(part.label) + '</th><td>' + esc(part.answer) + '</td><td>' + part.expected + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="race-review-answer"><b>Em đã chọn / nhập</b><div>' + (item.answer || '(Chưa trả lời)') + '</div></div><div class="race-review-expected"><b>Đáp án đúng của đề em</b><div>' + (item.expected || 'Xem lời giải') + '</div></div>';
-      review.innerHTML = '<h3>' + (item.correct === null ? '⏳ Chờ ADMIN chấm' : item.correct ? '✅ Đúng' : '❌ Chưa đúng') + '</h3>' + comparison + '<h4>Lời giải đề của em</h4>' + item.solution; panel.append(review);
+      const item = state.review[pos], review = document.createElement('div'); review.className = 'race-student-review ' + (item.correct === true ? 'is-correct' : item.correct === false ? 'is-incorrect' : 'is-pending');
+      const comparison = item.parts?.length ? '<div class="race-review-scroll"><table><thead><tr><th>Kết quả</th><th>Em đã nhập</th><th>Đáp án đúng</th></tr></thead><tbody>' + item.parts.map(part => '<tr><th>' + esc(part.label) + '</th><td>' + esc(part.answer) + '</td><td>' + part.expected + '</td></tr>').join('') + '</tbody></table></div>' : '<div class="race-review-pair"><div class="race-review-answer"><b>Em đã chọn / nhập</b><div>' + (item.answer || '(Chưa trả lời)') + '</div></div><div class="race-review-expected"><b>Đáp án đúng của đề em</b><div>' + (item.expected || 'Xem lời giải') + '</div></div></div>';
+      review.innerHTML = '<h3>' + (item.correct === null ? '⏳ Chờ ADMIN chấm' : item.correct ? '✅ Đúng' : '❌ Chưa đúng') + '</h3>' + comparison + adviceHTML(item.advice) + '<details class="race-solution"><summary>Xem lời giải từng bước</summary><div>' + item.solution + '</div></details>'; panel.append(review);
     }
     if (!followingHost && pos > 0) button('← Câu trước', async () => { pos--; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
     if (!followingHost && pos + 1 < questions.length) button('Câu tiếp →', async () => { pos++; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true); }, actions);
@@ -206,10 +209,10 @@
       heading.textContent = row.name + ' · ' + row.score + '/' + row.questions.length + ' đúng · ' + clock(row.elapsed) + (row.pending ? ' · ' + row.pending + ' câu chờ chấm' : '');
       card.append(heading);
       row.questions.forEach((item, i) => {
-        const part = document.createElement('section'); part.style = 'border:1px solid #cbd5e1;padding:12px;margin:10px 0';
+        const part = document.createElement('section'); part.className = 'race-report-question';
         const q = item.question;
         const options = (q.options || q.statements || []).map((t,j) => '<p><b>' + (q.options ? 'ABCD'[j] : 'abcd'[j]) + '.</b> ' + t + '</p>').join('');
-        part.innerHTML = '<h4>Câu ' + (i+1) + ' · ' + (item.correct === null ? '⏳ Chờ chấm' : item.correct ? '✅ Đúng' : '❌ Sai') + '</h4><div>' + q.text + '</div>' + options + '<p><b>Học sinh trả lời:</b> ' + esc(item.answer) + '</p><p><b>Đáp án của đề này:</b> ' + item.expected + '</p><div><b>Lời giải:</b> ' + item.solution + '</div>';
+        part.innerHTML = '<h4>Câu ' + (i+1) + ' · ' + (item.correct === null ? '⏳ Chờ chấm' : item.correct ? '✅ Đúng' : '❌ Sai') + '</h4><div>' + q.text + '</div>' + options + '<div class="race-review-pair"><div class="race-review-answer"><b>Học sinh trả lời</b><div>' + esc(item.answer) + '</div></div><div class="race-review-expected"><b>Đáp án của đề này</b><div>' + item.expected + '</div></div></div>' + adviceHTML(item.advice) + '<details class="race-solution"><summary>Xem lời giải từng bước</summary><div>' + item.solution + '</div></details>';
         card.append(part);
       });
       card.open = previous?.card.open || false;
