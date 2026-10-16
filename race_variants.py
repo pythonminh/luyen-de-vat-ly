@@ -4,6 +4,7 @@ import copy
 import math
 import random
 import re
+from decimal import Decimal, ROUND_HALF_UP, localcontext
 
 import sympy as sp
 
@@ -153,6 +154,39 @@ def random_data(s):
     return p
 
 
+DECIMAL_HINT = 'Kết quả không nguyên làm tròn đến 2 chữ số sau dấu phẩy. Dùng dấu phẩy (,) làm dấu thập phân, ví dụ 8,19; dùng dấu chấm phẩy (;) giữa các kết quả. Số nguyên giữ nguyên.'
+
+
+def decimal_value(value):
+    with localcontext() as ctx:
+        ctx.prec = 60
+        exact = parse_expression(str(value), False)
+        if exact.is_Integer:
+            return str(exact)
+        rounded = Decimal(str(sp.N(exact, 55))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        return format(abs(rounded) if rounded == 0 else rounded, '.2f')
+
+
+def decimalize(q):
+    if q.get('kind') == 'TN':
+        return q
+    values = q.get('_race_answer_components')
+    if not values and '_race_saved_answer' in q:
+        values = [q['_race_saved_answer']]
+    if not values:
+        return q
+    try:
+        rounded = [decimal_value(v) for v in values]
+    except (ValueError, TypeError, SyntaxError):
+        return q
+    q['_race_rounded_components'] = rounded
+    q['_race_decimal_places'] = 2
+    q['_race_answer_display'] = '$' + r';\quad '.join(v.replace('.', '{,}') for v in rounded) + '$'
+    q['text'] += '\n' + DECIMAL_HINT
+    q['solution'] = str(q.get('solution') or '') + '\nKết quả nhập (đã làm tròn): ' + q['_race_answer_display'] + '.'
+    return q
+
+
 def generate(q, original=False):
     s=q.get('_race_variant_spec') or spec(q)
     if not s:
@@ -160,24 +194,24 @@ def generate(q, original=False):
     out=copy.deepcopy(q)
     if s['engine']=='sets':
         from race_set_variants import generate as generate_sets
-        return generate_sets(q, s, original)
+        return decimalize(generate_sets(q, s, original))
     if s['engine']=='saved':
         from variable_templates import generate_custom
         ex=generate_custom(q,s['config'],original=original)
         out.update({k:ex[k] for k in ('text','solution','answer','kind','options') if k in ex})
         out['_race_saved_answer']=ex['answer']
-        return out
+        return decimalize(out)
     p={k:sp.Rational(v) for k,v in s['data'].items()} if original else random_data(s)
     if not original and all(p[k]==sp.Rational(v) for k,v in s['data'].items()):
         return generate(q,False)
     stem,solution,components,order=solve_triangle(s['type'],p)
-    out['text']=(q['text'] if original else stem)+f'\nNhập theo thứ tự: {order}. Dùng dấu chấm phẩy (;) giữa các kết quả. Có thể nhập sqrt(67), acos(3/5), asin(5/8); góc trong các hàm lượng giác tính theo độ. Giữ biểu thức chính xác, không tự làm tròn.'
+    out['text']=(q['text'] if original else stem)+f'\nNhập theo thứ tự: {order}. Dùng dấu chấm phẩy (;) giữa các kết quả. Các góc tính theo độ.'
     out['solution']=solution+'\nĐáp án theo thứ tự: $'+r';\quad '.join(fmt(v) for v in components)+'$.'
     out['_race_answer_components']=[str(sp.simplify(v)) for v in components]
     out['_race_order']=order
     out['_race_variant_values']={k:str(v) for k,v in p.items()}
     out['_race_variant_spec']=s
-    return out
+    return decimalize(out)
 
 
 def parse_expression(text, degrees=True):
@@ -223,6 +257,14 @@ def parse_expression(text, degrees=True):
 
 
 def matches(q, answer):
+    rounded = q.get('_race_rounded_components')
+    if rounded and isinstance(answer, str):
+        parts = answer.strip().split(';')
+        try:
+            if len(parts) == len(rounded) and all(abs(float(sp.N(parse_expression(a)-sp.Rational(b), 20))) < 1e-9 for a,b in zip(parts, rounded)):
+                return True
+        except (ValueError, TypeError, SyntaxError, ZeroDivisionError, OverflowError):
+            pass
     if q.get('_race_set_answer'):
         from race_set_variants import matches as set_matches
         return set_matches(q, answer)

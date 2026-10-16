@@ -65,7 +65,7 @@ def solve(kind, raw):
             else:
                 bounds.append([str(piece.start),str(piece.end),bool(piece.left_open),bool(piece.right_open)])
         answer={'type':'intervals','values':bounds}
-        return stem,solution,answer,'Nhập khoảng/đoạn, dùng dấu ; giữa hai đầu, U để hợp và inf cho vô cực. Ví dụ [2;+inf) hoặc [1;3] U [5;+inf).'
+        return stem,solution,answer,'Nhập khoảng/đoạn, dùng dấu ; giữa hai đầu, U để hợp và inf cho vô cực. Đầu mút giữ phân số chính xác để không thay đổi biên của tập hợp. Ví dụ [2;+inf) hoặc [1;3] U [5;+inf).'
     if kind=='closed_subset_count':
         u,v,k,l,r=[p[x] for x in ('u','v','k','l','r')]
         nonempty=(u+v)/(k-1);left=l-u;right=(r+v)/k
@@ -90,8 +90,8 @@ def solve(kind, raw):
             ctx.prec=50
             rounded=Decimal(str(sp.N(width,45))).quantize(Decimal('.01'),rounding=ROUND_HALF_UP)
         stem=f'Cho $m<0$, $A=(-\\infty;{tex(k*m)})$, $B=(\\dfrac{{{tex(t)}}}{{m}};+\\infty)$. Biết tập các $m$ để $A\\cap B\\ne\\varnothing$ là $(a;b)$. Tính $b-a$, làm tròn đến hàng phần trăm.'
-        solution=f'Hai khoảng mở giao nhau khi ${tex(k*m)}>\\dfrac{{{tex(t)}}}{{m}}$. Vì $m<0$, nhân với $m$ phải đổi chiều: ${tex(k)}m^2<{tex(t)}$. Suy ra $-{tex(width)}<m<0$, nên $b-a={tex(width)}\\approx {rounded}$.'
-        return stem,solution,{'type':'scalar','value':str(sp.Rational(str(rounded))),'display':str(rounded)},'Nhập kết quả làm tròn đến hàng phần trăm (2 chữ số thập phân), dùng dấu chấm hoặc dấu phẩy.'
+        solution=f'Hai khoảng mở giao nhau khi ${tex(k*m)}>\\dfrac{{{tex(t)}}}{{m}}$. Vì $m<0$, nhân với $m$ phải đổi chiều: ${tex(k)}m^2<{tex(t)}$. Suy ra $-{tex(width)}<m<0$, nên $b-a={tex(width)}\\approx {str(rounded).replace('.', '{,}')}$.'
+        return stem,solution,{'type':'scalar','value':str(sp.Rational(str(rounded))),'display':str(rounded)},'Nhập kết quả làm tròn đến hàng phần trăm (2 chữ số thập phân), dùng dấu phẩy (,) làm dấu thập phân, ví dụ 0,67.'
     if kind=='open_subset_count':
         u,v,k,t=[p[x] for x in ('u','v','k','t')]
         left=max(sp.ceiling(u),sp.floor(t/(k-1))+1);right=(v+t)/k

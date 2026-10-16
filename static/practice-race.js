@@ -57,13 +57,15 @@
     parent.append(b); return b;
   }
   function controls() {
-    const key = [state.state, state.joined, cfg.host ? state.ranking.length : '', state.capacity].join(':');
+    const key = [state.state, state.joined, cfg.host ? state.ranking.length : '', state.capacity, state.storage?.state, state.storage?.saved_at].join(':');
     if (key === controlsKey) return;
     controlsKey = key;
     const el = $('raceControls'); el.replaceChildren();
     if (cfg.host) {
       const link = location.origin + '/member/race/' + cfg.code;
       const code = document.createElement('strong'); code.textContent = 'Mã phòng: ' + cfg.code + ' · ' + state.ranking.length + '/' + state.capacity + ' người · ' + state.total + ' câu'; el.append(code);
+      if (state.history_url) { const history = document.createElement('a'); history.className = 'btn'; history.href = state.history_url; history.textContent = '📚 Xem / tải lịch sử bài làm'; el.append(history); }
+      if (state.storage) { const saved = document.createElement('span'); saved.textContent = ({saved:'☁ Đã lưu lâu dài',pending:'☁ Đang lưu lâu dài…',error:'⚠ Chưa đồng bộ lâu dài · mở lịch sử để tải sao lưu',local:'Đã lưu trên máy chủ · tải sao lưu trong Lịch sử'})[state.storage.state] || ''; el.append(saved); }
       button('Sao chép link tham gia', async () => { try { await navigator.clipboard.writeText(link); note('Đã sao chép link.'); } catch (_) { window.prompt('Link tham gia', link); } }, el);
       if (state.mode === 'numeric') button('🎲 Đổi số đề minh họa', async () => update(await enqueue({action:'variant'})), el);
       if (state.state === 'closed') button('Tạo phòng mới · Đổi số', async () => { const d = await enqueue({action:'new_round'}); location.href = d.redirect; }, el);
@@ -119,7 +121,7 @@
         label.append(span, select); panel.append(label);
       });
     } else {
-      const input = document.createElement(q.manual ? 'textarea' : 'input'); if (!q.manual) input.type = 'text'; input.maxLength = q.manual ? 5000 : q.numeric ? 1500 : 100; input.rows = 5; input.style = 'width:100%;padding:12px;box-sizing:border-box'; input.placeholder = q.manual ? 'Nhập bài làm hoặc kết quả. ADMIN sẽ chấm câu này.' : 'Nhập đáp án'; input.value = answers[pos] ?? ''; input.disabled = !editable;
+      const input = document.createElement(q.manual ? 'textarea' : 'input'); if (!q.manual) input.type = 'text'; input.maxLength = q.manual ? 5000 : q.numeric ? 1500 : 100; input.rows = 5; input.style = 'width:100%;padding:12px;box-sizing:border-box'; input.placeholder = q.manual ? 'Nhập bài làm hoặc kết quả. ADMIN sẽ chấm câu này.' : q.decimal_places === 2 ? 'Dùng dấu phẩy: 8,19; nhiều kết quả ngăn bằng ;' : 'Nhập đáp án'; input.value = answers[pos] ?? ''; input.disabled = !editable;
       input.setAttribute('aria-label', 'Đáp án câu ' + (pos + 1)); input.onchange = () => changed(input.value, answerPos); input.oninput = () => { answers[answerPos] = input.value; clearTimeout(saveTimer); saveTimer = setTimeout(saveAnswers, 400); }; input.id = 'raceTextAnswer'; panel.append(input);
     }
     if (state.state === 'closed' && state.review?.[pos]) {
