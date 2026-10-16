@@ -51,4 +51,35 @@
 
 .race-answer-hint{display:block;width:fit-content;max-width:min(360px,100%);margin:8px 0 8px auto;color:#b91c1c;font-size:11px;line-height:1.35;font-weight:400;text-align:left;overflow-wrap:anywhere}
 
-#raceQuestion .race-component-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:8px;margin-top:12px}#raceQuestion .race-component-fields label{display:flex;flex-direction:column;align-items:stretch;gap:5px;margin:0;padding:8px}#raceQuestion .race-component-fields input{width:100%;box-sizing:border-box;min-width:0;font-size:16px}#raceQuestion .race-component-fields span{font-weight:600;font-size:14px}
+/* Compact answer area: one border per input, consistent rows on small screens. */
+#raceQuestion .race-component-fields{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px 18px;margin:20px 0 6px;padding:16px;
+  border:0;border-radius:12px;background:#f4f7fb;
+}
+#raceQuestion .race-component-fields label{
+  display:flex;flex-direction:column;align-items:stretch;gap:6px;
+  min-width:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;
+}
+#raceQuestion .race-component-fields span{
+  font-size:13px;font-weight:600;line-height:1.4;color:#475569;
+}
+#raceQuestion .race-component-fields input{
+  display:block;width:100%;min-width:0;height:44px;box-sizing:border-box;
+  padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;
+  background:#fff;color:#0f172a;font-size:16px;font-weight:500;
+  font-variant-numeric:tabular-nums;box-shadow:none;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+#raceQuestion .race-component-fields input::placeholder{color:#94a3b8;font-weight:400;font-size:13px}
+#raceQuestion .race-component-fields input:focus{border-color:#2563eb;box-shadow:0 0 0 3px #2563eb18}
+#raceQuestion .race-component-fields input:disabled{background:#eef2f6;color:#475569;opacity:1}
+#raceQuestion>h3{margin:0 0 14px;font-size:15px;color:#64748b;font-weight:600}
+#raceActions{gap:8px;padding-top:6px}
+#raceActions .btn{border-radius:8px}
+.race-answer-hint{font-size:10px;line-height:1.4;max-width:310px;color:#b91c1c;margin-top:12px}
+@media(max-width:480px){
+  #raceQuestion .race-component-fields{gap:12px;padding:12px;margin-top:16px}
+  #raceQuestion .race-component-fields input{padding:9px;height:42px}
+}
+@media(max-width:320px){#raceQuestion .race-component-fields{grid-template-columns:1fr}}
