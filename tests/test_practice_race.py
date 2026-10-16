@@ -124,9 +124,10 @@ class RaceTests(unittest.TestCase):
             self.user_as('s' + str(i)); self.assertEqual(self.post('join').status_code, 200)
         self.user_as('extra'); self.assertEqual(self.post('join').status_code, 409)
 
-    def test_join_after_start_refused(self):
+    def test_join_after_start_receives_paper(self):
         self.user_as('alice'); self.post('join'); self.start(); self.user_as('late')
-        self.assertEqual(self.post('join').status_code, 409)
+        self.assertEqual(self.post('join').status_code, 200)
+        self.assertTrue(self.get()['questions'])
 
     def test_guest_enters_with_name_without_login_or_vip(self):
         self.user = None

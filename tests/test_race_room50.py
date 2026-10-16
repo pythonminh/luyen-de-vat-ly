@@ -86,3 +86,20 @@ class Room50Tests(unittest.TestCase):
         self.assertEqual(race.student_review(q, '1;2', None)['advice'], [])
         tn = {'kind':'TN','text':'x','options':[{'text':'1','correct':True}]}
         self.assertNotIn('chưa trả lời', race.student_advice(tn, 0, False)[0])
+
+    def test_closed_room_announces_next_round_and_cannot_join(self):
+        self.user_as('alice'); self.post('join', name='Alice')
+        self.start(); self.user_as('teacher'); self.post('close')
+        first=self.post('new_round').get_json()['redirect']
+        second=self.post('new_round').get_json()['redirect']
+        self.assertEqual(first,second)
+        self.user_as('alice')
+        self.assertEqual(self.get()['next_room_url'],first)
+        self.assertTrue(self.get()['review'])
+        self.user_as('newguest')
+        self.assertEqual(self.post('join',name='New Guest').status_code,409)
+        self.assertEqual(self.get()['state'],'closed')
+        self.assertNotIn('questions',self.get())
+        self.code=first.rsplit('/',1)[-1]
+        self.assertNotIn('next_room_url',self.get())
+        self.assertEqual(self.post('join',name='New Guest').status_code,200)

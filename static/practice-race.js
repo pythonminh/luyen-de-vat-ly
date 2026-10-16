@@ -60,10 +60,13 @@
     parent.append(b); return b;
   }
   function controls() {
-    const key = [state.state, state.joined, cfg.host ? state.ranking.length : '', state.capacity, state.storage?.state, state.storage?.saved_at].join(':');
+    const key = [state.state, state.joined, cfg.host ? state.ranking.length : '', state.capacity, state.storage?.state, state.storage?.saved_at, state.next_room_url].join(':');
     if (key === controlsKey) return;
     controlsKey = key;
     const el = $('raceControls'); el.replaceChildren();
+    const status = document.createElement('div'); status.className = 'race-room-status ' + state.state; status.setAttribute('role', 'status');
+    status.textContent = state.state === 'waiting' ? 'CHƯA BẮT ĐẦU · Nhập tên để nhận chỗ, chờ ADMIN bắt đầu.' : state.state === 'running' ? 'ĐANG DIỄN RA · Đồng hồ tính theo thời gian chung của lớp.' : 'ĐÃ KẾT THÚC · Bài đã nộp được giữ lại để xem kết quả.'; el.append(status);
+    if (!cfg.host && state.next_room_url) { const link = document.createElement('a'); link.className = 'btn primary'; link.href = state.next_room_url; link.textContent = '→ Vào lượt mới của lớp'; el.append(link); }
     if (cfg.host) {
       const link = location.origin + '/member/race/' + cfg.code;
       const code = document.createElement('strong'); code.textContent = 'Mã phòng: ' + cfg.code + ' · ' + state.ranking.length + '/' + state.capacity + ' người · ' + state.total + ' câu'; el.append(code);
@@ -74,7 +77,7 @@
       if (state.state === 'closed') button('Tạo phòng mới · Đổi số', async () => { const d = await enqueue({action:'new_round'}); location.href = d.redirect; }, el);
       if (state.state === 'waiting') button('▶ Bắt đầu đồng loạt', async () => update(await enqueue({action:'start'})), el);
       if (state.state !== 'closed') button('■ Kết thúc phòng', async () => { if (confirm('Kết thúc và chấm bài tất cả thành viên?')) update(await enqueue({action:'close'})); }, el);
-    } else if (!state.joined && state.state === 'waiting') {
+    } else if (!state.joined && state.state !== 'closed') {
       const label = document.createElement('label'), input = document.createElement('input');
       label.textContent = 'Tên học sinh: ';
       input.type = 'text'; input.id = 'racePlayerName'; input.maxLength = 80; input.minLength = 2; input.autocomplete = 'name'; input.placeholder = 'Nhập họ tên để tham gia'; input.value = joinName;
@@ -96,13 +99,13 @@
     return tips?.length ? '<aside class="race-advice"><strong>Gợi ý để em làm tốt hơn</strong><ul>' + tips.map(tip => '<li>' + esc(tip) + '</li>').join('') + '</ul></aside>' : '';
   }
   function drawQuestion(force = false) {
-    const key = [state.state, pos, !!state.finished, questions.length, cfg.host, JSON.stringify(state.review?.map(x=>x.correct))].join(':');
+    const key = [state.state, state.joined, state.next_room_url, pos, !!state.finished, questions.length, cfg.host, JSON.stringify(state.review?.map(x=>x.correct))].join(':');
     if (!force && key === rendered) return;
     rendered = key;
     const panel = $('raceQuestion'), nav = $('raceNav'), actions = $('raceActions');
     panel.replaceChildren(); nav.replaceChildren(); actions.replaceChildren();
     if (state.state === 'waiting' && !cfg.host) { panel.textContent = state.joined ? 'Đã nhận chỗ. Chờ ADMIN bắt đầu; đề sẽ hiện khi đồng hồ chạy.' : 'Bấm Tham gia để nhận một đề riêng.'; return; }
-    if (!questions.length) { panel.textContent = 'Phòng đã bắt đầu hoặc kết thúc. Chỉ thành viên đã tham gia mới có bài làm.'; return; }
+    if (!questions.length) { panel.textContent = state.state === 'closed' ? (state.next_room_url ? 'Lượt này đã kết thúc. Bấm Vào lượt mới của lớp ở phía trên để tiếp tục.' : 'Lượt này đã kết thúc. Em chưa có bài làm trong lượt này; hãy chờ ADMIN tạo lượt mới.') : 'Phòng đang làm bài. Nhập tên và bấm Vào làm bài ở phía trên để nhận đề; em sẽ làm trong thời gian còn lại của lớp.'; return; }
     const editable = !cfg.host && state.state === 'running' && !state.finished && !submitting;
     questions.forEach((q, i) => { const b = button((i === pos ? '▶ ' : '') + (i + 1) + (answers[i] !== undefined ? ' ✓' : ''), async () => {
       pos = i; if (cfg.host) update(await enqueue({action:'show', pos})); else drawQuestion(true);
