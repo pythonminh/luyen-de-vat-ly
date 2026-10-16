@@ -162,7 +162,8 @@
       button('💾 Lưu lại', saveAnswers, actions);
       button('🏁 Nộp bài', submit, actions).classList.add('primary');
     }
-    if (state.finished) { const p = document.createElement('p'); p.textContent = 'Đã nộp bài. Kết quả được ghi trên bảng xếp hạng; lời giải mở khi phòng kết thúc.'; actions.append(p); }
+    if (!cfg.host && state.finished && state.state === 'running') button('✎ Chỉnh sửa bài đã nộp', async () => { update(await enqueue({action:'reopen'})); note('Đã mở lại bài. Em có thể sửa và nộp lại trước khi hết giờ.'); }, actions);
+    if (state.finished) { const p = document.createElement('p'); p.textContent = state.state === 'running' ? 'Đã nộp bài. Khi còn giờ, em có thể bấm Chỉnh sửa bài đã nộp; thời gian hoàn thành được tính lại lúc nộp lần cuối.' : 'Phòng đã kết thúc. Bài được khóa; em có thể xem lại đáp án và lời giải.'; actions.append(p); }
     typeset(); scheduleFit();
   }
   function changed(value, index = pos) {
@@ -205,6 +206,8 @@
       resultFold.append(resultSummary); el.append(resultFold);
     }
     resultSummary.textContent = '📋 Kết quả từng học sinh · ' + rows.length + ' bài đã nộp';
+    const submittedIds = new Set(rows.map(row => row.player || row.name));
+    for (const [id, entry] of resultCards) if (!submittedIds.has(id)) { entry.card.remove(); resultCards.delete(id); }
     rows.forEach(row => {
       const id = row.player || row.name, signature = JSON.stringify(row), previous = resultCards.get(id);
       if (previous?.signature === signature) return;

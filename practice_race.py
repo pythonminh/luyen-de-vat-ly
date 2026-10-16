@@ -60,7 +60,7 @@ def record_event(c, code, user, kind, payload=None, at=None):
     if has_request_context():
         codes=getattr(g,'race_archive_codes',set())
         codes.add(code);g.race_archive_codes=codes
-        if kind in ('create','join','start','submit','close','grade','import','next_round'):g.race_archive_force=True
+        if kind in ('create','join','start','submit','close','grade','import','next_round','reopen'):g.race_archive_force=True
 
 
 def who():
@@ -430,7 +430,7 @@ def race_home():
     body = '<div class="wrap race"><h1>🏁 Thi đua luyện đề</h1><p>Học sinh chỉ cần mã phòng và họ tên, không cần đăng nhập tài khoản.</p>' + error + creation + '<section class="race-join"><h2>👨‍🎓 Học sinh · Vào phòng đã tạo</h2><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Mã phòng <input name="code" maxlength="8" required placeholder="Nhập đúng mã ADMIN cung cấp"></label><button class="btn primary">Vào phòng</button></form></section>' + '<p><a class="btn primary" href="/member/race/history">📚 Lịch sử bài làm học sinh</a></p><h2>Phòng của tôi</h2><ul>' + links + '</ul><a class="btn" href="/member">← Mục lục</a></div><style>.race{max-width:1000px}.race label{display:block;margin:12px 0}.race input,.race select{max-width:100%;padding:9px}.race select{width:100%}.race-create{border:2px solid #2563eb;background:#eff6ff;padding:20px;border-radius:12px;margin:16px 0}.race-join{border:1px solid #cbd5e1;padding:20px;border-radius:12px;margin:16px 0}</style>'
     if not base.can_manage_bank():
         body = body.replace('<p><a class="btn primary" href="/member/race/history">📚 Lịch sử bài làm học sinh</a></p>', '')
-    body += '<link rel="stylesheet" href="/static/practice-race.css?v=roomsync1">'
+    body += '<link rel="stylesheet" href="/static/practice-race.css?v=reopen1">'
     return base.page('Thi đua luyện đề', body)
 
 
@@ -443,14 +443,14 @@ def race_page(code):
             return base.page('Không tìm thấy phòng', '<div class="wrap"><h2>Mã phòng chưa tồn tại hoặc đã hết hiệu lực</h2><p>ADMIN cần tạo phòng trước, sau đó gửi mã hoặc QR mới cho học sinh.</p><a class="btn primary" href="/member/race">← Tạo phòng / Nhập mã khác</a></div>'), 404
         host = is_host(r, user)
     cfg = json.dumps({'code': code, 'csrf': csrf(), 'host': host, 'name': m.get('name') or session.get('race_name', '')}, ensure_ascii=True).replace('<', '\\u003c')
-    body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><a class="btn" href="/member/race/history">📚 Lịch sử</a><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div><div id="raceGrading"></div><div id="raceResults"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp và chấm đủ. Câu thiếu đáp án/tự luận chờ ADMIN chấm. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js?v=roomsync1"></script>'
+    body = '<div class="wrap race"><div class="racebar"><a class="btn" href="/member/race">← Quay lại</a><h2>' + html.escape(r['title']) + ' · ' + html.escape(code) + '</h2><a class="btn" href="/member/race/history">📚 Lịch sử</a><button id="raceFull" class="btn">⛶ Toàn màn hình</button></div><div id="raceNotice" role="status"></div><div id="raceControls"></div><p id="raceClock" aria-live="off"></p><div class="racegrid"><section><div id="raceNav"></div><div id="raceQuestion"></div><div id="raceActions"></div><div id="raceGrading"></div><div id="raceResults"></div></section><aside><h2>🏆 Bảng xếp hạng</h2><p>Ưu tiên số câu đúng; bằng điểm xét thời gian. Chỉ xếp hạng khi đã nộp và chấm đủ. Câu thiếu đáp án/tự luận chờ ADMIN chấm. Mỗi câu đúng tính 1; câu Đúng/Sai cần đúng cả 4 ý.</p><div id="raceRanks"></div></aside></div></div><style>.race{max-width:1300px}.racebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.racebar h2{flex:1}.racegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:20px}.racegrid section,.racegrid aside{background:#fff;border:1px solid #cbd5e1;padding:18px;border-radius:12px;min-width:0}#raceClock{font-size:26px;font-weight:800;color:#b45309;font-variant-numeric:tabular-nums}#raceQuestion{font-size:18px;line-height:1.6;overflow-wrap:anywhere}#raceQuestion label{display:flex;gap:10px;margin:12px 0;padding:10px;border:1px solid #cbd5e1;border-radius:8px}#raceQuestion select,#raceQuestion input{padding:10px;max-width:100%}#raceNav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}.race table{width:100%;border-collapse:collapse}.race th,.race td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:left}.race tr.me{background:#dbeafe}.race .medal{font-weight:bold;color:#b45309}#raceControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#raceNotice{padding:10px}#raceActions{margin-top:18px;display:flex;gap:8px;flex-wrap:wrap}@media(max-width:800px){.racegrid{grid-template-columns:1fr}}</style><script>window.RACE_CONFIG=' + cfg + ';</script><script src="/static/practice-race.js?v=reopen1"></script>'
     if not host:
         body = body.replace('<a class="btn" href="/member/race/history">📚 Lịch sử</a>', '')
     if host:
         join_url = base.public_origin() + '/member/race/' + code
         qr = '<section id="raceQR" class="race-qr"><img src="/race/' + code + '/qr.svg" alt="Mã QR tham gia phòng ' + code + '" width="260" height="260"><div><h2>📱 Quét QR để tham gia</h2><p>MÃ PHÒNG</p><strong style="font:800 38px monospace;letter-spacing:4px">' + code + '</strong><p>Học sinh quét QR → nhập họ tên → chờ bắt đầu. Quét và tham gia trước khi ADMIN bấm bắt đầu.</p><input readonly aria-label="Link tham gia" value="' + html.escape(join_url, quote=True) + '" style="width:100%;padding:10px"></div></section><style>.race-qr{display:flex;gap:24px;align-items:center;border:2px solid #2563eb;border-radius:14px;background:white;padding:20px;margin:16px 0}.race-qr[hidden]{display:none}.race-qr img{max-width:42%;height:auto}.race-qr>div{flex:1;min-width:0}@media(max-width:600px){.race-qr{display:block;text-align:center}.race-qr img{max-width:100%;width:220px}}</style>'
         body = body.replace('<div id="raceControls"></div>', qr + '<div id="raceControls"></div>')
-    body += '<link rel="stylesheet" href="/static/practice-race.css?v=roomsync1">'
+    body += '<link rel="stylesheet" href="/static/practice-race.css?v=reopen1">'
     response = base.page('Thi đua luyện đề', body)
     response.headers['Cache-Control'] = 'no-store'
     return response
@@ -582,6 +582,13 @@ def race_api(code):
             score, _, _ = graded_result(c, code, p)
             c.execute('UPDATE race_players SET correct=? WHERE room=? AND user=?', (score, code, target))
             record_event(c,code,user,'grade',{'player':target,'pos':pos,'correct':decision},now)
+        elif action == 'reopen':
+            if not player or r['state'] != 'running' or now >= r['started'] + r['duration']:
+                return jsonify(ok=False, error='Chỉ sửa bài khi phòng đang diễn ra và vẫn còn thời gian.'), 409
+            if player['finished'] is not None:
+                c.execute('UPDATE race_players SET finished=NULL,correct=NULL,elapsed=NULL WHERE room=? AND user=?', (code, user))
+                c.execute('DELETE FROM race_marks WHERE room=? AND user=?', (code, user))
+                record_event(c,code,user,'reopen',at=now)
         elif action in ('save', 'submit'):
             if not player or r['state'] != 'running':
                 return jsonify(ok=False, error='Chưa bắt đầu hoặc phòng đã kết thúc.'), 409

@@ -103,3 +103,32 @@ class Room50Tests(unittest.TestCase):
         self.code=first.rsplit('/',1)[-1]
         self.assertNotIn('next_room_url',self.get())
         self.assertEqual(self.post('join',name='New Guest').status_code,200)
+
+    def test_reopen_preserves_paper_resets_score_and_resubmits(self):
+        self.user_as('alice');self.post('join',name='Alice');self.start();self.user_as('alice')
+        paper=self.get()['questions']
+        self.post('submit',answers={'0':0})
+        self.assertTrue(self.get()['finished'])
+        d=self.post('reopen').get_json()
+        self.assertFalse(d['finished'])
+        self.assertEqual(d['answers'],{'0':0})
+        self.assertEqual(d['questions'],paper)
+        self.assertFalse(next(r for r in d['ranking'] if r['me'])['done'])
+        with race.db() as c:
+            p=c.execute('SELECT * FROM race_players WHERE room=? AND user=?',(self.code,'alice')).fetchone()
+            self.assertIsNone(p['elapsed']);self.assertIsNone(p['finished'])
+        self.post('save',answers={'0':1})
+        self.assertEqual(self.get()['answers'],{'0':1})
+        self.post('submit',answers={'0':1})
+        self.assertTrue(self.get()['finished'])
+        self.user_as('teacher');self.post('close');self.user_as('alice')
+        self.assertEqual(self.post('reopen').status_code,409)
+        self.assertEqual(self.get()['answers'],{'0':1})
+
+    def test_reopen_rejected_at_deadline(self):
+        self.user_as('alice');self.post('join',name='Alice');self.start();self.user_as('alice')
+        self.post('submit',answers={'0':0})
+        with race.db() as c:
+            c.execute('UPDATE race_rooms SET started=started-1000 WHERE code=?',(self.code,))
+        self.assertEqual(self.post('reopen').status_code,409)
+        self.assertEqual(self.get()['state'],'closed')
