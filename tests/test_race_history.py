@@ -143,3 +143,20 @@ class DecimalTests(unittest.TestCase):
         self.assertIn('làm tròn đến 2',q['text'])
         self.assertNotIn('không tự làm tròn',q['text'])
         self.assertTrue(race.correct(q,'8,19'));self.assertFalse(race.correct(q,'8,18'))
+
+
+class ArchiveProbeTests(unittest.TestCase):
+    def test_probe_starts_in_current_serving_process_after_fork(self):
+        from unittest.mock import MagicMock
+        old_thread=MagicMock();old_thread.is_alive.return_value=True
+        new_thread=MagicMock();new_thread.is_alive.return_value=True
+        patches=[patch.object(archive,'configured',return_value=True),patch.object(archive,'_VERIFIED',False),
+                 patch.object(archive,'_PROBE_PID',111),patch.object(archive,'_PROBE_AT',10**12),
+                 patch.object(archive,'_PROBE_THREAD',old_thread),patch.object(archive.os,'getpid',return_value=222),
+                 patch.object(archive.threading,'Thread',return_value=new_thread)]
+        for p in patches:p.start();self.addCleanup(p.stop)
+        archive.start_probe()
+        new_thread.start.assert_called_once()
+        self.assertEqual(archive._PROBE_PID,222)
+        archive.start_probe()
+        new_thread.start.assert_called_once()

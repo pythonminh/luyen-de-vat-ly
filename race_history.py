@@ -182,4 +182,4 @@ def register():
         if request.path.startswith('/member/race/history') or request.path=='/api/race-storage-status':response.headers['Cache-Control']='no-store, private'
         return response
 
-    if archive.configured():threading.Thread(target=archive.probe,daemon=True,name='race-storage-check').start()
+    # Start connection checks in the serving worker, never during a preloaded import.

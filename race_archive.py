@@ -26,6 +26,10 @@ _ERROR = ''
 _LAST_QUEUED = {}
 _INDEX_CACHE = None
 _INDEX_AT = 0
+_PROBE_PID = None
+_PROBE_AT = 0
+_PROBE_THREAD = None
+_PROBE_LOCK = threading.Lock()
 RETRY_SECONDS = 60
 
 
@@ -229,5 +233,17 @@ def probe():
     except Exception as exc:_ERROR=type(exc).__name__
 
 
+def start_probe():
+    global _PROBE_PID,_PROBE_AT,_PROBE_THREAD
+    if not configured() or _VERIFIED:return
+    with _PROBE_LOCK:
+        pid=os.getpid()
+        if _PROBE_PID==pid and ((_PROBE_THREAD and _PROBE_THREAD.is_alive()) or time.time()-_PROBE_AT<60):return
+        _PROBE_PID=pid;_PROBE_AT=time.time()
+        _PROBE_THREAD=threading.Thread(target=probe,daemon=True,name='race-storage-check')
+        _PROBE_THREAD.start()
+
+
 def health():
+    start_probe()
     return {'configured':configured(),'verified':_VERIFIED,'error':bool(_ERROR)}
