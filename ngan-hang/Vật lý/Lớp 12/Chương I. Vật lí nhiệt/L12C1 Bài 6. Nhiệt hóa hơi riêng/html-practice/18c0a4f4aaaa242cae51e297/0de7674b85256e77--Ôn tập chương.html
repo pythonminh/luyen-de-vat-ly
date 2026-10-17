@@ -1,0 +1,1275 @@
+<!--hp-title:w5RuIHThuq1wIGNoxrDGoW5n-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Luyện nhiệt học — 29 câu đổi số</title>
+<style>
+*{box-sizing:border-box}
+:root{--navy:#102a4c;--blue:#176497;--line:#dbe5ef;--bg:#edf3f8}
+body{margin:0;background:var(--bg);color:#19334b;font:16px Arial,sans-serif;line-height:1.65}
+header{background:var(--navy);color:white;padding:18px 5%}
+header strong{font-size:20px}
+header small{display:block;color:#d0ddeb}
+main{max-width:1250px;margin:20px auto;padding:0 14px}
+h1{font-size:25px}h2{font-size:21px}
+button,input,select{font:inherit;border:1px solid #b5c9dc;border-radius:9px;padding:10px}
+button{background:white;color:#183d59;cursor:pointer}
+button:hover{filter:brightness(.96)}
+button.primary{background:var(--blue);border-color:var(--blue);color:white}
+button:disabled{cursor:not-allowed;opacity:.55}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.layout{display:grid;grid-template-columns:275px minmax(0,1fr);gap:18px}
+.card{background:white;padding:20px;border-radius:16px;box-shadow:0 5px 22px #18334a09}
+aside{align-self:start}
+#list{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+#list button{padding:8px 3px;position:relative}
+#list button.active{outline:3px solid #87b9dc;background:#eaf5ff}
+#list button.done{background:#e6f6eb;border-color:#6da887}
+#list button.tried{background:#fff2dd;border-color:#d6b278}
+.tag{display:inline-block;border-radius:20px;padding:3px 10px;background:#eaf2fa;font-size:13px}
+.formula{background:#edf6ff;border-left:4px solid #287cb2;padding:13px;margin:12px 0;border-radius:5px}
+.note{font-size:14px;color:#60738a}
+.lock{font-size:14px;background:#fff6df;padding:10px;border-radius:9px;margin:10px 0}
+.option{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;cursor:pointer}
+.option input{width:auto;margin-top:6px;accent-color:#176497}
+.option:has(input:checked){background:#eef7ff;border-color:#438fc0}
+.option.correct{border-color:#409567;background:#edf8ef}
+.option.incorrect{border-color:#c77161;background:#fff0ec}
+.ds-item{padding:13px;border:1px solid var(--line);border-radius:10px;margin:10px 0}
+.ds-buttons{display:flex;gap:8px;margin-top:10px}
+.ds-buttons label{display:flex;align-items:center;gap:7px;border:1px solid #c4d3e0;padding:6px 15px;border-radius:8px;cursor:pointer}
+.ds-buttons input{width:auto;accent-color:#176497}
+input[type=text]{width:100%;background:#fffdf0}
+.feedback{font-weight:bold;margin-top:9px}
+.good{color:#167342}.bad{color:#ae5916}
+.solution{background:#edf8f1;border-radius:12px;padding:17px;margin-top:15px;overflow-wrap:anywhere}
+.solution p{margin:8px 0}
+.warning{background:#fff5dc;border-left:4px solid #c58a28;padding:12px;margin-top:13px;color:#6b4b13}
+.math{font-family:"Cambria Math","Times New Roman",serif;font-size:1.1em}
+.math-block{display:block;overflow-x:auto;padding:8px 0}
+.fraction{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.93em;margin:0 3px;line-height:1.3}
+.fraction>span:first-child{border-bottom:1px solid currentColor;padding:0 4px 2px}
+.fraction>span:last-child{padding:2px 4px 0}
+.progress{height:8px;background:#e0e8ef;border-radius:9px;overflow:hidden;margin:10px 0}
+#bar{height:100%;width:0;background:#258b63}
+svg{display:block;width:100%;height:auto}
+#question{font-size:18px}
+details{margin-top:15px}
+textarea{width:100%;height:230px;font:13px monospace}
+footer{font-size:13px;color:#60738a;margin:20px 0}
+@media(max-width:780px){
+.layout{grid-template-columns:1fr}
+#list{grid-template-columns:repeat(10,1fr)}
+.card{padding:16px}
+header strong{font-size:17px}
+h1{font-size:22px}
+#question{font-size:17px}
+}
+@media(max-width:430px){#list{grid-template-columns:repeat(6,1fr)}}
+@media print{
+body{background:white}
+header{background:white;color:black;border-bottom:2px solid #17314b}
+header small{color:black}
+aside,.actions,.controls,details,button{display:none!important}
+.layout{display:block}
+.card{box-shadow:none}
+}
+</style>
+</head>
+<body>
+<header>
+<strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
+<small>lophocthayminh.onrender.com</small>
+</header>
+
+<main>
+<h1>Nhiệt học — 29 câu luyện đổi số</h1>
+<p>Trắc nghiệm · Đúng/Sai từng ý · Trả lời ngắn · Lời giải chi tiết</p>
+
+<div class="layout">
+<aside class="card">
+<h2>Danh sách câu</h2>
+<div id="list"></div>
+<p id="progressText" class="note"></p>
+<div class="progress"><div id="bar"></div></div>
+
+<details open>
+<summary><b>Công thức tham khảo</b></summary>
+<div id="formula" class="formula"></div>
+</details>
+
+<div id="illustration"></div>
+<p class="note">
+Kết quả mới được giữ chính xác bằng phân số hoặc số thập phân hữu hạn.
+Câu lý thuyết không có số liệu được giữ nguyên.
+</p>
+<div class="actions">
+<button onclick="fullscreen()">Toàn màn hình</button>
+</div>
+</aside>
+
+<section class="card">
+<span id="type" class="tag"></span>
+<h2 id="title"></h2>
+<div id="question"></div>
+
+<div class="actions">
+<button id="newButton" class="primary" onclick="generateCurrent()">Đổi đề bài mới</button>
+<button onclick="restoreCurrent()">Khôi phục đề gốc</button>
+</div>
+<div id="lockReason" class="lock" hidden></div>
+
+<div id="answerArea"></div>
+
+<div class="actions">
+<button class="primary" onclick="check()">Kiểm tra</button>
+<button onclick="showSolution()">Xem lời giải</button>
+</div>
+
+<div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+<div id="solution" class="solution" hidden></div>
+
+<div class="actions">
+<button onclick="move(-1)">← Câu trước</button>
+<button onclick="move(1)">Câu tiếp →</button>
+<button onclick="window.print()">In câu hiện tại</button>
+</div>
+
+<details>
+<summary>Dữ liệu gốc JSON</summary>
+<p class="note">Chứa đáp án và lời giải. Chỉ mở khi cần đối chiếu dữ liệu.</p>
+<button onclick="showOriginalJSON()">Hiện JSON câu hiện tại</button>
+<textarea id="jsonArea" readonly hidden></textarea>
+</details>
+</section>
+</div>
+
+<footer>
+Chạy offline, không dùng thư viện ngoài.
+Câu thiếu hình hoặc có dữ kiện nguồn chưa chặt chẽ được giữ nguyên và khóa đổi số.
+</footer>
+</main>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+const clone=x=>JSON.parse(JSON.stringify(x));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+
+/* =========================================================
+   DỮ LIỆU GỐC
+   Các chuỗi LaTeX được giữ bằng String.raw.
+   ========================================================= */
+
+const S=String.raw;
+
+function original(cau,loai,de,options,truth,answer,solution){
+ return {
+  cau,loai,ma:"",nguon:"",
+  de_html:de,
+  phuong_an:(options||[]).map((x,i)=>({
+   nhan:"ABCD"[i],noi_dung_html:x[0],dung:x[1]
+  })),
+  dung_sai:(truth||[]).map((x,i)=>({
+   nhan:"abcd"[i],noi_dung_html:x[0],dung:x[1]
+  })),
+  dap_an:answer||"",
+  loi_giai_html:solution
+ };
+}
+
+const ORIGINAL=[
+original(1,"TN",
+S`Tính nhiệt lượng cần cung cấp để đun nóng $5\,\mathrm{kg}$ nước từ $25^\circ\mathrm{C}$ đến $80^\circ\mathrm{C}$. Biết nhiệt dung riêng của nước là $4\,180\,\mathrm{J/kg.K}$.`,
+[
+[S`$552{,}5\,\mathrm{kJ}$`,false],
+[S`$3{,}3\cdot10^6\,\mathrm{J}$`,false],
+[S`$1\,672\,\mathrm{kJ}$`,false],
+[S`$1\,149{,}5\cdot10^3\,\mathrm{J}$`,true]
+],[],"",
+S`<div class="lt-math">\[Q=mc\Delta T=5\cdot4\,180\cdot(80-25)=1\,149\,500\ \mathrm{J}.\]</div>`),
+
+original(2,"TN",
+S`Nhiệt dung riêng của đồng là $380\,\mathrm{J/kg.K}$, điều này cho biết`,
+[
+[S`nhiệt lượng cần thiết để làm cho $1\,\mathrm{kg}$ đồng nóng lên thêm $10^\circ\mathrm{C}$ là $380\,\mathrm{J}$.`,false],
+[S`nhiệt lượng cần thiết để làm cho $1\,\mathrm{kg}$ đồng nóng lên là $380\,\mathrm{J}$.`,false],
+[S`nhiệt lượng cần thiết để làm cho $1\,\mathrm{kg}$ đồng nóng lên thêm $1^\circ\mathrm{C}$ là $380\,\mathrm{J}$.`,true],
+[S`nhiệt lượng cần thiết để làm cho $1\,\mathrm{g}$ đồng nóng lên thêm $1^\circ\mathrm{C}$ là $380\,\mathrm{J}$.`,false]
+],[],"",
+S`Theo định nghĩa, nhiệt dung riêng là nhiệt lượng cần cung cấp để làm tăng nhiệt độ của $1\,\mathrm{kg}$ chất thêm $1^\circ\mathrm{C}$.`),
+
+original(3,"TN",
+"Một khối chất đang nhận nhiệt lượng nhưng nhiệt độ của nó không thay đổi. Khối chất đó",
+[
+["là chất rắn.",false],
+["đang chuyển thể.",true],
+["là chất khí.",false],
+["là chất lỏng.",false]
+],[],"",
+"Trong quá trình chuyển thể, chất có thể nhận hoặc tỏa nhiệt nhưng nhiệt độ không đổi."),
+
+original(4,"TN",
+"Câu nào sau đây nói về chuyển động của phân tử là không đúng?",
+[
+["Các phân tử khí không dao động quanh vị trí cân bằng.",false],
+["Các phân tử chuyển động càng nhanh thì nhiệt độ càng cao.",false],
+["Chuyển động của phân tử là do lực tương tác phân tử gây ra.",true],
+["Các phân tử chuyển động không ngừng.",false]
+],[],"",
+"Chuyển động nhiệt của các phân tử là chuyển động không ngừng, hỗn loạn; không thể nói chuyển động của phân tử là do lực tương tác phân tử gây ra."),
+
+original(5,"TN",
+"Công thức tính nhiệt lượng cần để làm nóng chảy hoàn toàn một chất là",
+[
+[S`$Q=mc\Delta t$`,false],
+[S`$Q=\lambda m$`,true],
+[S`$Q=Pt$`,false],
+[S`$Q=Lm$`,false]
+],[],"",S`<div class="lt-math">\[Q=\lambda m.\]</div>`),
+
+original(6,"TN",
+"Khi khoảng cách giữa các phân tử rất nhỏ, thì giữa các phân tử",
+[
+["chỉ có lực hút.",false],
+["có cả lực hút và lực đẩy, nhưng lực đẩy lớn hơn lực hút.",true],
+["chỉ có lực đẩy.",false],
+["có cả lực hút và lực đẩy, nhưng lực đẩy nhỏ hơn lực hút.",false]
+],[],"",
+"Khi các phân tử ở rất gần nhau, lực đẩy chiếm ưu thế so với lực hút."),
+
+original(7,"TN","Đơn vị của nhiệt dung riêng là gì?",
+[
+["J/K",false],["kg/K",false],["J/kg",false],["J/(kg.K)",true]
+],[],"",S`Từ $Q=mc\Delta T$ suy ra $[c]=\mathrm{J/(kg.K)}$.`),
+
+original(8,"TN",
+S`Trong quá trình chất khí nhận nhiệt và sinh công thì $Q$ và $A$ trong hệ thức $\Delta U=A+Q$ phải có giá trị nào?`,
+[
+[S`$Q&gt;0;\ A&gt;0$`,false],
+[S`$Q&lt;0;\ A&gt;0$`,false],
+[S`$Q&lt;0;\ A&lt;0$`,false],
+[S`$Q&gt;0;\ A&lt;0$`,true]
+],[],"",
+S`Khí nhận nhiệt nên $Q&gt;0$; khí sinh công ra ngoài nên công khí nhận $A&lt;0$.`),
+
+original(9,"TN",
+S`Người ta truyền cho một lượng khí trong xilanh nhiệt lượng $100\,\mathrm{J}$. Khí nở ra thực hiện công $60\,\mathrm{J}$ đẩy pit-tông dịch chuyển. Độ biến thiên nội năng của khí là`,
+[
+[S`$40\,\mathrm{J}$`,true],
+[S`$-40\,\mathrm{J}$`,false],
+[S`$30\,\mathrm{J}$`,false],
+[S`$-30\,\mathrm{J}$`,false]
+],[],"",
+S`<div class="lt-math">\[\Delta U=Q-W=100-60=40\ \mathrm{J}.\]</div>`),
+
+original(10,"TN",
+"Thang nhiệt độ nào sử dụng độ không tuyệt đối làm mốc?",
+[
+["Celsius",false],["Fahrenheit",false],["Kelvin",true],["Rankine",false]
+],[],"",
+S`Thang Kelvin lấy độ không tuyệt đối làm mốc $0\,\mathrm{K}$.`),
+
+original(11,"TN",
+"Phát biểu nào sau đây về nội năng là không đúng?",
+[
+["Nội năng là một dạng năng lượng.",false],
+["Nội năng của một vật có thể tăng hoặc giảm.",false],
+["Nội năng là nhiệt lượng.",true],
+["Nội năng có thể chuyển hoá thành các dạng năng lượng khác.",false]
+],[],"",
+"Nội năng và nhiệt lượng là hai khái niệm khác nhau."),
+
+original(12,"TN",
+S`Một viên đạn đại bác có khối lượng $10\,\mathrm{kg}$ khi rơi tới đích có tốc độ $54\,\mathrm{km}$/h. Nếu toàn bộ động năng của nó biến thành nội năng thì nhiệt lượng tỏa ra lúc va chạm vào khoảng`,
+[
+[S`$14\,580\,\mathrm{J}$`,false],
+[S`$2\,250\,\mathrm{J}$`,false],
+[S`$7\,290\,\mathrm{J}$`,false],
+[S`$1\,125\,\mathrm{J}$`,true]
+],[],"",
+S`<div class="lt-math">\[v=54\ \mathrm{km/h}=15\ \mathrm{m/s},\qquad W_\text{đ}=\frac12mv^2=1\,125\ \mathrm{J}.\]</div>`),
+
+original(13,"TN","Nội năng của vật phụ thuộc vào",
+[
+["nhiệt độ và thể tích của vật.",true],
+["khối lượng và nhiệt độ của vật.",false],
+["khối lượng của vật.",false],
+["khối lượng và thể tích của vật.",false]
+],[],"",
+"Nội năng của vật phụ thuộc vào nhiệt độ và thể tích của vật."),
+
+original(14,"TN",
+S`Một lượng nước có khối lượng $0{,}6\,\mathrm{kg}$ ban đầu ở $25^\circ\mathrm{C}$ được đun đến $100^\circ\mathrm{C}$ và sau đó hóa hơi hoàn toàn. Biết $c=4{,}18\,\mathrm{kJ}$/kg.K và $L=2\,260\,\mathrm{kJ}$/kg. Tổng nhiệt lượng cần cung cấp là`,
+[
+[S`$2\,956\,\mathrm{kJ}$`,false],
+[S`$1\,544{,}1\,\mathrm{kJ}$`,true],
+[S`$2\,468\,\mathrm{kJ}$`,false],
+[S`$3\,678\,\mathrm{kJ}$`,false]
+],[],"",
+S`<div class="lt-math">\[Q_1=0{,}6\cdot4{,}18\cdot75=188{,}1\ \mathrm{kJ},\quad Q_2=0{,}6\cdot2\,260=1\,356\ \mathrm{kJ}.\]</div><br>
+<div class="lt-math">\[Q=1\,544{,}1\ \mathrm{kJ}.\]</div>`),
+
+original(15,"TN",
+S`Hình bên là đồ thị sự thay đổi nhiệt độ của vật rắn kết tinh khi được làm nóng chảy. Trong khoảng thời gian từ $t_a$ đến $t_b$ thì`,
+[
+["nhiệt độ của vật rắn tăng.",false],
+["nhiệt độ của vật rắn giảm.",false],
+["vật rắn không nhận năng lượng.",false],
+["vật rắn đang nóng chảy.",true]
+],[],"",
+"Trong quá trình nóng chảy của chất rắn kết tinh, nhiệt độ không đổi dù vật vẫn tiếp tục nhận nhiệt."),
+
+original(16,"TN",
+S`Mỗi độ chia ($1^\circ\mathrm{C}$) trong thang Celsius bằng bao nhiêu phần của khoảng cách giữa nhiệt độ tan chảy của nước tinh khiết đóng băng và nhiệt độ sôi của nước tinh khiết ở áp suất tiêu chuẩn?`,
+[
+[S`$\dfrac{1}{273{,}16}$`,false],
+[S`$\dfrac{1}{10}$`,false],
+[S`$\dfrac{1}{273{,}15}$`,false],
+[S`$\dfrac{1}{100}$`,true]
+],[],"",
+S`Khoảng cách giữa nhiệt độ nước đá đang tan và nước sôi ở áp suất tiêu chuẩn là $100^\circ\mathrm{C}$.`),
+
+original(17,"TN",
+"Cồn y tế chuyển từ thể lỏng sang thể khí rất nhanh ở điều kiện thông thường. Khi xoa cồn vào da, ta cảm thấy lạnh ở vùng da đó vì cồn",
+[
+["thu nhiệt lượng từ cơ thể qua chỗ da đó để bay hơi.",true],
+["khi bay hơi kéo theo lượng nước chỗ da đó ra khỏi cơ thể.",false],
+["khi bay hơi tỏa nhiệt lượng vào chỗ da đó.",false],
+["khi bay hơi tạo ra dòng nước mát tại chỗ da đó.",false]
+],[],"",
+"Cồn bay hơi cần nhận nhiệt nên lấy nhiệt từ vùng da tiếp xúc, làm vùng da lạnh đi."),
+
+original(18,"TN",
+S`Thả một cục nước đá có khối lượng $30\,\mathrm{g}$ ở $0^\circ\mathrm{C}$ vào cốc nước chứa $0{,}2$ lít nước ở $20^\circ\mathrm{C}$. Biết $c=4{,}2\,\mathrm{J}$/g.K, $\rho=1\,\mathrm{g}$/cm$^3$, $\lambda=334\,\mathrm{kJ}$/kg. Nhiệt độ cuối của cốc nước bằng`,
+[
+[S`$10^\circ\mathrm{C}$`,false],
+[S`$5^\circ\mathrm{C}$`,false],
+[S`$0^\circ\mathrm{C}$`,false],
+[S`$7^\circ\mathrm{C}$`,true]
+],[],"",
+S`<div class="lt-math">\[m_n=200\ \mathrm{g},\quad Q_n=200\cdot4{,}2\cdot20=16\,800\ \mathrm{J}.\]</div><br>
+<div class="lt-math">\[Q_{nc}=30\cdot334=10\,020\ \mathrm{J}.\]</div><br>
+<div class="lt-math">\[6\,780=230\cdot4{,}2\cdot T\Rightarrow T\approx7^\circ\mathrm{C}.\]</div>`),
+
+original(19,"DS",
+"Trong các phát biểu sau đây, phát biểu nào đúng, phát biểu nào sai?",
+[],[
+["Chất khí không có hình dạng và thể tích riêng, luôn chiếm toàn bộ thể tích bình chứa và có thể nén được dễ dàng.",true],
+["Vật ở thể rắn có thể tích và hình dạng riêng, rất khó nén.",true],
+["Vật ở thể lỏng có thể tích riêng nhưng không có hình dạng riêng.",true],
+["Các chất không thể chuyển từ dạng này sang dạng khác.",false]
+],"",
+S`<ul class="tex-list"><li><b>Đúng.</b> Chất khí chiếm toàn bộ thể tích bình chứa và dễ nén.</li><li><b>Đúng.</b> Chất rắn có hình dạng và thể tích riêng, rất khó nén.</li><li><b>Đúng.</b> Chất lỏng có thể tích riêng nhưng không có hình dạng riêng.</li><li><b>Sai.</b> Các chất có thể chuyển từ thể này sang thể khác.</li></ul>`),
+
+original(20,"DS",
+S`Một khối khí ở áp suất $1{,}2\cdot10^5\,\mathrm{Pa}$ có thể tích $4$ lít được truyền nhiệt lượng $300\,\mathrm{J}$. Khối khí dãn nở đến thể tích $6$ lít với áp suất không đổi.`,
+[],[
+[S`Công thực hiện bởi khối khí có độ lớn là $240\,\mathrm{J}$.`,true],
+[S`Nội năng của khối khí giảm $60\,\mathrm{J}$.`,false],
+["Độ biến thiên nội năng của khối khí bằng tổng công và nhiệt lượng mà nó nhận được.",true],
+["Tốc độ chuyển động trung bình của các phân tử khí tăng lên.",true]
+],"",
+S`<div class="lt-math">\[W=p\Delta V=1{,}2\cdot10^5\cdot2\cdot10^{-3}=240\ \mathrm{J}.\]</div><br>
+<div class="lt-math">\[\Delta U=Q-W=300-240=60\ \mathrm{J}&gt;0.\]</div><br>
+Vì áp suất không đổi và thể tích tăng nên nhiệt độ tăng, do đó tốc độ chuyển động trung bình của phân tử tăng.`),
+
+original(21,"DS",
+"Khi bay hơi, các phân tử chất lỏng thoát ra ngoài làm mất đi năng lượng dưới dạng động năng của các phần tử thoát ra.",
+[],[
+["Nội năng của khối chất lỏng giảm.",true],
+["Nhiệt độ của khối chất lỏng giảm.",true],
+["Quá trình đông đặc chuyển sang thể rắn.",false],
+["Thể tích khối chất lỏng tăng lên.",false]
+],"",
+S`<ul class="tex-list"><li><b>Đúng.</b> Các phân tử có động năng lớn thoát khỏi chất lỏng làm nội năng phần còn lại giảm.</li><li><b>Đúng.</b> Nội năng giảm nên nhiệt độ của chất lỏng có xu hướng giảm nếu không được cung cấp nhiệt bù.</li><li><b>Sai.</b> Bay hơi là quá trình lỏng sang khí.</li><li><b>Sai.</b> Bay hơi làm khối lượng chất lỏng giảm.</li></ul>`),
+
+original(22,"DS",
+S`Một bếp điện có ghi $220\,\mathrm{V}$ -- $660\,\mathrm{W}$ được sử dụng với hiệu điện thế $220\,\mathrm{V}$. Mỗi ngày dùng bếp đun sôi $2$ lít nước từ $20^\circ\mathrm{C}$ trong $20$ phút. Cho $c=4\,200\,\mathrm{J/kg.K}$.`,
+[],[
+[S`Bếp sử dụng có hiệu điện thế định mức là $220\,\mathrm{V}$ và công suất khi đó là $660\,\mathrm{W}$.`,true],
+[S`Điện năng bếp tiêu thụ trong thời gian trên là $792\,\mathrm{kJ}$.`,true],
+[S`Hiệu suất của bếp là $84{,}8\%$.`,true],
+[S`Tiền điện phải trả cho việc đun nước trong $1$ tháng (30 ngày) là $9\,900$ đồng, biết $1\,\mathrm{kWh}$ trả $1\,500$ đồng.`,true]
+],"",
+S`<div class="lt-math">\[A=660\cdot20\cdot60=792\,000\ \mathrm{J}=792\ \mathrm{kJ}.\]</div><br>
+<div class="lt-math">\[Q=2\cdot4\,200\cdot80=672\,000\ \mathrm{J}=672\ \mathrm{kJ}.\]</div><br>
+<div class="lt-math">\[H=\frac{672}{792}\cdot100\%\approx84{,}8\%.\]</div><br>
+<div class="lt-math">\[A_{30}=0{,}66\cdot\frac{20}{60}\cdot30=6{,}6\ \mathrm{kWh}.\]</div><br>
+Tiền điện $=6{,}6\cdot1\,500=9\,900$ đồng.`),
+
+original(23,"TLN",
+S`Nội năng của khối khí tăng $10\,\mathrm{J}$ khi truyền cho khối khí một nhiệt lượng $30\,\mathrm{J}$. Khi đó khối khí đã thực hiện một công là bao nhiêu Jun?`,
+[],[],"20",
+S`<div class="lt-math">\[\Delta U=Q+A\Rightarrow10=30+A\Rightarrow A=-20\ \mathrm{J}.\]</div><br>
+Khối khí đã thực hiện công có độ lớn $20\,\mathrm{J}$.`),
+
+original(24,"TLN",
+S`Xác định giá trị tương ứng ở nhiệt giai Kelvin khi nhiệt độ có giá trị là $-196^\circ\mathrm{C}$.`,
+[],[],"77",
+S`<div class="lt-math">\[T=t+273=-196+273=77\ \mathrm{K}.\]</div>`),
+
+original(25,"TLN",
+S`Một nhiệt kế thủy ngân có phạm vi đo từ $-10^\circ\mathrm{C}$ đến $120^\circ\mathrm{C}$ và độ dài thang đo là $120\,\mathrm{mm}$. Mức thủy ngân trong ống dịch chuyển một đoạn bao nhiêu mm khi nhiệt độ tăng thêm $5^\circ\mathrm{C}$?`,
+[],[],"4,6",
+S`<div class="lt-math">\[\Delta T=120-(-10)=130^\circ\mathrm{C}.\]</div><br>
+<div class="lt-math">\[\Delta l=\frac{120}{130}\cdot5\approx4{,}6\ \mathrm{mm}.\]</div>`),
+
+original(26,"TLN",
+S`Một viên đạn bằng bạc có khối lượng $2{,}00\,\mathrm{g}$ bay với tốc độ $2{,}00\cdot10^2\,\mathrm{m/s}$ đến xuyên vào một bức tường gỗ. Nhiệt dung riêng của bạc là $0{,}234\,\mathrm{kJ}$/(kg.K). Coi viên đạn không trao đổi nhiệt với bên ngoài và toàn bộ công cản của bức tường chỉ dùng để làm nóng viên đạn. Nhiệt độ của viên đạn sẽ tăng thêm bao nhiêu kelvin?`,
+[],[],"85,5",
+S`<div class="lt-math">\[m=0{,}002\ \mathrm{kg},\qquad c=234\ \mathrm{J/(kg.K)}.\]</div><br>
+<div class="lt-math">\[Q=\frac12mv^2=\frac12\cdot0{,}002\cdot(200)^2=40\ \mathrm{J}.\]</div><br>
+<div class="lt-math">\[\Delta T=\frac{Q}{mc}=\frac{40}{0{,}002\cdot234}\approx85{,}5\ \mathrm{K}.\]</div>`),
+
+original(27,"TLN",
+S`Cần cung cấp một nhiệt lượng bằng bao nhiêu MJ để làm cho $200\,\mathrm{g}$ nước ở $10^\circ\mathrm{C}$ sôi ở $100^\circ\mathrm{C}$ và $10\%$ khối lượng của nó đã hóa hơi khi sôi? Biết $c=4\,190\,\mathrm{J/kg.K}$ và $L=2{,}26\cdot10^6\,\mathrm{J/kg}$.`,
+[],[],"0,12",
+S`<div class="lt-math">\[m=0{,}2\ \mathrm{kg}.\]</div><br>
+<div class="lt-math">\[Q_1=0{,}2\cdot4\,190\cdot90=75\,420\ \mathrm{J}.\]</div><br>
+<div class="lt-math">\[m_h=0{,}1\cdot0{,}2=0{,}02\ \mathrm{kg}.\]</div><br>
+<div class="lt-math">\[Q_2=0{,}02\cdot2{,}26\cdot10^6=45\,200\ \mathrm{J}.\]</div><br>
+<div class="lt-math">\[Q=120\,620\ \mathrm{J}=0{,}12062\ \mathrm{MJ}\approx0{,}12\ \mathrm{MJ}.\]</div>`),
+
+original(28,"TLN",
+S`Để kiểm tra thời gian ngắt mạch của một cầu chì khi xảy ra đoản mạch, nguồn điện có suất điện động $\xi=12\,\mathrm{V}$ và điện trở trong $r=0{,}25\ \Omega$. Cầu chì sẽ đứt ngay khi đạt nhiệt độ nóng chảy. Nhiệt độ ban đầu là $27{,}5^\circ\mathrm{C}$. Dây chì có điện trở $R=11{,}75\ \Omega$, khối lượng $m=0{,}1$ g. Cho chì có nhiệt dung riêng $130\,\mathrm{J/kg.K}$, nhiệt độ nóng chảy $327{,}5^\circ\mathrm{C}$. Thời điểm mạch bị ngắt kể từ khi đóng mạch là bao nhiêu?`,
+[],[],"0,33",
+S`<div class="lt-math">\[I=\frac{\xi}{R+r}=\frac{12}{11{,}75+0{,}25}=1\ \mathrm{A}.\]</div><br>
+<div class="lt-math">\[P=I^2R=11{,}75\ \mathrm{W}.\]</div><br>
+<div class="lt-math">\[m=0{,}1\ \mathrm{g}=10^{-4}\ \mathrm{kg},\qquad \Delta T=327{,}5-27{,}5=300\ \mathrm{K}.\]</div><br>
+<div class="lt-math">\[Q=mc\Delta T=10^{-4}\cdot130\cdot300=3{,}9\ \mathrm{J}.\]</div><br>
+<div class="lt-math">\[t=\frac{Q}{P}=\frac{3{,}9}{11{,}75}\approx0{,}33\ \mathrm{s}.\]</div>`)
+];
+
+const last=clone(ORIGINAL[25]);
+last.cau=29;
+ORIGINAL.push(last);
+
+/* =========================================================
+   PHÂN SỐ CHÍNH XÁC BẰNG BigInt
+   ========================================================= */
+
+function gcd(a,b){
+ a=a<0n?-a:a;b=b<0n?-b:b;
+ while(b){const t=a%b;a=b;b=t}
+ return a||1n;
+}
+
+function rational(n,d=1n){
+ n=BigInt(n);d=BigInt(d);
+ if(d===0n)throw Error("Không được chia cho 0");
+ if(d<0n){n=-n;d=-d}
+ const g=gcd(n,d);
+ return {n:n/g,d:d/g};
+}
+
+function numberR(s){
+ s=String(s).replace(",",".");
+ const match=s.match(/^([+-]?)(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?$/i);
+ if(!match||(!match[2]&&!match[3]))throw Error("Số không hợp lệ");
+ const digits=(match[2]||"0")+(match[3]||"");
+ let n=BigInt(digits||"0");
+ if(match[1]==="-")n=-n;
+ const exponent=Number(match[4]||0)-(match[3]||"").length;
+ if(Math.abs(exponent)>100)throw Error("Số mũ quá lớn");
+ return exponent>=0?rational(n*10n**BigInt(exponent)):rational(n,10n**BigInt(-exponent));
+}
+
+function add(a,b){return rational(a.n*b.d+b.n*a.d,a.d*b.d)}
+function sub(a,b){return rational(a.n*b.d-b.n*a.d,a.d*b.d)}
+function mul(a,b){return rational(a.n*b.n,a.d*b.d)}
+function div(a,b){return rational(a.n*b.d,a.d*b.n)}
+function eq(a,b){return a.n===b.n&&a.d===b.d}
+function neg(a){return rational(-a.n,a.d)}
+function pow(a,k){
+ if(k<-30||k>30)throw Error("Số mũ ngoài phạm vi");
+ return k>=0?rational(a.n**BigInt(k),a.d**BigInt(k)):
+ rational(a.d**BigInt(-k),a.n**BigInt(-k));
+}
+
+function E(text){
+ text=String(text).replace(/−/g,"-").replace(/,/g,".")
+ .replace(/[×·]/g,"*").replace(/\s/g,"");
+ if(text.length>200)throw Error("Biểu thức quá dài");
+
+ const tokens=[];
+ let p=0;
+ while(p<text.length){
+  const m=text.slice(p).match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?|^[()+*/^+-]/i);
+  if(!m)throw Error("Chỉ nhập số, phân số và phép toán");
+  tokens.push(m[0]);p+=m[0].length;
+ }
+ let i=0;
+ function expression(){
+  let v=term();
+  while(tokens[i]==="+"||tokens[i]==="-"){
+   const op=tokens[i++],b=term();
+   v=op==="+"?add(v,b):sub(v,b);
+  }
+  return v;
+ }
+ function term(){
+  let v=unary();
+  while(tokens[i]==="*"||tokens[i]==="/"){
+   const op=tokens[i++],b=unary();
+   v=op==="*"?mul(v,b):div(v,b);
+  }
+  return v;
+ }
+ function unary(){
+  if(tokens[i]==="+"){i++;return unary()}
+  if(tokens[i]==="-"){i++;return neg(unary())}
+  return power();
+ }
+ function power(){
+  let v=primary();
+  if(tokens[i]==="^"){
+   i++;
+   const k=unary();
+   if(k.d!==1n)throw Error("Số mũ phải nguyên");
+   v=pow(v,Number(k.n));
+  }
+  return v;
+ }
+ function primary(){
+  const t=tokens[i++];
+  if(t==="("){
+   const v=expression();
+   if(tokens[i++]!==")")throw Error("Thiếu ngoặc");
+   return v;
+  }
+  if(t===undefined)throw Error("Thiếu giá trị");
+  return numberR(t);
+ }
+ const value=expression();
+ if(i!==tokens.length)throw Error("Biểu thức chưa hợp lệ");
+ return value;
+}
+
+function formatR(a){
+ if(a.d===1n)return a.n.toString();
+ let d=a.d;
+ while(d%2n===0n)d/=2n;
+ while(d%5n===0n)d/=5n;
+ if(d!==1n)return a.n+"/"+a.d;
+
+ const sign=a.n<0n?"−":"";
+ let n=a.n<0n?-a.n:a.n;
+ const whole=n/a.d;
+ let remainder=n%a.d;
+ let decimals="";
+ while(remainder){
+  remainder*=10n;
+  decimals+=(remainder/a.d).toString();
+  remainder%=a.d;
+ }
+ return sign+whole+","+decimals;
+}
+
+function F(x){return formatR(typeof x==="string"?E(x):x)}
+function keyR(a){return a.n+"/"+a.d}
+
+/* =========================================================
+   HIỂN THỊ LATEX CƠ BẢN KHÔNG CẦN THƯ VIỆN
+   ========================================================= */
+
+function texMath(input){
+ let s=input.replace(/\{,\}/g,",");
+ s=s.replace(/\\(?:mathrm|text)\{([^{}]*)\}/g,"$1");
+ s=s.replace(/\\(?:dfrac|frac)\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g,
+  (_,a,b)=>`@@FRAC${encodeURIComponent(a)}SEP${encodeURIComponent(b)}END@@`);
+ s=s.replace(/\\frac\s*12/g,"½");
+ s=s.replace(/\\Delta/g,"Δ").replace(/\\lambda/g,"λ")
+ .replace(/\\rho/g,"ρ").replace(/\\xi/g,"ξ")
+ .replace(/\\Omega/g,"Ω").replace(/\\cdot/g,"·")
+ .replace(/\\times/g,"×").replace(/\\approx/g,"≈")
+ .replace(/\\Rightarrow/g,"⇒").replace(/\\qquad|\\quad/g,"  ")
+ .replace(/\\,/g," ").replace(/\\ /g," ")
+ .replace(/\\%/g,"%").replace(/\\circ/g,"°")
+ .replace(/&gt;/g,">").replace(/&lt;/g,"<");
+
+ s=esc(s);
+ s=s.replace(/@@FRAC(.*?)SEP(.*?)END@@/g,(_,a,b)=>
+ `<span class="fraction"><span>${texMath(decodeURIComponent(a))}</span><span>${texMath(decodeURIComponent(b))}</span></span>`);
+ s=s.replace(/\^\{([^{}]*)\}/g,"<sup>$1</sup>")
+ .replace(/\^([0-9°+-])/g,"<sup>$1</sup>")
+ .replace(/_\{([^{}]*)\}/g,"<sub>$1</sub>")
+ .replace(/_([A-Za-zÀ-ỹ0-9])/g,"<sub>$1</sub>");
+ return s.replace(/[{}]/g,"");
+}
+
+function renderMath(html){
+ return html.replace(/\\\[([\s\S]*?)\\\]|\$([^$]*?)\$/g,
+ (_,block,inline)=>`<span class="math ${block!==undefined?"math-block":""}">${texMath(block!==undefined?block:inline)}</span>`);
+}
+
+/* =========================================================
+   CÁC HÀM SINH ĐỀ VÀ TÍNH LẠI ĐÁP ÁN
+   ========================================================= */
+
+function base(id,de,solution){
+ return {
+  cau:id,loai:ORIGINAL[id-1].loai,ma:"",nguon:"",
+  de_html:de,phuong_an:[],dung_sai:[],dap_an:"",
+  loi_giai_html:solution,generated:true
+ };
+}
+
+function shuffle(a){
+ a=[...a];
+ for(let i=a.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [a[i],a[j]]=[a[j],a[i]];
+ }
+ return a;
+}
+
+function numericalTN(q,correct,unit,distractors){
+ const used=new Set([keyR(correct)]);
+ const pool=[];
+ for(const value of distractors){
+  if(!used.has(keyR(value))){
+   used.add(keyR(value));pool.push(value);
+  }
+ }
+ for(let factor=2;pool.length<3;factor++){
+  const value=mul(correct,E(String(factor)));
+  if(!used.has(keyR(value))){
+   used.add(keyR(value));pool.push(value);
+  }
+ }
+ q.phuong_an=shuffle([
+  {value:correct,dung:true},
+  ...pool.slice(0,3).map(value=>({value,dung:false}))
+ ]).map((x,i)=>({
+  nhan:"ABCD"[i],
+  noi_dung_html:`${F(x.value)} ${unit}`,
+  dung:x.dung
+ }));
+ return q;
+}
+
+function short(q,value,unit){
+ q.dap_an=keyR(value);
+ q.exact=keyR(value);
+ q.unit=unit;
+ return q;
+}
+
+function ds(q,items){
+ q.dung_sai=items.map((x,i)=>({
+  nhan:"abcd"[i],noi_dung_html:x[0],dung:x[1]
+ }));
+ return q;
+}
+
+const GENERATORS={};
+
+GENERATORS[1]=()=>{
+ const m=pick([2,3,4,5,6,8]);
+ const t1=pick([15,20,25,30]);
+ const t2=pick([60,70,80,90]);
+ const c=pick([4180,4200]);
+ const Q=E(`${m}*${c}*(${t2}-${t1})`);
+ const q=base(1,
+ `Tính nhiệt lượng cần cung cấp để đun nóng ${m} kg nước từ ${t1}°C đến ${t2}°C. Biết c = ${c} J/(kg.K).`,
+ `<p><b>Bước 1:</b> ΔT = ${t2} − ${t1} = ${t2-t1} K.</p>
+ <p><b>Bước 2:</b> Q = mcΔT = ${m} · ${c} · ${t2-t1} = <b>${F(Q)} J</b>.</p>`);
+ return numericalTN(q,Q,"J",[
+ E(`${m}*${c}*${t2}`),E(`${m}*${c}*${t1}`),E(`${c}*(${t2}-${t1})`)
+ ]);
+};
+
+GENERATORS[2]=()=>{
+ const material=pick([
+ {name:"đồng",c:380},{name:"nhôm",c:900},
+ {name:"sắt",c:460},{name:"nước",c:4200}
+ ]);
+ const q=base(2,
+ `Nhiệt dung riêng của ${material.name} là ${material.c} J/(kg.K), điều này cho biết`,
+ `Nhiệt dung riêng là nhiệt lượng cần để làm tăng nhiệt độ của 1 kg chất thêm 1 K (tương đương độ tăng 1°C).<br>
+ Q = 1 · ${material.c} · 1 = <b>${material.c} J</b>.`);
+ q.phuong_an=shuffle([
+ {noi_dung_html:`Cần ${material.c} J để làm 1 kg ${material.name} nóng thêm 1°C.`,dung:true},
+ {noi_dung_html:`Cần ${material.c} J để làm 1 kg ${material.name} nóng thêm 10°C.`,dung:false},
+ {noi_dung_html:`Cần ${material.c} J để làm 1 g ${material.name} nóng thêm 1°C.`,dung:false},
+ {noi_dung_html:`Cần ${material.c} J để làm 10 kg ${material.name} nóng thêm 1°C.`,dung:false}
+ ]).map((x,i)=>({nhan:"ABCD"[i],...x}));
+ return q;
+};
+
+GENERATORS[8]=()=>{
+ const receive=pick([true,false]),work=pick([true,false]);
+ const q=base(8,
+ `Chất khí ${receive?"nhận nhiệt":"tỏa nhiệt"} và ${work?"sinh công ra ngoài":"nhận công từ bên ngoài"}. Trong ΔU = A + Q, dấu của Q và A là`,
+ `${receive?"Khí nhận nhiệt nên Q > 0.":"Khí tỏa nhiệt nên Q < 0."}<br>
+ ${work?"Khí sinh công nên công khí nhận A < 0.":"Khí nhận công nên A > 0."}`);
+ q.phuong_an=shuffle([
+ [true,true],[true,false],[false,true],[false,false]
+ ]).map((x,i)=>({
+  nhan:"ABCD"[i],
+  noi_dung_html:`Q ${x[0]?"&gt;":"&lt;"} 0; A ${x[1]?"&gt;":"&lt;"} 0`,
+  dung:x[0]===receive&&x[1]===!work
+ }));
+ return q;
+};
+
+GENERATORS[9]=()=>{
+ const Q=pick([120,160,200,240,300]);
+ const W=pick([30,40,50,60,80]);
+ const U=E(`${Q}-${W}`);
+ const q=base(9,
+ `Truyền cho khí trong xilanh nhiệt lượng ${Q} J. Khí nở ra thực hiện công ${W} J đẩy pit-tông. Độ biến thiên nội năng của khí là`,
+ `Khí nhận nhiệt: Q = +${Q} J.<br>
+ Khí sinh công: A = −${W} J.<br>
+ ΔU = Q + A = ${Q} − ${W} = <b>${F(U)} J</b>.`);
+ return numericalTN(q,U,"J",[neg(U),E(`${Q}+${W}`),E(String(W))]);
+};
+
+GENERATORS[12]=()=>{
+ const m=pick([4,6,8,10,12]);
+ const v=pick([10,15,20,25,30]);
+ const kmh=E(`${v}*18/5`);
+ const Q=E(`${m}*${v}^2/2`);
+ const q=base(12,
+ `Một viên đạn đại bác khối lượng ${m} kg có tốc độ ${F(kmh)} km/h khi tới đích. Toàn bộ động năng chuyển thành nội năng khi va chạm. Năng lượng chuyển hóa bằng`,
+ `Đổi v = ${F(kmh)} km/h = ${v} m/s.<br>
+ Q = Wđ = ½mv² = ½ · ${m} · ${v}² = <b>${F(Q)} J</b>.`);
+ return numericalTN(q,Q,"J",[
+ E(`${m}*${v}^2`),E(`${m}*${v}/2`),E(`${m}*(${keyR(kmh)})^2/2`)
+ ]);
+};
+
+GENERATORS[14]=()=>{
+ const m=pick(["0.2","0.4","0.5","0.6","0.8"]);
+ const t=pick([15,20,25,30,40]);
+ const Q1=E(`${m}*4.18*(100-${t})`);
+ const Q2=E(`${m}*2260`);
+ const Q=add(Q1,Q2);
+ const q=base(14,
+ `Đun ${F(m)} kg nước từ ${t}°C đến 100°C rồi hóa hơi hoàn toàn ở nhiệt độ này. Cho c = 4,18 kJ/(kg.K), L = 2260 kJ/kg. Bỏ qua hao phí. Tổng nhiệt lượng cần cung cấp là`,
+ `Q₁ = mcΔT = ${F(m)} · 4,18 · ${100-t} = ${F(Q1)} kJ.<br>
+ Q₂ = mL = ${F(m)} · 2260 = ${F(Q2)} kJ.<br>
+ Q = Q₁ + Q₂ = <b>${F(Q)} kJ</b>.`);
+ return numericalTN(q,Q,"kJ",[Q1,Q2,E(`${m}*4.18*100+${m}*2260`)]);
+};
+
+GENERATORS[16]=()=>{
+ const degrees=pick([2,4,5,10,20,25]);
+ const correct=E(`${degrees}/100`);
+ const q=base(16,
+ `Một khoảng tăng nhiệt độ ${degrees}°C bằng bao nhiêu phần khoảng cách từ điểm nước đá đang tan đến điểm nước sôi ở áp suất tiêu chuẩn trên thang Celsius?`,
+ `Khoảng hai mốc chuẩn là 100°C.<br>
+ Tỉ phần cần tìm = ${degrees}/100 = <b>${F(correct)}</b>.`);
+ return numericalTN(q,correct,"",[
+ E(`${degrees}/10`),E(`${degrees}/273.15`),E(`1/${degrees}`)
+ ]);
+};
+
+GENERATORS[18]=()=>{
+ let ice,water,t;
+ do{
+  ice=pick([10,20,30,40,50]);
+  water=pick([150,200,250,300,400]);
+  t=pick([15,20,25,30]);
+ }while(water*4.2*t<=ice*334);
+ const available=E(`${water}*4.2*${t}`);
+ const melt=E(`${ice}*334`);
+ const final=div(sub(available,melt),E(`(${water}+${ice})*4.2`));
+ const q=base(18,
+ `Thả ${ice} g nước đá ở 0°C vào cốc chứa ${F(E(`${water}/1000`))} lít nước ở ${t}°C. Cho c = 4,2 J/(g.K), ρ = 1 g/cm³, λ = 334 kJ/kg. Bỏ qua nhiệt dung cốc và trao đổi nhiệt với ngoài. Tìm nhiệt độ cân bằng chính xác.`,
+ `Khối lượng nước: mₙ = ${water} g.<br>
+ Nước hạ tới 0°C tỏa Qₙ = ${water} · 4,2 · ${t} = ${F(available)} J.<br>
+ Nhiệt làm tan hết đá: Qnc = ${ice} · 334 = ${F(melt)} J.<br>
+ Vì Qₙ > Qnc nên đá tan hết và nhiệt độ cuối dương.<br>
+ Cân bằng nhiệt:<br>
+ ${water} · 4,2 · (${t} − T) = ${ice} · 334 + ${ice} · 4,2 · T.<br>
+ T = (${F(available)} − ${F(melt)})/[(${water}+${ice}) · 4,2]
+ = <b>${F(final)} °C</b>.`);
+ return numericalTN(q,final,"°C",[
+ E("0"),E(String(t)),E(`${water}*${t}/(${water}+${ice})`)
+ ]);
+};
+
+GENERATORS[20]=()=>{
+ const p=pick([80000,100000,120000,150000]);
+ const V1=pick([2,3,4,5]);
+ const dV=pick([1,2,3]);
+ const W=E(`${p}*${dV}/1000`);
+ const increment=pick([40,60,80,100]);
+ const Q=add(W,E(String(increment)));
+ const U=sub(Q,W);
+ const flags=[pick([true,false]),pick([true,false]),pick([true,false]),pick([true,false])];
+ const claimW=flags[0]?W:mul(W,E("2"));
+ const q=base(20,
+ `Một lượng khí lí tưởng ở áp suất ${p} Pa có thể tích ${V1} lít nhận nhiệt lượng ${F(Q)} J, giãn nở đẳng áp đến ${V1+dV} lít. Xác định Đúng/Sai từng ý.`,
+ `ΔV = ${dV} lít = ${F(E(`${dV}/1000`))} m³.<br>
+ W = pΔV = ${p} · ${F(E(`${dV}/1000`))} = ${F(W)} J.<br>
+ Công khí nhận A = −${F(W)} J.<br>
+ ΔU = Q + A = ${F(Q)} − ${F(W)} = ${F(U)} J > 0.<br>
+ Với lượng khí lí tưởng cố định, p không đổi và V tăng nên T tăng, tốc độ trung bình của phân tử tăng.<br>
+ Định luật I: ΔU bằng tổng công và nhiệt lượng hệ nhận.`);
+ return ds(q,[
+ [`Công khí thực hiện có độ lớn ${F(claimW)} J.`,flags[0]],
+ [`Nội năng của khí ${flags[1]?"tăng":"giảm"} ${F(U)} J.`,flags[1]],
+ [flags[2]?"Độ biến thiên nội năng bằng tổng công và nhiệt lượng khí nhận.":"Độ biến thiên nội năng luôn bằng riêng nhiệt lượng khí nhận.",flags[2]],
+ [`Tốc độ chuyển động trung bình của phân tử khí ${flags[3]?"tăng":"giảm"}.`,flags[3]]
+ ]);
+};
+
+GENERATORS[22]=()=>{
+ const P=pick([600,750,900,1000,1200]);
+ const minutes=pick([20,25,30]);
+ const m=pick([1,2]);
+ const t=pick([20,25,30]);
+ const price=pick([1500,1800,2000,2500]);
+ const days=30;
+ const A=E(`${P}*${minutes}*60`);
+ const Q=E(`${m}*4200*(100-${t})`);
+ const H=E(`(${keyR(Q)})/(${keyR(A)})*100`);
+ const monthly=E(`${P}*${minutes}*${days}/60000`);
+ const cost=mul(monthly,E(String(price)));
+ const flags=Array.from({length:4},()=>pick([true,false]));
+ const energy=flags[1]?div(A,E("1000")):div(A,E("2000"));
+ const efficiency=flags[2]?H:div(H,E("2"));
+ const money=flags[3]?cost:mul(cost,E("2"));
+
+ const q=base(22,
+ `Bếp điện ghi 220 V – ${P} W, dùng đúng 220 V. Mỗi ngày đun sôi ${m} lít nước từ ${t}°C trong ${minutes} phút. Cho c = 4200 J/(kg.K), khối lượng riêng nước 1 kg/lít. Một tháng dùng ${days} ngày; giá điện ${price} đồng/kWh. Xét các phát biểu sau.`,
+ `Điện năng mỗi ngày: A = Pt = ${P} · ${minutes} · 60 = ${F(A)} J = ${F(div(A,E("1000")))} kJ.<br>
+ Nhiệt có ích Q = mcΔT = ${m} · 4200 · ${100-t} = ${F(Q)} J.<br>
+ H = Q/A · 100% = <b>${F(H)}%</b>.<br>
+ Điện năng tháng = (${P}/1000) · (${minutes}/60) · 30 = ${F(monthly)} kWh.<br>
+ Tiền điện = ${F(monthly)} · ${price} = <b>${F(cost)} đồng</b>.<br>
+ Phân số trong hiệu suất là kết quả chính xác, không làm tròn.`);
+ return ds(q,[
+ [`Công suất định mức của bếp là ${flags[0]?P:P*2} W ở 220 V.`,flags[0]],
+ [`Điện năng bếp tiêu thụ mỗi ngày là ${F(energy)} kJ.`,flags[1]],
+ [`Hiệu suất bếp bằng ${F(efficiency)}%.`,flags[2]],
+ [`Tiền điện cho ${days} ngày là ${F(money)} đồng.`,flags[3]]
+ ]);
+};
+
+GENERATORS[23]=()=>{
+ const U=pick([10,20,30,40]);
+ const W=pick([20,30,40,50,60]);
+ const Q=U+W;
+ return short(base(23,
+ `Khí nhận nhiệt lượng ${Q} J, nội năng tăng ${U} J. Khí thực hiện công có độ lớn bao nhiêu J?`,
+ `ΔU = Q − W ⇒ W = Q − ΔU = ${Q} − ${U} = <b>${W} J</b>.<br>
+ Công khí nhận A = −${W} J.`),E(String(W)),"J");
+};
+
+GENERATORS[24]=()=>{
+ const t=pick([-200,-196,-150,-100,-50,0,27,50,100]);
+ const T=E(`${t}+273.15`);
+ return short(base(24,
+ `Đổi ${t}°C sang Kelvin. Trong đề mới dùng hệ thức chính xác T(K) = t(°C) + 273,15.`,
+ `T = ${t} + 273,15 = <b>${F(T)} K</b>.<br>
+ Độ tăng 1°C bằng độ tăng 1 K.`),T,"K");
+};
+
+GENERATORS[25]=()=>{
+ const low=pick([-20,-10,0]);
+ const high=pick([100,110,120,130]);
+ const length=pick([100,120,150,180]);
+ const delta=pick([3,5,6,8,10]);
+ const result=E(`${length}*${delta}/(${high}-(${low}))`);
+ return short(base(25,
+ `Nhiệt kế có thang đo tuyến tính từ ${low}°C đến ${high}°C, dài ${length} mm. Khi nhiệt độ tăng ${delta}°C, cột thủy ngân dịch chuyển bao nhiêu mm? Cho kết quả chính xác.`,
+ `Khoảng nhiệt độ: ${high} − (${low}) = ${high-low}°C.<br>
+ Δl/ΔT = ${length}/${high-low} mm/°C.<br>
+ Δl = ${length} · ${delta}/${high-low} = <b>${F(result)} mm</b>.`),result,"mm");
+};
+
+function bulletGenerator(id){
+ const m=pick([2,3,4,5]);
+ const v=pick([100,120,150,180,200,240]);
+ const c=234;
+ const Q=E(`${m}/1000*${v}^2/2`);
+ const delta=E(`${v}^2/(2*${c})`);
+ return short(base(id,
+ `Một viên đạn bằng bạc khối lượng ${m} g bay với tốc độ ${v} m/s, xuyên vào tường gỗ rồi dừng lại. Nhiệt dung riêng bạc 0,234 kJ/(kg.K). Toàn bộ động năng chỉ dùng làm nóng viên đạn, không trao đổi nhiệt với ngoài và chưa xảy ra chuyển thể. Nhiệt độ tăng bao nhiêu K? Cho kết quả chính xác.`,
+ `m = ${F(E(`${m}/1000`))} kg; c = 234 J/(kg.K).<br>
+ Q = ½mv² = <b>${F(Q)} J</b>.<br>
+ mcΔT = ½mv² ⇒ ΔT = v²/(2c).<br>
+ ΔT = ${v}²/(2 · 234) = <b>${F(delta)} K</b>.<br>
+ Khối lượng triệt tiêu trong công thức độ tăng nhiệt độ.`),delta,"K");
+}
+GENERATORS[26]=()=>bulletGenerator(26);
+GENERATORS[29]=()=>bulletGenerator(29);
+
+GENERATORS[27]=()=>{
+ const grams=pick([100,150,200,250,300]);
+ const t=pick([10,20,25,30]);
+ const percentage=pick([5,10,15,20]);
+ const c=4190,L=2260000;
+ const Q1=E(`${grams}/1000*${c}*(100-${t})`);
+ const vapor=E(`${grams}/1000*${percentage}/100`);
+ const Q2=mul(vapor,E(String(L)));
+ const Q=div(add(Q1,Q2),E("1000000"));
+ return short(base(27,
+ `Cần cung cấp bao nhiêu MJ để ${grams} g nước ở ${t}°C đạt 100°C rồi có ${percentage}% khối lượng hóa hơi ở 100°C? Cho c = 4190 J/(kg.K), L = 2,26·10⁶ J/kg. Bỏ qua hao phí, cho kết quả chính xác.`,
+ `m = ${F(E(`${grams}/1000`))} kg.<br>
+ Q₁ = mc(100 − ${t}) = ${F(Q1)} J.<br>
+ Khối lượng hóa hơi mₕ = m · ${percentage}/100 = ${F(vapor)} kg.<br>
+ Q₂ = mₕL = ${F(Q2)} J.<br>
+ Q = Q₁ + Q₂ = ${F(add(Q1,Q2))} J = <b>${F(Q)} MJ</b>.`),Q,"MJ");
+};
+
+GENERATORS[28]=()=>{
+ const emf=pick([6,9,12,15]);
+ const inside="0.25";
+ const R=E(`${emf}-0.25`);
+ const mg=pick(["0.05","0.1","0.15","0.2"]);
+ const t0=pick(["27.5","37.5","47.5"]);
+ const tm="327.5",c=130;
+ const I=div(E(String(emf)),add(R,E(inside)));
+ const P=mul(mul(I,I),R);
+ const Q=E(`${mg}/1000*${c}*(${tm}-${t0})`);
+ const time=div(Q,P);
+ return short(base(28,
+ `Nguồn điện có suất điện động ${emf} V, điện trở trong 0,25 Ω. Dây cầu chì bằng chì có R = ${F(R)} Ω, m = ${F(mg)} g, nhiệt độ ban đầu ${F(t0)}°C. Cho c = 130 J/(kg.K), nhiệt độ nóng chảy 327,5°C. Giả sử R không đổi, bỏ qua mất nhiệt và cầu chì ngắt ngay khi đạt nhiệt độ nóng chảy, chưa tính nhiệt nóng chảy. Tính thời gian ngắt mạch bằng giây, kết quả chính xác.`,
+ `I = ξ/(R + r) = ${emf}/(${F(R)} + 0,25) = ${F(I)} A.<br>
+ P = I²R = ${F(P)} W.<br>
+ m = ${F(E(`${mg}/1000`))} kg.<br>
+ ΔT = 327,5 − ${F(t0)} = ${F(E(`${tm}-${t0}`))} K.<br>
+ Q = mcΔT = ${F(Q)} J.<br>
+ t = Q/P = <b>${F(time)} s</b>.<br>
+ Theo giả thiết ngắt ngay khi đạt nhiệt độ nóng chảy nên không cộng λm.`),time,"s");
+};
+
+/* =========================================================
+   NHỮNG ĐIỂM CẦN GIỮ NGUYÊN / ĐỐI CHIẾU DỮ LIỆU
+   ========================================================= */
+
+const LOCKS={
+ 3:"Câu lý thuyết không có số liệu để đổi; giữ nguyên nội dung gốc.",
+ 4:"Câu lý thuyết không có số liệu để đổi; giữ nguyên nội dung gốc.",
+ 5:"Câu nhận biết công thức, không có dữ kiện số để sinh đề mới. Công thức λm dùng cho chất ở nhiệt độ nóng chảy.",
+ 6:"Câu lý thuyết không có số liệu để đổi; giữ nguyên nội dung gốc.",
+ 7:"Câu nhận biết đơn vị, không có dữ kiện số để đổi.",
+ 10:"Khóa đổi đề: cả Kelvin và Rankine đều có gốc tại độ không tuyệt đối. Dữ liệu gốc đánh dấu C; câu này không có đáp án duy nhất.",
+ 11:"Câu lý thuyết không có số liệu để đổi.",
+ 13:"Khóa đổi đề: phát biểu về nội năng cần xác định một lượng chất cố định; giữ dữ liệu và đáp án gốc để đối chiếu.",
+ 15:"Khóa đổi đề: JSON chưa kèm hình đồ thị gốc, không thể xác định độc lập đoạn ta–tb hoặc sinh đồ thị thay thế.",
+ 17:"Câu lý thuyết không có số liệu để đổi.",
+ 19:"Câu lý thuyết về các thể của chất, không có số liệu để đổi.",
+ 21:"Khóa đổi đề: xu hướng giảm nhiệt độ khi bay hơi cần điều kiện không được cấp nhiệt bù; giữ nguyên dữ liệu nguồn."
+};
+
+const SOURCE_NOTES={
+ 5:"Q = λm là nhiệt lượng riêng cho giai đoạn nóng chảy khi chất đã ở nhiệt độ nóng chảy. Nếu ban đầu lạnh hơn, phải cộng nhiệt lượng tăng nhiệt độ.",
+ 10:"Dữ liệu nguồn đánh dấu C. Tuy nhiên, thang Rankine cũng lấy độ không tuyệt đối làm mốc. Vì vậy chương trình không tính điểm câu này.",
+ 13:"Đáp án A được giữ theo nguồn. Cách phát biểu U phụ thuộc nhiệt độ và thể tích được hiểu cho một lượng chất có thành phần cố định; nội năng cũng là đại lượng phụ thuộc lượng chất.",
+ 15:"Chưa có hình gốc để quan sát. Đáp án D và lời giải dưới đây được lưu theo nguồn; chương trình không tính điểm câu này và không tự dựng hình thay thế.",
+ 18:"Đáp án nguồn D = 7°C là giá trị gần đúng. Từ dữ kiện gốc, nhiệt độ chính xác là 1130/161 °C. Các đề mới dùng đáp án chính xác và nêu rõ bỏ qua nhiệt dung cốc, hao phí.",
+ 20:"Giải thích nhiệt độ và tốc độ phân tử dựa trên mô hình một lượng khí lí tưởng cố định.",
+ 21:"Ý b đúng theo nguồn khi chất lỏng không được cung cấp nhiệt bù đáng kể. Bay hơi không bắt buộc làm giảm nhiệt độ nếu có nguồn cấp nhiệt bù.",
+ 22:"Nguồn dùng hiệu suất gần đúng 84,8%. Giá trị chính xác là 2800/33 %. Vị trí Đúng/Sai gốc vẫn được giữ; đề mới dùng phân số chính xác.",
+ 24:"Nguồn dùng quy ước gần đúng T = t + 273 nên đáp án là 77 K. Theo độ lệch chính xác 273,15, kết quả là 77,15 K. Các đề mới ghi rõ dùng 273,15.",
+ 25:"Nguồn cho 4,6 mm dù đề chưa yêu cầu làm tròn. Kết quả chính xác là 60/13 mm. Chương trình nhận cả đáp án nguồn và kết quả chính xác ở đề gốc; đề mới chỉ nhận kết quả chính xác.",
+ 26:"Nguồn cho 85,5 K. Kết quả chính xác là 10000/117 K. Đề mới chỉ nhận kết quả chính xác.",
+ 27:"Nguồn làm tròn thành 0,12 MJ. Kết quả chính xác là 0,12062 MJ. Đề mới chỉ nhận kết quả chính xác.",
+ 28:"Nguồn làm tròn thành 0,33 s. Theo mô hình đã cho, kết quả chính xác là 78/235 s. Đề mới nêu rõ bỏ qua biến thiên điện trở, hao phí và nhiệt nóng chảy.",
+ 29:"Đây là câu trùng nội dung câu 26 trong JSON gốc, được giữ đủ. Kết quả chính xác là 10000/117 K; đáp án nguồn là 85,5 K."
+};
+
+const ORIGINAL_EXACT={
+ 23:"20",
+ 24:"77",
+ 25:"60/13",
+ 26:"10000/117",
+ 27:"0.12062",
+ 28:"78/235",
+ 29:"10000/117"
+};
+
+const UNITS={
+ 23:"J",24:"K",25:"mm",26:"K",27:"MJ",28:"s",29:"K"
+};
+
+function formulaFor(id){
+ if([1,2,7,25].includes(id))
+ return "<b>Tăng nhiệt độ</b><br>Q = mcΔT<br>c = Q/(mΔT)<br><br><b>Thang đo tuyến tính</b><br>Δl/L = ΔT/(tₘₐₓ − tₘᵢₙ)";
+ if([5,14,15,18,27].includes(id))
+ return "<b>Chuyển thể</b><br>Qnc = λm<br>Qhh = Lm<br>Q = mcΔT<br><br>Cân bằng nhiệt:<br>Qtỏa = Qthu";
+ if([8,9,20,23].includes(id))
+ return "<b>Định luật I</b><br>ΔU = A + Q<br>A: công hệ nhận<br>Q: nhiệt hệ nhận<br><br>Khí sinh công W:<br>A = −W<br>W = pΔV (đẳng áp)";
+ if([12,26,29].includes(id))
+ return "<b>Động năng thành nội năng</b><br>Q = ½mv²<br>mcΔT = ½mv²<br>ΔT = v²/(2c)<br><br>v(m/s) = v(km/h)/3,6";
+ if(id===22)
+ return "<b>Bếp điện</b><br>A = Pt<br>Q = mcΔT<br>H = Q/A · 100%<br><br>E(kWh) = P(kW)t(h)";
+ if(id===28)
+ return "<b>Cầu chì</b><br>I = ξ/(R + r)<br>P = I²R<br>Q = mcΔT<br>t = Q/P";
+ if([10,16,24].includes(id))
+ return "<b>Nhiệt độ</b><br>T(K) = t(°C) + 273,15<br>ΔT(K) = Δt(°C)<br><br>Khoảng hai mốc chuẩn Celsius: 100°C";
+ return "<b>Ôn tập lý thuyết</b><br>Chuyển động nhiệt, tương tác phân tử, các thể của chất và nội năng.";
+}
+
+/* =========================================================
+   TRẠNG THÁI VÀ GIAO DIỆN
+   ========================================================= */
+
+let current=0;
+const states=ORIGINAL.map(q=>({
+ q:clone(q),answer:null,checked:false,correct:false,
+ shown:false,feedback:"",detail:[],revision:0
+}));
+
+function state(){return states[current]}
+
+function renderList(){
+ $("list").innerHTML=states.map((s,i)=>`
+ <button class="${i===current?"active":""} ${s.checked?(s.correct?"done":"tried"):""}"
+ onclick="go(${i})" aria-label="Câu ${i+1}">${i+1}</button>`).join("");
+ const eligible=states.filter((s,i)=>![9,14].includes(i));
+ const done=eligible.filter(s=>s.checked).length;
+ const correct=eligible.filter(s=>s.checked&&s.correct).length;
+ $("progressText").textContent=`Đã kiểm tra ${done}/${eligible.length} câu chấm điểm; đúng trọn vẹn ${correct} câu. Câu 10, 15 dùng đối chiếu nguồn.`;
+ $("bar").style.width=(100*done/eligible.length)+"%";
+}
+
+function render(){
+ const s=state(),q=s.q,id=q.cau;
+ renderList();
+
+ $("type").textContent=`${q.loai==="TN"?"Trắc nghiệm":q.loai==="DS"?"Đúng / Sai":"Trả lời ngắn"} · ${q.generated?"Đề mới "+s.revision:"Đề gốc"}`;
+ $("title").textContent=`Câu ${id}`;
+ $("question").innerHTML=renderMath(q.de_html);
+ $("formula").innerHTML=formulaFor(id);
+ $("illustration").innerHTML=id===15?
+ `<div class="lock">Chưa có hình đồ thị gốc trong JSON.</div>`:"";
+
+ const reason=LOCKS[id];
+ $("newButton").disabled=!!reason;
+ $("lockReason").hidden=!reason;
+ $("lockReason").textContent=reason||"";
+
+ $("solution").hidden=!s.shown;
+ $("solution").innerHTML=s.shown?solutionHTML():"";
+ $("jsonArea").hidden=true;
+ $("jsonArea").value="";
+
+ if(q.loai==="TN"){
+  $("answerArea").innerHTML=q.phuong_an.map((p,i)=>`
+  <label class="option" id="option${i}">
+  <input type="radio" name="tn" value="${i}" ${s.answer===i?"checked":""}
+  onchange="answerTN(${i})">
+  <span><b>${p.nhan}.</b> ${renderMath(p.noi_dung_html)}</span>
+  </label>`).join("");
+ }else if(q.loai==="DS"){
+  $("answerArea").innerHTML=q.dung_sai.map((p,i)=>`
+  <div class="ds-item">
+  <div><b>${p.nhan})</b> ${renderMath(p.noi_dung_html)}</div>
+  <div class="ds-buttons">
+  <label><input type="radio" name="ds${i}"
+  ${s.answer&&s.answer[i]===true?"checked":""}
+  onchange="answerDS(${i},true)"> Đúng</label>
+  <label><input type="radio" name="ds${i}"
+  ${s.answer&&s.answer[i]===false?"checked":""}
+  onchange="answerDS(${i},false)"> Sai</label>
+  </div>
+  <div id="dsFeedback${i}" class="feedback"></div>
+  </div>`).join("");
+ }else{
+  $("answerArea").innerHTML=`
+  <p>Đáp án (${q.unit||UNITS[id]||""}):</p>
+  <input type="text" id="shortAnswer" autocomplete="off"
+  placeholder="Nhập số hoặc phân số chính xác, ví dụ 60/13"
+  aria-label="Đáp án câu ${id}">
+  <p class="note">Có thể dùng +, −, *, /, ngoặc và lũy thừa nguyên; ví dụ 2.26*10^6. Không nhập đơn vị.</p>`;
+  $("shortAnswer").value=s.answer||"";
+  $("shortAnswer").addEventListener("input",event=>{
+   s.answer=event.target.value;invalidate();
+  });
+ }
+
+ paintFeedback();
+}
+
+function invalidate(){
+ const s=state();
+ s.checked=false;s.correct=false;s.feedback="";s.detail=[];
+ $("feedback").textContent="";
+ document.querySelectorAll(".option").forEach(x=>x.classList.remove("correct","incorrect"));
+ document.querySelectorAll('[id^="dsFeedback"]').forEach(x=>x.textContent="");
+ renderList();
+}
+
+function answerTN(i){state().answer=i;invalidate()}
+function answerDS(i,value){
+ const s=state();
+ if(!Array.isArray(s.answer))s.answer=[null,null,null,null];
+ s.answer[i]=value;invalidate();
+}
+
+function paintFeedback(){
+ const s=state(),q=s.q;
+ $("feedback").className="feedback "+(s.correct?"good":"bad");
+ $("feedback").textContent=s.feedback||"";
+
+ if(s.checked&&q.loai==="TN"){
+  q.phuong_an.forEach((p,i)=>{
+   const node=$("option"+i);
+   if(!node)return;
+   if(p.dung)node.classList.add("correct");
+   if(s.answer===i&&!p.dung)node.classList.add("incorrect");
+  });
+ }
+ if(q.loai==="DS"){
+  (s.detail||[]).forEach((text,i)=>{
+   const node=$("dsFeedback"+i);
+   if(node){
+    node.textContent=text;
+    node.className="feedback "+(
+     s.answer&&s.answer[i]===q.dung_sai[i].dung?"good":"bad");
+   }
+  });
+ }
+}
+
+function check(){
+ const s=state(),q=s.q;
+ s.detail=[];
+
+ if(q.cau===10||q.cau===15){
+  s.checked=false;s.correct=false;
+  s.feedback=q.cau===10?
+  "Câu nguồn có hai thang lấy độ không tuyệt đối làm mốc, nên không chấm đúng/sai. Xem lời giải để đối chiếu.":
+  "Chưa có hình gốc nên không đủ căn cứ quan sát đoạn ta–tb. Câu này không tính điểm; xem lời giải để đối chiếu đáp án nguồn.";
+  paintFeedback();return;
+ }
+
+ if(q.loai==="TN"){
+  if(s.answer===null){
+   s.feedback="Hãy chọn một phương án.";paintFeedback();return;
+  }
+  s.correct=q.phuong_an[s.answer].dung;
+  const selected=q.phuong_an[s.answer].nhan;
+  const correct=q.phuong_an.filter(x=>x.dung).map(x=>x.nhan).join(", ");
+  s.feedback=s.correct?
+  `✓ Chính xác! Em đã chọn ${selected}.`:
+  `Chưa đúng. Em chọn ${selected}; đáp án là ${correct}.`;
+ }else if(q.loai==="DS"){
+  if(!s.answer||s.answer.some(x=>x===null)||s.answer.length!==4){
+   s.feedback="Hãy chọn Đúng hoặc Sai cho cả 4 ý.";paintFeedback();return;
+  }
+  let n=0;
+  s.detail=q.dung_sai.map((p,i)=>{
+   const ok=s.answer[i]===p.dung;if(ok)n++;
+   return `${ok?"✓ Chính xác.":"Chưa đúng."} Em chọn ${s.answer[i]?"Đúng":"Sai"}; đáp án: ${p.dung?"Đúng":"Sai"}.`;
+  });
+  s.correct=n===4;
+  s.feedback=`Đúng ${n}/4 ý.`;
+ }else{
+  if(!String(s.answer||"").trim()){
+   s.feedback="Hãy nhập đáp án.";paintFeedback();return;
+  }
+  try{
+   const value=E(s.answer);
+   const expected=E(q.generated?q.exact:ORIGINAL_EXACT[q.cau]||q.dap_an);
+   const source=q.generated?null:E(q.dap_an);
+   const exactOK=eq(value,expected);
+   const sourceOK=source&&eq(value,source);
+   s.correct=exactOK||!!sourceOK;
+
+   if(s.correct){
+    s.feedback=sourceOK&&!exactOK?
+    "✓ Khớp đáp án gần đúng trong nguồn. Xem lời giải để biết giá trị chính xác.":
+    "✓ Chính xác!";
+   }else{
+    s.feedback="Chưa đúng. Kiểm tra đơn vị và nhập phân số chính xác nếu kết quả là số thập phân vô hạn.";
+   }
+  }catch(error){
+   s.feedback="Biểu thức chưa hợp lệ. Ví dụ hợp lệ: 60/13, 0,12062 hoặc 2.26*10^6.";
+   s.checked=false;paintFeedback();return;
+  }
+ }
+
+ s.checked=true;
+ paintFeedback();
+ renderList();
+
+ if(!q.generated&&SOURCE_NOTES[q.cau]){
+  $("feedback").textContent+=" Có ghi chú đối chiếu dữ liệu trong phần lời giải.";
+ }
+}
+
+function solutionHTML(){
+ const q=state().q;
+ let html=renderMath(q.loi_giai_html);
+
+ if(q.loai==="TN"){
+  html=`<p><b>Đáp án ${q.generated?"":"theo nguồn: "}${q.phuong_an.filter(p=>p.dung).map(p=>p.nhan).join(", ")}.</b></p>`+html;
+ }else if(q.loai==="DS"){
+  html=`<p><b>Đáp án:</b> ${q.dung_sai.map(p=>`${p.nhan}) ${p.dung?"Đúng":"Sai"}`).join("; ")}.</p>`+html;
+ }else{
+  const answer=q.generated?F(E(q.exact)):q.dap_an;
+  html=`<p><b>Đáp án ${q.generated?"chính xác":"nguồn"}: ${esc(answer)} ${q.unit||UNITS[q.cau]||""}.</b></p>`+html;
+ }
+
+ if(!q.generated&&SOURCE_NOTES[q.cau]){
+  html+=`<div class="warning"><b>Đối chiếu dữ liệu:</b><br>${SOURCE_NOTES[q.cau]}</div>`;
+ }
+ if(!q.generated&&[25,26,27,28,29].includes(q.cau)){
+  html+=`<p><b>Kết quả chính xác:</b> ${F(E(ORIGINAL_EXACT[q.cau]))} ${UNITS[q.cau]}.</p>`;
+ }
+ return html;
+}
+
+function showSolution(){
+ state().shown=true;
+ $("solution").innerHTML=solutionHTML();
+ $("solution").hidden=false;
+}
+
+function go(i){current=i;render()}
+function move(step){go((current+step+states.length)%states.length)}
+
+function generateCurrent(){
+ const s=state(),id=s.q.cau;
+ if(LOCKS[id]||!GENERATORS[id])return;
+ let q,tries=0;
+ const previous=s.q.de_html;
+ do{q=GENERATORS[id]();tries++}
+ while(q.de_html===previous&&tries<30);
+ s.q=q;s.answer=null;s.checked=false;s.correct=false;
+ s.shown=false;s.feedback="";s.detail=[];s.revision++;
+ render();
+}
+
+function restoreCurrent(){
+ const s=state();
+ s.q=clone(ORIGINAL[current]);
+ s.answer=null;s.checked=false;s.correct=false;
+ s.shown=false;s.feedback="";s.detail=[];s.revision=0;
+ render();
+}
+
+function showOriginalJSON(){
+ $("jsonArea").hidden=false;
+ $("jsonArea").value=JSON.stringify(ORIGINAL[current],null,2);
+}
+
+async function fullscreen(){
+ try{
+  if(document.fullscreenElement)await document.exitFullscreen();
+  else if(document.documentElement.requestFullscreen)
+   await document.documentElement.requestFullscreen();
+  else throw Error();
+ }catch{
+  alert("Trình duyệt chưa hỗ trợ toàn màn hình. Có thể xoay ngang thiết bị để xem rộng hơn.");
+ }
+}
+
+render();
+</script>
+</body>
+</html>
