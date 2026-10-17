@@ -1,0 +1,955 @@
+<!--hp-title:w5RuIGPGoSBi4bqjbg==-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dao động điều hòa — Bài tập tổng hợp và đồ thị</title>
+<style>
+*{box-sizing:border-box}
+:root{--navy:#102a4c;--blue:#186298;--bg:#eef3f8;--line:#dce5ef;--green:#157343}
+body{margin:0;background:var(--bg);color:#19334c;font:16px Arial,sans-serif;line-height:1.65}
+header{background:var(--navy);color:white;padding:18px 5%}
+header strong{font-size:20px}
+header small{display:block;color:#cedeed}
+main{max-width:1280px;margin:22px auto;padding:0 14px}
+h1{font-size:26px;margin-bottom:8px}
+h2{font-size:21px}
+h3{font-size:17px}
+button,input,select{font:inherit;border:1px solid #b7cadb;border-radius:9px;padding:10px}
+button{cursor:pointer;background:white;color:#183d5b}
+button:hover{filter:brightness(.96)}
+button.primary{background:var(--blue);color:white;border-color:var(--blue)}
+button.active{background:var(--navy);color:white}
+input{width:100%;background:#fffdf0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.card{background:white;border-radius:16px;padding:21px;box-shadow:0 5px 20px #15334a09}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px}
+aside{align-self:start}
+.formula{background:#edf6ff;border-left:4px solid #3083b7;padding:13px;margin:12px 0;border-radius:5px}
+.note{font-size:14px;color:#60748b}
+.problem{background:#fff8df;border:1px solid #ebdba3;padding:17px;border-radius:12px}
+.item{border:1px solid var(--line);padding:16px;border-radius:12px;margin:13px 0}
+.item h3{margin:0 0 9px}
+.tag{display:inline-block;font-size:12px;background:#eaf2fa;padding:2px 9px;border-radius:20px;margin-bottom:10px}
+.answerline{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.feedback{font-weight:bold;min-height:24px}
+.solution{padding:14px;background:#edf8f0;border-radius:10px;margin-top:12px}
+.solution p{margin:7px 0}
+.good{color:var(--green)}
+.bad{color:#a85415}
+.progress{height:8px;background:#dde7ef;border-radius:10px;overflow:hidden;margin-top:9px}
+#bar{height:100%;background:#218b63;width:0;transition:width .2s}
+svg{width:100%;height:auto;display:block}
+.graph-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.graph-box{border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fields label{font-size:14px;font-weight:bold}
+.fields input{margin-top:5px}
+.preview{background:#eef5fb;border-radius:9px;padding:11px;margin:12px 0;overflow-wrap:anywhere}
+.graph-section{margin-top:20px}
+.checkpoint{background:#fff8df;padding:13px;border-radius:9px;margin-top:15px}
+footer{font-size:13px;color:#60748b;margin:20px 0}
+[hidden]{display:none!important}
+@media(max-width:850px){
+.layout,.graph-grid{grid-template-columns:1fr}
+.fields{grid-template-columns:1fr}
+.card{padding:16px}
+h1{font-size:22px}
+header strong{font-size:17px}
+}
+@media print{
+header{background:white;color:black;border-bottom:2px solid #17314b}
+header small{color:black}
+button,input,select,.controls,.answerline,.fields,.progress{display:none!important}
+.layout,.graph-grid{display:block}
+body{background:white}
+.card{box-shadow:none}
+.item,.graph-box{break-inside:avoid}
+.graph-box{margin-bottom:18px}
+}
+</style>
+</head>
+<body>
+<header>
+<strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
+<small>lophocthayminh.onrender.com</small>
+</header>
+
+<main>
+<h1>Dao động điều hòa — Bài tập tổng hợp và đồ thị</h1>
+<p>Li độ · Vận tốc · Gia tốc · Năng lượng · Tỉ số · Vận dụng · Đọc đồ thị</p>
+
+<div class="actions">
+<button class="primary" onclick="newProblem()">Đổi đề bài mới</button>
+<button onclick="restoreOriginal()">Khôi phục đề gốc</button>
+<button onclick="switchTab('exercise')" id="tabExercise" class="active">Bài tập tổng hợp</button>
+<button onclick="switchTab('graph')" id="tabGraph">Đọc đồ thị</button>
+<button onclick="fullscreen()">Toàn màn hình</button>
+<button onclick="window.print()">In phần đang xem</button>
+</div>
+
+<section id="exercisePanel">
+<div class="layout">
+<aside class="card">
+<details open>
+<summary><b>Bảng công thức</b></summary>
+<div class="formula">
+<b>Phương trình dao động</b><br>
+x = A cos(ωt + φ)<br>
+v = −ωA sin(ωt + φ)<br>
+a = −ω²x
+</div>
+<div class="formula">
+<b>Các đại lượng đặc trưng</b><br>
+ω = √(k/m)<br>
+T = 2π/ω<br>
+f = 1/T = ω/(2π)<br>
+v<sub>max</sub> = ωA<br>
+a<sub>max</sub> = ω²A<br>
+v² = ω²(A² − x²)
+</div>
+<div class="formula">
+<b>Năng lượng</b><br>
+W = ½kA² = ½mω²A²<br>
+W<sub>t</sub> = ½kx²<br>
+W<sub>đ</sub> = ½mv²<br>
+W = W<sub>t</sub> + W<sub>đ</sub>
+</div>
+<div class="formula">
+<b>Tỉ số</b><br>
+W<sub>t</sub>/W = x²/A²<br>
+W<sub>đ</sub>/W = 1 − x²/A²<br>
+W<sub>đ</sub>/W<sub>t</sub> = A²/x² − 1<br>
+Nếu W<sub>đ</sub> = nW<sub>t</sub>:<br>
+|x| = A/√(n + 1)
+</div>
+<p class="note">
+Khi tính năng lượng bằng J: m dùng kg; A, x dùng m; v dùng m/s.
+Công thức Wđ/Wt chỉ dùng khi Wt ≠ 0.
+</p>
+</details>
+<div id="springDiagram"></div>
+<div id="score"><b>Đã đúng: 0/24</b></div>
+<div class="progress"><div id="bar"></div></div>
+</aside>
+
+<section class="card">
+<h2>Đề bài tổng quát</h2>
+<div id="problem" class="problem"></div>
+<p class="note controls">
+Nhập biểu thức chính xác: pi là π, sqrt(3) là √3.
+Ví dụ: 20*sqrt(3), pi/30, 3/250.
+Dùng dấu * để nhân; chấp nhận dấu phẩy thập phân.
+Không cần nhập đơn vị vào ô.
+</p>
+<div class="actions">
+<select id="filter" onchange="renderTasks()">
+<option value="all">Tất cả câu hỏi</option>
+<option value="basic">Li độ · Vận tốc · Gia tốc</option>
+<option value="energy">Năng lượng · Tỉ số</option>
+<option value="apply">Vận dụng</option>
+</select>
+<button class="primary" onclick="checkAll()">Kiểm tra các câu đã nhập</button>
+<button onclick="showAllSolutions()">Xem toàn bộ lời giải</button>
+<button onclick="clearWork()">Làm lại đề hiện tại</button>
+</div>
+<div id="tasks"></div>
+</section>
+</div>
+</section>
+
+<section id="graphPanel" class="card graph-section" hidden>
+<h2>Nhìn đồ thị tìm phương trình li độ và vận tốc</h2>
+<p>
+Hai đồ thị thuộc cùng một dao động. Biên độ và tần số góc lấy theo bộ số hiện tại;
+trạng thái ban đầu của bài đồ thị được chọn riêng.
+</p>
+<div class="actions">
+<button class="primary" onclick="changeGraphPhase()">Đổi trạng thái ban đầu</button>
+<button onclick="showGraphSolution('x');showGraphSolution('v')">Xem lời giải hai đồ thị</button>
+</div>
+<p class="note">
+Dùng dạng cos với biên độ dương:
+x = A cos(ωt + φ), v = B cos(ωt + θ).
+Thời gian trên đồ thị tính bằng giây.
+</p>
+
+<div class="graph-grid">
+<div class="graph-box">
+<h3>Đồ thị x–t</h3>
+<div id="graphX"></div>
+<p><b>Viết phương trình li độ:</b></p>
+<div class="fields">
+<label>A (cm)<input id="gxA" placeholder="Biên độ"></label>
+<label>ω (rad/s)<input id="gxW" placeholder="Tần số góc"></label>
+<label>φ (rad)<input id="gxP" placeholder="Pha ban đầu"></label>
+</div>
+<div class="preview" id="gxPreview"></div>
+<div class="actions">
+<button onclick="checkGraph('x')">Kiểm tra</button>
+<button onclick="showGraphSolution('x')">Xem lời giải</button>
+</div>
+<div id="gxFeedback" class="feedback" role="status"></div>
+<div id="gxSolution" class="solution" hidden></div>
+</div>
+
+<div class="graph-box">
+<h3>Đồ thị v–t</h3>
+<div id="graphV"></div>
+<p><b>Viết phương trình vận tốc:</b></p>
+<div class="fields">
+<label>B (cm/s)<input id="gvA" placeholder="Vận tốc cực đại"></label>
+<label>ω (rad/s)<input id="gvW" placeholder="Tần số góc"></label>
+<label>θ (rad)<input id="gvP" placeholder="Pha của vận tốc"></label>
+</div>
+<div class="preview" id="gvPreview"></div>
+<div class="actions">
+<button onclick="checkGraph('v')">Kiểm tra</button>
+<button onclick="showGraphSolution('v')">Xem lời giải</button>
+</div>
+<div id="gvFeedback" class="feedback" role="status"></div>
+<div id="gvSolution" class="solution" hidden></div>
+</div>
+</div>
+
+<div class="formula">
+<b>Liên hệ hai phương trình</b><br>
+v = −ωA sin(ωt + φ) = ωA cos(ωt + φ + π/2).<br>
+B = ωA; θ = φ + π/2 (xét tương đương theo 2π).<br>
+Đồ thị x–t đi lên ⇒ v &gt; 0; đi xuống ⇒ v &lt; 0.<br>
+Độ dốc đồ thị v–t cho biết dấu gia tốc.
+</div>
+<div class="checkpoint">
+<b>Câu hỏi tự suy luận:</b>
+Ở những điểm nào trên đồ thị x–t thì động năng cực đại?
+Khi v = 0 thì thế năng bằng bao nhiêu phần cơ năng?
+</div>
+<details>
+<summary>Xem hướng dẫn suy luận</summary>
+<p>
+Khi x = 0: thế năng bằng 0, động năng bằng cơ năng, tốc độ cực đại.
+Khi v = 0: vật ở biên, động năng bằng 0 và thế năng bằng cơ năng.
+</p>
+</details>
+</section>
+
+<footer>
+Một file HTML chạy offline, không dùng thư viện ngoài.
+Đổi số bằng JavaScript; lời giải dùng phân số và biểu thức chính xác.
+</footer>
+</main>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+const ORIGINAL={m:200,k:20,A:4,w:10};
+let data={...ORIGINAL};
+let tasks=[];
+let answers={};
+let results={};
+let solutionsShown={};
+let graphPhaseIndex=0;
+
+const randomItem=a=>a[Math.floor(Math.random()*a.length)];
+const decimal=n=>String(n).replace(".",",");
+
+function gcd(a,b){
+ a=Math.abs(a);b=Math.abs(b);
+ while(b){const r=a%b;a=b;b=r}
+ return a||1;
+}
+
+function fraction(n,d){
+ if(n===0)return "0";
+ if(d<0){n=-n;d=-d}
+ const g=gcd(n,d);n/=g;d/=g;
+ return d===1?String(n):`${n}/${d}`;
+}
+
+function piFraction(n,d){
+ if(n===0)return "0";
+ const sign=n*d<0?"−":"";
+ n=Math.abs(n);d=Math.abs(d);
+ const g=gcd(n,d);n/=g;d/=g;
+ return `${sign}${n===1?"":n}π${d===1?"":"/"+d}`;
+}
+
+function rootText(c,n){
+ return `${c===1?"":c}√${n}`;
+}
+
+function close(a,b){
+ return Math.abs(a-b)<=1e-9*Math.max(1,Math.abs(b));
+}
+
+/* Đọc biểu thức số, không sử dụng eval hoặc Function. */
+function parseExpression(text){
+ text=String(text).toLowerCase()
+ .replace(/π/g,"pi")
+ .replace(/,/g,".")
+ .replace(/−/g,"-")
+ .replace(/\s+/g,"");
+
+ const tokens=[];
+ let position=0;
+
+ while(position<text.length){
+  const match=text.slice(position).match(
+   /^(sqrt|pi|(?:\d+(?:\.\d*)?|\.\d+)|[()+*/-])/
+  );
+  if(!match)throw Error("Biểu thức không hợp lệ");
+  tokens.push(match[0]);
+  position+=match[0].length;
+ }
+
+ let cursor=0;
+
+ function expression(){
+  let value=term();
+  while(tokens[cursor]==="+"||tokens[cursor]==="-"){
+   const op=tokens[cursor++];
+   const next=term();
+   value=op==="+"?value+next:value-next;
+  }
+  return value;
+ }
+
+ function term(){
+  let value=unary();
+  while(tokens[cursor]==="*"||tokens[cursor]==="/"){
+   const op=tokens[cursor++];
+   const next=unary();
+   value=op==="*"?value*next:value/next;
+  }
+  return value;
+ }
+
+ function unary(){
+  if(tokens[cursor]==="+"){cursor++;return unary()}
+  if(tokens[cursor]==="-"){cursor++;return -unary()}
+  return primary();
+ }
+
+ function primary(){
+  const token=tokens[cursor++];
+  if(token==="pi")return Math.PI;
+
+  if(token==="("){
+   const value=expression();
+   if(tokens[cursor++]!==")")throw Error("Thiếu ngoặc");
+   return value;
+  }
+
+  if(token==="sqrt"){
+   if(tokens[cursor++]!=="(")throw Error("Thiếu ngoặc");
+   const value=expression();
+   if(tokens[cursor++]!==")")throw Error("Thiếu ngoặc");
+   return Math.sqrt(value);
+  }
+
+  if(token&&/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(token)){
+   return Number(token);
+  }
+
+  throw Error("Thiếu giá trị");
+ }
+
+ const value=expression();
+ if(cursor!==tokens.length||!Number.isFinite(value)){
+  throw Error("Biểu thức không hợp lệ");
+ }
+ return value;
+}
+
+function addTask(id,group,title,unit,value,solution,phase=false){
+ tasks.push({id,group,title,unit,value,solution,phase});
+}
+
+function buildTasks(){
+ const {m,k,A,w}=data;
+ const W=m*w*w*A*A/20000000;
+ const Wtext=fraction(m*w*w*A*A,20000000);
+ const WtText=fraction(m*w*w*A*A,80000000);
+ const WdText=fraction(3*m*w*w*A*A,80000000);
+ const half=A/2;
+ const vcoef=w*A/2;
+ tasks=[];
+
+ addTask(1,"basic","Tính tần số góc ω.","rad/s",w,
+ `Đổi m = ${m} g = ${decimal(m/1000)} kg.<br>
+ ω = √(k/m) = √[${decimal(k)}/${decimal(m/1000)}]
+ = <b>${w} rad/s</b>.`);
+
+ addTask(2,"basic","Tính chu kì T.","s",2*Math.PI/w,
+ `T = 2π/ω = 2π/${w} = <b>${piFraction(2,w)} s</b>.`);
+
+ addTask(3,"basic","Tính tần số f.","Hz",w/(2*Math.PI),
+ `f = ω/(2π) = ${w}/(2π) = <b>${w/2}/π Hz</b>.`);
+
+ addTask(4,"basic",
+ "Tìm pha ban đầu φ trong x = A cos(ωt + φ).","rad",0,
+ `Tại t = 0: x₀ = +A, v₀ = 0.<br>
+ cos φ = 1, sin φ = 0 ⇒ chọn <b>φ = 0</b>.<br>
+ <b>x = ${A} cos(${w}t) cm.</b><br>
+ Các pha φ = 2nπ đều tương đương.`,true);
+
+ addTask(5,"basic","Tính li độ x tại t₁ = T/6.","cm",half,
+ `ωt₁ = ωT/6 = π/3.<br>
+ x = A cos(π/3) = A/2 = <b>${half} cm</b>.`);
+
+ addTask(6,"basic","Tính vận tốc v tại t₁ = T/6.","cm/s",
+ -vcoef*Math.sqrt(3),
+ `v = −ωA sin(ωt).<br>
+ v(t₁) = −${w} · ${A} · √3/2
+ = <b>−${rootText(vcoef,3)} cm/s</b>.<br>
+ Vận tốc âm vì vật chuyển động theo chiều âm.`);
+
+ addTask(7,"basic","Tính gia tốc a tại t₁ = T/6.","cm/s²",
+ -w*w*half,
+ `a = −ω²x = −${w}² · ${half}
+ = <b>${-w*w*half} cm/s²</b>.<br>
+ Gia tốc hướng về vị trí cân bằng.`);
+
+ addTask(8,"basic","Tính tốc độ cực đại vₘₐₓ.","cm/s",w*A,
+ `vₘₐₓ = ωA = ${w} · ${A}
+ = <b>${w*A} cm/s</b>.<br>
+ Tốc độ cực đại khi vật qua vị trí cân bằng.`);
+
+ addTask(9,"basic","Tính độ lớn gia tốc cực đại aₘₐₓ.","cm/s²",w*w*A,
+ `aₘₐₓ = ω²A = ${w}² · ${A}
+ = <b>${w*w*A} cm/s²</b>.<br>
+ Đạt được ở hai biên.`);
+
+ addTask(10,"energy","Tính cơ năng W.","J",W,
+ `A = ${A} cm = ${decimal(A/100)} m.<br>
+ W = ½kA² = ½ · ${decimal(k)} · (${decimal(A/100)})²
+ = <b>${Wtext} J</b>.`);
+
+ addTask(11,"energy","Tính thế năng Wₜ tại t₁ = T/6.","J",W/4,
+ `Tại t₁, x = A/2.<br>
+ Wₜ = ½kx² = ½k(A/2)² = W/4
+ = <b>${WtText} J</b>.`);
+
+ addTask(12,"energy","Tính động năng Wđ tại t₁ = T/6.","J",3*W/4,
+ `Wđ = W − Wₜ = 3W/4
+ = <b>${WdText} J</b>.<br>
+ Có thể kiểm tra bằng ½mv² sau khi đổi v sang m/s.`);
+
+ addTask(13,"energy","Tính Wₜ/W tại t₁ = T/6.","",1/4,
+ `Wₜ/W = x²/A² = (A/2)²/A² = <b>1/4</b>.`);
+
+ addTask(14,"energy","Tính Wđ/W tại t₁ = T/6.","",3/4,
+ `Wđ/W = 1 − Wₜ/W = 1 − 1/4 = <b>3/4</b>.`);
+
+ addTask(15,"energy","Tính Wđ/Wₜ tại t₁ = T/6.","",3,
+ `Wđ/Wₜ = (3W/4)/(W/4) = <b>3</b>.`);
+
+ addTask(16,"apply","Khi Wđ = Wₜ, tính độ lớn li độ |x|.","cm",
+ A/Math.sqrt(2),
+ `Wđ = Wₜ ⇒ Wₜ = W/2.<br>
+ x²/A² = 1/2 ⇒ |x| = A/√2
+ = <b>${rootText(A/2,2)} cm</b>.<br>
+ Có hai vị trí x = ±${rootText(A/2,2)} cm.`);
+
+ addTask(17,"apply","Khi Wđ = 3Wₜ, tính tốc độ của vật.","cm/s",
+ vcoef*Math.sqrt(3),
+ `Wđ = 3Wₜ ⇒ Wđ = 3W/4.<br>
+ Wđ/W = v²/(ω²A²) = 3/4.<br>
+ |v| = ωA√3/2 = <b>${rootText(vcoef,3)} cm/s</b>.`);
+
+ addTask(18,"apply",
+ "Tìm thời gian ngắn nhất từ t = 0 để Wđ = 3Wₜ.","s",
+ Math.PI/(3*w),
+ `Wđ = 3Wₜ ⇒ |x| = A/2.<br>
+ Vật xuất phát từ biên dương nên lần đầu tại x = +A/2.<br>
+ cos(ωt) = 1/2 ⇒ ωt = π/3.<br>
+ t = <b>π/${3*w} s</b>.`);
+
+ addTask(19,"apply","Tính quãng đường từ t = 0 đến t₁ = T/6.","cm",half,
+ `Vật đi từ +A đến +A/2, chưa đổi chiều.<br>
+ s = A − A/2 = <b>${half} cm</b>.`);
+
+ addTask(20,"apply",
+ "Giữ nguyên m, k; tăng biên độ lên 2A. Tính cơ năng mới W′.","J",4*W,
+ `W′ = ½k(2A)² = 4W
+ = <b>${fraction(4*m*w*w*A*A,20000000)} J</b>.<br>
+ Chu kì không đổi vì m và k không đổi.`);
+
+ addTask(21,"apply",
+ "Giữ nguyên k, A; thay vật bằng vật có khối lượng 4m. Tính T′/T.","",2,
+ `T′/T = √(m′/m) = √4 = <b>2</b>.<br>
+ Đồng thời ω′ = ω/2; v′ₘₐₓ = vₘₐₓ/2.<br>
+ Cơ năng không đổi vì k và A không đổi.`);
+
+ addTask(22,"apply",
+ "Tính độ lớn lực kéo về khi vật ở x = +A/2.","N",
+ k*A/200,
+ `|F| = k|x|.<br>
+ x = ${half} cm = ${decimal(A/200)} m.<br>
+ |F| = ${decimal(k)} · ${decimal(A/200)}
+ = <b>${fraction(m*w*w*A,200000)} N</b>.<br>
+ Lực có chiều âm vì x dương.`);
+
+ addTask(23,"apply",
+ "Khi tốc độ bằng một nửa tốc độ cực đại, tính Wₜ/W.","",3/4,
+ `Wđ/W = v²/vₘₐₓ² = 1/4.<br>
+ Wₜ/W = 1 − 1/4 = <b>3/4</b>.<br>
+ Khi đó |x| = A√3/2.`);
+
+ addTask(24,"apply",
+ "Tính thời gian giữa hai lần liên tiếp động năng đạt cực đại.","s",
+ Math.PI/w,
+ `Động năng cực đại khi vật qua VTCB.<br>
+ Trong một chu kì vật qua VTCB hai lần.<br>
+ Δt = T/2 = <b>${piFraction(1,w)} s</b>.<br>
+ Động năng và thế năng biến thiên với chu kì T/2.`);
+}
+
+function renderProblem(){
+ const q=data;
+ $("problem").innerHTML=`
+ Một con lắc lò xo nằm ngang gồm vật nhỏ khối lượng
+ <b>m = ${q.m} g</b> và lò xo độ cứng
+ <b>k = ${decimal(q.k)} N/m</b>.
+ Bỏ qua ma sát, lò xo có khối lượng không đáng kể.<br><br>
+ Kéo vật từ vị trí cân bằng theo chiều dương một đoạn
+ <b>${q.A} cm</b> rồi thả nhẹ.
+ Chọn gốc tọa độ tại vị trí cân bằng,
+ gốc thời gian lúc thả vật.
+ Thế năng đàn hồi bằng 0 tại vị trí cân bằng.<br><br>
+ Xét thời điểm <b>t₁ = T/6</b>, với T là chu kì.
+ Các tình huống thay đổi hệ trong câu vận dụng được xét
+ <b>độc lập từ hệ ban đầu</b>.`;
+
+ $("springDiagram").innerHTML=`
+ <svg viewBox="0 0 310 155" role="img" aria-label="Con lắc ở biên dương">
+ <rect x="8" y="35" width="10" height="55" fill="#71879a"/>
+ <path d="M18 60 H35 L45 45 L60 75 L75 45 L90 75
+ L105 45 L120 75 L135 45 L150 75 L165 60 H235"
+ fill="none" stroke="#246b9f" stroke-width="3"/>
+ <rect x="235" y="43" width="34" height="34" rx="6" fill="#efa83b"/>
+ <path d="M20 105 H295 M287 99 L295 105 L287 111"
+ fill="none" stroke="#627c92"/>
+ <path d="M150 87 V117" stroke="#627c92" stroke-dasharray="4 4"/>
+ <text x="143" y="136">O</text><text x="276" y="136">+x</text>
+ <text x="145" y="24" font-size="14">x₀ = +${q.A} cm; v₀ = 0</text>
+ </svg>`;
+}
+
+function saveVisibleAnswers(){
+ document.querySelectorAll("[data-answer]").forEach(input=>{
+  answers[input.dataset.answer]=input.value;
+ });
+}
+
+function renderTasks(){
+ saveVisibleAnswers();
+ const filter=$("filter").value;
+
+ $("tasks").innerHTML=tasks
+ .filter(t=>filter==="all"||t.group===filter)
+ .map(t=>`
+ <article class="item">
+ <h3>Câu ${t.id}. ${t.title}</h3>
+ <span class="tag">${
+  t.group==="basic"?"Li độ · Vận tốc · Gia tốc":
+  t.group==="energy"?"Năng lượng · Tỉ số":"Vận dụng"
+ }</span>
+ <div class="answerline">
+ <input id="answer${t.id}" data-answer="${t.id}"
+ placeholder="Nhập kết quả chính xác" aria-label="Đáp án câu ${t.id}">
+ <span>${t.unit}</span>
+ </div>
+ <div class="actions">
+ <button onclick="checkTask(${t.id})">Kiểm tra</button>
+ <button onclick="showTaskSolution(${t.id})">Xem lời giải</button>
+ </div>
+ <div id="feedback${t.id}" class="feedback" role="status"></div>
+ <div id="solution${t.id}" class="solution" hidden></div>
+ </article>`).join("");
+
+ document.querySelectorAll("[data-answer]").forEach(input=>{
+  const id=input.dataset.answer;
+  input.value=answers[id]||"";
+  input.addEventListener("input",()=>{
+   answers[id]=input.value;
+   delete results[id];
+   $("feedback"+id).textContent="";
+   updateScore();
+  });
+ });
+
+ tasks.forEach(t=>{
+  if($("feedback"+t.id)&&results[t.id]!==undefined)paintResult(t.id);
+  if($("solution"+t.id)&&solutionsShown[t.id])showTaskSolution(t.id);
+ });
+ updateScore();
+}
+
+function checkTask(id){
+ const t=tasks.find(t=>t.id===id);
+ const input=$("answer"+id);
+ if(input)answers[id]=input.value;
+
+ try{
+  const value=parseExpression(answers[id]||"");
+  results[id]=t.phase
+   ?Math.abs(Math.sin((value-t.value)/2))<1e-9
+   :close(value,t.value);
+ }catch{
+  delete results[id];
+  const f=$("feedback"+id);
+  if(f){
+   f.className="feedback bad";
+   f.textContent="Nhập biểu thức hợp lệ, ví dụ 3/250 hoặc 20*sqrt(3).";
+  }
+  updateScore();
+  return;
+ }
+
+ paintResult(id);
+ updateScore();
+}
+
+function paintResult(id){
+ const f=$("feedback"+id);
+ if(!f)return;
+ f.className="feedback "+(results[id]?"good":"bad");
+ f.textContent=results[id]
+ ?"✓ Chính xác!"
+ :"Chưa đúng. Kiểm tra công thức, đơn vị và dấu của đại lượng.";
+}
+
+function checkAll(){
+ saveVisibleAnswers();
+ let count=0;
+ tasks.forEach(t=>{
+  if(String(answers[t.id]||"").trim()){
+   checkTask(t.id);count++;
+  }
+ });
+ if(!count)alert("Hãy nhập ít nhất một đáp án trước khi kiểm tra.");
+}
+
+function showTaskSolution(id){
+ solutionsShown[id]=true;
+ const box=$("solution"+id);
+ if(!box)return;
+ box.innerHTML=tasks.find(t=>t.id===id).solution;
+ box.hidden=false;
+}
+
+function showAllSolutions(){
+ tasks.forEach(t=>{
+  solutionsShown[t.id]=true;
+  if($("solution"+t.id))showTaskSolution(t.id);
+ });
+}
+
+function updateScore(){
+ const n=Object.values(results).filter(v=>v===true).length;
+ $("score").innerHTML=`<b>Đã đúng: ${n}/${tasks.length}</b>`;
+ $("bar").style.width=(100*n/tasks.length)+"%";
+}
+
+function clearWork(){
+ answers={};results={};solutionsShown={};
+ $("tasks").innerHTML="";
+ renderTasks();
+}
+
+/* ===================== ĐỒ THỊ ===================== */
+
+const GRAPH_PHASES=[
+ {
+  value:0,text:"0",
+  xState:"x₀ = +A, sau đó li độ giảm",
+  vState:"v₀ = 0 và đồ thị vận tốc đi xuống"
+ },
+ {
+  value:Math.PI/2,text:"π/2",
+  xState:"x₀ = 0 và đồ thị li độ đi xuống, nên v₀ < 0",
+  vState:"v₀ = −B, vận tốc đạt cực tiểu"
+ },
+ {
+  value:Math.PI,text:"π",
+  xState:"x₀ = −A, sau đó li độ tăng",
+  vState:"v₀ = 0 và đồ thị vận tốc đi lên"
+ },
+ {
+  value:-Math.PI/2,text:"−π/2",
+  xState:"x₀ = 0 và đồ thị li độ đi lên, nên v₀ > 0",
+  vState:"v₀ = +B, vận tốc đạt cực đại"
+ }
+];
+
+function normalizedPhaseText(value){
+ const p=((value%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+ if(Math.abs(p)<1e-8)return "0";
+ if(Math.abs(p-Math.PI/2)<1e-8)return "π/2";
+ if(Math.abs(p-Math.PI)<1e-8)return "π";
+ return "−π/2";
+}
+
+function equationText(symbol,amplitude,w,phase){
+ const p=normalizedPhaseText(phase);
+ const addition=p==="0"?"":p.startsWith("−")
+ ?" − "+p.slice(1):" + "+p;
+ return `${symbol} = ${amplitude} cos(${w}t${addition})`;
+}
+
+function drawGraph(kind){
+ const isX=kind==="x";
+ const amplitude=isX?data.A:data.A*data.w;
+ const phase=GRAPH_PHASES[graphPhaseIndex].value+
+ (isX?0:Math.PI/2);
+
+ const left=80,right=563,top=48,bottom=246;
+ const center=(top+bottom)/2;
+ const scale=(bottom-top)/2;
+ const cycles=1.25;
+ const X=u=>left+(right-left)*u/cycles;
+ const Y=y=>center-scale*y;
+
+ let grid="",labels="",path="";
+
+ for(let n=0;n<=5;n++){
+  const x=X(n/4);
+  grid+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}"
+  stroke="#dce6ef" stroke-dasharray="4 4"/>`;
+
+  labels+=`
+  <line x1="${x}" y1="${center-4}" x2="${x}" y2="${center+4}"
+  stroke="#52728c"/>
+  <text x="${x}" y="${bottom+28}" text-anchor="middle"
+  font-size="15">${piFraction(n,2*data.w)}</text>`;
+ }
+
+ for(const value of [-1,0,1]){
+  const y=Y(value);
+  grid+=`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}"
+  stroke="#dce6ef" stroke-dasharray="4 4"/>`;
+  labels+=`<text x="${left-12}" y="${y+5}" text-anchor="end"
+  font-size="15">${value*amplitude}</text>`;
+ }
+
+ for(let i=0;i<=600;i++){
+  const u=cycles*i/600;
+  const value=Math.cos(2*Math.PI*u+phase);
+  path+=(i?" L":"M")+X(u).toFixed(3)+" "+Y(value).toFixed(3);
+ }
+
+ const color=isX?"#206ca7":"#d17720";
+
+ return `
+ <svg viewBox="0 0 625 330" role="img"
+ aria-label="Đồ thị ${isX?"li độ":"vận tốc"} theo thời gian">
+ <rect width="625" height="330" rx="12" fill="#f8fbfe"/>
+ ${grid}
+ <path d="M${left} ${bottom+5} V${top-18}
+ M${left-5} ${top-10} L${left} ${top-18} L${left+5} ${top-10}
+ M${left-5} ${center} H${right+22}
+ M${right+14} ${center-5} L${right+22} ${center}
+ L${right+14} ${center+5}"
+ fill="none" stroke="#496a83" stroke-width="1.7"/>
+ ${labels}
+ <path d="${path}" fill="none" stroke="${color}" stroke-width="3.5"/>
+ <circle cx="${left}" cy="${Y(Math.cos(phase))}" r="5" fill="${color}"/>
+ <text x="18" y="23" font-size="16">${isX?"x (cm)":"v (cm/s)"}</text>
+ <text x="${right+28}" y="${center+20}" text-anchor="end"
+ font-size="15">t</text>
+ <text x="320" y="315" text-anchor="middle" font-size="14" fill="#60748b">
+ Các mốc trên trục thời gian tính bằng giây
+ </text>
+ </svg>`;
+}
+
+function renderGraphs(){
+ $("graphX").innerHTML=drawGraph("x");
+ $("graphV").innerHTML=drawGraph("v");
+
+ for(const prefix of ["gx","gv"]){
+  for(const field of ["A","W","P"])$(prefix+field).value="";
+  $(prefix+"Feedback").textContent="";
+  $(prefix+"Solution").hidden=true;
+  updateGraphPreview(prefix);
+ }
+}
+
+function updateGraphPreview(prefix){
+ const symbol=prefix==="gx"?"x":"v";
+ const a=$(prefix+"A").value.trim()||(symbol==="x"?"A":"B");
+ const w=$(prefix+"W").value.trim()||"ω";
+ const p=$(prefix+"P").value.trim()||(symbol==="x"?"φ":"θ");
+
+ $(prefix+"Preview").textContent=
+ `${symbol} = (${a}) cos[(${w})t + (${p})] ${symbol==="x"?"cm":"cm/s"}`;
+}
+
+function checkGraph(kind){
+ const prefix=kind==="x"?"gx":"gv";
+ const box=$(prefix+"Feedback");
+ let a,w,p;
+
+ try{
+  a=parseExpression($(prefix+"A").value);
+  w=parseExpression($(prefix+"W").value);
+  p=parseExpression($(prefix+"P").value);
+ }catch{
+  box.className="feedback bad";
+  box.textContent="Nhập đủ biểu thức hợp lệ; ví dụ 4, 10, -pi/2.";
+  return;
+ }
+
+ const expectedA=kind==="x"?data.A:data.A*data.w;
+ const expectedPhase=GRAPH_PHASES[graphPhaseIndex].value+
+ (kind==="x"?0:Math.PI/2);
+
+ const amplitudeOK=a>0&&close(a,expectedA);
+ const omegaOK=w>0&&close(w,data.w);
+ const phaseOK=Math.abs(Math.sin((p-expectedPhase)/2))<1e-9;
+ const ok=amplitudeOK&&omegaOK&&phaseOK;
+
+ box.className="feedback "+(ok?"good":"bad");
+
+ if(ok){
+  box.textContent="✓ Chính xác! Phương trình phù hợp với đồ thị.";
+ }else{
+  const hints=[];
+  if(!amplitudeOK)hints.push("Đọc lại biên độ trên trục tung.");
+  if(!omegaOK)hints.push("Đọc chu kì theo giây rồi tính ω = 2π/T.");
+  if(!phaseOK)hints.push("Xét giá trị và chiều biến thiên tại t = 0.");
+  box.textContent="Chưa đúng. "+hints.join(" ");
+ }
+}
+
+function showGraphSolution(kind){
+ const q=data;
+ const ph=GRAPH_PHASES[graphPhaseIndex];
+ const prefix=kind==="x"?"gx":"gv";
+ const B=q.A*q.w;
+ const theta=normalizedPhaseText(ph.value+Math.PI/2);
+ const xEq=equationText("x",q.A,q.w,ph.value);
+ const vEq=equationText("v",B,q.w,ph.value+Math.PI/2);
+ let html="";
+
+ if(kind==="x"){
+  html=`
+  <p><b>Bước 1. Biên độ:</b><br>
+  xₘₐₓ = +${q.A} cm; xₘᵢₙ = −${q.A} cm.<br>
+  A = (xₘₐₓ − xₘᵢₙ)/2 = <b>${q.A} cm</b>.</p>
+
+  <p><b>Bước 2. Chu kì và tần số góc:</b><br>
+  Hai cực trị trái dấu liên tiếp cách nhau
+  T/2 = ${piFraction(1,q.w)} s.<br>
+  T = ${piFraction(2,q.w)} s.<br>
+  ω = 2π/T = <b>${q.w} rad/s</b>.</p>
+
+  <p><b>Bước 3. Pha ban đầu:</b><br>
+  Tại t = 0: ${ph.xState}.<br>
+  Dùng x₀ = A cos φ; v₀ = −ωA sin φ.<br>
+  Chọn <b>φ = ${ph.text}</b>.</p>
+
+  <p><b>Phương trình li độ:</b><br>${xEq} cm.</p>
+  <p><b>Suy ra vận tốc:</b><br>${vEq} cm/s.</p>`;
+ }else{
+  html=`
+  <p><b>Bước 1. Đọc biên độ vận tốc:</b><br>
+  B = vₘₐₓ = <b>${B} cm/s</b>.</p>
+
+  <p><b>Bước 2. Đọc chu kì:</b><br>
+  T = ${piFraction(2,q.w)} s.<br>
+  ω = 2π/T = <b>${q.w} rad/s</b>.</p>
+
+  <p><b>Bước 3. Pha của vận tốc:</b><br>
+  Tại t = 0: ${ph.vState}.<br>
+  Dùng v₀ = B cos θ và dấu độ dốc
+  dv/dt = −Bω sin(ωt + θ).<br>
+  Chọn <b>θ = ${theta}</b>.</p>
+
+  <p><b>Phương trình vận tốc:</b><br>${vEq} cm/s.</p>
+
+  <p><b>Suy ra phương trình li độ:</b><br>
+  A = B/ω = ${B}/${q.w} = ${q.A} cm.<br>
+  φ = θ − π/2, xét tương đương theo 2π.<br>
+  <b>${xEq} cm.</b></p>`;
+ }
+
+ $(prefix+"Solution").innerHTML=html;
+ $(prefix+"Solution").hidden=false;
+}
+
+function changeGraphPhase(){
+ graphPhaseIndex=(graphPhaseIndex+1)%GRAPH_PHASES.length;
+ renderGraphs();
+}
+
+/* ===================== ĐIỀU KHIỂN ===================== */
+
+function switchTab(tab){
+ $("exercisePanel").hidden=tab!=="exercise";
+ $("graphPanel").hidden=tab!=="graph";
+ $("tabExercise").classList.toggle("active",tab==="exercise");
+ $("tabGraph").classList.toggle("active",tab==="graph");
+}
+
+function refresh(){
+ answers={};results={};solutionsShown={};
+ $("tasks").innerHTML="";
+ buildTasks();
+ renderProblem();
+ renderTasks();
+ renderGraphs();
+}
+
+function newProblem(){
+ const old=JSON.stringify(data);
+ do{
+  const m=randomItem([100,200,250,400,500]);
+  const w=randomItem([4,6,8,10,12,20]);
+  data={
+   m,w,
+   k:m*w*w/1000,
+   A:randomItem([2,4,6,8,10,12])
+  };
+ }while(JSON.stringify(data)===old);
+
+ graphPhaseIndex=Math.floor(Math.random()*GRAPH_PHASES.length);
+ refresh();
+}
+
+function restoreOriginal(){
+ data={...ORIGINAL};
+ graphPhaseIndex=0;
+ refresh();
+}
+
+async function fullscreen(){
+ try{
+  if(document.fullscreenElement){
+   await document.exitFullscreen();
+  }else if(document.documentElement.requestFullscreen){
+   await document.documentElement.requestFullscreen();
+  }else{
+   throw Error();
+  }
+ }catch{
+  alert("Trình duyệt chưa hỗ trợ toàn màn hình. Có thể xoay ngang thiết bị.");
+ }
+}
+
+for(const prefix of ["gx","gv"]){
+ for(const field of ["A","W","P"]){
+  $(prefix+field).addEventListener("input",()=>{
+   updateGraphPreview(prefix);
+   $(prefix+"Feedback").textContent="";
+  });
+ }
+}
+
+refresh();
+</script>
+</body>
+</html>
