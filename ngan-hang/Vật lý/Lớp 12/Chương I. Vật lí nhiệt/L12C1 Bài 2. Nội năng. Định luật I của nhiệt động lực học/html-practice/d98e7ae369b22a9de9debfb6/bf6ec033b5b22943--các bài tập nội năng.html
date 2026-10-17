@@ -1,0 +1,978 @@
+<!--hp-title:Y8OhYyBiw6BpIHThuq1wIG7hu5lpIG7Eg25n-->
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nội năng và nhiệt lượng · Thầy Minh</title>
+<style>
+:root{
+  font-family:system-ui,sans-serif;
+  color:#153453;
+  background:#eef4fa
+}
+*{box-sizing:border-box}
+body{margin:0}
+header{
+  background:#07366b;
+  color:white;
+  padding:14px 4%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap
+}
+header b{font-size:20px}
+header small{display:block;margin-top:4px}
+main{max-width:1200px;padding:20px;margin:auto}
+h1{font-size:clamp(24px,4vw,34px)}
+button,input{font:inherit}
+button{
+  padding:11px 14px;
+  border:1px solid #b8cde0;
+  border-radius:10px;
+  background:white;
+  color:#164572;
+  cursor:pointer
+}
+button:hover{background:#e9f4ff}
+button.primary{
+  background:#0869c5;
+  color:white;
+  border-color:#0869c5
+}
+button:disabled{opacity:.4;cursor:default}
+.layout{
+  display:grid;
+  grid-template-columns:190px minmax(0,1fr);
+  gap:18px
+}
+.card{
+  background:white;
+  border:1px solid #d7e4f0;
+  border-radius:16px;
+  padding:20px;
+  min-width:0
+}
+.nav{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px
+}
+.nav button{padding:11px 2px}
+.nav .active{background:#07366b;color:white}
+.nav .done{outline:2px solid #159568;outline-offset:-3px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.cols{
+  display:grid;
+  grid-template-columns:minmax(200px,.8fr) minmax(0,1.25fr);
+  gap:20px
+}
+.cols>div{min-width:0}
+.question{font-size:19px;line-height:1.8}
+.muted{font-size:14px;color:#657b90;line-height:1.7}
+.tag{
+  background:#e4f4ef;
+  color:#08735d;
+  border-radius:20px;
+  padding:5px 10px;
+  font-size:13px
+}
+.formula{
+  white-space:pre-line;
+  background:#eaf5ff;
+  border:1px solid #b6d8f4;
+  border-radius:12px;
+  padding:15px;
+  font:19px/1.9 Georgia,serif;
+  overflow-wrap:anywhere
+}
+.facts{
+  background:#f3f7fb;
+  border-radius:12px;
+  padding:14px;
+  line-height:1.9;
+  margin:12px 0;
+  white-space:pre-line
+}
+.assumption{
+  background:#fff5db;
+  padding:12px;
+  border-radius:10px;
+  font-size:14px;
+  line-height:1.7;
+  margin:12px 0
+}
+.inputrow{display:flex;align-items:center;gap:10px}
+input{
+  padding:12px;
+  border:1px solid #b2c8dd;
+  border-radius:9px;
+  width:100%;
+  min-width:0;
+  margin:7px 0
+}
+input:focus{outline:2px solid #80bfff}
+.feedback{padding:12px;border-radius:10px;line-height:1.7}
+.good{background:#e2f7eb;color:#096341}
+.bad{background:#fff0e9;color:#a03d11}
+.solution{
+  margin-top:20px;
+  padding:18px;
+  background:#eafaef;
+  border:1px solid #b1dbbe;
+  border-radius:13px;
+  line-height:1.9;
+  overflow-wrap:anywhere
+}
+.solution li{margin-bottom:10px}
+.hidden{display:none!important}
+details{
+  margin-top:20px;
+  border-top:1px solid #d9e5ef;
+  padding-top:16px
+}
+summary{font-weight:bold;cursor:pointer}
+.fields{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px
+}
+label{font-size:14px}
+.bottom{
+  display:flex;
+  justify-content:space-between;
+  margin-top:20px;
+  gap:10px
+}
+.error{color:#a13818}
+progress{width:100%}
+footer{
+  text-align:center;
+  font-size:13px;
+  color:#61798f;
+  line-height:1.7;
+  margin:20px
+}
+@media(max-width:800px){
+  main{padding:12px}
+  .layout,.cols{grid-template-columns:1fr}
+  .card{padding:15px}
+  .nav{grid-template-columns:repeat(6,1fr)}
+  aside p,aside progress{display:none}
+  header b{font-size:17px}
+  .bar button{flex-grow:1}
+  .question{font-size:18px}
+}
+@media print{
+  aside,.bar,.bottom,details{display:none}
+  .layout,.cols{display:block}
+  .card{border:0}
+  header{background:white;color:black}
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div>
+    <b>Lớp Học Thầy Minh · Zalo 0946111107</b>
+    <small>lophocthayminh.onrender.com</small>
+  </div>
+  <button id="full">⛶ Toàn màn hình</button>
+</header>
+
+<main>
+<h1>NỘI NĂNG & NHIỆT LƯỢNG</h1>
+<p class="muted">
+  6 câu trả lời ngắn · Đổi số tự động · Công thức · Lời giải chi tiết · Offline
+</p>
+
+<div class="layout">
+  <aside class="card">
+    <b>Danh sách câu</b>
+    <p class="muted">Mỗi câu giữ riêng dữ kiện và bài làm.</p>
+    <div id="nav" class="nav"></div>
+    <p id="score" class="muted"></p>
+    <progress id="progress" max="6" value="0"></progress>
+    <div class="bar">
+      <button id="reset">Khôi phục 6 đề gốc</button>
+    </div>
+  </aside>
+
+  <section class="card">
+    <span id="tag" class="tag"></span>
+    <h2 id="title"></h2>
+
+    <div class="bar">
+      <button id="new" class="primary">↻ Đổi đề bài mới</button>
+      <button id="original">Đề gốc</button>
+      <button id="formulaBtn">Xem công thức</button>
+      <button id="solutionBtn">Xem lời giải</button>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h3>Dữ kiện đang xét</h3>
+        <div id="facts" class="facts"></div>
+        <div id="formula" class="formula hidden"></div>
+        <p id="hint" class="muted">
+          Bấm “Xem công thức” để nhận gợi ý.
+        </p>
+        <p class="muted">
+          Quy ước: ΔU = A + Q; A là công khí nhận,
+          Q là nhiệt lượng khí nhận. Khí tỏa nhiệt: Q âm.
+        </p>
+      </div>
+
+      <div>
+        <div id="question" class="question"></div>
+        <div id="assumption" class="assumption hidden"></div>
+
+        <label for="answer">Đáp số của em</label>
+        <div class="inputrow">
+          <input
+            id="answer"
+            type="text"
+            autocomplete="off"
+            placeholder="Nhập số hoặc phân số a/b">
+          <b id="unit"></b>
+        </div>
+
+        <p id="answerHint" class="muted"></p>
+
+        <div class="bar">
+          <button id="check" class="primary">Kiểm tra</button>
+        </div>
+
+        <div id="feedback" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <section id="solution" class="solution hidden">
+      <h3>Lời giải từng bước</h3>
+      <ol id="steps"></ol>
+      <p id="conclusion" style="font-weight:bold"></p>
+    </section>
+
+    <details>
+      <summary>Tự nhập số liệu</summary>
+      <p class="muted">
+        Nhập số thập phân bằng dấu phẩy hoặc dấu chấm;
+        cũng có thể nhập phân số.
+      </p>
+      <div id="fields" class="fields"></div>
+      <div class="bar">
+        <button id="apply">Áp dụng số liệu</button>
+      </div>
+      <p id="error" class="error" role="alert"></p>
+    </details>
+
+    <div class="bottom">
+      <button id="prev">← Câu trước</button>
+      <button id="next">Câu tiếp →</button>
+    </div>
+  </section>
+</div>
+
+<footer>
+  Mở bằng trình duyệt để chạy offline. Không tải thư viện ngoài.<br>
+  Đề mới, đáp số và lời giải được tính từ dữ kiện.
+</footer>
+</main>
+
+<script>
+'use strict';
+
+// Tính bằng phân số chính xác, không làm tròn ngầm.
+const gcd = (a,b) => b ? gcd(b,a%b) : (a<0n ? -a : a);
+
+class R {
+  constructor(n,d=1n){
+    n=BigInt(n);
+    d=BigInt(d);
+
+    if(!d) throw Error('Không thể chia cho 0.');
+
+    if(d<0n){
+      n=-n;
+      d=-d;
+    }
+
+    const g=gcd(n,d);
+    this.n=n/g;
+    this.d=d/g;
+  }
+
+  static of(x){
+    if(x instanceof R) return x;
+
+    let s=String(x)
+      .trim()
+      .replaceAll(',','.')
+      .replaceAll('−','-');
+
+    if(s.length>60)
+      throw Error('Số nhập quá dài.');
+
+    if(s.includes('/')){
+      const a=s.split('/');
+      if(a.length!==2)
+        throw Error('Phân số phải có dạng a/b.');
+
+      return R.of(a[0]).div(R.of(a[1]));
+    }
+
+    if(!/^[+-]?\d+(\.\d+)?$/.test(s))
+      throw Error('Hãy nhập số hoặc phân số, không kèm đơn vị.');
+
+    const neg=s.startsWith('-');
+    s=s.replace(/^[+-]/,'');
+
+    const [a,b='']=s.split('.');
+
+    return new R(
+      BigInt(a+b)*(neg?-1n:1n),
+      10n**BigInt(b.length)
+    );
+  }
+
+  add(x){
+    x=R.of(x);
+    return new R(
+      this.n*x.d+x.n*this.d,
+      this.d*x.d
+    );
+  }
+
+  sub(x){
+    x=R.of(x);
+    return this.add(new R(-x.n,x.d));
+  }
+
+  mul(x){
+    x=R.of(x);
+    return new R(this.n*x.n,this.d*x.d);
+  }
+
+  div(x){
+    x=R.of(x);
+    return new R(this.n*x.d,this.d*x.n);
+  }
+
+  eq(x){
+    x=R.of(x);
+    return this.n===x.n&&this.d===x.d;
+  }
+
+  lt(x){
+    x=R.of(x);
+    return this.n*x.d<x.n*this.d;
+  }
+
+  text(){
+    let d=this.d;
+
+    while(d%2n===0n)d/=2n;
+    while(d%5n===0n)d/=5n;
+
+    if(d!==1n)
+      return this.n+'/'+this.d;
+
+    const neg=this.n<0n;
+    const n=neg?-this.n:this.n;
+
+    let s=String(n/this.d);
+    let rem=n%this.d;
+
+    if(rem){
+      s+=',';
+
+      while(rem){
+        rem*=10n;
+        s+=rem/this.d;
+        rem%=this.d;
+      }
+    }
+
+    return(neg?'-':'')+s;
+  }
+
+  nearest(){
+    const a=this.n<0n?-this.n:this.n;
+    let k=a/this.d;
+
+    if((a%this.d)*2n>=this.d)k++;
+
+    return new R(this.n<0n?-k:k);
+  }
+}
+
+const r=R.of;
+const f=x=>r(x).text();
+const random=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+const defs=[
+  {
+    title:'Khí nhận nhiệt và nhận công',
+    p:{heat:250,work:500},
+    unit:'kJ',
+    formula:
+      'ΔU = A + Q\n'+
+      'Khí nhận công: A > 0\n'+
+      'Khí nhận nhiệt: Q > 0'
+  },
+  {
+    title:'Nén khí đồng thời khí tỏa nhiệt',
+    p:{work:200,heat:40},
+    unit:'J',
+    formula:
+      'ΔU = A + Q\n'+
+      'A = +Wnén\n'+
+      'Q = −Qtỏa'
+  },
+  {
+    title:'Quả bóng rơi và nảy lên',
+    p:{mass:200,h1:15,h2:10,g:10},
+    unit:'J',
+    formula:
+      'm(kg) = m(g)/1000\n'+
+      'ΔU = mgh₁ − mgh₂\n'+
+      'ΔU = mg(h₁ − h₂)'
+  },
+  {
+    title:'Động năng chuyển thành nội năng',
+    p:{mass:10,speed:54},
+    unit:'J',
+    formula:
+      'v(m/s) = v(km/h)/3,6\n'+
+      'ΔU = Wđ = ½mv²'
+  },
+  {
+    title:'Xác định nhiệt độ lò nung',
+    p:{
+      iron:50,
+      water:900,
+      t0:17,
+      tf:23,
+      ci:460,
+      cw:4200
+    },
+    unit:'K',
+    formula:
+      'Q sắt tỏa = Q nước thu\n'+
+      'mscs(tlò − tf) = mncn(tf − t₀)\n'+
+      'tlò = tf + mncn(tf − t₀)/(mscs)\n'+
+      'Tlò = tlò + 273,15'
+  },
+  {
+    title:'Đun nước trong thùng sắt',
+    p:{
+      water:5,
+      iron:'1.5',
+      t0:15,
+      tf:100,
+      cw:4200,
+      ci:460
+    },
+    unit:'kJ',
+    formula:
+      'Qnước = mncn(tf − t₀)\n'+
+      'Qthùng = mscs(tf − t₀)\n'+
+      'Q = (mncn + mscs)(tf − t₀)\n'+
+      'Q(kJ) = Q(J)/1000'
+  }
+];
+
+const labels={
+  h1:'Độ cao thả (m)',
+  h2:'Độ cao nảy lên (m)',
+  g:'Gia tốc g (m/s²)',
+  speed:'Vận tốc (km/h)',
+  t0:'Nhiệt độ đầu (°C)',
+  tf:'Nhiệt độ cuối (°C)',
+  ci:'Nhiệt dung riêng sắt (J/(kg·K))',
+  cw:'Nhiệt dung riêng nước (J/(kg·K))'
+};
+
+function fieldLabel(i,k){
+  if(k==='mass')
+    return i===2
+      ?'Khối lượng bóng (g)'
+      :'Khối lượng viên đạn (kg)';
+
+  if(k==='water')
+    return i===4
+      ?'Khối lượng nước (g)'
+      :'Khối lượng nước (kg)';
+
+  if(k==='iron')
+    return i===4
+      ?'Khối lượng sắt (g)'
+      :'Khối lượng thùng sắt (kg)';
+
+  if(k==='heat')
+    return i===0
+      ?'Nhiệt lượng khí nhận (kJ)'
+      :'Nhiệt lượng khí tỏa (J)';
+
+  if(k==='work')
+    return i===0
+      ?'Công khí nhận (kJ)'
+      :'Công khí nhận (J)';
+
+  return labels[k]||k;
+}
+
+function solve(i,p,original=false){
+  const v=k=>r(p[k]);
+
+  let q='';
+  let answer;
+  let steps=[];
+  let assumption='';
+  let facts='';
+
+  if(i===0){
+    q=`Một lượng khí nhận nhiệt lượng ${f(p.heat)} kJ do được đun nóng; đồng thời nhận công ${f(p.work)} kJ do bị nén. Độ tăng nội năng của lượng khí là bao nhiêu kJ?`;
+
+    answer=v('work').add(v('heat'));
+
+    facts=
+      `Nhận nhiệt: ${f(p.heat)} kJ\n`+
+      `Nhận công: ${f(p.work)} kJ`;
+
+    steps=[
+      `Khí nhận nhiệt nên Q = +${f(p.heat)} kJ.`,
+      `Khí bị nén, nhận công nên A = +${f(p.work)} kJ.`,
+      'Áp dụng định luật I nhiệt động lực học: ΔU = A + Q.',
+      `Thay số: ΔU = ${f(p.work)} + ${f(p.heat)} = ${f(answer)} kJ.`,
+      'ΔU dương: nội năng của khí tăng.'
+    ];
+  }
+
+  if(i===1){
+    q=`Người ta thực hiện công ${f(p.work)} J để nén khí trong một xilanh. Biết khí truyền ra môi trường xung quanh nhiệt lượng ${f(p.heat)} J. Độ biến thiên nội năng của khí là bao nhiêu J?`;
+
+    answer=v('work').sub(v('heat'));
+
+    facts=
+      `Công nén: ${f(p.work)} J\n`+
+      `Nhiệt lượng tỏa: ${f(p.heat)} J`;
+
+    steps=[
+      `Khí nhận công: A = +${f(p.work)} J.`,
+      `Khí truyền nhiệt ra môi trường: Q = −${f(p.heat)} J.`,
+      'Áp dụng ΔU = A + Q.',
+      `Thay số: ΔU = ${f(p.work)} + (−${f(p.heat)}) = ${f(answer)} J.`,
+      answer.lt(0)
+        ?'ΔU âm: nội năng của khí giảm.'
+        :answer.eq(0)
+          ?'ΔU = 0: nội năng không đổi.'
+          :'ΔU dương: nội năng của khí tăng.'
+    ];
+  }
+
+  if(i===2){
+    const m=v('mass').div(1000);
+    const e1=m.mul(v('g')).mul(v('h1'));
+    const e2=m.mul(v('g')).mul(v('h2'));
+
+    answer=e1.sub(e2);
+
+    q=`Một quả bóng khối lượng ${f(p.mass)} g rơi từ độ cao ${f(p.h1)} m xuống sàn và nảy lên được ${f(p.h2)} m. Độ biến thiên nội năng của quả bóng bằng bao nhiêu J? Lấy g = ${f(p.g)} m/s².`;
+
+    assumption='Theo mô hình bài tập: bỏ qua lực cản không khí, coi toàn bộ cơ năng hao hụt chuyển thành nội năng của quả bóng. Nếu năng lượng còn truyền cho sàn hoặc âm thanh thì cần thêm dữ kiện.';
+
+    facts=
+      `m = ${f(p.mass)} g\n`+
+      `h₁ = ${f(p.h1)} m; h₂ = ${f(p.h2)} m\n`+
+      `g = ${f(p.g)} m/s²`;
+
+    steps=[
+      `Đổi khối lượng: m = ${f(p.mass)}/1000 = ${f(m)} kg.`,
+      'Chọn mốc thế năng tại sàn. Ở độ cao thả và đỉnh nảy lên, vận tốc bằng 0.',
+      `Cơ năng trước khi rơi: E₁ = mgh₁ = (${f(m)}) × (${f(p.g)}) × (${f(p.h1)}) = ${f(e1)} J.`,
+      `Cơ năng tại đỉnh nảy lên: E₂ = mgh₂ = (${f(m)}) × (${f(p.g)}) × (${f(p.h2)}) = ${f(e2)} J.`,
+      'Theo giả thiết, độ tăng nội năng bằng cơ năng hao hụt: ΔU = E₁ − E₂.',
+      `ΔU = (${f(e1)}) − (${f(e2)}) = ${f(answer)} J.`
+    ];
+  }
+
+  if(i===3){
+    const speed=v('speed').div('3.6');
+
+    answer=v('mass').mul(speed).mul(speed).div(2);
+
+    q=`Một viên đạn đại bác có khối lượng ${f(p.mass)} kg khi tới đích có vận tốc ${f(p.speed)} km/h. Nếu toàn bộ động năng của nó biến thành nội năng khi va chạm, phần năng lượng chuyển hóa này bằng bao nhiêu J?`;
+
+    assumption='Theo cách gọi “nhiệt lượng tỏa ra” trong đề gốc, bài yêu cầu tính phần động năng chuyển thành nội năng khi va chạm.';
+
+    facts=
+      `m = ${f(p.mass)} kg\n`+
+      `v = ${f(p.speed)} km/h`;
+
+    steps=[
+      `Đổi vận tốc: v = ${f(p.speed)}/3,6 = ${f(speed)} m/s.`,
+      'Động năng trước va chạm: Wđ = ½mv².',
+      'Toàn bộ động năng chuyển thành nội năng nên ΔU = Wđ.',
+      `Thay số: ΔU = ½ × (${f(p.mass)}) × (${f(speed)})² = ${f(answer)} J.`
+    ];
+  }
+
+  if(i===4){
+    const mi=v('iron').div(1000);
+    const mw=v('water').div(1000);
+    const dt=v('tf').sub(v('t0'));
+    const heat=mw.mul(v('cw')).mul(dt);
+    const cap=mi.mul(v('ci'));
+    const rise=heat.div(cap);
+    const temp=v('tf').add(rise);
+
+    answer=temp.add('273.15');
+
+    q=`Để xác định nhiệt độ của một lò nung, người ta đưa vào lò một miếng sắt khối lượng ${f(p.iron)} g. Khi miếng sắt có nhiệt độ bằng nhiệt độ của lò, lấy ra và thả vào một nhiệt lượng kế chứa ${f(p.water)} g nước ở ${f(p.t0)}°C. Nhiệt độ cân bằng là ${f(p.tf)}°C. Cho nhiệt dung riêng của sắt ${f(p.ci)} J/(kg·K), của nước ${f(p.cw)} J/(kg·K). Nhiệt độ của lò xấp xỉ bằng bao nhiêu K?`;
+
+    assumption='Bỏ qua nhiệt lượng do nhiệt lượng kế hấp thụ, thất thoát khi chuyển miếng sắt và trao đổi nhiệt với môi trường. Sắt và nước đạt cân bằng nhiệt.';
+
+    facts=
+      `Sắt: ${f(p.iron)} g; c = ${f(p.ci)} J/(kg·K)\n`+
+      `Nước: ${f(p.water)} g; c = ${f(p.cw)} J/(kg·K)\n`+
+      `Nước: ${f(p.t0)}°C → ${f(p.tf)}°C`;
+
+    steps=[
+      `Đổi đơn vị: ms = ${f(mi)} kg; mn = ${f(mw)} kg.`,
+      `Nước tăng nhiệt độ: Δt = ${f(p.tf)} − (${f(p.t0)}) = ${f(dt)}°C.`,
+      `Nhiệt lượng nước thu: Qn = mncnΔt = (${f(mw)}) × (${f(p.cw)}) × (${f(dt)}) = ${f(heat)} J.`,
+      'Cân bằng nhiệt: mscs(tlò − tf) = Qn.',
+      `Suy ra tlò − tf = Qn/(mscs) = (${f(heat)})/(${f(cap)}) = ${f(rise)}°C.`,
+      `Nhiệt độ lò: tlò = ${f(p.tf)} + (${f(rise)}) = ${f(temp)}°C.`,
+      `Đổi sang Kelvin: Tlò = (${f(temp)}) + 273,15 = ${f(answer)} K.`,
+      `Nếu làm tròn đến kelvin: Tlò ≈ ${f(answer.nearest())} K. Đề không nêu độ chính xác; chương trình nhận cả phân số chính xác và số nguyên kelvin gần nhất.`
+    ];
+  }
+
+  if(i===5){
+    const dt=v('tf').sub(v('t0'));
+    const qw=v('water').mul(v('cw')).mul(dt);
+    const qi=v('iron').mul(v('ci')).mul(dt);
+    const total=qw.add(qi);
+
+    answer=total.div(1000);
+
+    q=`Tính nhiệt lượng cần thiết theo đơn vị kJ để đun ${f(p.water)} kg nước từ ${f(p.t0)}°C đến ${f(p.tf)}°C trong một thùng sắt khối lượng ${f(p.iron)} kg. Biết nhiệt dung riêng của nước ${f(p.cw)} J/(kg·K), của sắt ${f(p.ci)} J/(kg·K).`;
+
+    assumption='Thùng sắt và nước ban đầu cùng nhiệt độ, sau đó cùng đạt nhiệt độ cuối. Bỏ qua hao phí và lượng nước bay hơi; chưa tính quá trình hóa hơi.';
+
+    facts=
+      `Nước: ${f(p.water)} kg; c = ${f(p.cw)} J/(kg·K)\n`+
+      `Thùng sắt: ${f(p.iron)} kg; c = ${f(p.ci)} J/(kg·K)\n`+
+      `Nhiệt độ: ${f(p.t0)}°C → ${f(p.tf)}°C`;
+
+    steps=[
+      `Độ tăng nhiệt độ: Δt = ${f(p.tf)} − (${f(p.t0)}) = ${f(dt)}°C.`,
+      `Nước thu nhiệt: Qn = mncnΔt = (${f(p.water)}) × (${f(p.cw)}) × (${f(dt)}) = ${f(qw)} J.`,
+      `Thùng sắt thu nhiệt: Qs = mscsΔt = (${f(p.iron)}) × (${f(p.ci)}) × (${f(dt)}) = ${f(qi)} J.`,
+      `Tổng nhiệt lượng: Q = Qn + Qs = (${f(qw)}) + (${f(qi)}) = ${f(total)} J.`,
+      `Đổi sang kJ: Q = (${f(total)})/1000 = ${f(answer)} kJ.`
+    ];
+  }
+
+  return{
+    p:{...p},
+    q,
+    answer,
+    steps,
+    assumption,
+    facts,
+    original,
+    input:'',
+    checked:false,
+    good:false,
+    feedback:'',
+    showFormula:false,
+    showSolution:false
+  };
+}
+
+function validate(i,p){
+  Object.values(p).forEach(r);
+  const v=k=>r(p[k]);
+
+  for(const k of['mass','g','iron','water','ci','cw']){
+    if(k in p&&!r(0).lt(v(k)))
+      throw Error('Khối lượng, nhiệt dung riêng và g phải dương.');
+  }
+
+  for(const k of['heat','work','speed','h1','h2']){
+    if(k in p&&v(k).lt(0))
+      throw Error('Độ lớn nhiệt lượng, công, tốc độ và độ cao phải không âm.');
+  }
+
+  if(i===2&&!v('h2').lt(v('h1')))
+    throw Error('Độ cao nảy lên phải nhỏ hơn độ cao thả.');
+
+  if(i===4||i===5){
+    if(!v('t0').lt(v('tf')))
+      throw Error('Nhiệt độ cuối phải lớn hơn nhiệt độ đầu.');
+
+    if(v('t0').lt(0)||r(100).lt(v('tf')))
+      throw Error('Trong mô hình nước lỏng này: 0 ≤ nhiệt độ đầu < nhiệt độ cuối ≤ 100°C.');
+  }
+}
+
+function generate(i){
+  const p={...defs[i].p};
+
+  if(i===0){
+    p.heat=random(5,40)*10;
+    p.work=random(5,60)*10;
+  }
+
+  if(i===1){
+    p.work=random(5,40)*10;
+    p.heat=random(1,50)*10;
+  }
+
+  if(i===2){
+    p.mass=random(1,12)*50;
+    p.h1=random(8,25);
+    p.h2=random(1,p.h1-1);
+    p.g=[10,'9.8'][random(0,1)];
+  }
+
+  if(i===3){
+    p.mass=random(2,20);
+    p.speed=random(3,30)*9;
+  }
+
+  if(i===4){
+    p.iron=random(3,15)*10;
+    p.water=random(4,15)*100;
+    p.t0=random(10,25);
+    p.tf=p.t0+random(2,12);
+  }
+
+  if(i===5){
+    p.water=random(2,12);
+    p.iron=f(r(random(2,8)).div(2));
+    p.t0=random(10,30);
+    p.tf=[70,80,90,100][random(0,3)];
+  }
+
+  return p;
+}
+
+let states=defs.map((d,i)=>solve(i,d.p,true));
+let index=0;
+
+const $=id=>document.getElementById(id);
+
+function render(){
+  const s=states[index];
+  const d=defs[index];
+
+  $('nav').replaceChildren(...defs.map((d,i)=>{
+    const b=document.createElement('button');
+
+    b.textContent=i+1;
+    b.className=
+      (i===index?'active ':'')+
+      (states[i].checked&&states[i].good?'done':'');
+
+    b.onclick=()=>{
+      index=i;
+      render();
+    };
+
+    return b;
+  }));
+
+  $('title').textContent=`Câu ${index+1} · ${d.title}`;
+  $('tag').textContent=s.original
+    ?'Số liệu gốc trong ảnh'
+    :'Đề đã đổi số';
+
+  $('question').textContent=s.q;
+  $('facts').textContent=s.facts;
+
+  $('formula').textContent=d.formula;
+  $('formula').classList.toggle('hidden',!s.showFormula);
+  $('hint').classList.toggle('hidden',s.showFormula);
+  $('formulaBtn').textContent=s.showFormula
+    ?'Ẩn công thức'
+    :'Xem công thức';
+
+  $('solution').classList.toggle('hidden',!s.showSolution);
+  $('solutionBtn').textContent=s.showSolution
+    ?'Ẩn lời giải'
+    :'Xem lời giải';
+
+  $('steps').replaceChildren(...s.steps.map(t=>{
+    const li=document.createElement('li');
+    li.textContent=t;
+    return li;
+  }));
+
+  $('conclusion').textContent=
+    `Đáp số: ${f(s.answer)} ${d.unit}.`+
+    (index===4
+      ?` Làm tròn đến kelvin: ${f(s.answer.nearest())} K.`
+      :'');
+
+  $('assumption').textContent=s.assumption;
+  $('assumption').classList.toggle('hidden',!s.assumption);
+
+  $('answer').value=s.input;
+  $('unit').textContent=d.unit;
+
+  $('answerHint').textContent=index===4
+    ?'Chấp nhận kết quả chính xác hoặc làm tròn đến kelvin gần nhất. Nhập số, không kèm đơn vị.'
+    :'Nhập số thập phân hoặc phân số chính xác, không kèm đơn vị. Độ biến thiên có thể âm.';
+
+  $('feedback').textContent=s.feedback;
+  $('feedback').className=s.feedback
+    ?'feedback '+(s.good?'good':'bad')
+    :'';
+
+  $('fields').replaceChildren(...Object.keys(s.p).map(k=>{
+    const l=document.createElement('label');
+    l.textContent=fieldLabel(index,k);
+
+    const input=document.createElement('input');
+    input.value=f(s.p[k]);
+    input.dataset.key=k;
+
+    l.append(input);
+    return l;
+  }));
+
+  $('error').textContent='';
+  $('prev').disabled=index===0;
+  $('next').disabled=index===5;
+
+  const n=states.filter(s=>s.checked&&s.good).length;
+  $('score').textContent=`Đã đúng ${n}/6 câu`;
+  $('progress').value=n;
+}
+
+$('new').onclick=()=>{
+  let p;
+
+  for(let n=0;n<50;n++){
+    p=generate(index);
+    if(JSON.stringify(p)!==JSON.stringify(states[index].p))
+      break;
+  }
+
+  validate(index,p);
+  states[index]=solve(index,p,false);
+  render();
+};
+
+$('original').onclick=()=>{
+  states[index]=solve(index,defs[index].p,true);
+  render();
+};
+
+$('reset').onclick=()=>{
+  states=defs.map((d,i)=>solve(i,d.p,true));
+  render();
+};
+
+$('formulaBtn').onclick=()=>{
+  states[index].showFormula=!states[index].showFormula;
+  render();
+};
+
+$('solutionBtn').onclick=()=>{
+  states[index].showSolution=!states[index].showSolution;
+  render();
+};
+
+$('answer').oninput=e=>{
+  const s=states[index];
+  s.input=e.target.value;
+  s.checked=false;
+  s.feedback='';
+  $('feedback').textContent='';
+};
+
+$('answer').onkeydown=e=>{
+  if(e.key==='Enter')$('check').click();
+};
+
+$('check').onclick=()=>{
+  const s=states[index];
+
+  try{
+    if(!s.input.trim())
+      throw Error('Em hãy nhập đáp số.');
+
+    const x=r(s.input);
+
+    s.good=x.eq(s.answer)||
+      (index===4&&x.eq(s.answer.nearest()));
+
+    s.checked=true;
+
+    s.feedback=s.good
+      ?'✓ Chính xác!'
+      :'Chưa đúng. Hãy kiểm tra dấu của công, nhiệt lượng, đổi đơn vị và các bước tính. Bấm “Xem lời giải” để đối chiếu.';
+
+    render();
+  }catch(e){
+    $('feedback').className='feedback bad';
+    $('feedback').textContent=e.message;
+  }
+};
+
+$('apply').onclick=()=>{
+  try{
+    const p={};
+
+    $('fields').querySelectorAll('input').forEach(e=>{
+      p[e.dataset.key]=r(e.value).text();
+    });
+
+    validate(index,p);
+    states[index]=solve(index,p,false);
+    render();
+  }catch(e){
+    $('error').textContent=e.message;
+  }
+};
+
+$('prev').onclick=()=>{
+  if(index>0){
+    index--;
+    render();
+  }
+};
+
+$('next').onclick=()=>{
+  if(index<5){
+    index++;
+    render();
+  }
+};
+
+$('full').onclick=async()=>{
+  try{
+    if(document.fullscreenElement){
+      await document.exitFullscreen();
+    }else if(document.documentElement.requestFullscreen){
+      await document.documentElement.requestFullscreen();
+    }else{
+      alert('Hãy dùng chế độ toàn màn hình của trình duyệt.');
+    }
+  }catch{
+    alert('Trình duyệt này chưa cho phép mở toàn màn hình.');
+  }
+};
+
+render();
+</script>
+</body>
+</html>
