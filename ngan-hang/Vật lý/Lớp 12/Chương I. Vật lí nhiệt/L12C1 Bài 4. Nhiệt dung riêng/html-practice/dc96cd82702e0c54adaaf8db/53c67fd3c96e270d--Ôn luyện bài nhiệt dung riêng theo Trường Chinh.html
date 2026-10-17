@@ -1,0 +1,521 @@
+<!--hp-title:w5RuIGx1eeG7h24gYsOgaSBuaGnhu4d0IGR1bmcgcmnDqm5nIHRoZW8gVHLGsOG7nW5nIENoaW5o-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luyện nhiệt học – Câu 17–20</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#edf2f8;color:#19304c;font:17px/1.65 Arial,sans-serif}
+header{background:#10294c;color:white;padding:18px 5%;font-weight:bold}
+header small{display:block;font-size:13px;font-weight:normal;margin-top:4px}
+main{max-width:1150px;margin:auto;padding:20px}
+h1{font-size:25px}
+nav,.buttons{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}
+button{padding:12px 16px;border:1px solid #ccd7e5;border-radius:9px;background:white;color:#173c69;font-size:15px;cursor:pointer}
+button.active,.primary{background:#173c69;color:white}
+.layout{display:grid;grid-template-columns:340px 1fr;gap:20px}
+.card{background:white;padding:22px;border-radius:16px}
+.formula{background:#eaf3ff;padding:15px;border-radius:10px;overflow-wrap:anywhere}
+.data{width:100%;border-collapse:collapse;margin-top:15px;font-size:15px}
+.data td{padding:7px;border-bottom:1px solid #e4eaf2}
+.data td:last-child{background:#fff4bf;font-weight:bold}
+#question{font-size:19px}
+input{width:100%;padding:14px;font-size:19px;border:1px solid #afc0d5;border-radius:9px}
+.note{color:#64778d;font-size:14px}
+#feedback{font-weight:bold;margin:12px 0}
+#solution{border-top:1px solid #dce4ef;margin-top:18px;padding-top:15px;overflow-wrap:anywhere}
+#solution li{margin:12px 0}
+@media(max-width:760px){
+.layout{grid-template-columns:1fr}
+main{padding:12px}
+.card{padding:17px}
+aside{order:2}
+#question{font-size:17px}
+h1{font-size:22px}
+}
+</style>
+</head>
+<body>
+<header>
+Lớp Học Thầy Minh · Zalo 0946111107
+<small>lophocthayminh.onrender.com</small>
+</header>
+
+<main>
+<h1>Nhiệt học · Luyện đổi số câu 17–20</h1>
+<p class="note">Chạy offline · Đáp án chính xác · Lời giải từng bước</p>
+<nav id="nav"></nav>
+
+<div class="layout">
+<aside class="card">
+<h3>Công thức áp dụng</h3>
+<div id="formula" class="formula"></div>
+<h3>Dữ kiện hiện tại</h3>
+<table class="data" id="data"></table>
+</aside>
+
+<section class="card">
+<b id="title"></b>
+<p id="question"></p>
+
+<div class="buttons">
+<button class="primary" onclick="generate()">↻ Đổi đề bài mới</button>
+<button onclick="original()">Về đề gốc</button>
+</div>
+
+<label for="answer">Đáp án (<span id="unit"></span>)</label>
+<input id="answer" placeholder="Nhập số hoặc phân số a/b">
+<p class="note">
+Chấp nhận dấu phẩy hoặc chấm thập phân.
+Nếu kết quả vô hạn, nhập phân số chính xác.
+</p>
+
+<div class="buttons">
+<button class="primary" onclick="check()">Kiểm tra</button>
+<button onclick="showSolution()">Xem lời giải</button>
+</div>
+
+<div id="feedback" role="status"></div>
+<div id="solution" hidden></div>
+</section>
+</div>
+
+<div class="buttons">
+<button onclick="select((index+3)%4)">← Câu trước</button>
+<button onclick="select((index+1)%4)">Câu sau →</button>
+<button onclick="fullscreen()">⛶ Toàn màn hình</button>
+</div>
+<div id="clock" class="note"></div>
+</main>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const fmt = n => String(n).replace(".",",");
+const pick = a => a[Math.floor(Math.random()*a.length)];
+
+const source = [
+ {fuel:200,q:29000000,H:60,t0:20,tm:1400,c:460,L:83700},
+ {ms:350,mw:330,tm:232,t0:7,t:32,C:100,cw:4200,cs:230},
+ {V:20,rho:1000,c:4180,t0:20,t:80,P:2500,H:85},
+ {cup:200,water:700,total:775,t0:25,t:16,cc:380,cw:4180}
+];
+
+const states = source.map(p=>({
+ p:{...p},version:0,input:"",message:"",shown:false
+}));
+
+let index=0;
+const started=Date.now();
+
+function gcd(a,b){
+ a=a<0n?-a:a;
+ b=b<0n?-b:b;
+ while(b){[a,b]=[b,a%b]}
+ return a;
+}
+
+function fraction(n,d=1){
+ n=BigInt(n);d=BigInt(d);
+ if(d===0n)throw Error("Mẫu số bằng 0");
+ if(d<0n){n=-n;d=-d}
+ const g=gcd(n,d);
+ return {n:n/g,d:d/g};
+}
+
+function exact(r){
+ let d=r.d;
+ while(d%2n===0n)d/=2n;
+ while(d%5n===0n)d/=5n;
+ if(d!==1n)return `${r.n}/${r.d}`;
+
+ const negative=r.n<0n;
+ let n=negative?-r.n:r.n;
+ const whole=n/r.d;
+ let remainder=n%r.d;
+ let digits="";
+ while(remainder){
+  remainder*=10n;
+  digits+=String(remainder/r.d);
+  remainder%=r.d;
+ }
+ return (negative?"-":"")+whole+(digits?","+digits:"");
+}
+
+function parseAnswer(text){
+ const parts=text.trim().replace(/\s/g,"").replace(/,/g,".").split("/");
+ if(parts.length>2)return null;
+
+ function decimal(s){
+  if(!/^[+-]?\d+(\.\d+)?$/.test(s))return null;
+  const a=s.split(".");
+  return fraction(BigInt(a.join("")),10n**BigInt((a[1]||"").length));
+ }
+
+ const a=decimal(parts[0]);
+ if(!a)return null;
+ if(parts.length===1)return a;
+ const b=decimal(parts[1]);
+ if(!b||b.n===0n)return null;
+ return fraction(a.n*b.d,a.d*b.n);
+}
+
+function build(i,p){
+ let question,formula,rows,steps,result,unit;
+
+ if(i===0){
+  const delta=p.tm-p.t0;
+  const perKg=p.c*delta+p.L;
+  const useful=p.fuel*p.q*p.H/100;
+
+  result=fraction(p.fuel*p.q*p.H,100*perKg);
+  unit="kg";
+
+  question=`Để đúc các vật bằng thép, người ta nấu chảy thép trong lò.
+  Thép đưa vào lò có nhiệt độ ${p.t0}°C, hiệu suất của lò là ${p.H}%.
+  Để cung cấp nhiệt lượng, người ta đốt hết ${p.fuel} kg than đá có
+  năng suất tỏa nhiệt ${fmt(p.q/1000000)}·10⁶ J/kg.
+  Nhiệt nóng chảy riêng của thép λ = ${fmt(p.L/1000)}·10³ J/kg;
+  nhiệt độ nóng chảy ${p.tm}°C; nhiệt dung riêng ${p.c} J/(kg·K).
+  Xác định khối lượng mẻ thép được nấu chảy hoàn toàn.`;
+
+  formula=`Q<sub>ích</sub> = Hm<sub>than</sub>q<br>
+  Q<sub>ích</sub> = m[c(t<sub>nc</sub>−t₀)+λ]<br><br>
+  m = Hm<sub>than</sub>q / [c(t<sub>nc</sub>−t₀)+λ]`;
+
+  rows=[
+   ["Khối lượng than",p.fuel+" kg"],
+   ["Hiệu suất",p.H+"%"],
+   ["Nhiệt độ ban đầu",p.t0+"°C"],
+   ["Nhiệt độ nóng chảy",p.tm+"°C"],
+   ["Nhiệt dung riêng",p.c+" J/(kg·K)"],
+   ["Nhiệt nóng chảy riêng",p.L+" J/kg"]
+  ];
+
+  steps=[
+   `Hiệu suất H = ${p.H}/100.`,
+   `Nhiệt lượng hữu ích:
+   Qích = (${p.H}/100) × ${p.fuel} × ${p.q} = ${useful} J.`,
+   `Một kilôgam thép cần nhiệt lượng:
+   cΔt + λ = ${p.c} × (${p.tm}−${p.t0}) + ${p.L}
+   = ${perKg} J/kg.`,
+   `Khối lượng thép:
+   m = ${useful}/${perKg}
+   = <b>${exact(result)} kg</b>.`
+  ];
+ }
+
+ if(i===1){
+  const deltaWater=p.t-p.t0;
+  const deltaTin=p.tm-p.t;
+  const numerator=(p.mw*p.cw+1000*p.C)*deltaWater
+                  -p.ms*p.cs*deltaTin;
+
+  result=fraction(numerator,p.ms);
+  unit="J/kg";
+
+  question=`Để xác định nhiệt nóng chảy riêng của thiếc, người ta đổ
+  ${p.ms} g thiếc nóng chảy ở ${p.tm}°C vào ${p.mw} g nước ở ${p.t0}°C
+  đựng trong một nhiệt lượng kế có nhiệt dung ${p.C} J/K.
+  Sau khi cân bằng nhiệt, nhiệt độ là ${p.t}°C.
+  Tính nhiệt nóng chảy riêng của thiếc.
+  Cho nhiệt dung riêng của nước ${p.cw} J/(kg·K),
+  của thiếc ${p.cs} J/(kg·K).`;
+
+  formula=`Q<sub>tỏa</sub> = Q<sub>thu</sub><br>
+  m<sub>s</sub>λ + m<sub>s</sub>c<sub>s</sub>(t<sub>nc</sub>−t)
+  = (m<sub>w</sub>c<sub>w</sub>+C)(t−t₀)<br><br>
+  λ = [(m<sub>w</sub>c<sub>w</sub>+C)(t−t₀)
+  −m<sub>s</sub>c<sub>s</sub>(t<sub>nc</sub>−t)]/m<sub>s</sub>`;
+
+  rows=[
+   ["Khối lượng thiếc",p.ms+" g"],
+   ["Khối lượng nước",p.mw+" g"],
+   ["Nhiệt dung nhiệt lượng kế",p.C+" J/K"],
+   ["Nhiệt độ thiếc",p.tm+"°C"],
+   ["Nhiệt độ nước đầu",p.t0+"°C"],
+   ["Nhiệt độ cân bằng",p.t+"°C"]
+  ];
+
+  steps=[
+   `Đổi đơn vị:
+   mthiếc = ${fmt(p.ms/1000)} kg;
+   mnước = ${fmt(p.mw/1000)} kg.`,
+   `Thiếc đông đặc ở ${p.tm}°C rồi nguội đến ${p.t}°C:
+   Qtỏa = mthiếcλ + mthiếc × ${p.cs} × ${deltaTin}.`,
+   `Nước và nhiệt lượng kế nóng lên:
+   Qthu = (mnước × ${p.cw} + ${p.C}) × ${deltaWater}.`,
+   `Cân bằng nhiệt:
+   mthiếcλ = (mnước × ${p.cw} + ${p.C}) × ${deltaWater}
+   − mthiếc × ${p.cs} × ${deltaTin}.`,
+   `Thay số:
+   λ = [(${fmt(p.mw/1000)} × ${p.cw} + ${p.C}) × ${deltaWater}
+   − ${fmt(p.ms/1000)} × ${p.cs} × ${deltaTin}]
+   / ${fmt(p.ms/1000)}.`,
+   `Kết quả chính xác: <b>λ = ${exact(result)} J/kg</b>.`
+  ];
+ }
+
+ if(i===2){
+  const delta=p.t-p.t0;
+  const mass=p.V*p.rho/1000;
+  const heat=mass*p.c*delta;
+
+  result=fraction(p.V*p.rho*p.c*delta*100,1000*p.P*p.H);
+  unit="s";
+
+  question=`Một thùng đựng ${p.V} lít nước ở nhiệt độ ${p.t0}°C.
+  Khối lượng riêng của nước là ${p.rho} kg/m³,
+  nhiệt dung riêng ${p.c} J/(kg·K).
+  Tính thời gian cần thiết để thiết bị điện công suất
+  ${fmt(p.P/1000)} kW đun nước từ ${p.t0}°C lên ${p.t}°C.
+  Chỉ có ${p.H}% điện năng tiêu thụ được dùng làm nóng nước.
+  Trả lời theo giây.`;
+
+  formula=`m = ρV<br>
+  Q = mc(t−t₀)<br>
+  Q = HPτ<br><br>
+  τ = mc(t−t₀)/(HP)`;
+
+  rows=[
+   ["Thể tích",p.V+" lít"],
+   ["Khối lượng riêng",p.rho+" kg/m³"],
+   ["Nhiệt dung riêng",p.c+" J/(kg·K)"],
+   ["Nhiệt độ đầu",p.t0+"°C"],
+   ["Nhiệt độ cuối",p.t+"°C"],
+   ["Công suất",fmt(p.P/1000)+" kW"],
+   ["Hiệu suất",p.H+"%"]
+  ];
+
+  steps=[
+   `Đổi V = ${p.V}/1000 m³;
+   P = ${p.P} W; H = ${p.H}/100.`,
+   `Khối lượng nước:
+   m = ρV = ${p.rho} × ${p.V}/1000 = ${fmt(mass)} kg.`,
+   `Nhiệt lượng nước cần:
+   Q = mcΔt = ${fmt(mass)} × ${p.c} × ${delta}
+   = ${heat} J.`,
+   `Điện năng tiêu thụ là Pτ; nhiệt hữu ích là HPτ.
+   Do đó HPτ = Q.`,
+   `Thời gian:
+   τ = ${heat}/[(${p.H}/100) × ${p.P}]
+   = <b>${exact(result)} s</b>.`
+  ];
+ }
+
+ if(i===3){
+  const ice=p.total-p.water;
+  const delta=p.t0-p.t;
+  const numerator=(p.water*p.cw+p.cup*p.cc)*delta
+                  -ice*p.cw*p.t;
+
+  result=fraction(numerator,ice);
+  unit="J/kg";
+
+  question=`Người ta thả cục nước đá ở 0°C vào chiếc cốc bằng đồng
+  khối lượng ${fmt(p.cup/1000)} kg đặt trong nhiệt lượng kế.
+  Trong cốc đựng ${fmt(p.water/1000)} kg nước ở ${p.t0}°C.
+  Khi nước đá vừa tan hết, nước có nhiệt độ ${p.t}°C
+  và khối lượng nước là ${fmt(p.total/1000)} kg.
+  Xác định nhiệt nóng chảy riêng của nước đá.
+  Cho nhiệt dung riêng của đồng ${p.cc} J/(kg·K),
+  của nước ${p.cw} J/(kg·K).
+  Bỏ qua nhiệt truyền ra bên ngoài; ban đầu cốc cùng nhiệt độ với nước.`;
+
+  formula=`m<sub>đá</sub> = m<sub>sau</sub>−m<sub>nước đầu</sub><br>
+  Q<sub>tỏa</sub> = (m<sub>n</sub>c<sub>n</sub>
+  +m<sub>cốc</sub>c<sub>đồng</sub>)(t₀−t)<br>
+  Q<sub>thu</sub> = m<sub>đá</sub>λ+m<sub>đá</sub>c<sub>n</sub>t<br><br>
+  λ = [Q<sub>tỏa</sub>−m<sub>đá</sub>c<sub>n</sub>t]/m<sub>đá</sub>`;
+
+  rows=[
+   ["Khối lượng cốc",fmt(p.cup/1000)+" kg"],
+   ["Khối lượng nước đầu",fmt(p.water/1000)+" kg"],
+   ["Khối lượng nước sau",fmt(p.total/1000)+" kg"],
+   ["Nhiệt độ ban đầu",p.t0+"°C"],
+   ["Nhiệt độ cân bằng",p.t+"°C"],
+   ["Nhiệt độ đá ban đầu","0°C"]
+  ];
+
+  steps=[
+   `Khối lượng nước đá:
+   mđá = ${fmt(p.total/1000)}−${fmt(p.water/1000)}
+   = ${fmt(ice/1000)} kg.`,
+   `Nước ban đầu và cốc đồng tỏa nhiệt:
+   Qtỏa = (${fmt(p.water/1000)} × ${p.cw}
+   + ${fmt(p.cup/1000)} × ${p.cc}) × ${delta}.`,
+   `Nước đá thu nhiệt để tan, sau đó phần nước tan ra nóng lên:
+   Qthu = ${fmt(ice/1000)}λ
+   + ${fmt(ice/1000)} × ${p.cw} × ${p.t}.`,
+   `Cân bằng nhiệt Qtỏa = Qthu, suy ra:
+   λ = [(${fmt(p.water/1000)} × ${p.cw}
+   + ${fmt(p.cup/1000)} × ${p.cc}) × ${delta}
+   − ${fmt(ice/1000)} × ${p.cw} × ${p.t}]
+   / ${fmt(ice/1000)}.`,
+   `Kết quả: <b>λ = ${exact(result)} J/kg</b>.`
+  ];
+ }
+
+ return {question,formula,rows,steps,result,unit};
+}
+
+function saveInput(){
+ states[index].input=$("answer").value;
+}
+
+function render(){
+ const state=states[index];
+ const b=build(index,state.p);
+
+ $("nav").innerHTML=states.map((_,i)=>
+  `<button class="${i===index?"active":""}"
+   onclick="select(${i})">Câu ${17+i}</button>`
+ ).join("");
+
+ $("title").textContent=`Câu ${17+index} · ${
+  state.version?"Đề đổi số lần "+state.version:"Đề gốc"
+ }`;
+
+ $("question").textContent=b.question;
+ $("formula").innerHTML=b.formula;
+ $("data").innerHTML=b.rows.map(r=>
+  `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`
+ ).join("");
+
+ $("unit").textContent=b.unit;
+ $("answer").value=state.input;
+ $("feedback").textContent=state.message;
+ $("solution").hidden=!state.shown;
+ $("solution").innerHTML="<b>Lời giải chi tiết</b><ol>"+
+  b.steps.map(s=>"<li>"+s+"</li>").join("")+"</ol>";
+}
+
+function select(i){
+ saveInput();
+ index=i;
+ render();
+}
+
+function clearAttempt(){
+ const s=states[index];
+ s.input="";
+ s.message="";
+ s.shown=false;
+ render();
+}
+
+function original(){
+ states[index].p={...source[index]};
+ states[index].version=0;
+ clearAttempt();
+}
+
+function generate(){
+ const previous=JSON.stringify(states[index].p);
+ let p;
+
+ do{
+  p={...source[index]};
+
+  if(index===0){
+   Object.assign(p,{
+    fuel:pick([100,150,200,250,300]),
+    H:pick([50,55,60,65,70,75]),
+    t0:pick([10,20,30,40])
+   });
+  }
+
+  if(index===1){
+   Object.assign(p,{
+    ms:pick([300,350,400]),
+    mw:pick([300,330,360,400]),
+    C:pick([80,100,120]),
+    t0:pick([5,7,10]),
+    t:pick([30,32,35,38])
+   });
+  }
+
+  if(index===2){
+   Object.assign(p,{
+    V:pick([10,15,20,25,30]),
+    t0:pick([15,20,25]),
+    t:pick([65,70,75,80,90]),
+    P:pick([1500,2000,2500,3000]),
+    H:pick([75,80,85,90])
+   });
+  }
+
+  if(index===3){
+   const water=pick([600,700,800]);
+   const ice=pick([60,75,80]);
+   Object.assign(p,{
+    water,
+    total:water+ice,
+    cup:pick([150,200,250]),
+    t0:pick([24,25,28,30]),
+    t:pick([12,14,16,18])
+   });
+  }
+
+ }while(
+  JSON.stringify(p)===previous ||
+  build(index,p).result.n<=0n
+ );
+
+ states[index].p=p;
+ states[index].version++;
+ clearAttempt();
+}
+
+function check(){
+ saveInput();
+ const state=states[index];
+ const input=parseAnswer(state.input);
+ const result=build(index,state.p).result;
+
+ if(!input){
+  state.message="Vui lòng nhập số hoặc phân số hợp lệ.";
+ }else if(input.n*result.d===result.n*input.d){
+  state.message="✓ Chính xác!";
+ }else{
+  state.message="Chưa đúng. Kiểm tra đổi đơn vị, hiệu suất và các phần nhiệt lượng.";
+ }
+
+ $("feedback").textContent=state.message;
+}
+
+function showSolution(){
+ states[index].shown=true;
+ $("solution").hidden=false;
+}
+
+async function fullscreen(){
+ try{
+  if(document.fullscreenElement){
+   await document.exitFullscreen();
+  }else{
+   await document.documentElement.requestFullscreen();
+  }
+ }catch{
+  $("feedback").textContent=
+   "Trình duyệt chưa hỗ trợ toàn màn hình. Thầy có thể xoay ngang thiết bị.";
+ }
+}
+
+$("answer").addEventListener("keydown",e=>{
+ if(e.key==="Enter")check();
+});
+
+setInterval(()=>{
+ const seconds=Math.floor((Date.now()-started)/1000);
+ $("clock").textContent=
+  `Thời gian luyện tập: ${Math.floor(seconds/60)} phút ${seconds%60} giây`;
+},1000);
+
+render();
+</script>
+</body>
+</html>
