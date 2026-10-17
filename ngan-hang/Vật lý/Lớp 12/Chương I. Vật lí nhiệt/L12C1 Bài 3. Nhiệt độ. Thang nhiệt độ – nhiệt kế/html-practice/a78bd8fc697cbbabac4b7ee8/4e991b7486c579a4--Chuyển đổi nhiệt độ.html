@@ -1,0 +1,948 @@
+<!--hp-title:Q2h1eeG7g24gxJHhu5VpIG5oaeG7h3QgxJHhu5k=-->
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luyện thang nhiệt độ · Thầy Minh</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#132c49;background:#eef4fa}
+*{box-sizing:border-box}
+body{margin:0}
+header{background:#07356a;color:white;padding:14px 4%;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+header b{font-size:19px}
+header small{display:block}
+button,input{font:inherit}
+button{border:1px solid #b9cde1;border-radius:10px;background:white;color:#123a65;padding:11px 15px;cursor:pointer}
+button:hover{background:#e7f2ff}
+button.primary{background:#0863be;color:white;border-color:#0863be}
+button:disabled{opacity:.5;cursor:default}
+main{max-width:1200px;margin:auto;padding:20px}
+h1{font-size:clamp(23px,4vw,34px);margin:0}
+p{line-height:1.65}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:15px 0}
+.layout{display:grid;grid-template-columns:220px 1fr;gap:18px}
+.panel{background:white;border:1px solid #d8e4ef;border-radius:16px;padding:20px;box-shadow:0 5px 20px #16365a08;min-width:0}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.nav button{padding:10px 3px}
+.nav .active{background:#07356a;color:white}
+.nav .done{border:2px solid #009978}
+.content{display:grid;grid-template-columns:minmax(210px,.8fr) minmax(0,1.4fr);gap:20px;margin-top:15px}
+.content>div{min-width:0}
+.formula{background:#eaf5ff;border-radius:12px;padding:16px;line-height:1.8;font-family:Georgia,serif;font-size:21px;white-space:pre-line;overflow-wrap:anywhere}
+.tag{display:inline-block;background:#e5f4f0;color:#08735b;padding:5px 10px;border-radius:20px;font-size:13px}
+.question{font-size:19px;line-height:1.7;margin:15px 0}
+.options{display:grid;gap:9px}
+.option{text-align:left;display:flex;gap:12px;align-items:center;overflow-wrap:anywhere}
+.option.selected{border:2px solid #0863be;background:#eaf5ff}
+.option b{border-radius:6px;background:#eef3f8;padding:4px 8px}
+.feedback{padding:12px;border-radius:10px;margin-top:12px;line-height:1.6}
+.good{background:#e1f7eb;color:#086344}
+.bad{background:#fff0e9;color:#9a3c0a}
+.muted{color:#60768d;font-size:14px}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{font-size:14px}
+input{display:block;width:100%;padding:10px;border:1px solid #b9cde1;border-radius:8px;margin:5px 0}
+details{border-top:1px solid #dbe6f0;margin-top:20px;padding-top:15px}
+summary{cursor:pointer;font-weight:600}
+.bottom{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
+.hidden{display:none}
+#error{color:#aa3215}
+progress{width:100%;height:9px}
+footer{font-size:13px;text-align:center;margin:20px;color:#60768d}
+.solution{margin-top:20px;padding:18px;background:#e9f8ef;border:1px solid #a4d8b9;border-radius:12px;line-height:1.8;overflow-wrap:anywhere}
+.solution li{margin-bottom:9px}
+@media(max-width:780px){
+ main{padding:12px}
+ .layout,.content{grid-template-columns:1fr}
+ .nav{grid-template-columns:repeat(8,1fr)}
+ .panel{padding:15px}
+ aside .muted{display:none}
+ .question{font-size:18px}
+ header b{font-size:17px}
+ .formula{font-size:19px}
+}
+@media print{
+ header{background:white;color:black}
+ .toolbar,aside,.bottom,details{display:none}
+ .layout,.content{display:block}
+ .panel{box-shadow:none}
+ .formula{display:block!important}
+}
+</style>
+</head>
+<body>
+<header>
+ <div>
+  <b>Lớp Học Thầy Minh · Zalo 0946111107</b>
+  <small>lophocthayminh.onrender.com</small>
+ </div>
+ <button id="fullscreen">⛶ Toàn màn hình</button>
+</header>
+
+<main>
+ <h1>THANG NHIỆT ĐỘ</h1>
+ <p style="margin:6px 0">Luyện thế số · Câu 41–56 · Chạy hoàn toàn offline</p>
+
+ <div class="layout">
+  <aside class="panel">
+   <b>Danh sách câu</b>
+   <p class="muted">Chọn câu để luyện. Mỗi câu giữ riêng đề và câu trả lời.</p>
+   <div id="nav" class="nav"></div>
+   <p id="progressText" class="muted"></p>
+   <progress id="progress" max="16" value="0"></progress>
+   <div class="toolbar">
+    <button id="reset">Khôi phục đề gốc</button>
+   </div>
+  </aside>
+
+  <section class="panel">
+   <span id="tag" class="tag"></span>
+   <h2 id="title"></h2>
+
+   <div class="toolbar">
+    <button id="new" class="primary">↻ Đổi đề bài mới</button>
+    <button id="original">Đề gốc câu này</button>
+    <button id="formulaBtn">Xem công thức</button>
+    <button id="solutionBtn">Xem lời giải</button>
+   </div>
+
+   <div class="content">
+    <div>
+     <h3>Công thức áp dụng</h3>
+     <div id="formula" class="formula hidden"></div>
+     <p id="formulaHint" class="muted">
+      Bấm “Xem công thức” để hiện gợi ý.
+      Muốn xem từng bước, bấm “Xem lời giải”.
+     </p>
+     <p class="muted">
+      Quy ước: t là số chỉ °C; T là số chỉ K; F là số chỉ °F.
+      Các tỉ số trong đề là tỉ số số chỉ.
+     </p>
+    </div>
+
+    <div>
+     <div id="question" class="question"></div>
+     <div id="options" class="options"></div>
+
+     <div id="numeric" class="hidden">
+      <label>Nhập đáp số (cm)
+       <input id="answer" inputmode="decimal" placeholder="Ví dụ: 12 hoặc 25/2">
+      </label>
+     </div>
+
+     <div class="toolbar">
+      <button id="check" class="primary">Kiểm tra</button>
+     </div>
+     <div id="feedback" role="status" aria-live="polite"></div>
+    </div>
+   </div>
+
+   <section id="solution" class="solution hidden">
+    <h3 style="margin-top:0">Lời giải chi tiết</h3>
+    <ol id="steps"></ol>
+    <p id="conclusion" style="font-weight:bold"></p>
+   </section>
+
+   <details id="custom">
+    <summary>Tự nhập số liệu cho câu này</summary>
+    <p class="muted">
+     Nhập số thập phân hoặc phân số.
+     Dữ kiện phải phù hợp thang nhiệt và điều kiện bài.
+    </p>
+    <div id="fields" class="fields"></div>
+    <p id="customHint" class="muted"></p>
+    <button id="apply">Áp dụng số liệu</button>
+    <p id="error" role="alert"></p>
+   </details>
+
+   <div class="bottom">
+    <button id="prev">← Câu trước</button>
+    <button id="next">Câu tiếp →</button>
+   </div>
+  </section>
+ </div>
+
+ <footer>
+  Đáp án và lời giải được tính lại từ dữ kiện.
+  Câu 51 gốc có thêm lựa chọn “Không có phương án đúng”.
+ </footer>
+</main>
+
+<script>
+'use strict';
+
+// Tính bằng số hữu tỉ để không làm tròn ngầm.
+const gcd = (a,b) => b ? gcd(b,a%b) : a<0n ? -a : a;
+
+class R {
+ constructor(n,d=1n){
+  n=BigInt(n);
+  d=BigInt(d);
+  if(!d) throw Error('Mẫu số phải khác 0.');
+  if(d<0n){n=-n;d=-d}
+  const g=gcd(n,d);
+  this.n=n/g;
+  this.d=d/g;
+ }
+
+ static of(v){
+  if(v instanceof R) return v;
+
+  let s=String(v).trim().replaceAll(',','.');
+
+  if(s.includes('/')){
+   const a=s.split('/');
+   if(a.length!==2) throw Error('Phân số không hợp lệ.');
+   return R.of(a[0]).div(R.of(a[1]));
+  }
+
+  if(!/^[+-]?\d+(\.\d+)?$/.test(s)||s.length>30)
+   throw Error('Hãy nhập một số hoặc phân số hợp lệ.');
+
+  const neg=s.startsWith('-');
+  s=s.replace(/^[+-]/,'');
+  const [a,b='']=s.split('.');
+  return new R(BigInt(a+b)*(neg?-1n:1n),10n**BigInt(b.length));
+ }
+
+ add(v){
+  v=R.of(v);
+  return new R(this.n*v.d+v.n*this.d,this.d*v.d);
+ }
+ sub(v){
+  v=R.of(v);
+  return this.add(new R(-v.n,v.d));
+ }
+ mul(v){
+  v=R.of(v);
+  return new R(this.n*v.n,this.d*v.d);
+ }
+ div(v){
+  v=R.of(v);
+  return new R(this.n*v.d,this.d*v.n);
+ }
+ eq(v){
+  v=R.of(v);
+  return this.n===v.n&&this.d===v.d;
+ }
+ lt(v){
+  v=R.of(v);
+  return this.n*v.d<v.n*this.d;
+ }
+ str(){
+  let d=this.d;
+  while(d%2n===0n)d/=2n;
+  while(d%5n===0n)d/=5n;
+
+  if(d!==1n) return this.n+'/'+this.d;
+
+  const neg=this.n<0n;
+  const n=neg?-this.n:this.n;
+  let out=String(n/this.d);
+  let rem=n%this.d;
+
+  if(rem){
+   out+=',';
+   while(rem){
+    rem*=10n;
+    out+=String(rem/this.d);
+    rem%=this.d;
+   }
+  }
+  return(neg?'-':'')+out;
+ }
+}
+
+const r=R.of;
+const fmt=x=>r(x).str();
+const kel=t=>r(t).add('273.15');
+const cel=T=>r(T).sub('273.15');
+const far=t=>r(t).mul('1.8').add(32);
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+const defs=[
+ [41,'Độ không tuyệt đối',{},
+  'T = t + 273,15\nTmin = 0 K'],
+
+ [42,'Đổi Celsius → Fahrenheit',{},
+  'F = (9/5)t + 32'],
+
+ [43,'Đổi Kelvin → Celsius',{T:300},
+  't = T − 273,15'],
+
+ [44,'Giới hạn nhiệt độ',{},
+  'T ≥ 0 K\nt = T − 273,15'],
+
+ [45,'Đổi Kelvin → Celsius',{T:'373.15'},
+  't = T − 273,15'],
+
+ [46,'Tỉ số Fahrenheit / Celsius',{ratio:'2.5'},
+  'F = 1,8t + 32\nF/t = r\nt = 32/(r − 1,8)'],
+
+ [47,'Tỉ số và nhiệt độ Kelvin',{ratio:3},
+  'F/t = r\nt = 32/(r − 1,8)\nT = t + 273,15'],
+
+ [48,'Tỉ số Celsius / Kelvin',{ratio:'0.5'},
+  't/T = r\nT = t + 273,15\nF = 1,8t + 32'],
+
+ [49,'Độ giảm nhiệt độ',{high:100,low:20},
+  '|ΔF| = 1,8|Δt|\n|Δt| = |t₂ − t₁|'],
+
+ [50,'Tỉ số Celsius / Kelvin',{ratio:'0.25'},
+  't/T = r\nT = t + 273,15\nF = 1,8t + 32'],
+
+ [51,'Hai thang có cùng số chỉ',{},
+  't = T − 273,15\nF = 1,8t + 32\nT = F = x'],
+
+ [52,'Thang nhiệt độ X',{x0:-10,x100:90,t:40},
+  '(X − X₀)/(X₁₀₀ − X₀) = t/100'],
+
+ [53,'Thang Z và điểm ba',{z1:-15,z2:60,z:-96},
+  '(t − t₁)/(t₂ − t₁) = (Z − Z₁)/(Z₂ − Z₁)\nF = 1,8t + 32\nĐiểm ba: t₁ = 0,01°C; t₂ = 100°C'],
+
+ [54,'Đổi giữa hai thang',{x0:40,x100:120,y0:-30,y100:130,x:50},
+  '(X − X₀)/(X₁₀₀ − X₀)\n= (Y − Y₀)/(Y₁₀₀ − Y₀)'],
+
+ [55,'Nhiệt kế: tìm nhiệt độ',{l0:2,l100:22,l:8},
+  't/100 = (l − l₀)/(l₁₀₀ − l₀)'],
+
+ [56,'Nhiệt kế: tìm chiều dài',{l0:2,l100:22,t:50},
+  'l = l₀ + (l₁₀₀ − l₀)t/100']
+];
+
+const originalOptions={
+ 43:['27 °C','30 °C','25 °C','20 °C'],
+ 45:['100 °C','0 °C','273,15 °C','373,15 °C'],
+ 46:['30 °C','45,71 °C','50 °C','60 °C'],
+ 47:['273,15 K','298,15 K','299,82 K','310,15 K'],
+ 48:['100 °F','212 °F','300 °F','523,67 °F'],
+ 49:['68 °F','92 °F','144 °F','180 °F'],
+ 50:['100 °F','150 °F','196 °F','250 °F'],
+ 51:['313','212','574,25','273','Không có phương án đúng'],
+ 52:['20 °X','30 °X','40 °X','50 °X'],
+ 53:['−62,4 °F','162,4 °F','−162,4 °F','62,4 °F'],
+ 54:['−5°','−8°','−10°','−12°'],
+ 55:['40 °C','50 °C','20 °C','30 °C']
+};
+
+const originalCorrect={
+ 43:0,45:0,46:1,47:2,48:3,49:2,
+ 50:2,51:4,52:1,53:2,54:2,55:3
+};
+
+function build(i,p,original=false){
+ const id=defs[i][0];
+ let q='',a=null,unit='',note='',o=null,correct=null;
+ const v=k=>r(p[k]);
+
+ if(id===41){
+  q='Một vật có nhiệt độ −273,15°C được gọi là gì?';
+  o=['Nhiệt độ nóng chảy','Nhiệt độ điểm ba','Độ không tuyệt đối','Nhiệt độ sôi'];
+  correct=2;
+ }
+
+ if(id===42){
+  q='Để chuyển đổi từ nhiệt độ Celsius sang Fahrenheit, công thức nào được sử dụng?';
+  o=['F = t + 273,15','F = t / 1,8','F = 1,8t + 32','F = t − 32 / 1,8'];
+  correct=2;
+ }
+
+ if(id===44){
+  q='Giới hạn nhiệt độ thấp nhất của một vật là bao nhiêu?';
+  o=['−273,15 °C','0 °C','−100 °C','100 K'];
+  correct=0;
+  note='Đề dùng “thấp nhất có thể đạt”; hiểu là giới hạn lí thuyết.';
+ }
+
+ if(id===43||id===45){
+  q=`Một vật có nhiệt độ ${fmt(p.T)} K. Nhiệt độ đó tương đương bao nhiêu °C?`;
+  a=cel(v('T'));
+  unit='°C';
+ }
+
+ if(id===46||id===47){
+  q=`Tỉ số giữa số chỉ nhiệt độ Fahrenheit và Celsius là ${fmt(p.ratio)}. Tìm nhiệt độ theo thang ${id===46?'Celsius':'Kelvin'}.`;
+  a=r(32).div(v('ratio').sub('1.8'));
+  if(id===47)a=kel(a);
+  unit=id===46?'°C':'K';
+ }
+
+ if(id===48||id===50){
+  q=`Tỉ số giữa số chỉ nhiệt độ Celsius và Kelvin là ${fmt(p.ratio)}. Nhiệt độ Fahrenheit bằng bao nhiêu?`;
+  a=far(v('ratio').mul('273.15').div(r(1).sub(v('ratio'))));
+  unit='°F';
+ }
+
+ if(id===49){
+  q=`Nhiệt độ của một vật giảm từ ${fmt(p.high)}°C xuống ${fmt(p.low)}°C. Số chỉ Fahrenheit giảm bao nhiêu độ?`;
+  a=v('high').sub(v('low')).mul('1.8');
+  unit='°F';
+ }
+
+ if(id===51){
+  q='Nhiệt độ của một vật đo theo thang Kelvin là x K, theo thang Fahrenheit là x °F. Giá trị của x là bao nhiêu?';
+  a=r('459.67').div('0.8');
+  if(!original){
+   o=[fmt(a),fmt(a.add(10)),fmt(a.sub(10)),fmt(a.add(32))];
+   correct=0;
+  }
+ }
+
+ if(id===52){
+  q=`Thang X lấy điểm băng là ${fmt(p.x0)}°X và điểm sôi là ${fmt(p.x100)}°X. Vật ở ${fmt(p.t)}°C có số chỉ trên thang X bằng bao nhiêu?`;
+  a=v('x0').add(v('x100').sub(v('x0')).mul(v('t')).div(100));
+  unit='°X';
+ }
+
+ if(id===53){
+  q=`Thang Z có nhiệt độ sôi của nước là ${fmt(p.z2)}°Z, điểm ba của nước là ${fmt(p.z1)}°Z. Vật ở ${fmt(p.z)}°Z có nhiệt độ Fahrenheit bao nhiêu?`;
+  const t=r('0.01').add(
+   v('z').sub(v('z1')).mul('99.99').div(v('z2').sub(v('z1')))
+  );
+  a=far(t);
+  unit='°F';
+ }
+
+ if(id===54){
+  q=`Thang X có điểm băng ${fmt(p.x0)}°, điểm sôi ${fmt(p.x100)}°. Thang Y có các điểm tương ứng ${fmt(p.y0)}° và ${fmt(p.y100)}°. Khi X = ${fmt(p.x)}°, số chỉ Y bằng bao nhiêu?`;
+  a=v('y0').add(
+   v('x').sub(v('x0'))
+   .mul(v('y100').sub(v('y0')))
+   .div(v('x100').sub(v('x0')))
+  );
+  unit='°';
+ }
+
+ if(id===55||id===56){
+  q=`Cột thủy ngân dài ${fmt(p.l0)} cm ở 0°C và ${fmt(p.l100)} cm ở 100°C. `;
+
+  if(id===55){
+   q+=`Khi cột dài ${fmt(p.l)} cm, nhiệt độ bằng bao nhiêu?`;
+   a=v('l').sub(v('l0')).mul(100).div(v('l100').sub(v('l0')));
+   unit='°C';
+  }else{
+   q+=`Ở ${fmt(p.t)}°C, chiều dài cột thủy ngân bằng bao nhiêu cm?`;
+   a=v('l0').add(v('l100').sub(v('l0')).mul(v('t')).div(100));
+   unit='cm';
+  }
+ }
+
+ if(original&&originalOptions[id]){
+  o=originalOptions[id].slice();
+  correct=originalCorrect[id];
+
+  if([43,46,47,50,53].includes(id))
+   note='Đề gốc: chọn giá trị gần đúng theo các phương án đã cho. Đề đổi số dùng giá trị chính xác.';
+ }
+
+ if(!o&&id!==56){
+  const vals=[a,a.add(10),a.sub(10),a.add(32)];
+  o=vals.map(x=>fmt(x)+' '+unit);
+  correct=0;
+ }
+
+ if(!original&&o){
+  const pairs=o.map((s,j)=>({s,ok:j===correct}));
+
+  for(let j=pairs.length-1;j>0;j--){
+   const k=rnd(0,j);
+   [pairs[j],pairs[k]]=[pairs[k],pairs[j]];
+  }
+
+  o=pairs.map(x=>x.s);
+  correct=pairs.findIndex(x=>x.ok);
+ }
+
+ return{
+  p:{...p},original,q,a,unit,o,correct,note,
+  selected:null,input:'',checked:false,
+  feedback:'',good:false,showFormula:false,showSolution:false
+ };
+}
+
+function validate(i,p){
+ for(const k in p)r(p[k]);
+
+ const id=defs[i][0];
+ const v=k=>r(p[k]);
+
+ if('T'in p&&v('T').lt(0))
+  throw Error('Kelvin phải không âm.');
+
+ if((id===46||id===47)&&!r('1.8').lt(v('ratio')))
+  throw Error('Dạng này cần tỉ số > 1,8.');
+
+ if((id===48||id===50)&&(!r(0).lt(v('ratio'))||!v('ratio').lt(1)))
+  throw Error('Tỉ số phải lớn hơn 0 và nhỏ hơn 1.');
+
+ if(id===49&&!v('low').lt(v('high')))
+  throw Error('Nhiệt độ đầu phải lớn hơn nhiệt độ cuối.');
+
+ if(('t'in p&&v('t').lt('-273.15'))||
+    ('low'in p&&v('low').lt('-273.15')))
+  throw Error('Nhiệt độ không được thấp hơn độ không tuyệt đối.');
+
+ for(const [a,b]of[
+  ['x0','x100'],['y0','y100'],['z1','z2'],['l0','l100']
+ ]){
+  if(a in p&&!v(a).lt(v(b)))
+   throw Error('Mốc trên phải lớn hơn mốc dưới.');
+ }
+
+ if(id===53){
+  const t=r('0.01').add(
+   v('z').sub(v('z1')).mul('99.99').div(v('z2').sub(v('z1')))
+  );
+  if(t.lt('-273.15'))
+   throw Error('Số chỉ Z cho nhiệt độ thấp hơn độ không tuyệt đối.');
+ }
+
+ if(id===55&&(v('l').lt(v('l0'))||v('l100').lt(v('l'))))
+  throw Error('Chiều dài cần nằm giữa hai mốc nhiệt kế.');
+
+ if(('l0'in p&&v('l0').lt(0))||
+    (id===56&&(v('t').lt(0)||r(100).lt(v('t')))))
+  throw Error('Chiều dài không âm; nhiệt độ nhiệt kế trong khoảng 0–100°C.');
+}
+
+function generate(i){
+ const id=defs[i][0];
+ const p={...defs[i][2]};
+
+ if(id===43||id===45)
+  p.T=fmt(kel(rnd(-50,200)));
+
+ if(id===46||id===47)
+  p.ratio=fmt(r('1.8').add(r(32).div(rnd(1,16)*5)));
+
+ if(id===48||id===50)
+  p.ratio=['0.1','0.2','0.25','0.4','0.5','0.6','0.75'][rnd(0,6)];
+
+ if(id===49){
+  p.low=rnd(-4,8)*10;
+  p.high=p.low+rnd(2,12)*10;
+ }
+
+ if(id===52){
+  p.x0=rnd(-5,5)*10;
+  p.x100=p.x0+rnd(5,20)*10;
+  p.t=rnd(0,20)*5;
+ }
+
+ if(id===53){
+  p.z1=rnd(-4,4)*5;
+  p.z2=p.z1+rnd(5,15)*5;
+  p.z=p.z1-rnd(1,5)*5;
+ }
+
+ if(id===54){
+  p.x0=rnd(-4,4)*10;
+  p.x100=p.x0+rnd(4,12)*10;
+  p.y0=rnd(-6,3)*10;
+  p.y100=p.y0+rnd(5,20)*10;
+  p.x=p.x0+rnd(1,3)*(p.x100-p.x0)/4;
+ }
+
+ if(id===55||id===56){
+  p.l0=rnd(1,5);
+  p.l100=p.l0+rnd(2,6)*5;
+
+  if(id===55)
+   p.l=p.l0+rnd(1,4)*(p.l100-p.l0)/5;
+  else
+   p.t=rnd(1,19)*5;
+ }
+
+ return p;
+}
+
+let states=defs.map((d,i)=>build(i,d[2],true));
+let index=0;
+
+const $=id=>document.getElementById(id);
+
+const labels={
+ T:'Nhiệt độ T (K)',
+ ratio:'Tỉ số số chỉ',
+ high:'Nhiệt độ đầu (°C)',
+ low:'Nhiệt độ cuối (°C)',
+ x0:'Điểm băng X',
+ x100:'Điểm sôi X',
+ y0:'Điểm băng Y',
+ y100:'Điểm sôi Y',
+ x:'Số chỉ X',
+ t:'Nhiệt độ t (°C)',
+ z1:'Điểm ba Z',
+ z2:'Điểm sôi Z',
+ z:'Số chỉ Z',
+ l0:'Chiều dài ở 0°C (cm)',
+ l100:'Chiều dài ở 100°C (cm)',
+ l:'Chiều dài cần xét (cm)'
+};
+
+function solution(s,i){
+ const id=defs[i][0],p=s.p;
+ const v=k=>r(p[k]);
+ const f=fmt;
+ let steps=[];
+
+ if(id===41)steps=[
+  'Đổi từ Celsius sang Kelvin: T = t + 273,15.',
+  'Thay số: T = −273,15 + 273,15 = 0 K.',
+  '0 K là độ không tuyệt đối, giới hạn dưới của nhiệt độ nhiệt động lực học.'
+ ];
+
+ if(id===42)steps=[
+  'Hai mốc của thang nhiệt độ: 0°C ứng với 32°F; 100°C ứng với 212°F.',
+  'Quan hệ tuyến tính: (F − 32)/(212 − 32) = t/100.',
+  'Suy ra F − 32 = (180/100)t = 1,8t.',
+  'Công thức cần chọn: F = 1,8t + 32.'
+ ];
+
+ if(id===44)steps=[
+  'Nhiệt độ Kelvin có giới hạn dưới là 0 K.',
+  'Dùng t = T − 273,15.',
+  'Tại giới hạn dưới: t = 0 − 273,15 = −273,15°C.',
+  'Đây là giới hạn lí thuyết; không đạt chính xác 0 K bằng một quá trình hữu hạn.'
+ ];
+
+ if(id===43||id===45)steps=[
+  'Công thức: t = T − 273,15.',
+  `Thay T = ${f(p.T)} K.`,
+  `t = ${f(p.T)} − 273,15 = ${f(s.a)} °C.`
+ ];
+
+ if(id===46||id===47){
+  const b=v('ratio').sub('1.8');
+  const t=r(32).div(b);
+
+  steps=[
+   `Theo đề, F/t = ${f(p.ratio)}, do đó F = (${f(p.ratio)})t, với t ≠ 0.`,
+   'Công thức đổi thang: F = 1,8t + 32.',
+   `Lập phương trình: 1,8t + 32 = (${f(p.ratio)})t.`,
+   `Chuyển vế: (${f(p.ratio)} − 1,8)t = 32 ⇒ (${f(b)})t = 32.`,
+   `t = 32 / (${f(b)}) = ${f(t)} °C.`
+  ];
+
+  if(id===47)steps.push(
+   `Đổi sang Kelvin: T = t + 273,15 = (${f(t)}) + 273,15 = ${f(s.a)} K.`
+  );
+ }
+
+ if(id===48||id===50){
+  const b=r(1).sub(v('ratio'));
+  const n=v('ratio').mul('273.15');
+  const t=n.div(b);
+
+  steps=[
+   `Theo đề, t/T = ${f(p.ratio)} và T = t + 273,15.`,
+   `Suy ra t = (${f(p.ratio)})(t + 273,15).`,
+   `Chuyển vế: (1 − ${f(p.ratio)})t = (${f(p.ratio)}) × 273,15.`,
+   `t = (${f(n)}) / (${f(b)}) = ${f(t)} °C.`,
+   `Đổi sang Fahrenheit: F = 1,8 × (${f(t)}) + 32 = ${f(s.a)} °F.`
+  ];
+ }
+
+ if(id===49){
+  const dt=v('high').sub(v('low'));
+  steps=[
+   `Độ giảm theo Celsius: |Δt| = ${f(p.high)} − (${f(p.low)}) = ${f(dt)} °C.`,
+   'Từ F = 1,8t + 32, khi lấy hiệu hai nhiệt độ, số hạng 32 triệt tiêu.',
+   'Vì vậy |ΔF| = 1,8|Δt|.',
+   `Thay số: |ΔF| = 1,8 × (${f(dt)}) = ${f(s.a)} °F.`
+  ];
+ }
+
+ if(id===51)steps=[
+  'Theo đề, T = x và F = x: hai số chỉ bằng nhau.',
+  'Đổi sang Celsius: t = x − 273,15.',
+  'Thay vào F = 1,8t + 32: x = 1,8(x − 273,15) + 32.',
+  'Khai triển: x = 1,8x − 491,67 + 32 = 1,8x − 459,67.',
+  'Chuyển vế: 0,8x = 459,67.',
+  `Suy ra x = 459,67 / 0,8 = ${f(s.a)}.`
+ ];
+
+ if(id===52){
+  const gap=v('x100').sub(v('x0'));
+  steps=[
+   'Dùng quan hệ tuyến tính: (X − X₀)/(X₁₀₀ − X₀) = t/100.',
+   `Thay số: (X − (${f(p.x0)}))/(${f(p.x100)} − (${f(p.x0)})) = (${f(p.t)})/100.`,
+   `Suy ra X = ${f(p.x0)} + (${f(gap)}) × (${f(p.t)}) / 100.`,
+   `Kết quả: X = ${f(s.a)} °X.`
+  ];
+ }
+
+ if(id===53){
+  const dz=v('z2').sub(v('z1'));
+  const z=v('z').sub(v('z1'));
+  const t=r('0.01').add(z.mul('99.99').div(dz));
+
+  steps=[
+   'Điểm ba của nước là t₁ = 0,01°C; điểm sôi quy ước trong bài là t₂ = 100°C.',
+   'Quan hệ: (t − 0,01)/(100 − 0,01) = (Z − Z₁)/(Z₂ − Z₁).',
+   `Thay số: (t − 0,01)/99,99 = (${f(p.z)} − (${f(p.z1)}))/(${f(p.z2)} − (${f(p.z1)})).`,
+   `Suy ra t = 0,01 + (${f(z)}) × 99,99 / (${f(dz)}) = ${f(t)} °C.`,
+   `Đổi sang Fahrenheit: F = 1,8 × (${f(t)}) + 32 = ${f(s.a)} °F.`
+  ];
+ }
+
+ if(id===54){
+  const a=v('x').sub(v('x0'));
+  const b=v('x100').sub(v('x0'));
+  const c=v('y100').sub(v('y0'));
+
+  steps=[
+   'Với hai thang tuyến tính: (X − X₀)/(X₁₀₀ − X₀) = (Y − Y₀)/(Y₁₀₀ − Y₀).',
+   `Thay số: (${f(p.x)} − (${f(p.x0)}))/(${f(p.x100)} − (${f(p.x0)})) = (Y − (${f(p.y0)}))/(${f(p.y100)} − (${f(p.y0)})).`,
+   `Suy ra Y = ${f(p.y0)} + (${f(a)}) × (${f(c)}) / (${f(b)}).`,
+   `Kết quả: Y = ${f(s.a)}°.`
+  ];
+ }
+
+ if(id===55){
+  const a=v('l').sub(v('l0'));
+  const b=v('l100').sub(v('l0'));
+
+  steps=[
+   'Chiều dài cột thủy ngân được coi là thay đổi tuyến tính theo nhiệt độ.',
+   'Công thức: t/100 = (l − l₀)/(l₁₀₀ − l₀).',
+   `Thay số: t = 100 × (${f(p.l)} − ${f(p.l0)}) / (${f(p.l100)} − ${f(p.l0)}).`,
+   `t = 100 × (${f(a)}) / (${f(b)}) = ${f(s.a)} °C.`
+  ];
+ }
+
+ if(id===56)steps=[
+  'Chiều dài tăng tuyến tính theo nhiệt độ: (l − l₀)/(l₁₀₀ − l₀) = t/100.',
+  'Suy ra l = l₀ + (l₁₀₀ − l₀)t/100.',
+  `Thay số: l = ${f(p.l0)} + (${f(p.l100)} − ${f(p.l0)}) × (${f(p.t)}) / 100.`,
+  `Kết quả: l = ${f(s.a)} cm.`
+ ];
+
+ let conclusion=s.o
+  ?`Chọn ${String.fromCharCode(65+s.correct)}: ${s.o[s.correct]}.`
+  :`Đáp số: ${f(s.a)} ${s.unit}.`;
+
+ if(s.original&&[43,46,47,50,53].includes(id))
+  steps.push(
+   'Giữ kết quả tính chính xác ở trên; phương án đề gốc là giá trị gần đúng tương ứng.'
+  );
+
+ if(id===51&&s.original)
+  conclusion='Đề gốc không có phương án A–D đúng. Kết quả chính xác là x = 574,5875; chọn mục bổ sung “Không có phương án đúng”.';
+
+ return{steps,conclusion};
+}
+
+function render(){
+ const s=states[index],d=defs[index];
+
+ $('nav').replaceChildren(...defs.map((x,i)=>{
+  const b=document.createElement('button');
+  b.textContent=x[0];
+  b.className=(i===index?'active ':'')+
+   (states[i].checked&&states[i].good?'done':'');
+  b.onclick=()=>{index=i;render()};
+  return b;
+ }));
+
+ $('tag').textContent=s.original
+  ?'Số liệu gốc'
+  :'Đề đã đổi số · tính chính xác';
+
+ $('title').textContent=`Câu ${d[0]} · ${d[1]}`;
+ $('question').textContent=s.q;
+ $('formula').textContent=d[3];
+ $('formula').classList.toggle('hidden',!s.showFormula);
+ $('formulaHint').classList.toggle('hidden',s.showFormula);
+ $('formulaBtn').textContent=s.showFormula?'Ẩn công thức':'Xem công thức';
+
+ $('options').replaceChildren();
+
+ if(s.o)s.o.forEach((text,j)=>{
+  const b=document.createElement('button');
+  b.className='option'+(s.selected===j?' selected':'');
+  b.setAttribute('aria-pressed',s.selected===j);
+
+  const letter=document.createElement('b');
+  letter.textContent=String.fromCharCode(65+j);
+
+  const span=document.createElement('span');
+  span.textContent=text;
+
+  b.append(letter,span);
+  b.onclick=()=>{
+   s.selected=j;
+   s.checked=false;
+   s.feedback='';
+   render();
+  };
+
+  $('options').append(b);
+ });
+
+ $('numeric').classList.toggle('hidden',!!s.o);
+ $('answer').value=s.input;
+ $('feedback').textContent=s.feedback||s.note;
+ $('feedback').className=s.feedback
+  ?'feedback '+(s.good?'good':'bad')
+  :'muted';
+
+ $('prev').disabled=index===0;
+ $('next').disabled=index===defs.length-1;
+
+ const done=states.filter(s=>s.checked&&s.good).length;
+ $('progressText').textContent=`Đã làm đúng ${done}/16 câu`;
+ $('progress').value=done;
+
+ const fixed=[41,42,44,51].includes(d[0]);
+ $('new').textContent=fixed?'↻ Trộn phương án':'↻ Đổi đề bài mới';
+
+ $('fields').replaceChildren();
+
+ Object.keys(s.p).forEach(k=>{
+  const l=document.createElement('label');
+  l.textContent=labels[k]||k;
+
+  const inp=document.createElement('input');
+  inp.value=fmt(s.p[k]);
+  inp.dataset.key=k;
+  inp.inputMode='decimal';
+
+  l.append(inp);
+  $('fields').append(l);
+ });
+
+ $('apply').disabled=fixed;
+ $('customHint').textContent=fixed
+  ?'Câu này có dữ kiện hoặc định nghĩa cố định; chương trình chỉ trộn phương án. Câu 51 ở chế độ mới dùng phương án đúng đã sửa.'
+  :'';
+
+ $('error').textContent='';
+ $('solution').classList.toggle('hidden',!s.showSolution);
+ $('solutionBtn').textContent=s.showSolution?'Ẩn lời giải':'Xem lời giải';
+
+ const sol=solution(s,index);
+
+ $('steps').replaceChildren(...sol.steps.map(t=>{
+  const li=document.createElement('li');
+  li.textContent=t;
+  return li;
+ }));
+
+ $('conclusion').textContent=sol.conclusion;
+}
+
+$('solutionBtn').onclick=()=>{
+ states[index].showSolution=!states[index].showSolution;
+ render();
+};
+
+$('new').onclick=()=>{
+ const old=states[index];
+ let p;
+
+ for(let tries=0;tries<30;tries++){
+  p=generate(index);
+  if(JSON.stringify(p)!==JSON.stringify(old.p)||
+     [41,42,44,51].includes(defs[index][0]))break;
+ }
+
+ validate(index,p);
+ states[index]=build(index,p,false);
+ render();
+};
+
+$('original').onclick=()=>{
+ states[index]=build(index,defs[index][2],true);
+ render();
+};
+
+$('reset').onclick=()=>{
+ states=defs.map((d,i)=>build(i,d[2],true));
+ render();
+};
+
+$('formulaBtn').onclick=()=>{
+ states[index].showFormula=!states[index].showFormula;
+ render();
+};
+
+$('answer').oninput=e=>{
+ states[index].input=e.target.value;
+ states[index].checked=false;
+ states[index].feedback='';
+ $('feedback').textContent='';
+};
+
+$('check').onclick=()=>{
+ const s=states[index];
+
+ try{
+  if(s.o&&s.selected===null)
+   throw Error('Hãy chọn một phương án.');
+
+  if(!s.o&&!s.input.trim())
+   throw Error('Hãy nhập đáp số.');
+
+  s.good=s.o
+   ?s.selected===s.correct
+   :r(s.input).eq(s.a);
+
+  s.checked=true;
+  s.feedback=s.good
+   ?'✓ Chính xác!'
+   :'Chưa đúng. Hãy xem công thức và kiểm tra lại dữ kiện, đơn vị.';
+
+  if(s.good&&defs[index][0]===51&&s.original)
+   s.feedback+=' Đề gốc không có phương án khớp; bạn đã nhận ra lỗi đề.';
+
+  render();
+ }catch(e){
+  $('feedback').className='feedback bad';
+  $('feedback').textContent=e.message;
+ }
+};
+
+$('apply').onclick=()=>{
+ try{
+  const p={};
+
+  $('fields').querySelectorAll('input').forEach(e=>{
+   p[e.dataset.key]=r(e.value).str().replace(',','.');
+  });
+
+  validate(index,p);
+  states[index]=build(index,p,false);
+  render();
+ }catch(e){
+  $('error').textContent=e.message;
+ }
+};
+
+$('prev').onclick=()=>{
+ if(index>0){index--;render()}
+};
+
+$('next').onclick=()=>{
+ if(index<defs.length-1){index++;render()}
+};
+
+$('fullscreen').onclick=async()=>{
+ try{
+  if(document.fullscreenElement){
+   await document.exitFullscreen();
+  }else if(document.documentElement.requestFullscreen){
+   await document.documentElement.requestFullscreen();
+  }else{
+   alert('Trình duyệt này chưa hỗ trợ nút toàn màn hình. Bạn có thể thêm trang vào màn hình chính.');
+  }
+ }catch(e){
+  alert('Hãy dùng menu trình duyệt để mở toàn màn hình.');
+ }
+};
+
+render();
+</script>
+</body>
+</html>
