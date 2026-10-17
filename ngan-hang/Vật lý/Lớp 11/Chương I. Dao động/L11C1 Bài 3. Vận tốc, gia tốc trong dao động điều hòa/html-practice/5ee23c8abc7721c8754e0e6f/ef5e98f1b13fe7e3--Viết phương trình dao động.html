@@ -1,0 +1,646 @@
+<!--hp-title:Vmnhur90IHBoxrDGoW5nIHRyw6xuaCBkYW8gxJHhu5luZw==-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Luyện viết phương trình con lắc lò xo</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#edf3f8;color:#17314b;font:16px Arial,sans-serif;line-height:1.65}
+header{background:#102a4c;color:#fff;padding:17px 5%}
+header strong{font-size:20px}
+header small{display:block;color:#cddceb}
+main{max-width:1150px;margin:22px auto;padding:0 14px}
+h1{font-size:25px}
+h2{font-size:20px;margin-top:0}
+nav,.actions{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}
+button{border:1px solid #bacbdc;background:#fff;color:#143955;border-radius:10px;padding:11px 15px;font:inherit;cursor:pointer}
+button:hover{filter:brightness(.95)}
+button.active,button.primary{background:#185b8e;color:#fff;border-color:#185b8e}
+.layout{display:grid;grid-template-columns: .85fr 1.25fr;gap:18px}
+.card{background:#fff;padding:22px;border-radius:17px;box-shadow:0 5px 22px #17314b0b}
+.formula{background:#edf6fd;border-left:4px solid #287db3;padding:15px;border-radius:5px}
+.data{padding:12px;background:#fff8df;border-radius:10px;margin-top:15px}
+.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+label{display:block;font-weight:bold}
+input{width:100%;margin-top:6px;padding:12px;border:1px solid #b7c9da;border-radius:9px;background:#fffdf1;font:inherit}
+.hint{font-size:14px;color:#60748b}
+#feedback{font-weight:bold}
+#solution{padding:18px;background:#edf8f0;border-radius:12px;margin-top:15px}
+#solution p{margin:9px 0}
+.answer{padding:13px;background:#fff;border:1px solid #99c5a7;border-radius:8px;font-weight:bold}
+svg{width:100%;height:auto}
+.preview{background:#f2f6fb;border-radius:9px;padding:12px;margin-top:12px;overflow-wrap:anywhere}
+footer{font-size:13px;color:#60748b;margin:20px 0}
+@media(max-width:760px){
+.layout{grid-template-columns:1fr}
+.fields{grid-template-columns:1fr}
+.card{padding:17px}
+header strong{font-size:17px}
+h1{font-size:22px}
+}
+@media print{
+nav,button,.fields,.hint,#feedback{display:none}
+.layout{display:block}
+.card{box-shadow:none;break-inside:avoid}
+body{background:#fff}
+}
+</style>
+</head>
+<body>
+<header>
+<strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
+<small>lophocthayminh.onrender.com</small>
+</header>
+
+<main>
+<h1>Viết phương trình con lắc lò xo</h1>
+<p>Quy ước: x = A cos(ωt + φ), với x tính bằng cm, t tính bằng s.</p>
+
+<nav id="questionList"></nav>
+
+<div class="layout">
+<section class="card">
+<h2>Công thức áp dụng</h2>
+<div class="formula">
+ω = 2π/T = √(k/m)<br>
+A = L/2<br>
+A = √[x₀² + (v₀/ω)²]<br>
+x₀ = A cos φ<br>
+v₀ = −Aω sin φ
+</div>
+<p class="hint">L là chiều dài quỹ đạo. Khi dùng ω = √(k/m), khối lượng phải tính bằng kg.</p>
+<div id="illustration"></div>
+<div id="givenData" class="data"></div>
+<p class="hint">Sơ đồ biểu diễn điều kiện ban đầu, không theo tỉ lệ.</p>
+</section>
+
+<section class="card">
+<h2 id="questionTitle"></h2>
+<div id="questionText"></div>
+
+<div class="actions">
+<button class="primary" onclick="newQuestion()">Đổi đề bài mới</button>
+<button onclick="restoreOriginal()">Khôi phục đề gốc</button>
+</div>
+
+<p>Nhập các hệ số của phương trình:</p>
+<div class="fields">
+<label>A (cm)
+<input id="inputA" placeholder="Ví dụ: 2*sqrt(2)" oninput="updatePreview()">
+</label>
+<label>ω (rad/s)
+<input id="inputW" placeholder="Ví dụ: 10*pi" oninput="updatePreview()">
+</label>
+<label>φ (rad)
+<input id="inputP" placeholder="Ví dụ: -pi/4" oninput="updatePreview()">
+</label>
+</div>
+
+<p class="hint">
+Dùng pi hoặc π; sqrt(2) là √2; atan(2) là arctan(2).
+Dùng dấu * để nhân. Chấp nhận dấu phẩy thập phân.
+</p>
+
+<div class="preview" id="equationPreview">x = A cos(ωt + φ) cm</div>
+
+<div class="actions">
+<button class="primary" onclick="checkAnswer()">Kiểm tra</button>
+<button onclick="showSolution()">Xem lời giải</button>
+</div>
+
+<div id="feedback" role="status" aria-live="polite"></div>
+<div id="solution" hidden></div>
+</section>
+</div>
+
+<div class="actions">
+<button onclick="changePage(-1)">← Câu trước</button>
+<button onclick="changePage(1)">Câu tiếp →</button>
+<button onclick="toggleFullscreen()">Toàn màn hình</button>
+<button onclick="window.print()">In bài hiện tại</button>
+</div>
+
+<footer>
+Chạy offline. Đổi số và tính đáp án bằng JavaScript.
+Lời giải giữ kết quả dưới dạng biểu thức chính xác.
+</footer>
+</main>
+
+<script>
+"use strict";
+
+const ORIGINAL = [
+  {
+    type: 0,
+    m: 50,
+    period: "0,2",
+    omegaPi: 10,
+    length: 40
+  },
+  {
+    type: 1,
+    m: 400,
+    k: 40,
+    omega: 10,
+    displacement: 8
+  },
+  {
+    type: 2,
+    m: 100,
+    k: 40,
+    omega: 20,
+    displacement: 2,
+    velocity: "0,4",
+    velocityCm: 40,
+    ratio: 1
+  }
+];
+
+const clone = object => JSON.parse(JSON.stringify(object));
+const questions = clone(ORIGINAL);
+let current = 0;
+
+const el = id => document.getElementById(id);
+const randomItem = array => array[Math.floor(Math.random() * array.length)];
+const decimal = value => String(value).replace(".", ",");
+
+function radical(coefficient, radicand) {
+  return (coefficient === 1 ? "" : coefficient) + "√" + radicand;
+}
+
+function render() {
+  const q = questions[current];
+
+  el("questionList").innerHTML = questions.map((_, i) =>
+    `<button class="${i === current ? "active" : ""}"
+      onclick="selectQuestion(${i})">Bài ${i + 1}</button>`
+  ).join("");
+
+  const titles = [
+    "Qua vị trí cân bằng theo chiều âm",
+    "Thả vật từ vị trí biên",
+    "Truyền vận tốc ban đầu"
+  ];
+
+  el("questionTitle").textContent =
+    `Bài ${current + 1}. ${titles[current]}`;
+
+  if (current === 0) {
+    el("questionText").textContent =
+      `Một con lắc lò xo có khối lượng m = ${q.m} g, dao động điều hòa trên trục Ox với chu kì T = ${q.period} s và chiều dài quỹ đạo là ${q.length} cm. Chọn gốc tọa độ tại vị trí cân bằng, gốc thời gian lúc con lắc qua vị trí cân bằng theo chiều âm. Viết phương trình dao động của con lắc.`;
+
+    el("givenData").innerHTML =
+      `<b>Dữ kiện:</b><br>
+      m = ${q.m} g; T = ${q.period} s;<br>
+      L = ${q.length} cm; x₀ = 0; v₀ &lt; 0.`;
+  }
+
+  if (current === 1) {
+    el("questionText").textContent =
+      `Một con lắc lò xo gồm một quả nặng có khối lượng m = ${q.m} g và một lò xo có độ cứng k = ${decimal(q.k)} N/m. Người ta kéo quả nặng ra khỏi vị trí cân bằng một đoạn bằng ${q.displacement} cm và thả cho nó dao động. Chọn gốc thời gian lúc thả vật. Viết phương trình dao động của quả nặng. Quy ước gốc tọa độ tại vị trí cân bằng, chiều dương hướng từ vị trí cân bằng tới vị trí thả vật.`;
+
+    el("givenData").innerHTML =
+      `<b>Dữ kiện:</b><br>
+      m = ${q.m} g; k = ${decimal(q.k)} N/m;<br>
+      x₀ = +${q.displacement} cm; v₀ = 0.`;
+  }
+
+  if (current === 2) {
+    el("questionText").textContent =
+      `Quả cầu có khối lượng m = ${q.m} g treo vào đầu lò xo có độ cứng k = ${decimal(q.k)} N/m rồi treo thẳng đứng. Dùng tay kéo vật xuống dưới một đoạn ${q.displacement} cm, sau đó tiếp tục truyền cho nó một vận tốc ${q.velocity} m/s theo chiều hướng xuống dưới. Chọn gốc tọa độ tại vị trí cân bằng, trục tọa độ thẳng đứng, chiều dương hướng xuống dưới; gốc thời gian là lúc truyền vận tốc. Viết phương trình dao động của vật.`;
+
+    el("givenData").innerHTML =
+      `<b>Dữ kiện:</b><br>
+      m = ${q.m} g; k = ${decimal(q.k)} N/m;<br>
+      x₀ = +${q.displacement} cm;<br>
+      v₀ = +${q.velocity} m/s.`;
+  }
+
+  drawIllustration();
+
+  ["inputA", "inputW", "inputP"].forEach(id => el(id).value = "");
+  el("feedback").textContent = "";
+  el("solution").hidden = true;
+  el("solution").innerHTML = "";
+  updatePreview();
+}
+
+function drawIllustration() {
+  const q = questions[current];
+
+  if (current < 2) {
+    const blockX = current === 0 ? 163 : 245;
+    const marker = current === 0 ? "x₀ = 0" : `x₀ = +${q.displacement} cm`;
+
+    el("illustration").innerHTML = `
+      <svg viewBox="0 0 380 180" role="img"
+        aria-label="Sơ đồ con lắc lò xo nằm ngang tại thời điểm ban đầu">
+        <rect x="15" y="45" width="12" height="55" fill="#71879a"/>
+        <path d="M27 72 L45 72
+          L55 57 L70 87 L85 57 L100 87 L115 57 L130 87
+          L145 72 L${blockX} 72"
+          stroke="#246b9f" stroke-width="3" fill="none"/>
+        <rect x="${blockX}" y="55" width="34" height="34"
+          rx="6" fill="#efa83b"/>
+        <path d="M25 118 H355 M345 112 L355 118 L345 124"
+          stroke="#526d83" fill="none"/>
+        <path d="M180 100 V135" stroke="#526d83" stroke-dasharray="4 4"/>
+        <text x="166" y="155" font-size="14">O</text>
+        <text x="345" y="146" font-size="14">+x</text>
+        <text x="35" y="25" font-size="15">${marker}</text>
+        ${
+          current === 0
+            ? `<path d="M196 42 H142 M151 36 L142 42 L151 48"
+                stroke="#c94e45" stroke-width="2" fill="none"/>
+               <text x="214" y="40" font-size="14">v₀ &lt; 0</text>`
+            : `<text x="230" y="40" font-size="14">v₀ = 0</text>`
+        }
+      </svg>`;
+  } else {
+    el("illustration").innerHTML = `
+      <svg viewBox="0 0 380 235" role="img"
+        aria-label="Con lắc lò xo thẳng đứng, chiều dương hướng xuống">
+        <rect x="95" y="15" width="140" height="10" fill="#71879a"/>
+        <path d="M165 25 V40 L150 50 L180 65 L150 80
+          L180 95 L150 110 L165 125 V150"
+          stroke="#246b9f" stroke-width="3" fill="none"/>
+        <rect x="148" y="150" width="34" height="34"
+          rx="6" fill="#efa83b"/>
+        <path d="M115 125 H275" stroke="#8aa0b4" stroke-dasharray="5 4"/>
+        <text x="280" y="130" font-size="14">O — VTCB</text>
+        <path d="M245 75 V210 M239 200 L245 210 L251 200"
+          stroke="#526d83" stroke-width="2" fill="none"/>
+        <text x="256" y="210" font-size="14">+x</text>
+        <text x="20" y="207" font-size="14">x₀ = +${q.displacement} cm</text>
+        <path d="M200 155 V185 M194 177 L200 185 L206 177"
+          stroke="#c94e45" stroke-width="2" fill="none"/>
+        <text x="20" y="228" font-size="14">v₀ = +${q.velocity} m/s ↓</text>
+      </svg>`;
+  }
+}
+
+function selectQuestion(index) {
+  current = index;
+  render();
+}
+
+function changePage(step) {
+  selectQuestion((current + step + questions.length) % questions.length);
+}
+
+function restoreOriginal() {
+  questions[current] = clone(ORIGINAL[current]);
+  render();
+}
+
+function newQuestion() {
+  const old = JSON.stringify(questions[current]);
+  let q;
+
+  do {
+    if (current === 0) {
+      const periodOptions = [
+        {period: "1", omegaPi: 2},
+        {period: "0,5", omegaPi: 4},
+        {period: "0,4", omegaPi: 5},
+        {period: "0,25", omegaPi: 8},
+        {period: "0,2", omegaPi: 10},
+        {period: "0,1", omegaPi: 20}
+      ];
+
+      const selected = randomItem(periodOptions);
+
+      q = {
+        type: 0,
+        m: randomItem([40, 50, 80, 100, 200]),
+        period: selected.period,
+        omegaPi: selected.omegaPi,
+        length: randomItem([12, 16, 20, 24, 30, 40, 48])
+      };
+    } else if (current === 1) {
+      const m = randomItem([100, 200, 250, 400, 500]);
+      const omega = randomItem([4, 5, 10, 20]);
+
+      q = {
+        type: 1,
+        m,
+        omega,
+        k: m * omega * omega / 1000,
+        displacement: randomItem([3, 4, 5, 6, 8, 10, 12])
+      };
+    } else {
+      const m = randomItem([100, 200, 250, 400]);
+      const omega = randomItem([5, 10, 20]);
+      const displacement = randomItem([1, 2, 3, 4, 5]);
+      const ratio = randomItem([1, 2]);
+      const velocityCm = displacement * omega * ratio;
+
+      q = {
+        type: 2,
+        m,
+        omega,
+        k: m * omega * omega / 1000,
+        displacement,
+        ratio,
+        velocityCm,
+        velocity: decimal(velocityCm / 100)
+      };
+    }
+  } while (JSON.stringify(q) === old);
+
+  questions[current] = q;
+  render();
+}
+
+function correctAnswer() {
+  const q = questions[current];
+
+  if (current === 0) {
+    return {
+      A: q.length / 2,
+      w: q.omegaPi * Math.PI,
+      p: Math.PI / 2
+    };
+  }
+
+  if (current === 1) {
+    return {
+      A: q.displacement,
+      w: q.omega,
+      p: 0
+    };
+  }
+
+  return {
+    A: q.displacement * Math.sqrt(1 + q.ratio * q.ratio),
+    w: q.omega,
+    p: -Math.atan(q.ratio)
+  };
+}
+
+/* Bộ đọc biểu thức: số, pi, sqrt(...), atan(...), + - * / và ngoặc. */
+function evaluateExpression(text) {
+  text = text.toLowerCase()
+    .replace(/π/g, "pi")
+    .replace(/,/g, ".")
+    .replace(/\s+/g, "");
+
+  const tokens = [];
+  let position = 0;
+
+  while (position < text.length) {
+    const part = text.slice(position);
+    const match = part.match(
+      /^(sqrt|atan|pi|(?:\d+(?:\.\d*)?|\.\d+)|[()+*/-])/
+    );
+
+    if (!match) throw new Error("Biểu thức không hợp lệ");
+    tokens.push(match[0]);
+    position += match[0].length;
+  }
+
+  let cursor = 0;
+
+  function expression() {
+    let value = term();
+
+    while (tokens[cursor] === "+" || tokens[cursor] === "-") {
+      const operator = tokens[cursor++];
+      const next = term();
+      value = operator === "+" ? value + next : value - next;
+    }
+
+    return value;
+  }
+
+  function term() {
+    let value = unary();
+
+    while (tokens[cursor] === "*" || tokens[cursor] === "/") {
+      const operator = tokens[cursor++];
+      const next = unary();
+      value = operator === "*" ? value * next : value / next;
+    }
+
+    return value;
+  }
+
+  function unary() {
+    if (tokens[cursor] === "+") {
+      cursor++;
+      return unary();
+    }
+
+    if (tokens[cursor] === "-") {
+      cursor++;
+      return -unary();
+    }
+
+    return primary();
+  }
+
+  function primary() {
+    const token = tokens[cursor++];
+
+    if (token === undefined) throw new Error("Thiếu giá trị");
+    if (token === "pi") return Math.PI;
+
+    if (token === "(") {
+      const value = expression();
+      if (tokens[cursor++] !== ")") throw new Error("Thiếu ngoặc");
+      return value;
+    }
+
+    if (token === "sqrt" || token === "atan") {
+      if (tokens[cursor++] !== "(") throw new Error("Thiếu ngoặc");
+      const value = expression();
+      if (tokens[cursor++] !== ")") throw new Error("Thiếu ngoặc");
+      return token === "sqrt" ? Math.sqrt(value) : Math.atan(value);
+    }
+
+    if (/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(token)) return Number(token);
+
+    throw new Error("Giá trị không hợp lệ");
+  }
+
+  const result = expression();
+
+  if (cursor !== tokens.length || !Number.isFinite(result)) {
+    throw new Error("Biểu thức không hợp lệ");
+  }
+
+  return result;
+}
+
+function updatePreview() {
+  const A = el("inputA").value.trim() || "A";
+  const w = el("inputW").value.trim() || "ω";
+  const p = el("inputP").value.trim() || "φ";
+
+  el("equationPreview").textContent =
+    `Bài làm: x = (${A}) cos[(${w})t + (${p})] cm`;
+}
+
+function checkAnswer() {
+  let A, w, p;
+
+  try {
+    A = evaluateExpression(el("inputA").value);
+    w = evaluateExpression(el("inputW").value);
+    p = evaluateExpression(el("inputP").value);
+  } catch {
+    el("feedback").style.color = "#ae5913";
+    el("feedback").textContent =
+      "Nhập đủ ba biểu thức hợp lệ. Ví dụ: 2*sqrt(2), 20, -pi/4.";
+    return;
+  }
+
+  const expected = correctAnswer();
+  const close = (a, b) =>
+    Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(b));
+
+  const amplitudeOK = A > 0 && close(A, expected.A);
+  const omegaOK = w > 0 && close(w, expected.w);
+  const phaseOK = Math.abs(Math.sin((p - expected.p) / 2)) < 1e-9;
+
+  if (amplitudeOK && omegaOK && phaseOK) {
+    el("feedback").style.color = "#14733c";
+    el("feedback").textContent =
+      "✓ Chính xác! Phương trình phù hợp với điều kiện ban đầu.";
+    return;
+  }
+
+  const hints = [];
+  if (!amplitudeOK) hints.push("Kiểm tra lại biên độ A.");
+  if (!omegaOK) hints.push("Kiểm tra ω và đơn vị khối lượng.");
+  if (!phaseOK) hints.push("Kiểm tra pha từ cả x₀ và dấu của v₀.");
+
+  el("feedback").style.color = "#ae5913";
+  el("feedback").textContent = "Chưa đúng. " + hints.join(" ");
+}
+
+function showSolution() {
+  const q = questions[current];
+  let html = "";
+
+  if (current === 0) {
+    html = `
+      <p><b>Bước 1. Tìm biên độ.</b><br>
+      A = L/2 = ${q.length}/2 = ${q.length / 2} cm.</p>
+
+      <p><b>Bước 2. Tìm tần số góc.</b><br>
+      ω = 2π/T = 2π/(${q.period}) = ${q.omegaPi}π rad/s.</p>
+
+      <p><b>Bước 3. Xác định pha ban đầu.</b><br>
+      Tại t = 0, x₀ = 0 nên cos φ = 0.<br>
+      Vật chuyển động theo chiều âm nên v₀ &lt; 0.<br>
+      Từ v₀ = −Aω sin φ suy ra sin φ &gt; 0.<br>
+      Chọn φ = π/2; các pha cộng thêm 2kπ đều tương đương.</p>
+
+      <p class="answer">
+      x = ${q.length / 2} cos(${q.omegaPi}πt + π/2) cm.
+      </p>
+
+      <p><b>Kiểm tra:</b> tại t = 0, x = 0 và v = −Aω &lt; 0.</p>`;
+  }
+
+  if (current === 1) {
+    html = `
+      <p><b>Bước 1. Đổi đơn vị.</b><br>
+      m = ${q.m} g = ${decimal(q.m / 1000)} kg.</p>
+
+      <p><b>Bước 2. Tìm tần số góc.</b><br>
+      ω = √(k/m)<br>
+      = √[${decimal(q.k)}/${decimal(q.m / 1000)}]
+      = ${q.omega} rad/s.</p>
+
+      <p><b>Bước 3. Xác định biên độ.</b><br>
+      Thả nhẹ vật nên v₀ = 0; vị trí thả là biên.<br>
+      Do đó A = ${q.displacement} cm.</p>
+
+      <p><b>Bước 4. Xác định pha ban đầu.</b><br>
+      Theo chiều dương đã chọn, x₀ = +A.<br>
+      cos φ = 1 và sin φ = 0 ⇒ chọn φ = 0.</p>
+
+      <p class="answer">
+      x = ${q.displacement} cos(${q.omega}t) cm.
+      </p>
+
+      <p class="hint">
+      Đề trong ảnh chưa quy định chiều dương.
+      Chương trình bổ sung chiều dương hướng về điểm thả.
+      Nếu chọn chiều ngược lại, phương trình có pha ban đầu π.
+      </p>`;
+  }
+
+  if (current === 2) {
+    const amplitude = radical(q.displacement, 1 + q.ratio * q.ratio);
+    const phase = q.ratio === 1 ? "π/4" : "arctan(2)";
+
+    html = `
+      <p><b>Bước 1. Đổi đơn vị và xác định dấu.</b><br>
+      m = ${decimal(q.m / 1000)} kg.<br>
+      x₀ = +${q.displacement} cm.<br>
+      v₀ = +${q.velocity} m/s = +${q.velocityCm} cm/s.<br>
+      Cả x₀ và v₀ đều dương vì chiều dương hướng xuống.</p>
+
+      <p><b>Bước 2. Tìm tần số góc.</b><br>
+      ω = √(k/m)<br>
+      = √[${decimal(q.k)}/${decimal(q.m / 1000)}]
+      = ${q.omega} rad/s.</p>
+
+      <p><b>Bước 3. Tìm biên độ.</b><br>
+      A² = x₀² + (v₀/ω)².<br>
+      A = √[${q.displacement}² + (${q.velocityCm}/${q.omega})²]
+      = ${amplitude} cm.</p>
+
+      <p><b>Bước 4. Tìm pha ban đầu.</b><br>
+      cos φ = x₀/A &gt; 0.<br>
+      sin φ = −v₀/(Aω) &lt; 0.<br>
+      Chọn φ thuộc góc phần tư IV.<br>
+      tan φ = −v₀/(ωx₀)<br>
+      = −${q.velocityCm}/(${q.omega} · ${q.displacement})
+      = −${q.ratio}.<br>
+      Vì vậy φ = −${phase}.</p>
+
+      <p class="answer">
+      x = ${amplitude} cos(${q.omega}t − ${phase}) cm.
+      </p>
+
+      <p><b>Cách nhập:</b><br>
+      A: ${q.displacement}*sqrt(${1 + q.ratio * q.ratio})<br>
+      ω: ${q.omega}<br>
+      φ: ${q.ratio === 1 ? "-pi/4" : "-atan(2)"}</p>
+
+      <p class="hint">
+      Gốc tọa độ nằm tại vị trí cân bằng.
+      Trọng lực làm thay đổi vị trí cân bằng,
+      còn tần số góc vẫn là √(k/m).
+      </p>`;
+  }
+
+  el("solution").innerHTML = html;
+  el("solution").hidden = false;
+}
+
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else if (document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen();
+    } else {
+      throw new Error("Không hỗ trợ");
+    }
+  } catch {
+    el("feedback").textContent =
+      "Trình duyệt chưa hỗ trợ toàn màn hình. Có thể xoay ngang thiết bị để xem rộng hơn.";
+  }
+}
+
+render();
+</script>
+</body>
+</html>
