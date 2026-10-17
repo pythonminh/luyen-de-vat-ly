@@ -1,0 +1,634 @@
+<!--hp-title:xJDhu5MgdGjhu4sgxJHhu5kgZOG7i2NoIGNodXnhu4Nu-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vật lí 10 – Luyện đồ thị vận tốc, gia tốc</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#edf3f9;color:#18324e;font:17px/1.65 Arial,sans-serif}
+header{background:#10294c;color:#fff;padding:18px 5%;font-weight:bold}
+header small{display:block;font-size:13px;font-weight:normal}
+main{max-width:1200px;margin:auto;padding:20px}
+h1{font-size:25px;margin:12px 0}
+nav,.buttons{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}
+button{padding:12px 16px;border:1px solid #c8d5e6;border-radius:10px;background:white;color:#173d6b;font-size:15px;cursor:pointer}
+button.active,.primary{background:#173d6b;color:white}
+.layout{display:grid;grid-template-columns:420px 1fr;gap:20px}
+.card{background:white;border-radius:16px;padding:22px}
+#graph svg{width:100%;height:auto;display:block}
+.formula{background:#eaf3ff;padding:15px;border-radius:10px;margin-top:15px}
+#question{font-size:19px}
+.option{display:flex;gap:10px;padding:12px;border:1px solid #d6e0ec;border-radius:10px;margin:9px 0;cursor:pointer;align-items:baseline}
+.option:has(input:checked){background:#eaf3ff;border-color:#2866ab}
+input[type=radio]{accent-color:#173d6b}
+input[type=text]{width:100%;padding:13px;border:1px solid #b8c9df;border-radius:9px;font-size:18px}
+.note{font-size:14px;color:#63768d}
+#feedback{font-weight:bold;margin:12px 0}
+#solution{border-top:1px solid #dbe4ee;margin-top:15px;padding-top:15px}
+#solution li{margin:10px 0}
+.badge{display:inline-block;background:#fff0b2;padding:3px 10px;border-radius:7px;font-size:14px}
+@media(max-width:850px){
+.layout{grid-template-columns:1fr}
+main{padding:12px}
+.card{padding:17px}
+h1{font-size:22px}
+#question{font-size:17px}
+}
+</style>
+</head>
+<body>
+<header>
+Lớp Học Thầy Minh · Zalo 0946111107
+<small>lophocthayminh.onrender.com</small>
+</header>
+
+<main>
+<h1>Vật lí 10 · Đồ thị vận tốc – thời gian</h1>
+<p class="note">
+Câu 8–15 trong ảnh · Hình vẽ đổi theo đề · Chạy offline
+</p>
+<nav id="nav"></nav>
+
+<div class="layout">
+<section class="card">
+<b>Đồ thị / kiến thức áp dụng</b>
+<div id="graph"></div>
+<div id="formula" class="formula"></div>
+</section>
+
+<section class="card">
+<div id="tag" class="badge"></div>
+<p id="question"></p>
+<div id="answers"></div>
+
+<div class="buttons">
+<button class="primary" onclick="generate()">↻ Đổi đề bài mới</button>
+<button onclick="resetOriginal()">Về đề gốc</button>
+</div>
+
+<div class="buttons">
+<button class="primary" onclick="check()">Kiểm tra</button>
+<button onclick="solution()">Xem lời giải</button>
+</div>
+
+<div id="feedback" role="status"></div>
+<div id="solution" hidden></div>
+</section>
+</div>
+
+<div class="buttons">
+<button onclick="select((index+7)%8)">← Câu trước</button>
+<button onclick="select((index+1)%8)">Câu sau →</button>
+<button onclick="fullscreen()">⛶ Toàn màn hình</button>
+</div>
+<div id="clock" class="note"></div>
+<p class="note">
+Câu 15 dùng ba ô nhập gia tốc vì ảnh chưa hiển thị đủ bốn phương án.
+Ở câu 8, góc trên hình mô tả độ dốc theo cùng tỉ lệ trục như hình gốc.
+</p>
+</main>
+
+<script>
+"use strict";
+
+const $=id=>document.getElementById(id);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const fmt=n=>String(n).replace(".",",");
+const letters=["A","B","C","D"];
+
+const originals=[
+ {type:8,angle1:30,angle2:60,v:40},
+ {type:9,variant:0},
+ {type:10,variant:0},
+ {type:11,v:3,t1:1,t2:2},
+ {type:12,v:10,t1:10,t2:30},
+ {type:13,v0:2,a10:2,tEnd:50,s:80},
+ {type:14,a1:2,a2:1,v02:4},
+ {type:15,v0:20,v1:40,t1:20,t2:60,t3:80}
+];
+
+const states=originals.map(p=>({
+ p:{...p},version:0,choice:null,inputs:[],
+ message:"",shown:false
+}));
+
+let index=0;
+const started=Date.now();
+
+function gcd(a,b){
+ a=a<0n?-a:a;
+ b=b<0n?-b:b;
+ while(b){[a,b]=[b,a%b]}
+ return a;
+}
+function rat(n,d=1){
+ n=BigInt(n);d=BigInt(d);
+ if(!d)throw Error("Mẫu số bằng 0");
+ if(d<0n){n=-n;d=-d}
+ const g=gcd(n,d);
+ return {n:n/g,d:d/g};
+}
+function exact(r){
+ let d=r.d;
+ while(d%2n===0n)d/=2n;
+ while(d%5n===0n)d/=5n;
+ if(d!==1n)return r.n+"/"+r.d;
+ let n=r.n,sign="";
+ if(n<0n){sign="-";n=-n}
+ let rem=n%r.d,str="";
+ const whole=n/r.d;
+ while(rem){
+  rem*=10n;
+  str+=String(rem/r.d);
+  rem%=r.d;
+ }
+ return sign+whole+(str?","+str:"");
+}
+function parse(s){
+ const parts=String(s).trim().replace(/\s/g,"").replace(/,/g,".").split("/");
+ if(parts.length>2)return null;
+ function decimal(x){
+  if(!/^[+-]?\d+(\.\d+)?$/.test(x))return null;
+  const a=x.split(".");
+  return rat(BigInt(a.join("")),10n**BigInt((a[1]||"").length));
+ }
+ const a=decimal(parts[0]);
+ if(!a)return null;
+ if(parts.length===1)return a;
+ const b=decimal(parts[1]);
+ if(!b||b.n===0n)return null;
+ return rat(a.n*b.d,a.d*b.n);
+}
+function equal(a,b){return a&&a.n*b.d===b.n*a.d}
+function uniqueOptions(correct,candidates){
+ const answer=exact(correct);
+ const out=[answer];
+ for(const r of candidates){
+  const s=exact(r);
+  if(!out.includes(s))out.push(s);
+  if(out.length===4)break;
+ }
+ for(let k=1;out.length<4;k++){
+  const s=exact(rat(correct.n+BigInt(k)*correct.d,correct.d));
+  if(!out.includes(s))out.push(s);
+ }
+ return out;
+}
+function shuffle(a){
+ for(let i=a.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [a[i],a[j]]=[a[j],a[i]];
+ }
+ return a;
+}
+
+function chart(points,xMax,yMax,xTicks=[],yTicks=[],extra=""){
+ const X=x=>48+x/xMax*300;
+ const Y=y=>242-y/yMax*195;
+ const path=points.map((p,i)=>(i?"L":"M")+X(p[0])+","+Y(p[1])).join(" ");
+ let content=`
+ <line x1="48" y1="242" x2="370" y2="242" stroke="#344b65" stroke-width="2" marker-end="url(#arrow)"/>
+ <line x1="48" y1="242" x2="48" y2="20" stroke="#344b65" stroke-width="2" marker-end="url(#arrow)"/>
+ <text x="25" y="262">O</text>
+ <text x="348" y="269">t (s)</text>
+ <text x="12" y="16">v (m/s)</text>`;
+
+ for(const t of xTicks){
+  content+=`<line x1="${X(t)}" y1="242" x2="${X(t)}" y2="247" stroke="#344b65"/>
+  <text x="${X(t)}" y="264" text-anchor="middle">${fmt(t)}</text>`;
+ }
+ for(const v of yTicks){
+  content+=`<line x1="43" y1="${Y(v)}" x2="48" y2="${Y(v)}" stroke="#344b65"/>
+  <text x="38" y="${Y(v)+5}" text-anchor="end">${fmt(v)}</text>`;
+ }
+ content+=`<path d="${path}" fill="none" stroke="#2377b8" stroke-width="3" stroke-linejoin="round"/>`;
+
+ return {
+  X,Y,
+  svg:`<svg viewBox="0 0 400 290" role="img" aria-label="Đồ thị vận tốc theo thời gian">
+  <defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+  <path d="M0,0 L6,3 L0,6" fill="#344b65"/></marker></defs>
+  <g font-family="Arial" font-size="13" fill="#19334d">${content}${extra}</g></svg>`
+ };
+}
+function addToChart(c,markup){
+ return c.svg.replace("</g></svg>",markup+"</g></svg>");
+}
+function dashed(x1,y1,x2,y2){
+ return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#8a9bb0" stroke-dasharray="5 4"/>`;
+}
+
+function build(p){
+ let q,formula,graph="",opts=[],correct,steps=[],unit="";
+ const type=p.type;
+
+ if(type===8){
+  const same=p.angle1===p.angle2;
+  correct=same?rat(1):p.angle1===30?rat(1,3):rat(3);
+  q=`Đồ thị vận tốc – thời gian của một chuyển động như hình.
+  Góc của đoạn OC với trục thời gian là ${p.angle1}°;
+  góc nhọn của đoạn CB với trục thời gian là ${p.angle2}°.
+  Tỉ số độ lớn gia tốc trong thời gian OA và AB bằng bao nhiêu?`;
+  opts=["1","1/2","1/3","3"];
+  formula="a = Δv/Δt<br>|a₁|/|a₂| = tan α / tan β";
+  const h=165;
+  const left=h/Math.tan(p.angle1*Math.PI/180);
+  const right=h/Math.tan(p.angle2*Math.PI/180);
+  const scale=280/(left+right);
+  const cx=50+left*scale, bx=330, cy=240-h*scale;
+  graph=`<svg viewBox="0 0 400 290" role="img" aria-label="Đồ thị tam giác OCB">
+  <g font-family="Arial" font-size="14" fill="#19334d">
+  <path d="M50 30V240H370" fill="none" stroke="#344b65" stroke-width="2"/>
+  <path d="M50 240L${cx} ${cy}L${bx} 240" fill="none" stroke="#2377b8" stroke-width="3"/>
+  ${dashed(cx,cy,cx,240)}${dashed(50,cy,cx,cy)}
+  <text x="28" y="260">O</text>
+  <text x="${cx-4}" y="260">A</text>
+  <text x="${bx-4}" y="260">B</text>
+  <text x="${cx-4}" y="${cy-10}">C</text>
+  <text x="28" y="${cy+5}">${p.v}</text>
+  <text x="13" y="20">v (m/s)</text><text x="345" y="267">t (s)</text>
+  <text x="86" y="229">${p.angle1}°</text>
+  <text x="${bx-48}" y="229">${p.angle2}°</text>
+  </g></svg>`;
+  steps=[
+   "Gia tốc trên đồ thị v–t bằng hệ số góc của đoạn thẳng.",
+   `Độ lớn gia tốc đoạn OC tỉ lệ với tan ${p.angle1}°;
+   độ lớn gia tốc đoạn CB tỉ lệ với tan ${p.angle2}°.`,
+   `|a₁|/|a₂| = tan ${p.angle1}° / tan ${p.angle2}°
+   = <b>${exact(correct)}</b>.`
+  ];
+ }
+
+ if(type===9){
+  formula="Nhanh dần: a và v cùng chiều (av > 0).<br>Chậm dần: a và v ngược chiều (av < 0).";
+  if(p.variant===0){
+   q="Vectơ gia tốc có tính chất nào kể sau?";
+   opts=[
+    "Đặc trưng cho sự biến thiên của vận tốc.",
+    "Cùng chiều với vận tốc nếu chuyển động nhanh dần.",
+    "Ngược chiều với vận tốc nếu chuyển động chậm dần.",
+    "Cả ba tính chất trên."
+   ];
+   correct=3;
+   steps=["Gia tốc đặc trưng cho sự biến thiên của vận tốc.",
+   "Nhanh dần: gia tốc cùng chiều vận tốc. Chậm dần: gia tốc ngược chiều vận tốc.",
+   "Vậy cả ba phát biểu đều đúng. Chọn <b>D</b>."];
+  }else{
+   const variants=[
+    ["Một vật có v > 0 và a > 0. Vật đang:",
+     ["Nhanh dần.","Chậm dần.","Đứng yên.","Chuyển động đều."],0],
+    ["Một vật có v > 0 và a < 0. Vật đang:",
+     ["Chuyển động đều.","Chậm dần.","Nhanh dần.","Đứng yên."],1],
+    ["Một vật có v < 0 và a < 0. Vật đang:",
+     ["Chậm dần.","Đứng yên.","Nhanh dần.","Chuyển động đều."],2],
+    ["Một vật có v < 0 và a > 0. Vật đang:",
+     ["Đứng yên.","Nhanh dần.","Chuyển động đều.","Chậm dần."],3]
+   ];
+   const v=variants[(p.variant-1)%4];
+   q=v[0];opts=v[1];correct=v[2];
+   steps=["Xét dấu của tích av.",
+    "av > 0: nhanh dần; av < 0: chậm dần.",
+    `Chọn <b>${letters[correct]}</b>: ${opts[correct]}`];
+  }
+  graph='<p style="font-size:55px;text-align:center">v⃗ &nbsp; a⃗</p>';
+ }
+
+ if(type===10){
+  formula="a⃗ = Δv⃗ / Δt<br>Gia tốc là đại lượng vectơ, đơn vị m/s².";
+  if(p.variant===0){
+   q="Gia tốc là một đại lượng:";
+   opts=[
+    "Đại số, đặc trưng cho sự biến đổi nhanh hay chậm của chuyển động.",
+    "Đại số, đặc trưng cho tính không đổi của vận tốc.",
+    "Vectơ, đặc trưng cho sự biến đổi nhanh hay chậm của chuyển động.",
+    "Vectơ, đặc trưng cho sự biến đổi nhanh hay chậm của vận tốc."
+   ];
+   correct=3;
+   steps=["Gia tốc được xác định bằng độ biến thiên vectơ vận tốc chia cho khoảng thời gian.",
+   "Gia tốc là đại lượng vectơ, đặc trưng cho mức độ biến thiên của vận tốc.",
+   "Chọn <b>D</b>."];
+  }else{
+   q="Đơn vị SI của gia tốc là:";
+   opts=["m/s","m/s²","m²/s","s/m"];
+   correct=1;
+   steps=["a = Δv/Δt nên đơn vị là (m/s)/s = m/s².","Chọn <b>B</b>."];
+  }
+  graph='<p style="font-size:38px;text-align:center">Δv⃗ → a⃗</p>';
+ }
+
+ if(type===11){
+  const s=p.v*(p.t2-p.t1);
+  correct=rat(s);unit="m";
+  q=`Một chất điểm chuyển động thẳng đều có đồ thị vận tốc – thời gian như hình.
+  Quãng đường đi được từ t = ${p.t1} s đến t = ${p.t2} s bằng bao nhiêu?`;
+  opts=p.t1===1&&p.t2===2&&p.v===3?
+   ["1","2","3","4"]:
+   uniqueOptions(correct,[rat(s+1),rat(s+2),rat(Math.max(0,s-1))]);
+  formula="s = vΔt<br>Quãng đường bằng diện tích dưới đồ thị khi v ≥ 0.";
+  const c=chart([[0,p.v],[p.t2+0.5,p.v]],p.t2+1,p.v*1.5,[p.t1,p.t2],[p.v]);
+  graph=addToChart(c,
+   `<rect x="${c.X(p.t1)}" y="${c.Y(p.v)}"
+    width="${c.X(p.t2)-c.X(p.t1)}" height="${c.Y(0)-c.Y(p.v)}"
+    fill="#ffd86b" opacity=".35"/>
+   ${dashed(c.X(p.t1),c.Y(p.v),c.X(p.t1),c.Y(0))}
+   ${dashed(c.X(p.t2),c.Y(p.v),c.X(p.t2),c.Y(0))}`);
+  steps=[
+   `Khoảng thời gian: Δt = ${p.t2}−${p.t1} = ${p.t2-p.t1} s.`,
+   `Vận tốc không đổi v = ${p.v} m/s.`,
+   `s = vΔt = ${p.v} × ${p.t2-p.t1} = <b>${s} m</b>.`
+  ];
+ }
+
+ if(type===12){
+  correct=rat(p.v*(2*p.t2-p.t1),2);unit="m";
+  q=`Đồ thị vận tốc – thời gian của một vật chuyển động thẳng như hình.
+  Quãng đường vật đi được sau ${p.t2} s bằng bao nhiêu?`;
+  opts=p.v===10&&p.t1===10&&p.t2===30?
+   ["200","250","300","350"]:
+   uniqueOptions(correct,[
+    rat(p.v*p.t2),rat(p.v*p.t1,2),
+    rat(p.v*(2*p.t2-p.t1)+100,2)
+   ]);
+  formula="s = S tam giác + S hình chữ nhật<br>s = ½v₁t₁ + v₁(t₂−t₁)";
+  const c=chart([[0,0],[p.t1,p.v],[p.t2,p.v]],p.t2*1.25,p.v*1.5,[p.t1,p.t2],[p.v]);
+  graph=addToChart(c,
+   `<path d="M${c.X(0)},${c.Y(0)}
+   L${c.X(p.t1)},${c.Y(p.v)}
+   L${c.X(p.t2)},${c.Y(p.v)}
+   L${c.X(p.t2)},${c.Y(0)}Z" fill="#ffd86b" opacity=".3"/>
+   ${dashed(c.X(p.t1),c.Y(p.v),c.X(p.t1),c.Y(0))}
+   ${dashed(c.X(p.t2),c.Y(p.v),c.X(p.t2),c.Y(0))}`);
+  steps=[
+   "Vận tốc không âm nên quãng đường bằng diện tích dưới đồ thị.",
+   `Giai đoạn đầu: s₁ = ½ × ${p.t1} × ${p.v}
+   = ${exact(rat(p.t1*p.v,2))} m.`,
+   `Giai đoạn sau: s₂ = ${p.v} × (${p.t2}−${p.t1})
+   = ${p.v*(p.t2-p.t1)} m.`,
+   `Tổng quãng đường: <b>s = ${exact(correct)} m</b>.`
+  ];
+ }
+
+ if(type===13){
+  const a=p.a10/10;
+  const vend=p.v0+a*p.tEnd;
+  const square=rat(10*p.v0*p.v0+2*p.a10*p.s,10);
+  const root=Math.sqrt(Number(square.n)/Number(square.d));
+  correct=rat(root);unit="m/s";
+  q=`Đồ thị vận tốc – thời gian của một tàu hỏa chuyển động thẳng như hình.
+  Thời điểm t = 0 là lúc tàu đi qua sân ga.
+  Vận tốc của tàu sau khi rời sân ga được ${p.s} m bằng bao nhiêu?`;
+  opts=p.v0===2&&p.s===80&&p.a10===2?
+   ["4","6","8","10"]:
+   uniqueOptions(correct,[rat(root+2),rat(root+4),rat(Math.max(0,root-2))]);
+  formula="a = (v−v₀)/t<br>v²−v₀² = 2as<br>v = √(v₀²+2as)";
+  const c=chart([[0,p.v0],[p.tEnd,vend]],p.tEnd*1.15,vend*1.2,
+   [p.tEnd/5,3*p.tEnd/5,p.tEnd],[4,8,12].filter(v=>v<=vend));
+  graph=addToChart(c,
+   `<text x="35" y="${c.Y(p.v0)+4}" text-anchor="end">${p.v0}</text>
+   ${dashed(c.X(p.tEnd),c.Y(vend),c.X(p.tEnd),c.Y(0))}
+   ${dashed(c.X(0),c.Y(vend),c.X(p.tEnd),c.Y(vend))}
+   <text x="37" y="${c.Y(vend)-6}" text-anchor="end">${fmt(vend)}</text>`);
+  steps=[
+   `Đọc đồ thị: v₀ = ${p.v0} m/s;
+   tại t = ${p.tEnd} s, v = ${fmt(vend)} m/s.`,
+   `Gia tốc: a = (${fmt(vend)}−${p.v0})/${p.tEnd}
+   = ${exact(rat(p.a10,10))} m/s².`,
+   `Áp dụng v²−v₀² = 2as:
+   v² = ${p.v0}² + 2 × (${exact(rat(p.a10,10))}) × ${p.s}
+   = ${exact(square)}.`,
+   `Tàu chuyển động theo chiều dương:
+   <b>v = ${exact(correct)} m/s</b>.`
+  ];
+ }
+
+ if(type===14){
+  const t0=p.v02/(p.a1-p.a2);
+  correct=2;
+  q=`Hình bên là đồ thị vận tốc – thời gian của hai vật chuyển động thẳng
+  cùng hướng, xuất phát từ cùng một vị trí. Gốc thời gian là lúc các vật
+  bắt đầu chuyển động. Nhận xét nào sau đây sai?`;
+  opts=[
+   "Hai vật cùng chuyển động nhanh dần.",
+   "Vật 1 bắt đầu chuyển động từ trạng thái nghỉ.",
+   "Vật 2 chuyển động với gia tốc lớn hơn vật 1.",
+   "Ở thời điểm t₀, vật 1 ở phía sau vật 2."
+  ];
+  formula="a = độ dốc của đồ thị v–t<br>Độ dời = diện tích dưới đồ thị v–t.";
+  const xmax=t0*1.7,ymax=p.a1*xmax*1.2;
+  const c=chart([[0,0],[xmax,p.a1*xmax]],xmax,ymax,[],[]);
+  graph=addToChart(c,
+   `<path d="M${c.X(0)},${c.Y(p.v02)}
+   L${c.X(xmax)},${c.Y(p.v02+p.a2*xmax)}"
+   fill="none" stroke="#e58d28" stroke-width="3"/>
+   ${dashed(c.X(t0),c.Y(p.a1*t0),c.X(t0),c.Y(0))}
+   <text x="${c.X(t0)}" y="263" text-anchor="middle">t₀</text>
+   <text x="${c.X(xmax)-15}" y="${c.Y(p.a1*xmax)-9}">(1)</text>
+   <text x="${c.X(xmax)-15}" y="${c.Y(p.v02+p.a2*xmax)+19}">(2)</text>`);
+  steps=[
+   "Cả hai đường đều dốc lên và vận tốc không âm nên hai vật đều nhanh dần.",
+   "Đường (1) đi qua O nên vật 1 có vận tốc ban đầu bằng 0.",
+   "Đường (1) dốc hơn đường (2), do đó a₁ > a₂. Phát biểu C sai.",
+   "Từ 0 đến t₀, đồ thị (2) luôn nằm trên đồ thị (1), nên diện tích dưới đường (2) lớn hơn.",
+   "Hai vật xuất phát cùng vị trí, suy ra tại t₀ vật 2 ở trước vật 1.",
+   "Chọn <b>C</b>."
+  ];
+ }
+
+ if(type===15){
+  const a1=rat(p.v1-p.v0,p.t1);
+  const a2=rat(0);
+  const a3=rat(-p.v1,p.t3-p.t2);
+  correct=[a1,a2,a3];
+  q=`Đồ thị vận tốc – thời gian như hình.
+  Gọi a₁, a₂, a₃ là gia tốc trong các khoảng:
+  từ 0 đến ${p.t1} s; từ ${p.t1} đến ${p.t2} s;
+  từ ${p.t2} đến ${p.t3} s.
+  Tính lần lượt a₁, a₂, a₃ (m/s²).`;
+  formula="a = Δv/Δt<br>Đồ thị ngang: a = 0.<br>Đồ thị đi xuống: a < 0.";
+  const c=chart([[0,p.v0],[p.t1,p.v1],[p.t2,p.v1],[p.t3,0]],
+   p.t3*1.15,p.v1*1.35,[p.t1,p.t2,p.t3],[p.v0,p.v1]);
+  graph=addToChart(c,
+   dashed(c.X(p.t1),c.Y(p.v1),c.X(p.t1),c.Y(0))+
+   dashed(c.X(p.t2),c.Y(p.v1),c.X(p.t2),c.Y(0)));
+  steps=[
+   `Giai đoạn 1:
+   a₁ = (${p.v1}−${p.v0})/(${p.t1}−0)
+   = <b>${exact(a1)} m/s²</b>.`,
+   `Giai đoạn 2: vận tốc không đổi nên <b>a₂ = 0 m/s²</b>.`,
+   `Giai đoạn 3:
+   a₃ = (0−${p.v1})/(${p.t3}−${p.t2})
+   = <b>${exact(a3)} m/s²</b>.`
+  ];
+ }
+
+ return {q,formula,graph,opts,correct,steps,unit};
+}
+
+function remember(){
+ const s=states[index];
+ if(s.p.type===15){
+  s.inputs=[0,1,2].map(i=>$("input"+i).value);
+ }
+}
+
+function render(){
+ const s=states[index],b=build(s.p);
+
+ $("nav").innerHTML=states.map((_,i)=>
+  `<button class="${i===index?"active":""}" onclick="select(${i})">
+  Câu ${i+8}</button>`).join("");
+
+ $("tag").textContent=`Câu ${index+8} · ${
+ s.version?"Đổi đề lần "+s.version:"Đề gốc"}`;
+
+ $("question").textContent=b.q;
+ $("formula").innerHTML=b.formula;
+ $("graph").innerHTML=b.graph;
+
+ if(s.p.type===15){
+  $("answers").innerHTML=[0,1,2].map(i=>
+   `<p><label for="input${i}">a${["₁","₂","₃"][i]} (m/s²)</label>
+   <input type="text" id="input${i}" placeholder="Nhập số hoặc phân số"></p>`
+  ).join("");
+  [0,1,2].forEach(i=>$("input"+i).value=s.inputs[i]||"");
+ }else{
+  $("answers").innerHTML=b.opts.map((o,i)=>
+   `<label class="option">
+   <input type="radio" name="choice" ${s.choice===i?"checked":""}
+    onchange="states[index].choice=${i}">
+   <span><b>${letters[i]}.</b> ${o}${b.unit?" "+b.unit:""}</span>
+   </label>`).join("");
+ }
+
+ $("feedback").textContent=s.message;
+ $("solution").hidden=!s.shown;
+ $("solution").innerHTML="<b>Lời giải chi tiết</b><ol>"+
+  b.steps.map(x=>"<li>"+x+"</li>").join("")+"</ol>";
+}
+
+function select(i){
+ remember();
+ index=i;
+ render();
+}
+
+function clearAttempt(){
+ const s=states[index];
+ s.choice=null;s.inputs=[];s.message="";s.shown=false;
+ render();
+}
+
+function resetOriginal(){
+ states[index].p={...originals[index]};
+ states[index].version=0;
+ clearAttempt();
+}
+
+function generate(){
+ let p;
+ const old=JSON.stringify(states[index].p);
+ do{
+  p={...originals[index]};
+
+  if(p.type===8){
+   [p.angle1,p.angle2]=pick([[30,60],[60,30],[45,45]]);
+   p.v=pick([20,30,40,50,60]);
+  }
+  if(p.type===9)p.variant=pick([1,2,3,4]);
+  if(p.type===10)p.variant=states[index].p.variant===0?1:0;
+
+  if(p.type===11){
+   p.v=pick([2,3,4,5,6,8]);
+   p.t1=pick([1,2,3]);
+   p.t2=p.t1+pick([1,2,3,4]);
+  }
+  if(p.type===12){
+   p.v=pick([6,8,10,12,15,20]);
+   p.t1=pick([5,10,15]);
+   p.t2=p.t1+pick([10,15,20,25]);
+  }
+  if(p.type===13){
+   const set=pick([
+    {v0:2,a10:2,s:80,tEnd:50},
+    {v0:2,a10:4,s:40,tEnd:25},
+    {v0:4,a10:2,s:120,tEnd:40},
+    {v0:4,a10:4,s:60,tEnd:20},
+    {v0:3,a10:5,s:40,tEnd:20},
+    {v0:6,a10:4,s:80,tEnd:20}
+   ]);
+   Object.assign(p,set);
+  }
+  if(p.type===14){
+   p.a1=pick([2,3,4]);
+   p.a2=1;
+   p.v02=pick([2,4,6,8]);
+  }
+  if(p.type===15){
+   p.v0=pick([10,15,20,25]);
+   p.v1=p.v0+pick([10,15,20,30]);
+   p.t1=pick([10,15,20]);
+   p.t2=p.t1+pick([20,30,40]);
+   p.t3=p.t2+pick([10,15,20,25]);
+  }
+ }while(JSON.stringify(p)===old);
+
+ states[index].p=p;
+ states[index].version++;
+ clearAttempt();
+}
+
+function check(){
+ remember();
+ const s=states[index],b=build(s.p);
+ let ok;
+
+ if(s.p.type===15){
+  const entered=s.inputs.map(parse);
+  if(entered.some(x=>!x)){
+   s.message="Hãy nhập đủ ba gia tốc bằng số hoặc phân số.";
+   $("feedback").textContent=s.message;
+   return;
+  }
+  ok=entered.every((x,i)=>equal(x,b.correct[i]));
+ }else{
+  if(s.choice===null){
+   s.message="Hãy chọn một đáp án trước khi kiểm tra.";
+   $("feedback").textContent=s.message;
+   return;
+  }
+  ok=typeof b.correct==="number"?
+   s.choice===b.correct:
+   equal(parse(b.opts[s.choice]),b.correct);
+ }
+
+ s.message=ok?"✓ Chính xác!":
+ "Chưa đúng. Hãy xét độ dốc để tính gia tốc và diện tích để tính quãng đường.";
+ $("feedback").textContent=s.message;
+}
+
+function solution(){
+ states[index].shown=true;
+ $("solution").hidden=false;
+}
+
+async function fullscreen(){
+ try{
+  if(document.fullscreenElement)await document.exitFullscreen();
+  else await document.documentElement.requestFullscreen();
+ }catch{
+  $("feedback").textContent="Trình duyệt chưa hỗ trợ toàn màn hình. Có thể xoay ngang thiết bị.";
+ }
+}
+
+setInterval(()=>{
+ const t=Math.floor((Date.now()-started)/1000);
+ $("clock").textContent=
+ `Thời gian luyện tập: ${Math.floor(t/60)} phút ${t%60} giây`;
+},1000);
+
+render();
+</script>
+</body>
+</html>
