@@ -922,6 +922,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "<time class='clock' id='ldvlClock' datetime=''>…</time>"
         + (f"<span class='whobar'>{who}</span>" if who else "")
         + admin_jump
+        + "<a id='htmlWarehouseQuickLink' href='/member/html-menu' title='Mở kho luyện tập HTML' style='display:inline-flex;align-items:center;gap:4px;flex-shrink:0;padding:5px 9px;border:1px solid #ffffff80;border-radius:6px;background:#ffffff20;color:white;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap'>▦ Kho HTML</a>"
         + "<button type='button' class='navtoggle' id='ldvlNavToggle' aria-expanded='false' aria-controls='ldvlNav' title='Thu / mở menu'>☰</button>"
         + "<div class='nav' id='ldvlNav'>" + "".join(nav)
         + "<button type='button' class='fsbtn' id='ldvlInstall' onclick='ldvlInstallApp()' title='Lưu ra màn hình chính'>📲</button>"
