@@ -3347,6 +3347,44 @@ def member_html_menu():
 @media(max-width:700px){.hg-shell{padding:12px!important}.hg-shell .hg-layout{grid-template-columns:1fr}.hg-shell .hg-filters{position:static}.hg-shell .hg-preview{height:130px}.hg-shell .hg-info{padding:12px}.hg-shell .hg-info h3{font-size:16px}.hg-shell .hg-list .hg-preview{width:130px}}
 @media(max-width:460px){.hg-shell .hg-grid{grid-template-columns:1fr}.hg-shell .hg-preview{height:150px}}
 </style>
+<style>
+/* Compact gallery: scoped to keep the exercise player unchanged. */
+.hg-shell{max-width:1440px!important;padding:16px 22px!important;color:#23354d}
+.hg-shell .hg-brand{padding:11px 16px;border-radius:12px;font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#132d4c}
+.hg-shell .hg-brand small{margin:0;font-size:11px;color:#b9cce0}
+.hg-shell>h2{font-size:22px;margin:18px 0 8px;letter-spacing:-.4px}
+.hg-shell>p{margin:0 0 16px}.hg-shell>p .btn{font-size:12px;padding:6px 10px;background:white;border-radius:7px}
+.hg-shell .hg-layout{grid-template-columns:205px minmax(0,1fr);gap:20px}
+.hg-shell .hg-filters{padding:14px;border:1px solid #e1e7ef;border-radius:12px;box-shadow:none}
+.hg-shell .hg-filters h3{font-size:14px;margin:0 0 12px}
+.hg-shell .hg-filters label{font-size:12px;color:#6a7a8c;margin:10px 0}
+.hg-shell .hg-filters select{min-height:35px;padding:6px 9px;font-size:13px;border-color:#e0e6ee;background:#f8fafc}
+.hg-shell #hgReset{font-size:12px;padding:5px 0;border:0;color:#55708f}
+.hg-shell .hg-tools{gap:8px}.hg-shell .hg-tools input{min-height:39px;padding:8px 12px;font-size:13px;background:white;border-color:#e0e6ee}
+.hg-shell .hg-tools button{font-size:12px;padding:7px 12px}
+.hg-shell #hgCount{font-size:12px;color:#7b8899;margin:10px 0}
+.hg-shell .hg-grid{gap:14px}
+.hg-shell .hg-card{border:1px solid #e0e6ee;border-radius:12px;box-shadow:0 2px 6px #172d4505;transition:box-shadow .15s,border-color .15s}
+.hg-shell .hg-card:has(.hg-open[href]):hover{border-color:#93b5dc;box-shadow:0 6px 18px #173a6512}
+.hg-shell .hg-preview{height:112px;background:linear-gradient(135deg,#edf3fa,#f7f9fc);border-bottom:1px solid #edf1f5}
+.hg-shell .hg-preview a{font-size:12px;font-weight:400;color:#8391a3}
+.hg-shell .hg-preview iframe{transform:scale(.23);width:1100px}
+.hg-shell .hg-info{padding:12px;gap:0}
+.hg-shell .hg-info h3{font-size:14px;line-height:1.45;margin:0 0 7px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:41px}
+.hg-shell .hg-info p{font-size:11px;line-height:1.5;margin:0 0 6px;color:#78879a}
+.hg-shell .hg-info>p:not(.hg-status){display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hg-shell .hg-tags{font-size:10px;gap:4px;margin:2px 0 6px}
+.hg-shell .hg-tags span{padding:2px 5px;background:#f7f9fc;border:0;color:#63758b;border-radius:4px}
+.hg-shell .hg-info .hg-status{padding:4px 0;font-size:11px;min-height:25px}
+.hg-shell .hg-open{font-size:12px;padding:7px 11px;border-radius:7px;background:#255f9e}
+.hg-shell .hg-unavailable{background:white}
+.hg-shell .hg-unavailable .hg-preview{height:76px;background:#f6f8fa}
+.hg-shell .hg-open[aria-disabled=true]{padding:0;background:transparent!important;font-size:11px;color:#9aa5b2!important}
+.hg-shell .hg-list .hg-preview,.hg-shell .hg-list .hg-unavailable .hg-preview{height:145px;width:200px}
+.hg-shell .hg-list .hg-info h3{min-height:0}
+@media(max-width:1000px){.hg-shell .hg-layout{grid-template-columns:180px minmax(0,1fr);gap:14px}}
+@media(max-width:700px){.hg-shell{padding:12px!important}.hg-shell .hg-layout{grid-template-columns:1fr}.hg-shell .hg-brand{display:block;font-size:13px}.hg-shell .hg-brand small{margin-top:3px}.hg-shell .hg-filters{padding:10px;gap:8px}.hg-shell .hg-filters label{margin:0}.hg-shell .hg-filters h3{margin:0}.hg-shell .hg-grid{gap:10px}.hg-shell>h2{font-size:20px;margin-top:14px}}
+</style>
     <script>(function(){
     const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0)))),manager=MANAGER,$=id=>document.getElementById(id),filters=[['hgGrade','grade'],['hgSubject','subject'],['hgChapter','chapter'],['hgLesson','lesson']];
     const E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fold=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
