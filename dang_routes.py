@@ -3200,6 +3200,9 @@ def member_html_practice():
                    '<input type="hidden" name="csrf" value="'+html.escape(session['html_practice_csrf'],quote=True)+'">'
                    '<input type="hidden" name="action" value="rename">'
                    '<input name="title" required maxlength="150" value="'+html.escape(selected_title,quote=True)+'"> <button>Lưu tên</button></form></details>')
+    if manager and selected:
+        from html_ai_editor import editor_html
+        editor += editor_html(path, dang, item, session['html_practice_csrf'])
     body = ('<div class="wrap"><h2>' + html.escape(selected_title if selected else '📁 HTML đổi số') + '</h2><p>' + html.escape(dang or 'Cả bài') + '</p>'
             '<p><a class="btn" href="' + html.escape(folder_url if selected else back, quote=True) + '">← Danh sách</a> '
             '<button type="button" class="hp-player-control" id="hpFull">Mở rộng bài</button> <button type="button" class="hp-player-control" id="hpShare">Sao chép tên bài + link</button></p>'
@@ -3477,3 +3480,7 @@ def _html_saved_title(rel,fallback):
         return title
     except Exception:
         return fallback
+
+
+# Register reviewable Gemini HTML drafts.
+import html_ai_editor  # noqa: E402,F401
