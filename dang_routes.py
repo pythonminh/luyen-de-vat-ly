@@ -3566,3 +3566,31 @@ def member_html_saved():
     title = _html_saved_title(rel, rel.rsplit('/', 1)[-1].split('--', 1)[-1][:-5])
     src = '/member/html-saved?' + urllib.parse.urlencode({'file': rel, 'content': '1'})
     return page(title, '<div style="padding:10px"><a class="btn" href="/member/html-menu">← Kho HTML</a> <b>' + html.escape(title) + '</b></div><iframe title="' + html.escape(title, quote=True) + '" src="' + html.escape(src, quote=True) + '" sandbox="allow-scripts allow-forms allow-modals allow-downloads" allow="fullscreen" style="display:block;width:100%;height:calc(100dvh - 120px);border:0"></iframe>')
+
+
+@app.before_request
+def require_html_membership():
+    """HTML is executable learning content: require login and lesson entitlement."""
+    if request.path not in {'/member/html-menu', '/member/html-gallery-items', '/member/html-practice', '/member/html-saved'}:
+        return None
+    member = member_current()
+    if not member:
+        if request.path == '/member/html-gallery-items' or request.args.get('content') == '1':
+            return jsonify(ok=False, error='Vui lòng đăng nhập để xem và làm bài HTML.'), 401
+        return redirect(login_url(request.full_path))
+    path = str(request.values.get('path') or '').strip()
+    if request.path == '/member/html-saved':
+        rel = str(request.args.get('file') or '')
+        try:
+            rel, _ = _safe_repo_file(rel)
+            parent, tail = rel.split('/html-practice/', 1)
+            if not re.fullmatch(r'[0-9a-f]{24}(?:/[^/]+)?\.html', tail):
+                raise ValueError()
+            path = parent + '/de.tex'
+        except ValueError:
+            return 'Bài HTML không hợp lệ.', 400
+    if path and not can_access(member, path):
+        if request.path == '/member/html-gallery-items' or request.args.get('content') == '1':
+            return jsonify(ok=False, error='Tài khoản chưa được cấp quyền bài HTML này.'), 403
+        return page('Chưa có quyền truy cập', '<div class="wrap"><h2>Bài HTML chưa được cấp quyền</h2><p>Tài khoản chỉ được xem và làm các bài thuộc lớp, môn và gói đã được thầy cấp.</p><a class="btn" href="/member/html-menu">← Kho HTML của bạn</a></div>'), 403
+    return None
