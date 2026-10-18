@@ -3294,6 +3294,8 @@ def _html_practice_list_html(path, dang):
 @app.get('/member/html-menu')
 def member_html_menu():
     """One searchable card per exercise type, using the existing HTML player."""
+    if request.args.get("mode") != "types":
+        return _saved_html_menu()
     from app import dang_pairs_of
     path = str(request.args.get('path') or '').strip()
     member = member_current()
@@ -3484,3 +3486,83 @@ def _html_saved_title(rel,fallback):
 
 # Register reviewable Gemini HTML drafts.
 import html_ai_editor  # noqa: E402,F401
+
+
+_SAVED_HTML_CACHE = (0, [])
+
+
+def _saved_html_paths():
+    """Discover saved files independently of mutable TEX exercise names."""
+    global _SAVED_HTML_CACHE
+    from app import ROOT, gh_api, BRANCH
+    now = time.time()
+    if now - _SAVED_HTML_CACHE[0] < 30:
+        return _SAVED_HTML_CACHE[1]
+    paths = {p.relative_to(ROOT).as_posix() for p in ROOT.glob('ngan-hang/**/html-practice/**/*.html') if p.is_file()}
+    try:
+        tree = gh_api('git/trees/' + urllib.parse.quote(BRANCH, safe='') + '?recursive=1')
+        for entry in tree.get('tree', []):
+            rel = str(entry.get('path') or '')
+            if entry.get('type') == 'blob' and rel.startswith('ngan-hang/') and '/html-practice/' in rel and rel.endswith('.html'):
+                paths.add(rel)
+    except Exception:
+        # A GitHub outage must not hide files already present in the deployment.
+        pass
+    result = sorted(paths)
+    _SAVED_HTML_CACHE = (now, result)
+    return result
+
+
+def _saved_html_menu():
+    member = member_current()
+    selected = str(request.args.get('path') or '').strip()
+    rows = []
+    for rel in _saved_html_paths():
+        parent = rel.split('/html-practice/', 1)[0]
+        lesson_path = parent + '/de.tex'
+        if selected and selected.rsplit('/', 1)[0] != parent:
+            continue
+        if not can_view(member, lesson_path):
+            continue
+        parts = parent.split('/')
+        fallback = rel.rsplit('/', 1)[-1].split('--', 1)[-1][:-5]
+        if re.fullmatch(r'[0-9a-f]{24}', fallback):
+            fallback = 'Bài luyện tập'
+        rows.append({'title': _html_saved_title(rel, fallback), 'subject': parts[1] if len(parts)>1 else '',
+                     'grade': parts[2] if len(parts)>2 else '', 'chapter': parts[3] if len(parts)>3 else '',
+                     'lesson': parts[-1], 'url': '/member/html-saved?' + urllib.parse.urlencode({'file': rel})})
+    seed = base64.b64encode(json.dumps(rows, ensure_ascii=False).encode()).decode()
+    body = r'''<div class="wrap saved-gallery"><header>Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>
+<h2>Kho bài HTML đã lưu</h2><p><a class="btn" href="/member">← Ngân hàng</a> <a class="btn" href="/member/html-menu?mode=types">Quản lý HTML theo dạng bài</a></p>
+<div class="sg-filters"><input id="sgSearch" placeholder="Tìm tên bài HTML…" aria-label="Tìm bài HTML"><select id="sgGrade" aria-label="Lớp"></select><select id="sgSubject" aria-label="Môn"></select><select id="sgChapter" aria-label="Chương"></select><select id="sgLesson" aria-label="Bài"></select><button id="sgReset">Xóa bộ lọc</button></div><p id="sgCount" role="status"></p><div id="sgCards"></div>
+<style>.saved-gallery{max-width:1400px!important;padding:18px!important;color:#23354d}.saved-gallery header{background:#132d4c;color:white;padding:16px;border-radius:12px;font-weight:bold}.saved-gallery header small{display:block;font-weight:normal;margin-top:5px}.sg-filters{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}.sg-filters input,.sg-filters select,.sg-filters button{padding:10px;border:1px solid #d8e1eb;border-radius:8px;max-width:100%;background:white}.sg-filters input{flex:1;min-width:180px}.sg-filters select{flex:1;min-width:150px}#sgCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}.sg-card{border:1px solid #dde5ef;border-radius:12px;padding:18px;background:white;display:flex;flex-direction:column;gap:10px;overflow-wrap:anywhere}.sg-card h3{margin:0;font-size:17px}.sg-card p{margin:0;color:#708095;font-size:13px}.sg-card a{align-self:flex-start;margin-top:auto;background:#255f9e;color:white;padding:9px 15px;border-radius:7px;text-decoration:none}#sgCount{color:#65758a}@media(max-width:600px){.saved-gallery{padding:10px!important}.sg-filters select{min-width:130px}#sgCards{grid-template-columns:1fr}}</style>
+<script>(()=>{const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0)))),$=id=>document.getElementById(id),fs=[['sgGrade','grade'],['sgSubject','subject'],['sgChapter','chapter'],['sgLesson','lesson']],E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fold=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
+function match(c,n=fs.length){return fs.slice(0,n).every(([id,k])=>!$(id).value||$(id).value===c[k])}function options(){fs.forEach(([id,k],i)=>{const old=$(id).value,values=[...new Set(data.filter(c=>match(c,i)).map(c=>c[k]))].sort((a,b)=>a.localeCompare(b,'vi',{numeric:true}));$(id).innerHTML='<option value="">'+({grade:'Tất cả lớp',subject:'Tất cả môn',chapter:'Tất cả chương',lesson:'Tất cả bài'}[k])+'</option>'+values.map(v=>'<option>'+E(v)+'</option>').join('');if(values.includes(old))$(id).value=old})}function draw(){const q=fold($('sgSearch').value),rows=data.filter(c=>match(c)&&fold(c.title+' '+c.lesson).includes(q));$('sgCount').textContent=rows.length+' / '+data.length+' bài HTML đã lưu';$('sgCards').innerHTML=rows.length?rows.map(c=>'<article class="sg-card"><p>HTML · '+E(c.subject+' · '+c.grade)+'</p><h3>'+E(c.title)+'</h3><p>'+E(c.chapter)+'</p><p>'+E(c.lesson)+'</p><a href="'+E(c.url)+'">▶ Mở luyện tập</a></article>').join(''):'<p>Không có bài HTML phù hợp với bộ lọc.</p>'}fs.forEach(([id])=>$(id).onchange=()=>{options();draw()});$('sgSearch').oninput=draw;$('sgReset').onclick=()=>{fs.forEach(([id])=>$(id).value='');$('sgSearch').value='';options();draw()};options();draw()})();</script></div>'''.replace('SEED', seed)
+    return page('Kho bài HTML đã lưu', body)
+
+
+@app.get('/member/html-saved')
+def member_html_saved():
+    from flask import Response
+    from app import _fetch_bytes_remote
+    rel = str(request.args.get('file') or '')
+    try:
+        rel, local = _safe_repo_file(rel)
+        parent, tail = rel.split('/html-practice/', 1)
+        if not re.fullmatch(r'[0-9a-f]{24}(?:/[^/]+)?\.html', tail):
+            raise ValueError('Bài HTML không hợp lệ.')
+    except ValueError:
+        return 'Bài HTML không hợp lệ.', 400
+    if not can_view(member_current(), parent + '/de.tex'):
+        return redirect(login_url(request.full_path)) if not member_current() else ('Không có quyền xem bài.', 403)
+    try:
+        source = local.read_text(encoding='utf-8-sig') if local.is_file() else _fetch_bytes_remote(rel).decode('utf-8-sig')
+    except Exception:
+        return 'Không đọc được bài HTML đã lưu. Vui lòng thử lại.', 404
+    if request.args.get('content') == '1':
+        response = Response(source, mimetype='text/html')
+        response.headers['Content-Security-Policy'] = "sandbox allow-scripts allow-forms allow-modals allow-downloads"
+        return response
+    title = _html_saved_title(rel, rel.rsplit('/', 1)[-1].split('--', 1)[-1][:-5])
+    src = '/member/html-saved?' + urllib.parse.urlencode({'file': rel, 'content': '1'})
+    return page(title, '<div style="padding:10px"><a class="btn" href="/member/html-menu">← Kho HTML</a> <b>' + html.escape(title) + '</b></div><iframe title="' + html.escape(title, quote=True) + '" src="' + html.escape(src, quote=True) + '" sandbox="allow-scripts allow-forms allow-modals allow-downloads" allow="fullscreen" style="display:block;width:100%;height:calc(100dvh - 120px);border:0"></iframe>')
