@@ -1,0 +1,1272 @@
+<!--hp-title:Y2h1eeG7g24gxJHhu5VpIHRoYW5nIG5oaeG7h3QgxJHhu5k=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Luyện đổi số · Nhiệt học · Thầy Minh</title>
+
+<style>
+:root{
+  --navy:#112b4d;
+  --blue:#1765d6;
+  --ink:#20344e;
+  --muted:#728097;
+  --line:#dfe7f1;
+  --bg:#edf2f8;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:"Segoe UI",Arial,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+}
+button,input{font:inherit}
+button{cursor:pointer}
+header{
+  background:var(--navy);
+  color:white;
+  padding:19px 4%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.brand{font-size:20px;font-weight:750}
+.website{font-size:12px;opacity:.75;margin-top:6px}
+.header-button{
+  color:white;
+  background:#ffffff14;
+  border:1px solid #ffffff40;
+  border-radius:10px;
+  padding:10px 14px;
+}
+.layout{
+  max-width:1400px;
+  margin:24px auto;
+  padding:0 20px;
+  display:grid;
+  grid-template-columns:290px minmax(0,1fr);
+  gap:22px;
+}
+.sidebar,.main{
+  background:white;
+  border:1px solid var(--line);
+  border-radius:18px;
+  box-shadow:0 6px 25px #17345b05;
+}
+.sidebar{
+  padding:20px;
+  align-self:start;
+  position:sticky;
+  top:16px;
+}
+.sidebar-title{
+  font-size:12px;
+  letter-spacing:1.4px;
+  font-weight:800;
+  color:#375d88;
+}
+.progress-text{font-size:13px;color:var(--muted);margin:12px 0 8px}
+.progress-track{
+  height:5px;
+  background:#edf2f8;
+  border-radius:10px;
+  overflow:hidden;
+}
+.progress-fill{height:100%;background:var(--blue);transition:width .2s}
+.question-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:6px;
+  margin:18px 0 22px;
+}
+.question-grid button{
+  min-height:35px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:white;
+  color:var(--ink);
+  padding:5px 0;
+  font-size:13px;
+}
+.question-grid button.active{
+  background:var(--navy);
+  border-color:var(--navy);
+  color:white;
+}
+.question-grid button.correct{border-bottom:3px solid #15976e}
+.question-grid button.wrong{border-bottom:3px solid #e19a38}
+.formula-panel{
+  background:#f6f9fe;
+  border:1px solid #e0e9f6;
+  border-radius:13px;
+  padding:16px;
+}
+.formula-label{
+  color:#517ba9;
+  font-size:10px;
+  letter-spacing:1.3px;
+  font-weight:800;
+}
+.formula-title{font-size:15px;margin:8px 0 15px}
+.formula-item{
+  border-top:1px solid #e0e8f3;
+  padding:14px 2px;
+  text-align:center;
+  overflow:auto;
+}
+.formula-note{
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.7;
+  margin-top:13px;
+}
+.main{padding:28px;min-width:0}
+.topline{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  font-size:12px;
+  color:var(--muted);
+}
+.badge{
+  color:#2766ab;
+  background:#edf5ff;
+  border-radius:20px;
+  padding:5px 10px;
+  font-size:11px;
+}
+h1{font-size:25px;margin:13px 0 20px}
+.statement{
+  font-size:19px;
+  line-height:1.95;
+  overflow-wrap:anywhere;
+}
+.statement .given{
+  display:inline-block;
+  color:#104f98;
+  font-weight:650;
+}
+.convention{
+  font-size:13px;
+  color:#65778d;
+  background:#f5f8fc;
+  padding:10px 13px;
+  border-radius:9px;
+  margin-top:14px;
+  line-height:1.7;
+}
+.options{display:grid;gap:11px;margin:24px 0}
+.option{
+  display:flex;
+  align-items:center;
+  gap:13px;
+  border:1px solid #d9e3ef;
+  border-radius:12px;
+  padding:16px;
+  min-height:70px;
+  cursor:pointer;
+  transition:.15s;
+}
+.option:hover{border-color:#90b4e6;background:#f9fbff}
+.option.selected{border-color:var(--blue);background:#f0f6ff}
+.option input{accent-color:var(--blue);flex-shrink:0}
+.option-letter{
+  width:29px;height:29px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#edf2f8;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:750;
+  flex-shrink:0;
+}
+.option.selected .option-letter{background:var(--blue);color:white}
+.option-content{font-size:19px;line-height:1.7;min-width:0}
+.actions{display:flex;flex-wrap:wrap;gap:9px}
+.btn{
+  border:1px solid #d6e0ed;
+  background:white;
+  color:#244563;
+  padding:12px 15px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:650;
+}
+.btn:hover{background:#f0f5fc}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:white}
+.btn.change{background:#eaf3ff;border-color:#cfe2ff;color:#1259ab}
+.message{
+  border-radius:11px;
+  padding:14px 16px;
+  margin-top:17px;
+  line-height:1.7;
+  font-size:14px;
+}
+.message.good{background:#eaf8f1;color:#176646}
+.message.bad{background:#fff5e6;color:#87581a}
+.message.info{background:#edf4ff;color:#315f98}
+.solution{
+  background:#f7faff;
+  border:1px solid #dce8f7;
+  border-radius:14px;
+  margin-top:20px;
+  overflow:hidden;
+}
+.solution-heading{
+  background:#edf4ff;
+  color:#245e9b;
+  padding:14px 19px;
+  font-weight:750;
+}
+.step{
+  display:grid;
+  grid-template-columns:27px minmax(0,1fr);
+  gap:12px;
+  margin:0 18px;
+  padding:17px 0;
+  border-bottom:1px solid #e0e8f4;
+}
+.step:last-child{border:0}
+.step-number{
+  width:25px;height:25px;
+  background:#e3edfc;
+  color:#2f65a3;
+  border-radius:50%;
+  text-align:center;
+  line-height:25px;
+  font-size:12px;
+  font-weight:750;
+  margin-top:3px;
+}
+.step-label{font-size:13px;color:#667d99;margin-bottom:10px}
+.step-content{min-width:0;line-height:1.9;overflow:auto}
+.answer{
+  padding:17px 19px;
+  background:#eaf6ee;
+  color:#235a3a;
+  font-weight:700;
+  line-height:2;
+}
+.bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:25px;
+  border-top:1px solid var(--line);
+  padding-top:20px;
+}
+.timer{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.math{
+  font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;
+  font-size:1.15em;
+  font-weight:400;
+  letter-spacing:.15px;
+}
+.math i{font-style:italic}
+.math sub,.math sup{font-size:.67em;line-height:0}
+.frac{
+  display:inline-flex;
+  flex-direction:column;
+  vertical-align:middle;
+  text-align:center;
+  line-height:1.3;
+  margin:2px 5px;
+  font-family:"Cambria Math","Times New Roman",serif;
+  font-weight:400;
+}
+.frac>.numerator{border-bottom:1.3px solid;padding:0 6px 3px}
+.frac>.denominator{padding:3px 6px 0}
+.unit{
+  font-family:"Segoe UI",Arial,sans-serif;
+  font-size:.85em;
+  font-style:normal;
+  white-space:nowrap;
+  margin-left:4px;
+}
+.equation{font-size:20px;line-height:2.2;white-space:nowrap}
+.formula-panel .equation{font-size:20px}
+.hint{font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px}
+[hidden]{display:none!important}
+@media(max-width:800px){
+  header{padding:16px}
+  .brand{font-size:16px;line-height:1.5}
+  .header-button{font-size:12px;padding:9px}
+  .layout{display:block;margin:12px auto;padding:0 10px}
+  .sidebar{position:static;padding:15px;margin-bottom:12px}
+  .question-grid{grid-template-columns:repeat(7,1fr);margin-bottom:14px}
+  .formula-panel{padding:13px}
+  .formula-title{margin-bottom:7px}
+  .formula-item{
+    display:inline-block;
+    vertical-align:middle;
+    border:0;
+    padding:10px 8px;
+    max-width:100%;
+  }
+  .formula-note{display:none}
+  .main{padding:19px}
+  h1{font-size:22px}
+  .statement{font-size:17px}
+  .option{padding:13px;gap:10px}
+  .option-content{font-size:18px}
+  .btn{font-size:13px;padding:11px 12px}
+  .equation{font-size:18px}
+  .step{margin:0 13px;gap:9px}
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div>
+    <div class="brand">Lớp Học Thầy Minh · Zalo 0946111107</div>
+    <div class="website">lophocthayminh.onrender.com</div>
+  </div>
+  <button class="header-button" onclick="toggleFullscreen()">⛶ Toàn màn hình</button>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-title">LUYỆN ĐỔI SỐ · NHIỆT HỌC</div>
+    <div class="progress-text" id="progressText"></div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <nav class="question-grid" id="questionGrid"></nav>
+    <section class="formula-panel" id="formulaPanel"></section>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="topline">
+      <span>28 câu tính toán · Chạy offline</span>
+      <span class="badge" id="version"></span>
+    </div>
+
+    <h1 id="questionTitle"></h1>
+    <div class="statement" id="statement"></div>
+    <div class="convention" id="convention" hidden></div>
+    <div class="options" id="options"></div>
+
+    <div class="actions">
+      <button class="btn primary" onclick="checkAnswer()">Kiểm tra</button>
+      <button class="btn" onclick="showSolution()">Xem lời giải</button>
+      <button class="btn change" onclick="changeQuestion()">↻ Đổi đề bài mới</button>
+    </div>
+
+    <div class="hint">Mỗi lần đổi đề, dữ kiện, đáp án, phương án và lời giải được tính lại.</div>
+    <div id="feedback" role="status"></div>
+    <section class="solution" id="solution" hidden></section>
+
+    <div class="bottom">
+      <button class="btn" onclick="navigate(-1)">← Câu trước</button>
+      <span class="timer" id="timer">00:00</span>
+      <button class="btn" onclick="navigate(1)">Câu sau →</button>
+    </div>
+  </main>
+</div>
+
+<script>
+"use strict";
+
+/* ================= PHÂN SỐ CHÍNH XÁC ================= */
+
+function gcd(a,b){
+  a=a<0n?-a:a;
+  b=b<0n?-b:b;
+  while(b){
+    const t=a%b;
+    a=b;
+    b=t;
+  }
+  return a;
+}
+
+class Rational{
+  constructor(n,d=1n){
+    n=BigInt(n);
+    d=BigInt(d);
+    if(d===0n) throw Error("Mẫu số không được bằng 0.");
+    if(d<0n){n=-n;d=-d;}
+    const g=gcd(n,d);
+    this.n=n/g;
+    this.d=d/g;
+  }
+
+  static from(value){
+    if(value instanceof Rational) return value;
+    let text=String(value).trim().replace(",",".");
+    if(text.includes("/")){
+      const [a,b]=text.split("/");
+      return Rational.from(a).div(Rational.from(b));
+    }
+    if(!text.includes(".")) return new Rational(BigInt(text));
+    const negative=text.startsWith("-");
+    if(negative) text=text.slice(1);
+    const [whole,decimal]=text.split(".");
+    const denominator=10n**BigInt(decimal.length);
+    const numerator=BigInt(whole||"0")*denominator+BigInt(decimal||"0");
+    return new Rational(negative?-numerator:numerator,denominator);
+  }
+
+  add(v){
+    v=Rational.from(v);
+    return new Rational(this.n*v.d+v.n*this.d,this.d*v.d);
+  }
+  sub(v){
+    v=Rational.from(v);
+    return new Rational(this.n*v.d-v.n*this.d,this.d*v.d);
+  }
+  mul(v){
+    v=Rational.from(v);
+    return new Rational(this.n*v.n,this.d*v.d);
+  }
+  div(v){
+    v=Rational.from(v);
+    return new Rational(this.n*v.d,this.d*v.n);
+  }
+  key(){return this.n+"/"+this.d;}
+
+  html(){
+    let divisor=this.d;
+    while(divisor%2n===0n) divisor/=2n;
+    while(divisor%5n===0n) divisor/=5n;
+
+    if(divisor!==1n){
+      return fraction(
+        String(this.n).replace("-","−"),
+        String(this.d)
+      );
+    }
+
+    const negative=this.n<0n;
+    let numerator=negative?-this.n:this.n;
+    let output=(negative?"−":"")+String(numerator/this.d);
+    let remainder=numerator%this.d;
+
+    if(remainder){
+      output+=",";
+      while(remainder){
+        remainder*=10n;
+        output+=String(remainder/this.d);
+        remainder%=this.d;
+      }
+    }
+    return output;
+  }
+}
+
+const R=value=>Rational.from(value);
+
+function fraction(a,b){
+  return `<span class="frac"><span class="numerator">${a}</span><span class="denominator">${b}</span></span>`;
+}
+
+function variable(name,index=""){
+  return `<i>${name}</i>${index!==""?`<sub>${index}</sub>`:""}`;
+}
+
+function math(content){
+  return `<span class="math">${content}</span>`;
+}
+
+function equation(content){
+  return `<div class="equation math">${content}</div>`;
+}
+
+function quantity(value,unit=""){
+  return math(R(value).html()+(unit?`<span class="unit">${unit}</span>`:""));
+}
+
+function given(value,unit=""){
+  return `<span class="given">${quantity(value,unit)}</span>`;
+}
+
+const t=variable("t");
+const T=variable("T");
+const F=variable("F");
+const p1=variable("p",1),p2=variable("p",2);
+const V1=variable("V",1),V2=variable("V",2);
+const T1=variable("T",1),T2=variable("T",2);
+const t1=variable("t",1),t2=variable("t",2);
+const nineFifths=fraction("9","5");
+const fiveNinths=fraction("5","9");
+
+function celsiusToFahrenheit(c){
+  return R(c).mul("9/5").add(32);
+}
+
+function fahrenheitToCelsius(f){
+  return R(f).sub(32).mul("5/9");
+}
+
+/* ================= DỮ LIỆU 28 CÂU ================= */
+
+const DATA=[
+  {type:"c2f",value:-40},
+  {type:"f2c",value:32},
+  {type:"c2k",value:25,offset:"273.15"},
+  {type:"f2c",value:77},
+  {type:"k2c",value:300,offset:"273.15"},
+  {type:"k2c",value:"373.15",offset:"273.15"},
+
+  {type:"ratioFC",ratio:"2.5",target:"C"},
+  {type:"ratioFC",ratio:3,target:"K"},
+  {type:"ratioFC",ratio:4,target:"F"},
+  {type:"ratioCK",ratio:"0.5"},
+  {type:"dropF",high:100,low:20},
+  {type:"ratioCK",ratio:"0.25"},
+
+  {type:"rangeK",low:19,high:28,offset:273},
+  {type:"c2k",value:32,offset:273},
+  {type:"c2f",value:-40},
+  {type:"f2c",value:77},
+  {type:"ratioFC",ratio:"2.5",target:"C"},
+  {type:"ratioFC",ratio:4,target:"F"},
+
+  {type:"c2k",value:27,offset:273},
+  {type:"gas",temperature:47,pressure:"0.7",finalPressure:8,compression:5},
+  {type:"boyle",volume:1,pressure:1,finalPressure:"3.5"},
+  {type:"volumeTemp",initialTemperature:250,finalTemperature:500},
+  {type:"volumeRatio",pressureRatio:2,temperatureRatio:3},
+  {type:"c2k",value:37,offset:273},
+
+  {type:"deltaK",low:17,high:22},
+  {type:"heat",mass:2,specificHeat:460,high:500,low:40},
+  {type:"compress",temperature:32,compression:16,pressureRatio:"48.5"},
+  {type:"isobarRise",temperature:27,volume:10,finalVolume:12}
+];
+
+/* ================= TẠO CÂU HỎI VÀ LỜI GIẢI ================= */
+
+function createQuestion(config){
+  const c=config;
+  const question={
+    text:"",
+    unit:"",
+    result:null,
+    formulas:[],
+    formulaTitle:"",
+    steps:[],
+    convention:"",
+    range:false
+  };
+
+  const step=(label,content)=>question.steps.push({label,content});
+  const result=(value,unit)=>{
+    question.result=R(value);
+    question.unit=unit;
+  };
+
+  switch(c.type){
+
+    case "c2f":{
+      const answer=celsiusToFahrenheit(c.value);
+      question.text=`Một vật có nhiệt độ ${given(c.value,"°C")}. Nhiệt độ tương ứng trong thang Fahrenheit là bao nhiêu?`;
+      question.formulaTitle="Celsius → Fahrenheit";
+      question.formulas=[`${F}=${nineFifths}${t}+32`];
+
+      step("Công thức chuyển đổi",
+        equation(`${F}=${nineFifths}${t}+32`));
+      step("Thay số",
+        equation(`${F}=${nineFifths}×${R(c.value).html()}+32`));
+      step("Tính kết quả",
+        equation(`${F}=${quantity(answer,"°F")}`));
+
+      result(answer,"°F");
+      break;
+    }
+
+    case "f2c":{
+      const answer=fahrenheitToCelsius(c.value);
+      question.text=`Một vật có nhiệt độ ${given(c.value,"°F")}. Nhiệt độ tương ứng trong thang Celsius là bao nhiêu?`;
+      question.formulaTitle="Fahrenheit → Celsius";
+      question.formulas=[`${t}=${fiveNinths}(${F}−32)`];
+
+      step("Công thức chuyển đổi",
+        equation(`${t}=${fiveNinths}(${F}−32)`));
+      step("Thay số",
+        equation(`${t}=${fiveNinths}(${R(c.value).html()}−32)`));
+      step("Tính kết quả",
+        equation(`${t}=${quantity(answer,"°C")}`));
+
+      result(answer,"°C");
+      break;
+    }
+
+    case "c2k":{
+      const answer=R(c.value).add(c.offset);
+      question.text=`Một vật có nhiệt độ ${given(c.value,"°C")}. Nhiệt độ tương ứng trong thang Kelvin là bao nhiêu?`;
+      question.formulaTitle="Celsius → Kelvin";
+      question.formulas=[`${T}=${t}+${R(c.offset).html()}`];
+      question.convention=`Sử dụng hệ thức ${math(`${T}=${t}+${R(c.offset).html()}`)}.`;
+
+      step("Công thức chuyển đổi",
+        equation(`${T}=${t}+${R(c.offset).html()}`));
+      step("Thay số và tính",
+        equation(`${T}=${R(c.value).html()}+${R(c.offset).html()}=${quantity(answer,"K")}`));
+
+      result(answer,"K");
+      break;
+    }
+
+    case "k2c":{
+      const answer=R(c.value).sub(c.offset);
+      question.text=`Một vật có nhiệt độ ${given(c.value,"K")}. Nhiệt độ tương ứng trong thang Celsius là bao nhiêu?`;
+      question.formulaTitle="Kelvin → Celsius";
+      question.formulas=[`${t}=${T}−${R(c.offset).html()}`];
+      question.convention=`Sử dụng hệ thức ${math(`${T}=${t}+${R(c.offset).html()}`)}.`;
+
+      step("Rút nhiệt độ Celsius",
+        equation(`${t}=${T}−${R(c.offset).html()}`));
+      step("Thay số và tính",
+        equation(`${t}=${R(c.value).html()}−${R(c.offset).html()}=${quantity(answer,"°C")}`));
+
+      result(answer,"°C");
+      break;
+    }
+
+    case "ratioFC":{
+      const ratio=R(c.ratio);
+      const answerC=R(32).div(ratio.sub("9/5"));
+      const targetName={C:"Celsius",K:"Kelvin",F:"Fahrenheit"}[c.target];
+
+      question.text=`Tỉ số giữa giá trị nhiệt độ Fahrenheit và giá trị nhiệt độ Celsius của một vật bằng ${given(ratio)}. Nhiệt độ của vật theo thang ${targetName} là bao nhiêu?`;
+      question.formulaTitle="Tỉ số Fahrenheit / Celsius";
+      question.formulas=[
+        `${F}=${nineFifths}${t}+32`,
+        `${fraction(F,t)}=${variable("r")}`,
+        `${t}=${fraction("32",`${variable("r")}−${nineFifths}`)}`
+      ];
+
+      step("Lập phương trình",
+        equation(`${fraction(F,t)}=${ratio.html()} ⇒ ${ratio.html()}${t}=${nineFifths}${t}+32`));
+
+      step("Tìm nhiệt độ Celsius",
+        equation(`${t}=${fraction("32",`${ratio.html()}−${nineFifths}`)}=${quantity(answerC,"°C")}`));
+
+      if(c.target==="C"){
+        result(answerC,"°C");
+      }else if(c.target==="K"){
+        const answerK=answerC.add("273.15");
+        question.convention=`Sử dụng ${math(`${T}=${t}+273,15`)}.`;
+        step("Chuyển sang Kelvin",
+          equation(`${T}=${answerC.html()}+273,15=${quantity(answerK,"K")}`));
+        result(answerK,"K");
+      }else{
+        const answerF=celsiusToFahrenheit(answerC);
+        step("Chuyển sang Fahrenheit",
+          equation(`${F}=${nineFifths}×${answerC.html()}+32=${quantity(answerF,"°F")}`));
+        result(answerF,"°F");
+      }
+      break;
+    }
+
+    case "ratioCK":{
+      const ratio=R(c.ratio);
+      const answerC=R("273.15").mul(ratio).div(R(1).sub(ratio));
+      const answerF=celsiusToFahrenheit(answerC);
+
+      question.text=`Tỉ số giữa giá trị nhiệt độ Celsius và giá trị nhiệt độ Kelvin của một vật bằng ${given(ratio)}. Nhiệt độ của vật theo thang Fahrenheit là bao nhiêu?`;
+      question.formulaTitle="Tỉ số Celsius / Kelvin";
+      question.formulas=[
+        `${fraction(t,T)}=${variable("r")}`,
+        `${T}=${t}+273,15`,
+        `${t}=${fraction(`273,15${variable("r")}`,`1−${variable("r")}`)}`,
+        `${F}=${nineFifths}${t}+32`
+      ];
+      question.convention=`Sử dụng ${math(`${T}=${t}+273,15`)}.`;
+
+      step("Lập phương trình theo nhiệt độ Celsius",
+        equation(`${fraction(t,`${t}+273,15`)}=${ratio.html()}`));
+
+      step("Giải nhiệt độ Celsius",
+        equation(`${t}=${fraction(`273,15×${ratio.html()}`,`1−${ratio.html()}`)}=${quantity(answerC,"°C")}`));
+
+      step("Chuyển sang Fahrenheit",
+        equation(`${F}=${nineFifths}×${answerC.html()}+32=${quantity(answerF,"°F")}`));
+
+      result(answerF,"°F");
+      break;
+    }
+
+    case "dropF":{
+      const change=R(c.high).sub(c.low);
+      const answer=change.mul("9/5");
+
+      question.text=`Nhiệt độ của một vật giảm từ ${given(c.high,"°C")} xuống ${given(c.low,"°C")}. Giá trị nhiệt độ Fahrenheit của vật giảm bao nhiêu độ?`;
+      question.formulaTitle="Độ giảm nhiệt độ";
+      question.formulas=[
+        `Δ${F}=${nineFifths}Δ${t}`
+      ];
+
+      step("Tính độ giảm theo Celsius",
+        equation(`Δ${t}=${R(c.high).html()}−${R(c.low).html()}=${quantity(change,"°C")}`));
+
+      step("Tính độ giảm theo Fahrenheit",
+        equation(`Δ${F}=${nineFifths}×${change.html()}=${quantity(answer,"°F")}`));
+
+      result(answer,"°F");
+      break;
+    }
+
+    case "rangeK":{
+      const low=R(c.low).add(c.offset);
+      const high=R(c.high).add(c.offset);
+
+      question.text=`Nhiệt độ ngoài trời thay đổi từ ${given(c.low,"°C")} đến ${given(c.high,"°C")}. Khoảng nhiệt độ này tương ứng với khoảng nào trong thang Kelvin?`;
+      question.formulaTitle="Đổi khoảng nhiệt độ";
+      question.formulas=[`${T}=${t}+${R(c.offset).html()}`];
+      question.convention=`Sử dụng ${math(`${T}=${t}+${R(c.offset).html()}`)}.`;
+      question.range=true;
+      question.low=low;
+      question.high=high;
+
+      step("Đổi nhiệt độ thấp nhất",
+        equation(`${T1}=${R(c.low).html()}+${R(c.offset).html()}=${quantity(low,"K")}`));
+
+      step("Đổi nhiệt độ cao nhất",
+        equation(`${T2}=${R(c.high).html()}+${R(c.offset).html()}=${quantity(high,"K")}`));
+
+      question.unit="K";
+      question.result=low;
+      break;
+    }
+
+    case "gas":{
+      const initialT=R(c.temperature).add(273);
+      const answer=initialT.mul(c.finalPressure).div(c.pressure).div(c.compression);
+
+      question.text=`Một lượng khí trong xilanh có nhiệt độ ${given(c.temperature,"°C")} và áp suất ${given(c.pressure,"atm")}. Sau khi nén, thể tích khí còn ${math(fraction("1",c.compression))} thể tích ban đầu, áp suất đạt ${given(c.finalPressure,"atm")}. Tính nhiệt độ khí sau khi nén theo Kelvin.`;
+      question.formulaTitle="Phương trình trạng thái";
+      question.formulas=[
+        `${fraction(p1+V1,T1)}=${fraction(p2+V2,T2)}`,
+        `${T2}=${T1}${fraction(p2,p1)}${fraction(V2,V1)}`
+      ];
+      question.convention=`Sử dụng ${math(`${T}=${t}+273`)}.`;
+
+      step("Đổi nhiệt độ ban đầu sang Kelvin",
+        equation(`${T1}=${R(c.temperature).html()}+273=${quantity(initialT,"K")}`));
+
+      step("Áp dụng phương trình trạng thái",
+        equation(`${T2}=${T1}${fraction(p2,p1)}${fraction(V2,V1)}`));
+
+      step("Thay số và tính",
+        equation(`${T2}=${initialT.html()}×${fraction(R(c.finalPressure).html(),R(c.pressure).html())}×${fraction("1",c.compression)}=${quantity(answer,"K")}`));
+
+      result(answer,"K");
+      break;
+    }
+
+    case "boyle":{
+      const answer=R(c.pressure).mul(c.volume).div(c.finalPressure);
+
+      question.text=`Một lượng khí có thể tích ${given(c.volume,"m³")} và áp suất ${given(c.pressure,"atm")}. Nén đẳng nhiệt khí đến áp suất ${given(c.finalPressure,"atm")}. Thể tích khí sau khi nén bằng bao nhiêu?`;
+      question.formulaTitle="Quá trình đẳng nhiệt";
+      question.formulas=[
+        `${p1}${V1}=${p2}${V2}`,
+        `${V2}=${fraction(p1+V1,p2)}`
+      ];
+
+      step("Áp dụng định luật Boyle",
+        equation(`${p1}${V1}=${p2}${V2}`));
+
+      step("Rút thể tích cần tìm",
+        equation(`${V2}=${fraction(p1+V1,p2)}`));
+
+      step("Thay số và tính",
+        equation(`${V2}=${fraction(`${R(c.pressure).html()}×${R(c.volume).html()}`,R(c.finalPressure).html())}=${quantity(answer,"m³")}`));
+
+      result(answer,"m³");
+      break;
+    }
+
+    case "volumeTemp":{
+      const answer=R(c.finalTemperature).div(c.initialTemperature);
+
+      question.text=`Một lượng khí lí tưởng có nhiệt độ tăng từ ${given(c.initialTemperature,"K")} đến ${given(c.finalTemperature,"K")}, áp suất không đổi. Tỉ số thể tích ${math(fraction(V2,V1))} bằng bao nhiêu?`;
+      question.formulaTitle="Quá trình đẳng áp";
+      question.formulas=[
+        `${fraction(V1,T1)}=${fraction(V2,T2)}`,
+        `${fraction(V2,V1)}=${fraction(T2,T1)}`
+      ];
+
+      step("Áp dụng định luật Charles",
+        equation(`${fraction(V1,T1)}=${fraction(V2,T2)}`));
+
+      step("Tính tỉ số thể tích",
+        equation(`${fraction(V2,V1)}=${fraction(T2,T1)}=${fraction(R(c.finalTemperature).html(),R(c.initialTemperature).html())}=${answer.html()}`));
+
+      result(answer,"");
+      break;
+    }
+
+    case "volumeRatio":{
+      const answer=R(c.temperatureRatio).div(c.pressureRatio);
+
+      question.text=`Với một lượng khí lí tưởng xác định, áp suất tăng gấp ${given(c.pressureRatio)} lần và nhiệt độ tuyệt đối tăng gấp ${given(c.temperatureRatio)} lần. Tỉ số thể tích ${math(fraction(V2,V1))} bằng bao nhiêu?`;
+      question.formulaTitle="Tỉ số thể tích khí";
+      question.formulas=[
+        `${fraction(p1+V1,T1)}=${fraction(p2+V2,T2)}`,
+        `${fraction(V2,V1)}=${fraction(T2,T1)}×${fraction(p1,p2)}`
+      ];
+
+      step("Rút tỉ số thể tích",
+        equation(`${fraction(V2,V1)}=${fraction(T2,T1)}×${fraction(p1,p2)}`));
+
+      step("Thay các tỉ số đã cho",
+        equation(`${fraction(V2,V1)}=${R(c.temperatureRatio).html()}×${fraction("1",R(c.pressureRatio).html())}=${answer.html()}`));
+
+      result(answer,"");
+      break;
+    }
+
+    case "deltaK":{
+      const answer=R(c.high).sub(c.low);
+
+      question.text=`Nhiệt độ trong một ngày thay đổi từ ${given(c.low,"°C")} đến ${given(c.high,"°C")}. Độ chênh lệch nhiệt độ trong thang Kelvin bằng bao nhiêu?`;
+      question.formulaTitle="Độ chênh lệch nhiệt độ";
+      question.formulas=[`Δ${T}=Δ${t}`];
+
+      step("So sánh độ chia hai thang đo",
+        equation(`Δ${T}=Δ${t}`));
+
+      step("Tính độ chênh lệch",
+        equation(`Δ${T}=${R(c.high).html()}−${R(c.low).html()}=${quantity(answer,"K")}`));
+
+      result(answer,"K");
+      break;
+    }
+
+    case "heat":{
+      const difference=R(c.high).sub(c.low);
+      const joules=R(c.mass).mul(c.specificHeat).mul(difference);
+      const answer=joules.div(1000);
+
+      question.text=`Một miếng sắt có khối lượng ${given(c.mass,"kg")}, nhiệt dung riêng ${given(c.specificHeat,"J/(kg·K)")}, nguội từ ${given(c.high,"°C")} xuống ${given(c.low,"°C")}. Nhiệt lượng miếng sắt tỏa ra bằng bao nhiêu kJ?`;
+      question.formulaTitle="Nhiệt lượng tỏa ra";
+      question.formulas=[
+        `${variable("Q")}=${variable("m")}${variable("c")}(${t1}−${t2})`
+      ];
+
+      step("Tính độ giảm nhiệt độ",
+        equation(`Δ${t}=${R(c.high).html()}−${R(c.low).html()}=${quantity(difference,"°C")}`));
+
+      step("Tính nhiệt lượng tỏa ra",
+        equation(`${variable("Q")}=${R(c.mass).html()}×${R(c.specificHeat).html()}×${difference.html()}=${quantity(joules,"J")}`));
+
+      step("Đổi từ J sang kJ",
+        equation(`${variable("Q")}=${fraction(joules.html(),"1000")}=${quantity(answer,"kJ")}`));
+
+      result(answer,"kJ");
+      break;
+    }
+
+    case "compress":{
+      const initialT=R(c.temperature).add(273);
+      const finalT=initialT.mul(c.pressureRatio).div(c.compression);
+      const answer=finalT.sub(273);
+
+      question.text=`Khí lí tưởng trong động cơ có nhiệt độ ban đầu ${given(c.temperature,"°C")}. Nén khí để thể tích còn ${math(fraction("1",c.compression))} ban đầu và áp suất tăng gấp ${given(c.pressureRatio)} lần. Nhiệt độ khí sau khi nén theo Celsius bằng bao nhiêu?`;
+      question.formulaTitle="Nén khí lí tưởng";
+      question.formulas=[
+        `${fraction(p1+V1,T1)}=${fraction(p2+V2,T2)}`,
+        `${T2}=${T1}${fraction(p2,p1)}${fraction(V2,V1)}`,
+        `${t2}=${T2}−273`
+      ];
+      question.convention=`Sử dụng ${math(`${T}=${t}+273`)}.`;
+
+      step("Đổi nhiệt độ ban đầu",
+        equation(`${T1}=${R(c.temperature).html()}+273=${quantity(initialT,"K")}`));
+
+      step("Tính nhiệt độ sau khi nén",
+        equation(`${T2}=${initialT.html()}×${R(c.pressureRatio).html()}×${fraction("1",c.compression)}=${quantity(finalT,"K")}`));
+
+      step("Chuyển sang Celsius",
+        equation(`${t2}=${finalT.html()}−273=${quantity(answer,"°C")}`));
+
+      result(answer,"°C");
+      break;
+    }
+
+    case "isobarRise":{
+      const initialT=R(c.temperature).add(273);
+      const finalT=initialT.mul(c.finalVolume).div(c.volume);
+      const answer=finalT.sub(initialT);
+
+      question.text=`Một lượng khí lí tưởng có thể tích ${given(c.volume,"lít")} ở ${given(c.temperature,"°C")}. Giữ áp suất không đổi, làm thể tích tăng lên ${given(c.finalVolume,"lít")}. Cần tăng nhiệt độ thêm bao nhiêu độ Celsius?`;
+      question.formulaTitle="Độ tăng nhiệt độ đẳng áp";
+      question.formulas=[
+        `${fraction(V1,T1)}=${fraction(V2,T2)}`,
+        `${T2}=${T1}${fraction(V2,V1)}`,
+        `Δ${t}=Δ${T}=${T2}−${T1}`
+      ];
+      question.convention=`Sử dụng ${math(`${T}=${t}+273`)}.`;
+
+      step("Đổi nhiệt độ ban đầu",
+        equation(`${T1}=${R(c.temperature).html()}+273=${quantity(initialT,"K")}`));
+
+      step("Tính nhiệt độ cuối",
+        equation(`${T2}=${initialT.html()}×${fraction(R(c.finalVolume).html(),R(c.volume).html())}=${quantity(finalT,"K")}`));
+
+      step("Tính độ tăng nhiệt độ",
+        equation(`Δ${t}=Δ${T}=${finalT.html()}−${initialT.html()}=${quantity(answer,"°C")}`));
+
+      result(answer,"°C");
+      break;
+    }
+
+    default:
+      throw Error("Chưa khai báo dạng bài.");
+  }
+
+  question.options=makeOptions(question);
+  return question;
+}
+
+/* ================= PHƯƠNG ÁN TRẮC NGHIỆM ================= */
+
+function shuffled(array){
+  const output=[...array];
+  for(let i=output.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [output[i],output[j]]=[output[j],output[i]];
+  }
+  return output;
+}
+
+function makeOptions(question){
+  if(question.range){
+    return shuffled([0,10,-20,30].map(offset=>{
+      const low=question.low.add(offset);
+      const high=question.high.add(offset);
+      return {
+        correct:offset===0,
+        html:`Từ ${quantity(low,"K")} đến ${quantity(high,"K")}`
+      };
+    }));
+  }
+
+  const answer=question.result;
+  const offsets=[0,10,-5,20];
+
+  return shuffled(offsets.map(offset=>({
+    correct:offset===0,
+    html:quantity(answer.add(offset),question.unit)
+  })));
+}
+
+/* ================= SINH DỮ KIỆN THEO TỪNG DẠNG ================= */
+
+const integer=(min,max)=>min+Math.floor(Math.random()*(max-min+1));
+const choose=array=>array[integer(0,array.length-1)];
+
+function generateConfig(base){
+  const c={...base};
+
+  switch(c.type){
+    case "c2f":
+      c.value=integer(-20,50)*5;
+      break;
+
+    case "f2c":
+      c.value=celsiusToFahrenheit(integer(-20,50)*5);
+      break;
+
+    case "c2k":
+      c.value=integer(-30,120);
+      break;
+
+    case "k2c":
+      c.value=integer(230,450);
+      break;
+
+    case "ratioFC":
+      c.ratio=choose(["2","2.5","3","3.5","4","5"]);
+      break;
+
+    case "ratioCK":
+      c.ratio=choose(["0.2","0.25","0.4","0.5"]);
+      break;
+
+    case "dropF":
+      c.low=integer(-10,30);
+      c.high=c.low+integer(2,15)*5;
+      break;
+
+    case "rangeK":
+    case "deltaK":
+      c.low=integer(-10,30);
+      c.high=c.low+integer(2,15);
+      break;
+
+    case "gas":
+      c.temperature=choose([17,27,37,47,67]);
+      c.pressure=choose(["0.5","0.6","0.7","0.8"]);
+      c.finalPressure=integer(5,10);
+      c.compression=integer(2,6);
+      break;
+
+    case "boyle":
+      c.volume=integer(1,8);
+      c.pressure=integer(1,3);
+      c.finalPressure=choose(["3.5","4","4.5","5","6","7"]);
+      break;
+
+    case "volumeTemp":
+      c.initialTemperature=choose([200,250,300,320]);
+      c.finalTemperature=c.initialTemperature+integer(2,8)*50;
+      break;
+
+    case "volumeRatio":
+      c.pressureRatio=integer(2,5);
+      c.temperatureRatio=integer(2,7);
+      break;
+
+    case "heat":
+      c.mass=integer(1,5);
+      c.specificHeat=460;
+      c.low=integer(2,8)*10;
+      c.high=c.low+integer(10,40)*10;
+      break;
+
+    case "compress":
+      c.temperature=choose([17,27,32,37,47]);
+      c.compression=integer(8,20);
+      c.pressureRatio=integer(c.compression+2,c.compression*4);
+      break;
+
+    case "isobarRise":
+      c.temperature=choose([17,27,37,47]);
+      c.volume=integer(5,15);
+      c.finalVolume=c.volume+integer(1,7);
+      break;
+  }
+
+  return c;
+}
+
+function configKey(config){
+  return Object.entries(config).map(([key,value])=>
+    key+":"+(value instanceof Rational?value.key():String(value))
+  ).join("|");
+}
+
+/* ================= TRẠNG THÁI VÀ GIAO DIỆN ================= */
+
+let current=0;
+
+const states=DATA.map(config=>({
+  config:{...config},
+  question:createQuestion(config),
+  selected:null,
+  checked:false,
+  solutionVisible:false,
+  version:1
+}));
+
+const $=id=>document.getElementById(id);
+
+function render(){
+  const state=states[current];
+  const q=state.question;
+
+  $("questionTitle").textContent=`Câu ${current+1}`;
+  $("version").textContent=`Lượt ${state.version}`;
+  $("statement").innerHTML=q.text;
+  $("convention").hidden=!q.convention;
+  $("convention").innerHTML=q.convention;
+
+  $("options").innerHTML=q.options.map((option,index)=>`
+    <label class="option ${state.selected===index?"selected":""}">
+      <input type="radio"
+             name="answer"
+             value="${index}"
+             ${state.selected===index?"checked":""}
+             onchange="selectAnswer(${index})">
+      <span class="option-letter">${"ABCD"[index]}</span>
+      <span class="option-content">${option.html}</span>
+    </label>
+  `).join("");
+
+  $("formulaPanel").innerHTML=`
+    <div class="formula-label">CÔNG THỨC ÁP DỤNG</div>
+    <h3 class="formula-title">${q.formulaTitle}</h3>
+    ${q.formulas.map(formula=>`
+      <div class="formula-item">${equation(formula)}</div>
+    `).join("")}
+    <div class="formula-note">
+      ${math(t)}: nhiệt độ Celsius.<br>
+      ${math(F)}: giá trị nhiệt độ Fahrenheit.<br>
+      ${math(T)}: nhiệt độ Kelvin.<br>
+      Nhiệt độ khí trong các định luật chất khí phải dùng Kelvin.
+    </div>
+  `;
+
+  $("feedback").innerHTML="";
+
+  if(state.checked){
+    const correct=q.options[state.selected].correct;
+    $("feedback").innerHTML=`
+      <div class="message ${correct?"good":"bad"}">
+        ${correct?"✓ Chính xác.":"Chưa đúng. Hãy kiểm tra công thức, phép tính và đơn vị."}
+        Bạn đã chọn <b>${"ABCD"[state.selected]}</b>.
+      </div>
+    `;
+  }
+
+  $("solution").hidden=!state.solutionVisible;
+
+  if(state.solutionVisible){
+    const correctIndex=q.options.findIndex(option=>option.correct);
+    const finalAnswer=q.range
+      ?`Từ ${quantity(q.low,"K")} đến ${quantity(q.high,"K")}`
+      :quantity(q.result,q.unit);
+
+    $("solution").innerHTML=`
+      <div class="solution-heading">Hướng dẫn giải</div>
+      ${q.steps.map((step,index)=>`
+        <div class="step">
+          <span class="step-number">${index+1}</span>
+          <div>
+            <div class="step-label">${step.label}</div>
+            <div class="step-content">${step.content}</div>
+          </div>
+        </div>
+      `).join("")}
+      <div class="answer">
+        Kết quả: ${finalAnswer}<br>
+        Chọn ${"ABCD"[correctIndex]}.
+      </div>
+    `;
+  }else{
+    $("solution").innerHTML="";
+  }
+
+  renderNavigation();
+}
+
+function renderNavigation(){
+  const checked=states.filter(state=>state.checked).length;
+
+  $("progressText").textContent=`Đã kiểm tra ${checked}/${states.length} câu`;
+  $("progressFill").style.width=(checked/states.length*100)+"%";
+
+  $("questionGrid").innerHTML=states.map((state,index)=>{
+    let status="";
+    if(state.checked){
+      status=state.question.options[state.selected].correct?"correct":"wrong";
+    }
+    return `
+      <button class="${current===index?"active":""} ${status}"
+              onclick="openQuestion(${index})"
+              aria-label="Câu ${index+1}">
+        ${index+1}
+      </button>
+    `;
+  }).join("");
+}
+
+function selectAnswer(index){
+  const state=states[current];
+  state.selected=index;
+  state.checked=false;
+  state.solutionVisible=false;
+  render();
+}
+
+function checkAnswer(){
+  const state=states[current];
+
+  if(state.selected===null){
+    $("feedback").innerHTML=`
+      <div class="message info">
+        Hãy chọn một phương án trước khi kiểm tra.
+      </div>
+    `;
+    return;
+  }
+
+  state.checked=true;
+  render();
+}
+
+function showSolution(){
+  states[current].solutionVisible=true;
+  render();
+}
+
+function changeQuestion(){
+  const state=states[current];
+  const previousKey=configKey(state.config);
+  let config;
+
+  for(let attempt=0;attempt<30;attempt++){
+    config=generateConfig(DATA[current]);
+    if(configKey(config)!==previousKey) break;
+  }
+
+  states[current]={
+    config,
+    question:createQuestion(config),
+    selected:null,
+    checked:false,
+    solutionVisible:false,
+    version:state.version+1
+  };
+
+  render();
+}
+
+function openQuestion(index){
+  current=index;
+  render();
+}
+
+function navigate(direction){
+  current=(current+direction+states.length)%states.length;
+  render();
+  $("main").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+async function toggleFullscreen(){
+  try{
+    if(document.fullscreenElement){
+      await document.exitFullscreen();
+    }else if(document.documentElement.requestFullscreen){
+      await document.documentElement.requestFullscreen();
+    }else{
+      $("feedback").innerHTML=`
+        <div class="message info">
+          Trình duyệt này chưa hỗ trợ nút toàn màn hình.
+          Trên máy tính, thầy có thể nhấn F11.
+        </div>
+      `;
+    }
+  }catch{
+    $("feedback").innerHTML=`
+      <div class="message info">
+        Không thể bật toàn màn hình trong cửa sổ này.
+        Hãy mở file trực tiếp bằng trình duyệt.
+      </div>
+    `;
+  }
+}
+
+const startedAt=Date.now();
+
+setInterval(()=>{
+  const seconds=Math.floor((Date.now()-startedAt)/1000);
+  const minutes=Math.floor(seconds/60);
+  $("timer").textContent=
+    String(minutes).padStart(2,"0")+":"+
+    String(seconds%60).padStart(2,"0");
+},1000);
+
+render();
+</script>
+</body>
+</html>
