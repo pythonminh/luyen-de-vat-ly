@@ -1,0 +1,608 @@
+<!--hp-title:c2FpIHPhu5E=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Luyện tập sai số phép đo - Lớp Học Thầy Minh</title>
+<style>
+:root{
+ --navy:#102747;--blue:#1764c0;--bg:#f1f5fb;
+ --line:#dce5f0;--text:#182b45;--green:#087a49;
+ --red:#bb2638;--yellow:#fff4c9;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+ font-family:Arial,Helvetica,sans-serif;line-height:1.6}
+header{background:var(--navy);color:white;padding:15px 22px}
+header strong{font-size:clamp(17px,2.5vw,23px)}
+header small{display:block;color:#cbd9eb}
+main{max-width:1400px;margin:auto;padding:16px}
+.toolbar,.actions,.nav{display:flex;gap:9px;flex-wrap:wrap;
+ align-items:center}
+.toolbar{justify-content:space-between;margin-bottom:15px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);
+ background:white;border-radius:9px;padding:10px 15px;
+ color:var(--text);font-weight:600}
+button:hover{filter:brightness(.96)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.primary{background:var(--blue);color:white;border:0}
+.success{background:var(--green);color:white;border:0}
+.grid{display:grid;grid-template-columns:minmax(280px,0.9fr)
+ minmax(320px,1.35fr);gap:16px}
+.card{background:white;border:1px solid var(--line);
+ border-radius:15px;padding:20px;min-width:0;
+ box-shadow:0 2px 9px #122d4a0a}
+h2{font-size:20px;margin:0 0 12px;color:var(--navy)}
+h3{font-size:16px;color:var(--navy)}
+.tag{display:inline-block;padding:3px 9px;border-radius:20px;
+ background:#e7efff;color:#1753a0;font-size:13px}
+.measure{width:100%;border-collapse:collapse;margin:12px 0}
+.measure th,.measure td{border:1px solid var(--line);
+ padding:9px;text-align:center}
+.measure th{background:#eaf1fb}
+.measure td:nth-child(2){font-weight:bold;color:#145eb2}
+.formula{background:#f3f7fe;border-left:4px solid var(--blue);
+ padding:12px;border-radius:8px;margin:10px 0;
+ overflow-wrap:anywhere}
+.math{font-family:Georgia,"Times New Roman",serif;font-size:1.12em}
+.frac{display:inline-flex;flex-direction:column;
+ vertical-align:middle;text-align:center;line-height:1.25;
+ margin:0 3px}
+.frac>span:first-child{border-bottom:1px solid currentColor;
+ padding:0 5px 3px}
+.frac>span:last-child{padding:3px 5px 0}
+.question{font-size:18px;margin:16px 0}
+.option{display:flex;gap:12px;align-items:center;
+ border:1px solid var(--line);border-radius:10px;
+ padding:12px;margin:9px 0;cursor:pointer}
+.option:has(input:checked){border-color:var(--blue);
+ background:#eef5ff}
+input[type=radio]{accent-color:var(--blue);width:18px;height:18px}
+input[type=text],input[type=number]{font:inherit;padding:11px;
+ border:1px solid #b7c8da;border-radius:9px;
+ max-width:100%;background:white}
+input[type=text]{width:100%}
+.toolinput{width:140px}
+.field{margin:12px 0}
+.field label{display:block;font-weight:bold;margin-bottom:5px}
+.note{font-size:13px;color:#5b6e84}
+.result{margin-top:15px;padding:13px;border-radius:9px;
+ background:#edf3fb}
+.good{background:#e3f6e9;color:#086a3e}
+.bad{background:#fff0f0;color:#aa2335}
+.solution{margin-top:15px;background:#f5f9ff;
+ padding:15px;border:1px solid #ccdef6;border-radius:11px}
+.step{padding:10px 0;border-bottom:1px dashed #cad9e9}
+.step:last-child{border-bottom:0}
+.highlight{background:var(--yellow);padding:9px;
+ border-radius:8px;margin:10px 0}
+.nav{justify-content:space-between;margin-top:16px}
+#questionList{display:flex;gap:8px;flex-wrap:wrap}
+#questionList button.active{background:var(--navy);color:white}
+svg{width:100%;height:auto}
+@media(max-width:780px){
+ main{padding:9px}
+ .grid{grid-template-columns:1fr}
+ .card{padding:14px}
+ .toolbar{align-items:stretch}
+ .actions button{flex:1}
+ .question{font-size:16px}
+}
+</style>
+</head>
+<body>
+<header>
+<strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
+<small>lophocthayminh.onrender.com</small>
+</header>
+
+<main>
+<div class="toolbar">
+ <div id="questionList"></div>
+ <button onclick="toggleFull()">⛶ Toàn màn hình</button>
+</div>
+
+<div class="grid">
+<section class="card">
+ <h2>📐 Bảng số liệu và công thức</h2>
+ <span class="tag" id="unitTag"></span>
+ <div id="dataTable"></div>
+ <div id="diagram"></div>
+
+ <h3>Công thức áp dụng</h3>
+ <div class="formula math">
+ Giá trị trung bình:
+ <p>x̄ =
+ <span class="frac"><span>x₁ + x₂ + ⋯ + xₙ</span>
+ <span>n</span></span></p>
+ </div>
+ <div class="formula math">
+ Sai số tuyệt đối trung bình:
+ <p>Δx̄ =
+ <span class="frac">
+ <span>|x₁−x̄| + ⋯ + |xₙ−x̄|</span>
+ <span>n</span></span></p>
+ </div>
+ <div class="formula math">
+ Sai số tuyệt đối phép đo:
+ <p>Δx = Δx̄ + Δx<sub>dc</sub></p>
+ </div>
+ <div class="formula math">
+ Sai số tương đối:
+ <p>δ =
+ <span class="frac"><span>Δx</span><span>|x̄|</span></span>
+ × 100%</p>
+ </div>
+ <div class="formula math">
+ Kết quả phép đo:
+ <p>x = x̄ ± Δx</p>
+ </div>
+ <p class="note">
+ Công thức trên dùng sai số tuyệt đối trung bình cộng
+ và sai số dụng cụ theo quy ước của bài học.
+ Không tự suy ra sai số dụng cụ chỉ từ số chữ số thập phân.
+ </p>
+</section>
+
+<section class="card">
+ <div class="toolbar">
+  <span class="tag" id="codeTag"></span>
+  <span class="tag" id="typeTag"></span>
+ </div>
+ <h2 id="title"></h2>
+ <div id="question" class="question"></div>
+
+ <div class="field">
+  <label for="instrument">Sai số dụng cụ Δx<sub>dc</sub></label>
+  <input class="toolinput" id="instrument" type="text"
+   inputmode="decimal" placeholder="Ví dụ: 0,1">
+  <span id="unitInstrument"></span>
+  <p class="note" id="instrumentNote"></p>
+ </div>
+
+ <div id="answerArea"></div>
+
+ <div class="actions">
+  <button class="primary" onclick="newQuestion()">
+   🔄 Đổi đề bài mới
+  </button>
+  <button class="success" onclick="checkAnswer()">
+   ✓ Kiểm tra
+  </button>
+  <button onclick="showSolution()">📖 Xem lời giải</button>
+ </div>
+ <div id="feedback" aria-live="polite"></div>
+ <div id="solution"></div>
+
+ <div class="nav">
+  <button onclick="go(-1)">← Câu trước</button>
+  <button onclick="go(1)">Câu tiếp →</button>
+ </div>
+</section>
+</div>
+</main>
+
+<script>
+"use strict";
+
+/*
+ Hai câu gốc giữ nguyên nội dung, đáp án và lời giải.
+ Dữ liệu số lưu dưới dạng số nguyên theo đơn vị 0,1.
+ Mọi phép tính dùng phân số BigInt, không làm tròn.
+*/
+
+const ORIGINAL=[
+ {
+  cau:1,loai:"TN",ma:"L10C1B3-66-TN",
+  nguon:"",
+  de_html:"Đo chiều dài ba lần được $10{,}0\\,\\text{cm}$; $11{,}0\\,\\text{cm}$; $12{,}0\\,\\text{cm}$. Giá trị trung bình bằng bao nhiêu?",
+  phuong_an:[
+   {nhan:"A",noi_dung_html:"$10\\,\\text{cm}$",dung:false},
+   {nhan:"B",noi_dung_html:"$11\\,\\text{cm}$",dung:true},
+   {nhan:"C",noi_dung_html:"$12\\,\\text{cm}$",dung:false},
+   {nhan:"D",noi_dung_html:"$13\\,\\text{cm}$",dung:false}
+  ],
+  dung_sai:[],dap_an:"",
+  loi_giai_html:"Giá trị trung bình: (10+11+12)/3 = $11\\,\\text{cm}$. Chọn B."
+ },
+ {
+  cau:2,loai:"TLN",ma:"L10C1B3-67-TLN",
+  nguon:"",
+  de_html:"Năm lần đo khối lượng cho các giá trị $50{,}1\\,\\text{g}$; $49{,}9\\,\\text{g}$; $50{,}0\\,\\text{g}$; $50{,}2\\,\\text{g}$; $49{,}8\\,\\text{g}$. Giá trị trung bình theo đơn vị g bằng bao nhiêu?",
+  phuong_an:[],dung_sai:[],dap_an:"50",
+  loi_giai_html:"Giá trị trung bình là (50,1 + 49,9 + 50,0 + 50,2 + 49,8)/5 = $50{,}0\\,\\text{g}$."
+ }
+];
+
+function abs(a){return a<0n?-a:a}
+function gcd(a,b){
+ a=abs(a);b=abs(b);
+ while(b){let t=a%b;a=b;b=t}
+ return a||1n;
+}
+function F(n,d=1n){
+ n=BigInt(n);d=BigInt(d);
+ if(!d)throw Error("Mẫu số bằng 0");
+ if(d<0n){n=-n;d=-d}
+ let g=gcd(n,d);
+ return {n:n/g,d:d/g};
+}
+const add=(a,b)=>F(a.n*b.d+b.n*a.d,a.d*b.d);
+const sub=(a,b)=>F(a.n*b.d-b.n*a.d,a.d*b.d);
+const mul=(a,b)=>F(a.n*b.n,a.d*b.d);
+const div=(a,b)=>F(a.n*b.d,a.d*b.n);
+const fa=a=>F(abs(a.n),a.d);
+const eq=(a,b)=>a.n===b.n&&a.d===b.d;
+
+function fromTenth(t){return F(BigInt(t),10n)}
+function mean(values){
+ let s=F(0);
+ values.forEach(v=>s=add(s,fromTenth(v)));
+ return div(s,F(values.length));
+}
+function deviation(values,m){
+ let s=F(0);
+ values.forEach(v=>s=add(s,fa(sub(fromTenth(v),m))));
+ return div(s,F(values.length));
+}
+function finiteDecimal(f){
+ let d=f.d,a=0,b=0;
+ while(d%2n===0n){d/=2n;a++}
+ while(d%5n===0n){d/=5n;b++}
+ if(d!==1n)return null;
+ let k=Math.max(a,b);
+ let p=10n**BigInt(k);
+ let scaled=f.n*(p/f.d);
+ let neg=scaled<0n?"-":"";
+ let digits=abs(scaled).toString().padStart(k+1,"0");
+ if(!k)return neg+digits;
+ let s=digits.slice(0,-k)+"."+digits.slice(-k);
+ return neg+s.replace(/0+$/,"").replace(/\.$/,"");
+}
+function format(f){
+ let s=finiteDecimal(f);
+ return (s===null?f.n+"/"+f.d:s).replace(".",",");
+}
+function fracHTML(f){
+ let s=finiteDecimal(f);
+ if(s!==null)return s.replace(".",",");
+ return '<span class="frac"><span>'+f.n+
+ '</span><span>'+f.d+'</span></span>';
+}
+function parseNumber(s){
+ s=String(s).trim().replace(/\s/g,"").replace(",",".");
+ let match=s.match(/^([+-]?\d+(?:\.\d+)?)(?:\/([+-]?\d+(?:\.\d+)?))?$/);
+ if(!match)return null;
+ function dec(v){
+  let neg=v.startsWith("-")?-1n:1n;
+  v=v.replace(/^[+-]/,"");
+  let a=v.split(".");
+  return F(neg*BigInt(a.join("")),10n**BigInt((a[1]||"").length));
+ }
+ try{
+  let n=dec(match[1]);
+  return match[2]?div(n,dec(match[2])):n;
+ }catch{return null}
+}
+function esc(s){
+ return String(s).replace(/&/g,"&amp;")
+ .replace(/</g,"&lt;").replace(/>/g,"&gt;")
+ .replace(/"/g,"&quot;");
+}
+function randomInt(a,b){
+ return a+Math.floor(Math.random()*(b-a+1));
+}
+function shuffle(a){
+ a=[...a];
+ for(let i=a.length-1;i>0;i--){
+  let j=randomInt(0,i);
+  [a[i],a[j]]=[a[j],a[i]];
+ }
+ return a;
+}
+
+/* Hai bộ sinh độc lập theo từng dạng bài. */
+function generateLength(){
+ let center=randomInt(60,250);
+ let gap=randomInt(2,20);
+ let values=[center-gap,center,center+gap];
+ let answer=fromTenth(center);
+ let candidates=[
+  fromTenth(center-gap),
+  answer,
+  fromTenth(center+gap),
+  fromTenth(center+2*gap)
+ ];
+ return {values,answer,
+  options:shuffle(candidates),generated:true};
+}
+function generateMass(){
+ let center=randomInt(300,950);
+ let gap=randomInt(1,8);
+ let values=shuffle([
+  center-gap,center+gap,center,
+  center-2*gap,center+2*gap
+ ]);
+ return {values,answer:fromTenth(center),generated:true};
+}
+
+const questions=[
+ {
+  original:ORIGINAL[0],
+  unit:"cm",quantity:"chiều dài",
+  state:{
+   values:[100,110,120],
+   answer:F(11),
+   options:[F(10),F(11),F(12),F(13)],
+   generated:false
+  },
+  generator:generateLength
+ },
+ {
+  original:ORIGINAL[1],
+  unit:"g",quantity:"khối lượng",
+  state:{
+   values:[501,499,500,502,498],
+   answer:F(50),options:[],generated:false
+  },
+  generator:generateMass
+ }
+];
+let current=0;
+const $=id=>document.getElementById(id);
+
+function currentQuestion(){return questions[current]}
+function instrumentValue(){
+ let s=$("instrument").value.trim();
+ if(!s)return null;
+ let v=parseNumber(s);
+ return v&&v.n>=0n?v:null;
+}
+function renderList(){
+ $("questionList").innerHTML=questions.map((q,i)=>
+  '<button class="'+(i===current?"active":"")+
+  '" onclick="selectQuestion('+i+')">Câu '+(i+1)+'</button>'
+ ).join("");
+}
+function render(){
+ const q=currentQuestion(),s=q.state;
+ renderList();
+ $("codeTag").textContent=q.original.ma;
+ $("typeTag").textContent=q.original.loai==="TN"?
+  "Trắc nghiệm":"Trả lời ngắn";
+ $("title").textContent="Câu "+q.original.cau+
+  " · Giá trị trung bình và sai số phép đo";
+ $("unitTag").textContent="Đơn vị: "+q.unit;
+ $("unitInstrument").textContent=q.unit;
+ $("instrument").value=q.instrument||"";
+ $("instrumentNote").textContent=
+ "Đề gốc không cho sai số dụng cụ. Hãy nhập giá trị "+
+ "do giáo viên quy định (ví dụ 0,1 hoặc 0,05). "+
+ "Giá trị 0 chỉ dùng khi quy ước bỏ qua sai số dụng cụ.";
+
+ const vals=s.values;
+ $("dataTable").innerHTML=
+ '<table class="measure"><thead><tr><th>Lần đo</th>'+
+ '<th>Giá trị ('+q.unit+')</th></tr></thead><tbody>'+
+ vals.map((v,i)=>'<tr><td>'+(i+1)+'</td><td>'+
+ format(fromTenth(v))+'</td></tr>').join("")+
+ '</tbody></table>';
+
+ renderDiagram(vals,q.unit);
+
+ $("question").innerHTML=s.generated?
+  "Đo "+q.quantity+" "+vals.length+" lần được "+
+  vals.map(v=>"<b>"+format(fromTenth(v))+" "+q.unit+
+  "</b>").join("; ")+
+  ". Giá trị trung bình bằng bao nhiêu?":
+  q.original.de_html
+   .replace(/\$([\s\S]*?)\$/g,(_,m)=>latexToHTML(m));
+
+ let area="";
+ if(q.original.loai==="TN"){
+  area='<h3>Chọn một đáp án</h3>'+
+   s.options.map((v,i)=>
+    '<label class="option"><input type="radio" name="answer" value="'+i+'">'+
+    '<b>'+String.fromCharCode(65+i)+'.</b> '+
+    fracHTML(v)+' '+q.unit+'</label>').join("");
+ }else{
+  area='<div class="field"><label for="answerText">'+
+   'Giá trị trung bình ('+q.unit+')</label>'+
+   '<input id="answerText" type="text" inputmode="decimal" '+
+   'placeholder="Nhập số hoặc phân số, ví dụ: 50 hoặc 100/2"></div>';
+ }
+ area+='<h3>Tính thêm sai số phép đo</h3>';
+ const fields=[
+  ["dev","Sai số tuyệt đối trung bình",q.unit],
+  ["total","Sai số tuyệt đối phép đo",q.unit],
+  ["relative","Sai số tương đối","%"]
+ ];
+ area+=fields.map(([id,label,unit])=>
+  '<div class="field"><label for="'+id+'">'+label+
+  ' ('+unit+')</label><input type="text" id="'+id+
+  '" inputmode="decimal" placeholder="Nhập kết quả chính xác"></div>'
+ ).join("");
+ area+='<p class="note">Có thể nhập phân số như 2/15. '+
+ 'Không cần làm tròn. Chỉ nhập số, không nhập đơn vị.</p>';
+ $("answerArea").innerHTML=area;
+ $("feedback").innerHTML="";
+ $("solution").innerHTML="";
+}
+function latexToHTML(s){
+ return esc(s)
+  .replace(/\\text\{([^{}]*)\}/g,"$1")
+  .replace(/\{,\}/g,",")
+  .replace(/\\,/g," ")
+  .replace(/\\/g,"");
+}
+function renderDiagram(values,unit){
+ let min=Math.min(...values),max=Math.max(...values);
+ let span=Math.max(1,max-min);
+ let x=v=>50+(v-min)/span*440;
+ let circles=values.map((v,i)=>
+  '<circle cx="'+x(v)+'" cy="65" r="6" fill="#1764c0">'+
+  '<title>Lần '+(i+1)+': '+format(fromTenth(v))+
+  ' '+unit+'</title></circle>').join("");
+ $("diagram").innerHTML=
+ '<svg viewBox="0 0 540 115" role="img" '+
+ 'aria-label="Các điểm đo trên trục giá trị">'+
+ '<line x1="40" y1="65" x2="510" y2="65" '+
+ 'stroke="#708aa8" stroke-width="2"/>'+
+ circles+
+ '<text x="40" y="97" font-size="14">'+
+ format(fromTenth(min))+' '+unit+'</text>'+
+ '<text x="490" y="97" font-size="14" text-anchor="end">'+
+ format(fromTenth(max))+' '+unit+'</text>'+
+ '<text x="270" y="23" font-size="14" text-anchor="middle" '+
+ 'fill="#526981">Phân bố các giá trị đo</text></svg>';
+}
+function selectQuestion(i){
+ current=i;render();window.scrollTo(0,0);
+}
+function go(d){
+ selectQuestion((current+d+questions.length)%questions.length);
+}
+function newQuestion(){
+ let q=currentQuestion();
+ let s=q.generator();
+ if(!s||!s.answer||!s.values){
+  $("feedback").innerHTML='<div class="result bad">'+
+   'Không đủ dữ kiện để sinh đề chính xác.</div>';
+  return;
+ }
+ q.state=s;
+ render();
+}
+function calculate(){
+ let q=currentQuestion(),s=q.state;
+ let m=mean(s.values);
+ let dev=deviation(s.values,m);
+ let inst=instrumentValue();
+ let total=inst===null?null:add(dev,inst);
+ let relative=total===null||m.n===0n?
+  null:mul(div(total,fa(m)),F(100));
+ return {m,dev,inst,total,relative};
+}
+function checkAnswer(){
+ let q=currentQuestion(),s=q.state;
+ let c=calculate();
+ let checks=[];
+ let mainOK=false;
+ if(q.original.loai==="TN"){
+  let selected=document.querySelector('input[name="answer"]:checked');
+  if(!selected){
+   $("feedback").innerHTML=
+    '<div class="result bad">Hãy chọn một phương án.</div>';
+   return;
+  }
+  mainOK=eq(s.options[Number(selected.value)],c.m);
+ }else{
+  let v=parseNumber($("answerText").value);
+  if(v===null){
+   $("feedback").innerHTML=
+    '<div class="result bad">Hãy nhập đáp án hợp lệ.</div>';
+   return;
+  }
+  mainOK=eq(v,c.m);
+ }
+ checks.push(["Giá trị trung bình",mainOK]);
+ let dev=parseNumber($("dev").value);
+ checks.push(["Sai số tuyệt đối trung bình",
+  dev!==null&&eq(dev,c.dev)]);
+
+ if(c.inst!==null){
+  let total=parseNumber($("total").value);
+  let rel=parseNumber($("relative").value);
+  checks.push(["Sai số tuyệt đối phép đo",
+   total!==null&&eq(total,c.total)]);
+  checks.push(["Sai số tương đối",
+   rel!==null&&eq(rel,c.relative)]);
+ }
+ let correct=checks.filter(x=>x[1]).length;
+ let html='<div class="result '+(correct===checks.length?"good":"bad")+'">'+
+ '<b>Đúng '+correct+'/'+checks.length+' nội dung.</b>';
+ html+=checks.map(x=>'<div>'+(x[1]?"✓":"✗")+
+ ' '+esc(x[0])+(x[1]?" — Đúng":" — Chưa đúng")+
+ '</div>').join("");
+ if(c.inst===null)html+='<p>Chưa nhập sai số dụng cụ: '+
+ 'hai kết quả phụ thuộc sai số dụng cụ chưa được chấm.</p>';
+ html+='</div>';
+ $("feedback").innerHTML=html;
+}
+function showSolution(){
+ let q=currentQuestion(),s=q.state,c=calculate();
+ let vals=s.values.map(v=>format(fromTenth(v)));
+ let html='<div class="solution"><h3>📖 Lời giải chi tiết</h3>';
+
+ if(!s.generated){
+  html+='<div class="highlight"><b>Lời giải gốc:</b> '+
+   latexToHTML(q.original.loi_giai_html)+'</div>';
+ }
+ html+='<div class="step"><b>Bước 1. Tính giá trị trung bình</b>'+
+ '<p class="math">x̄ = ('+vals.join(" + ")+') / '+
+ vals.length+' = <b>'+fracHTML(c.m)+' '+q.unit+
+ '</b></p></div>';
+
+ if(q.original.loai==="TN"){
+  let correct=s.options.findIndex(v=>eq(v,c.m));
+  html+='<div class="step">Đáp án trắc nghiệm: <b>'+
+   String.fromCharCode(65+correct)+'</b></div>';
+ }else{
+  html+='<div class="step">Đáp án trả lời ngắn: <b>'+
+   fracHTML(c.m)+'</b></div>';
+ }
+
+ let differences=s.values.map(v=>fa(sub(fromTenth(v),c.m)));
+ html+='<div class="step"><b>Bước 2. Sai số tuyệt đối từng lần đo</b>'+
+ differences.map((d,i)=>
+  '<p>Δx<sub>'+ (i+1) +'</sub> = |'+vals[i]+' − '+
+  fracHTML(c.m)+'| = '+fracHTML(d)+' '+q.unit+'</p>'
+ ).join("")+'</div>';
+
+ html+='<div class="step"><b>Bước 3. Sai số tuyệt đối trung bình</b>'+
+ '<p class="math">Δx̄ = ('+
+ differences.map(fracHTML).join(" + ")+') / '+
+ s.values.length+' = <b>'+fracHTML(c.dev)+' '+
+ q.unit+'</b></p></div>';
+
+ if(c.inst===null){
+  html+='<div class="highlight">Chưa nhập sai số dụng cụ. '+
+   'Không thể xác định bằng số sai số tuyệt đối toàn phần '+
+   'và sai số tương đối. Hãy nhập Δx<sub>dc</sub> để xem tiếp.</div>';
+  html+='<div class="step">Δx = '+fracHTML(c.dev)+
+   ' + Δx<sub>dc</sub> ('+q.unit+')</div>';
+ }else{
+  html+='<div class="step"><b>Bước 4. Sai số tuyệt đối phép đo</b>'+
+   '<p>Δx = Δx̄ + Δx<sub>dc</sub></p>'+
+   '<p>= '+fracHTML(c.dev)+' + '+fracHTML(c.inst)+
+   ' = <b>'+fracHTML(c.total)+' '+q.unit+'</b></p></div>';
+  html+='<div class="step"><b>Bước 5. Sai số tương đối</b>'+
+   '<p>δ = (Δx / |x̄|) × 100%</p>'+
+   '<p>= ('+fracHTML(c.total)+' / '+
+   fracHTML(fa(c.m))+') × 100%</p>'+
+   '<p><b>δ = '+fracHTML(c.relative)+'%</b></p></div>';
+  html+='<div class="highlight"><b>Kết quả phép đo:</b>'+
+   '<p class="math">'+(q.unit==="cm"?"l":"m")+
+   ' = ('+fracHTML(c.m)+' ± '+fracHTML(c.total)+
+   ') '+q.unit+'</p></div>';
+ }
+ html+='</div>';
+ $("solution").innerHTML=html;
+}
+function toggleFull(){
+ if(!document.fullscreenElement){
+  document.documentElement.requestFullscreen?.();
+ }else{
+  document.exitFullscreen?.();
+ }
+}
+$("instrument").addEventListener("input",function(){
+ currentQuestion().instrument=this.value;
+ $("feedback").innerHTML="";
+ $("solution").innerHTML="";
+});
+render();
+</script>
+</body>
+</html>
