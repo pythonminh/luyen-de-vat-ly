@@ -105,7 +105,10 @@ def _member_manager():
         needle = search_key(q)
         members = [m for m in members if needle in search_key(" ".join(str(m.get(k) or "") for k in ("username", "name", "phone")))]
     if grade:
-        members = [m for m in members if grade in (pkg.granted_package(m) or {}).get("grades", []) or pkg._grade(m.get("class")) == grade]
+        members = [m for m in members if
+                   grade in (pkg.requested_package(m) or {}).get("grades", [])
+                   or grade in (pkg.granted_package(m) or {}).get("grades", [])
+                   or pkg._grade(m.get("class") or m.get("grade")) == grade]
     if type_filter == "vip":
         members = [m for m in members if _norm_type(m.get("account_type")) in {"VIP", "SVIP"} and pkg.vip_active(m)]
     elif type_filter == "free":
@@ -144,6 +147,10 @@ def _member_manager():
     pagination = (f"<nav class='memberpages' aria-label='Phân trang thành viên'><span>{filtered_count} kết quả · Trang {current_page}/{pages}</span>"
                   + (page_link(current_page - 1, "← Trước") if current_page > 1 else "")
                   + (page_link(current_page + 1, "Sau →") if current_page < pages else "") + "</nav>")
+    review_links = "<div class='bulk'><b>Duyệt theo lớp:</b>" + "".join(
+        f"<a class='btn{' primary' if grade == g and type_filter == 'pending' else ''}' href='?grade={g}&amp;type=pending'>Lớp {g} · chờ duyệt</a>"
+        for g in ("10", "11", "12")
+    ) + "</div>"
     cards = []
     for m in members:
         u = str(m.get("username", "")).strip()
@@ -246,6 +253,7 @@ def _member_manager():
 <div class='note'>📌 <b>Tài khoản VIP</b> = xem đáp án + làm bài. <b>FREE</b> = chỉ xem đề. <b>Gói</b> là hạn dùng: 3 ngày / 1 tháng / 3 tháng / 1 năm (ô cam: ngày đăng ký — ngày hết hạn). Trùng tên hoặc SĐT hiện ở khung cam — gộp để còn một tài khoản.</div>
 {create}
 {dup_html}
+{review_links}
 <form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>TÀI KHOẢN</label><select name='type'><option value=''>Tất cả</option><option value='vip' {'selected' if type_filter=='vip' else ''}>VIP</option><option value='free' {'selected' if type_filter=='free' else ''}>FREE</option><option value='pending' {'selected' if type_filter=='pending' else ''}>Chờ duyệt</option></select></div><div><label>GÓI · HẠN DÙNG</label><select name='dur'><option value=''>Tất cả</option><option value='3d' {'selected' if dur_filter=='3d' else ''}>3 ngày</option><option value='1m' {'selected' if dur_filter=='1m' else ''}>1 tháng</option><option value='3m' {'selected' if dur_filter=='3m' else ''}>3 tháng</option><option value='1y' {'selected' if dur_filter=='1y' else ''}>1 năm</option><option value='none' {'selected' if dur_filter=='none' else ''}>Chưa có hạn</option></select></div><div><label>TRẠNG THÁI</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>Đang dùng</option><option value='OFF' {'selected' if status=='OFF' else ''}>Khóa</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
 <form id='bulkForm' method='post' action='/admin/members/bulk'></form>
 <div class='bulk'><label><input id='selectPage' type='checkbox'> Chọn trang này</label><b id='selectedCount' aria-live='polite'>Đã chọn: 0</b> <button class='btn green' name='intent' value='approve' form='bulkForm'>✅ Duyệt yêu cầu</button> <button class='btn' name='intent' value='off' form='bulkForm'>Khóa</button> <button class='btn' name='intent' value='on' form='bulkForm'>Mở</button> <button class='btn red' name='intent' value='delete' form='bulkForm' onclick="return confirm('Xóa các thành viên đang tick?')">🗑 Xóa đã chọn</button></div>
