@@ -3072,6 +3072,21 @@ def _html_practice_location(path, dang):
     return path.rsplit('/', 1)[0] + '/html-practice/' + key + '.html'
 
 
+
+def _html_is_approved(rel):
+    """Pre-existing HTML remains published; new pending-- files require ADMIN approval."""
+    name = rel.rsplit('/', 1)[-1]
+    if not name.startswith('pending--'):
+        return True
+    folder = rel.rsplit('/', 1)[0]
+    return any(e.get('name') == name + '.approved'
+               for e in _html_directory_entries(folder))
+
+
+def _html_can_open(rel, manager):
+    return bool(manager or _html_is_approved(rel))
+
+
 def _html_practice_link(path, dang):
     url = '/member/html-practice?' + urllib.parse.urlencode({'path': path, 'dang': dang})
     return '<nav id="htmlPracticeEntry" style="margin:8px 0"><a class="btn" href="' + html.escape(url,quote=True) + '">📁 HTML đổi số</a></nav>'
@@ -3096,6 +3111,8 @@ def member_html_practice():
     manager = can_manage_bank()
     if not can_view(m, path):
         return redirect(login_url(request.full_path)) if not m else ('Bài này dành cho VIP.', 403)
+    if request.method == 'GET' and (item or request.args.get('legacy') == '1') and not _html_can_open(rel, manager):
+        return ('Bài HTML đang chờ ADMIN duyệt.', 403)
     if 'html_practice_csrf' not in session:
         session['html_practice_csrf'] = secrets.token_urlsafe(32)
     note = ''
@@ -3105,6 +3122,21 @@ def member_html_practice():
         if not secrets.compare_digest(str(request.form.get('csrf') or ''), session['html_practice_csrf']):
             return 'Phiên đã hết hạn. Tải lại trang.', 403
         try:
+            if request.form.get('action') == 'approve':
+                from app import github_token
+                if not item or not item.startswith('pending--'):
+                    raise ValueError('Chỉ bài chờ duyệt mới cần duyệt.')
+                if not github_token():
+                    raise ValueError('Máy chủ chưa có quyền GitHub.')
+                marker = rel + '.approved'
+                github_put_text(marker, 'approved\\n', 'ADMIN duyệt bài HTML: ' + item[:80], None)
+                _, marker_local = _safe_repo_file(marker)
+                marker_local.parent.mkdir(parents=True, exist_ok=True)
+                marker_local.write_text('approved\\n', encoding='utf-8')
+                _HTML_LIST_CACHE.clear()
+                global _SAVED_HTML_CACHE
+                _SAVED_HTML_CACHE = (0, [])
+                return redirect('/member/html-practice?' + urllib.parse.urlencode({'path':path, 'dang':dang, 'item':item, 'approved':'1'}))
             if request.form.get('action') == 'rename':
                 from app import github_file_sha, _fetch_bytes_remote
                 title = str(request.form.get('title') or '').strip()[:150]
@@ -3138,7 +3170,7 @@ def member_html_practice():
             title = str(request.form.get('title') or (upload.filename if upload and upload.filename else '') or 'Bài luyện tập').strip()
             source = _html_with_title(source,title)
             title = re.sub(r'[<>:/\\|?*\x00-\x1f]', '-', title)[:100].removesuffix('.html').removesuffix('.htm') or 'Bài luyện tập'
-            item = secrets.token_hex(8) + '--' + title + '.html'
+            item = 'pending--' + secrets.token_hex(8) + '--' + title + '.html'
             rel = folder + '/' + item
             try:
                 sha = github_file_sha(rel)
@@ -3151,6 +3183,7 @@ def member_html_practice():
             local.parent.mkdir(parents=True, exist_ok=True)
             local.write_text(source, encoding='utf-8')
             _HTML_LIST_CACHE.clear()
+            _SAVED_HTML_CACHE = (0, [])
             return redirect('/member/html-practice?' + urllib.parse.urlencode({'path':path, 'dang':dang, 'item':item, 'saved':'1'}))
         except Exception as exc:
             note = '<p role="alert">Không lưu được: ' + html.escape(str(exc)) + '</p>'
@@ -3173,8 +3206,10 @@ def member_html_practice():
     back = dang_view_url(path, dang)
     content_url = '/member/html-practice?' + urllib.parse.urlencode({'path': path, 'dang': dang, 'item':item, 'content': '1'})
     if request.args.get('saved') == '1':
-        note = '<p role="status">✅ Đã thêm bài mới. Các bài trước vẫn được giữ.</p>'
-    listing = _html_practice_list_html(path, dang)
+        note = '<p role="status">🟠 Đã lưu bản nháp. ADMIN cần kiểm tra và duyệt trước khi học sinh được xem.</p>'
+    if request.args.get('approved') == '1':
+        note = '<p role="status">✅ ADMIN đã duyệt, thành viên đủ quyền có thể luyện tập.</p>'
+    listing = _html_practice_list_html(path, dang, manager)
     selected = bool(item or request.args.get('legacy') == '1')
     selected_title = _html_saved_title(rel,item.split('--',1)[-1][:-5] if item else 'Bài luyện tập') if selected else ''
     folder_url = '/member/html-practice?' + urllib.parse.urlencode({'path':path,'dang':dang})
@@ -3192,6 +3227,15 @@ def member_html_practice():
                   '<p><button type="button" id="hpPreview">Chạy thử</button> <button type="submit">Thêm bài vào thư mục dạng</button></p>'
                   ''
                   '</form></details>')
+    if manager and selected and not _html_is_approved(rel):
+        editor += ('<form method="post" style="padding:12px;border:2px solid #eab308;border-radius:10px;background:#fffbeb">'
+                   '<input type="hidden" name="path" value="'+html.escape(path,quote=True)+'">'
+                   '<input type="hidden" name="dang" value="'+html.escape(dang,quote=True)+'">'
+                   '<input type="hidden" name="item" value="'+html.escape(item,quote=True)+'">'
+                   '<input type="hidden" name="csrf" value="'+html.escape(session['html_practice_csrf'],quote=True)+'">'
+                   '<input type="hidden" name="action" value="approve">'
+                   '<strong>🟠 CHỜ ADMIN DUYỆT</strong><p>Chạy thử đổi số, kiểm tra đáp án và lời giải trước khi xuất bản.</p>'
+                   '<button type="submit" onclick="return confirm(\'Đã kiểm tra bài HTML và đồng ý cho thành viên xem?\')">✓ ADMIN duyệt và xuất bản</button></form>')
     if manager and selected:
         editor += ('<details class="hp-import"><summary>✎ Đổi tên bài</summary><form method="post">'
                    '<input type="hidden" name="path" value="'+html.escape(path,quote=True)+'">'
@@ -3273,16 +3317,19 @@ def _html_directory_entries(rel):
     return result
 
 
-def _html_practice_list_html(path, dang):
+def _html_practice_list_html(path, dang, manager=False):
     legacy = _html_practice_location(path, dang)
     rows = []
     for entry in sorted(_html_directory_entries(legacy[:-5]), key=lambda e:e['name']):
         name = entry['name']
         if entry.get('type') != 'file' or not name.endswith('.html'):
             continue
+        if not _html_can_open(legacy[:-5]+'/'+name, manager):
+            continue
         title = _html_saved_title(legacy[:-5]+'/'+name,name.split('--',1)[-1][:-5])
         href = '/member/html-practice?' + urllib.parse.urlencode({'path':path,'dang':dang,'item':name})
-        rows.append('<li><a href="' + html.escape(href, quote=True) + '">▶ ' + html.escape(title) + '</a></li>')
+        state = ' 🟠 Chờ duyệt' if not _html_is_approved(legacy[:-5]+'/'+name) else ''
+        rows.append('<li><a href="' + html.escape(href, quote=True) + '">▶ ' + html.escape(title + state) + '</a></li>')
     parent = legacy.rsplit('/',1)[0]
     if any(e['name'] == legacy.rsplit('/',1)[1] for e in _html_directory_entries(parent)):
         href = '/member/html-practice?' + urllib.parse.urlencode({'path':path,'dang':dang,'legacy':'1'})
@@ -3422,7 +3469,7 @@ def member_html_gallery_items():
         key = legacy.rsplit('/', 1)[1][:-5]
         rows = []
         if key in parent and parent[key].get('type') == 'dir':
-            rows = [{'name': e['name']} for e in _html_directory_entries(legacy[:-5]) if e.get('type') == 'file' and e['name'].endswith('.html')]
+            rows = [{'name': e['name']} for e in _html_directory_entries(legacy[:-5]) if e.get('type') == 'file' and e['name'].endswith('.html') and _html_can_open(legacy[:-5]+'/'+e['name'], can_manage_bank())]
         if key + '.html' in parent:
             rows.insert(0, {'legacy': True})
         items[name] = rows
@@ -3522,13 +3569,13 @@ def _saved_html_menu():
         lesson_path = parent + '/de.tex'
         if selected and selected.rsplit('/', 1)[0] != parent:
             continue
-        if not can_view(member, lesson_path):
+        if not can_view(member, lesson_path) or not _html_can_open(rel, can_manage_bank()):
             continue
         parts = parent.split('/')
         fallback = rel.rsplit('/', 1)[-1].split('--', 1)[-1][:-5]
         if re.fullmatch(r'[0-9a-f]{24}', fallback):
             fallback = 'Bài luyện tập'
-        rows.append({'title': _html_saved_title(rel, fallback), 'subject': parts[1] if len(parts)>1 else '',
+        rows.append({'title': _html_saved_title(rel, fallback) + (' · 🟠 Chờ duyệt' if not _html_is_approved(rel) else ''), 'subject': parts[1] if len(parts)>1 else '',
                      'grade': parts[2] if len(parts)>2 else '', 'chapter': parts[3] if len(parts)>3 else '',
                      'lesson': parts[-1], 'url': '/member/html-saved?' + urllib.parse.urlencode({'file': rel})})
     seed = base64.b64encode(json.dumps(rows, ensure_ascii=False).encode()).decode()
@@ -3550,10 +3597,12 @@ def member_html_saved():
     try:
         rel, local = _safe_repo_file(rel)
         parent, tail = rel.split('/html-practice/', 1)
-        if not re.fullmatch(r'[0-9a-f]{24}(?:/[^/]+)?\.html', tail):
+        if not re.fullmatch(r'[0-9a-f]{24}(?:/(?:pending--)?[^/]+)?\.html', tail):
             raise ValueError('Bài HTML không hợp lệ.')
     except ValueError:
         return 'Bài HTML không hợp lệ.', 400
+    if not _html_can_open(rel, can_manage_bank()):
+        return 'Bài HTML đang chờ ADMIN duyệt.', 403
     if not can_view(member_current(), parent + '/de.tex'):
         return redirect(login_url(request.full_path)) if not member_current() else ('Không có quyền xem bài.', 403)
     try:
@@ -3585,7 +3634,7 @@ def require_html_membership():
         try:
             rel, _ = _safe_repo_file(rel)
             parent, tail = rel.split('/html-practice/', 1)
-            if not re.fullmatch(r'[0-9a-f]{24}(?:/[^/]+)?\.html', tail):
+            if not re.fullmatch(r'[0-9a-f]{24}(?:/(?:pending--)?[^/]+)?\.html', tail):
                 raise ValueError()
             path = parent + '/de.tex'
         except ValueError:
