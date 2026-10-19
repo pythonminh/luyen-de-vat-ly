@@ -266,11 +266,33 @@
     {
       "username": "nguyenquangminh11qt1",
       "name": "nguyenquangminh11qt1",
-      "class": "",
-      "account_type": "FREE",
+      "class": "11",
+      "account_type": "VIP",
       "status": "ON",
       "password_sha256": "243b8936e40939e0e67194b516d7f02ef1c2529c7359971415b6fdfa25355a59",
-      "password_enc": "v1:7zeYFSi9oeHSbHtVQOWo"
+      "password_enc": "v1:7zeYFSi9oeHSbHtVQOWo",
+      "package": {
+        "kind": "lop1",
+        "grades": [
+          "11"
+        ],
+        "subjects": [
+          "Vật lý"
+        ]
+      },
+      "grades": [
+        "11"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "package_status": "approved",
+      "grade": "11",
+      "requested_package": null,
+      "vip_plan": "3m",
+      "vip_started_at": "2026-10-19 15:38:48",
+      "vip_expires_at": "2027-01-19 15:38:48",
+      "updated_at": "2026-10-19 15:38:48"
     },
     {
       "username": "Anh Quy",
