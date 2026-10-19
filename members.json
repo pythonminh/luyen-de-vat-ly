@@ -440,10 +440,15 @@
       "username": "quantranmanh301008gmail",
       "name": "THÙY Quyên",
       "phone": "0327267431",
-      "class": "",
-      "account_type": "FREE",
+      "class": "11",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
+      "password_enc": "v1:uDbAE0Tl-4s=",
+      "updated_at": "2026-10-19 16:07:20",
+      "package": {
         "kind": "mon1",
         "grades": [
           "11"
@@ -452,10 +457,16 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f",
-      "password_enc": "v1:uDbAE0Tl-4s=",
-      "updated_at": "2026-09-22 05:39:56"
+      "grades": [
+        "11"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "11",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-19 16:07:20",
+      "vip_expires_at": "2026-11-19 16:07:20"
     },
     {
       "username": "Thu Trúc",
