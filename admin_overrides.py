@@ -9,8 +9,9 @@ from __future__ import annotations
 import hashlib
 import html
 import re
+import unicodedata
 from datetime import datetime
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 import app as base
 import membership as pkg
@@ -97,8 +98,12 @@ def _member_manager():
     type_filter = str(request.args.get("type") or "").strip().lower()
     dur_filter = str(request.args.get("dur") or "").strip().lower()
     status = str(request.args.get("status") or "").strip().upper()
+    def search_key(value):
+        text = unicodedata.normalize("NFD", str(value or "").casefold().replace("đ", "d"))
+        return "".join(c for c in text if not unicodedata.combining(c))
     if q:
-        members = [m for m in members if q in str(m.get("username", "")).lower() or q in str(m.get("name", "")).lower() or q in str(m.get("phone", "")).lower()]
+        needle = search_key(q)
+        members = [m for m in members if needle in search_key(" ".join(str(m.get(k) or "") for k in ("username", "name", "phone")))]
     if grade:
         members = [m for m in members if grade in (pkg.granted_package(m) or {}).get("grades", []) or pkg._grade(m.get("class")) == grade]
     if type_filter == "vip":
@@ -124,6 +129,21 @@ def _member_manager():
     }
     members.sort(key=lambda m: (0 if pkg.package_status(m) == "pending" else 1, str(m.get("name") or m.get("username") or "")))
 
+    filtered_count = len(members)
+    per_page = 20
+    pages = max(1, (filtered_count + per_page - 1) // per_page)
+    try:
+        current_page = max(1, min(pages, int(request.args.get("page", 1))))
+    except (ValueError, TypeError):
+        current_page = 1
+    members = members[(current_page - 1) * per_page:current_page * per_page]
+    def page_link(number, label):
+        args = request.args.to_dict()
+        args["page"] = number
+        return f"<a class='btn small' href='?{_safe(urlencode(args))}'>{label}</a>"
+    pagination = (f"<nav class='memberpages' aria-label='Phân trang thành viên'><span>{filtered_count} kết quả · Trang {current_page}/{pages}</span>"
+                  + (page_link(current_page - 1, "← Trước") if current_page > 1 else "")
+                  + (page_link(current_page + 1, "Sau →") if current_page < pages else "") + "</nav>")
     cards = []
     for m in members:
         u = str(m.get("username", "")).strip()
@@ -131,7 +151,6 @@ def _member_manager():
         name = _safe(m.get("name") or "—")
         phone = _safe(m.get("phone") or "—")
         st = str(m.get("status", "ON")).upper()
-        seen = len(_allowed_items(m))
         pst = pkg.package_status(m)
         granted = pkg.granted_package(m)
         req = pkg.requested_package(m)
@@ -159,10 +178,13 @@ def _member_manager():
             f"<div class='memtop'><label class='ck'><input type='checkbox' name='selected' value='{su}' form='bulkForm'> "
             f"<b>{name}</b> · {su}</label><span class='muted'>{phone}</span>"
             f"{type_badge}{do_badge}{pst_badge}</div>"
-            f"{req_html}"
+            f"<div class='memberbrief'><span>{_safe(pkg.scope_label(m))}</span>"
+            f"<span>{_safe(pkg.vip_remaining_label(m))}</span>"
+            f"<span class='badge { 'no' if st != 'ON' else 'ok' }'>{'Đã khóa' if st != 'ON' else 'Đang dùng'}</span></div>"
+            f"{req_html}<details class='memberedit'><summary>Chỉnh sửa / cấp quyền</summary>"
             f"<form id='row_{su}' class='memform' method='post' action='/admin/members/save'>"
             f"<input type='hidden' name='save_user' value='{su}'>"
-            f"<div class='now'>Hiện có: <b>{_safe(pkg.package_label(granted))}</b> · {seen} bài "
+            f"<div class='now'>Hiện có: <b>{_safe(pkg.package_label(granted))}</b> "
             f"<a class='btn small' href='/admin/members/access?user={quote(u)}'>👁 Xem bài</a>"
             f"<div class='muted'>{_safe(pkg.vip_remaining_label(m))}</div></div>"
             + pkg.picker_html(prefix=u, selected=req or granted, student=False, duration=m.get("vip_plan"), expire_at=m.get("vip_expires_at"), started_at=m.get("vip_started_at"))
@@ -170,7 +192,7 @@ def _member_manager():
             f"<div class='passrow'><input class='pass' type='password' value='{cur_val}' placeholder='{cur_ph}' readonly autocomplete='off'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
             f"<div class='passrow'><input class='pass' name='new_password' type='password' placeholder='Đặt mật khẩu mới' autocomplete='new-password'><button type='button' class='eye' onclick=\"togglePass(this)\">👁</button></div>"
             f"<button class='btn green' name='intent' value='save'>💾 Lưu / cấp VIP</button>"
-            f"<button class='btn red small' name='intent' value='delete' onclick=\"return confirm('Xóa thành viên {su}? Không hoàn tác.')\">🗑 Xóa</button></div></form></article>"
+            f"<button class='btn red small' name='intent' value='delete' onclick=\"return confirm('Xóa thành viên {su}? Không hoàn tác.')\">🗑 Xóa</button></div></form></details></article>"
         )
 
     dup_blocks = []
@@ -188,10 +210,10 @@ def _member_manager():
             f"<button class='btn green' type='submit'>🔗 Gộp vào tài khoản đang chọn</button></form></div>"
         )
     dup_html = (
-        f"<div class='dupbox'><h3>⚠️ {len(dup_blocks)} nhóm trùng tên / số điện thoại</h3>"
+        f"<details class='dupbox createbox'><summary>⚠️ {len(dup_blocks)} nhóm có thể trùng · bấm kiểm tra</summary>"
         "<p class='muted' style='margin:0 0 6px'>Chọn tài khoản giữ lại (nên giữ VIP). Các tài khoản khác trong nhóm sẽ bị xóa sau khi gộp.</p>"
         + "".join(dup_blocks)
-        + "</div>"
+        + "</details>"
         if dup_blocks
         else ""
     )
@@ -210,6 +232,7 @@ def _member_manager():
     body = f"""
 {pkg.PKG_CSS}{pkg.PKG_JS}
 <style>
+.adminmembers .memberbrief{{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:#56677b}}.adminmembers .memberbrief>span:nth-child(2){{flex:1;min-width:200px}}.adminmembers .memberedit>summary{{cursor:pointer;color:#145bb0;font-weight:700;padding:9px 0 2px;font-size:12px}}.adminmembers .memberedit[open]{{border-top:1px solid #e5edf5;margin-top:8px}}.adminmembers .memberpages{{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 0;font-size:12px}}.adminmembers .memberpages>span{{margin-right:auto}}.adminmembers .bulk{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}.adminmembers .bulk button:disabled{{opacity:.4;cursor:default}}.adminmembers .memtop{{justify-content:flex-start}}.adminmembers .memtop .ck{{flex:1}}.adminmembers .note{{display:none}}.adminmembers .mobile-member-toggle{{display:none!important}}
 .adminmembers{{max-width:1100px;margin:auto;padding:12px}}.hero{{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}}.hero h2{{margin:0}}
 .stats{{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}}.stat{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px}}.stat b{{display:block;font-size:20px}}.stat span{{font-size:11px;color:#6c7d90;font-weight:800}}.stat.warn b{{color:#a15b00}}
 .toolbar,.bulk,.createbox{{background:#fff;border:1px solid #d7e2ee;border-radius:10px;padding:9px;margin:8px 0}}.toolbar{{display:flex;gap:7px;align-items:end;flex-wrap:wrap}}.toolbar .field{{min-width:150px;flex:1}}.toolbar label,.createform label{{display:block;font-size:10px;font-weight:900;color:#6c7d90}}.toolbar input,.toolbar select,.pass,select{{height:34px;border:1px solid #cbd8e6;border-radius:6px;padding:5px;background:#fff}}.toolbar input{{width:100%}}
@@ -225,11 +248,23 @@ def _member_manager():
 {dup_html}
 <form class='toolbar' method='get'><div class='field'><label>TÌM</label><input name='q' value='{_safe(q)}' placeholder='Tài khoản, họ tên, điện thoại'></div><div><label>LỚP</label><select name='grade'><option value=''>Tất cả</option><option value='10' {'selected' if grade=='10' else ''}>10</option><option value='11' {'selected' if grade=='11' else ''}>11</option><option value='12' {'selected' if grade=='12' else ''}>12</option></select></div><div><label>TÀI KHOẢN</label><select name='type'><option value=''>Tất cả</option><option value='vip' {'selected' if type_filter=='vip' else ''}>VIP</option><option value='free' {'selected' if type_filter=='free' else ''}>FREE</option><option value='pending' {'selected' if type_filter=='pending' else ''}>Chờ duyệt</option></select></div><div><label>GÓI · HẠN DÙNG</label><select name='dur'><option value=''>Tất cả</option><option value='3d' {'selected' if dur_filter=='3d' else ''}>3 ngày</option><option value='1m' {'selected' if dur_filter=='1m' else ''}>1 tháng</option><option value='3m' {'selected' if dur_filter=='3m' else ''}>3 tháng</option><option value='1y' {'selected' if dur_filter=='1y' else ''}>1 năm</option><option value='none' {'selected' if dur_filter=='none' else ''}>Chưa có hạn</option></select></div><div><label>TRẠNG THÁI</label><select name='status'><option value=''>Tất cả</option><option value='ON' {'selected' if status=='ON' else ''}>Đang dùng</option><option value='OFF' {'selected' if status=='OFF' else ''}>Khóa</option></select></div><button class='btn primary'>🔎 Lọc</button><a class='btn' href='/admin/members'>↻ Tất cả</a></form>
 <form id='bulkForm' method='post' action='/admin/members/bulk'></form>
-<div class='bulk'><b>⚡ Đã chọn:</b> <button class='btn green' name='intent' value='approve' form='bulkForm'>✅ Duyệt yêu cầu</button> <button class='btn' name='intent' value='off' form='bulkForm'>Khóa</button> <button class='btn' name='intent' value='on' form='bulkForm'>Mở</button> <button class='btn red' name='intent' value='delete' form='bulkForm' onclick="return confirm('Xóa các thành viên đang tick?')">🗑 Xóa đã chọn</button></div>
+<div class='bulk'><label><input id='selectPage' type='checkbox'> Chọn trang này</label><b id='selectedCount' aria-live='polite'>Đã chọn: 0</b> <button class='btn green' name='intent' value='approve' form='bulkForm'>✅ Duyệt yêu cầu</button> <button class='btn' name='intent' value='off' form='bulkForm'>Khóa</button> <button class='btn' name='intent' value='on' form='bulkForm'>Mở</button> <button class='btn red' name='intent' value='delete' form='bulkForm' onclick="return confirm('Xóa các thành viên đang tick?')">🗑 Xóa đã chọn</button></div>
+{pagination}
 {''.join(cards) or "<div class='note'>Không có thành viên phù hợp.</div>"}
+{pagination}
 </div>
 <script>function togglePass(b){{const i=b.previousElementSibling;i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'👁':'🙈'}}</script>
 """
+    body += r"""<script>
+(function(){
+const items=Array.from(document.querySelectorAll('input[name="selected"][form="bulkForm"]'));
+const all=document.getElementById('selectPage'), count=document.getElementById('selectedCount');
+const buttons=document.querySelectorAll('button[form="bulkForm"]');
+function update(){const n=items.filter(x=>x.checked).length;count.textContent='Đã chọn: '+n;all.checked=items.length>0&&n===items.length;all.indeterminate=n>0&&n<items.length;buttons.forEach(b=>b.disabled=n===0);}
+all.addEventListener('change',()=>{items.forEach(x=>x.checked=all.checked);update();});
+items.forEach(x=>x.addEventListener('change',update));update();
+document.querySelectorAll('.toolbar select').forEach(x=>x.addEventListener('change',()=>x.form.requestSubmit()));
+})();</script>"""
     return base.page("ADMIN · Thành viên", body)
 
 
@@ -513,6 +548,7 @@ _ADMIN_MOBILE_JS = r"""
     if (!window.matchMedia || !window.matchMedia('(max-width:700px)').matches) return;
     document.querySelectorAll('.adminmembers .memcard').forEach(function(card,idx){
       if(card.querySelector('.mobile-member-toggle')) return;
+      if(card.querySelector('.memberedit')) return;
       var form=card.querySelector('.memform');
       if(!form) return;
       if(!form.id) form.id='mobile-member-form-'+idx;
