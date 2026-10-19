@@ -552,7 +552,8 @@
       },
       "package_status": "pending",
       "password_sha256": "0b80e29bbe80fd731c55641464bcca0602ff21e9eacf426ea6ce0dd9a58d2019",
-      "password_enc": "v1:sTOZZgOSvtu1NkBQEOWz"
+      "password_enc": "v1:sTOZZgOSvtu1NkBQEOWz",
+      "updated_at": "2026-10-19 13:40:40"
     }
   ]
 }
