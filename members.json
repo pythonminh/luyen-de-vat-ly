@@ -277,6 +277,7 @@
           "11"
         ],
         "subjects": [
+          "Toán",
           "Vật lý"
         ]
       },
@@ -284,15 +285,16 @@
         "11"
       ],
       "subjects": [
+        "Toán",
         "Vật lý"
       ],
       "package_status": "approved",
       "grade": "11",
       "requested_package": null,
       "vip_plan": "3m",
-      "vip_started_at": "2026-10-19 15:38:51",
-      "vip_expires_at": "2027-01-19 15:38:51",
-      "updated_at": "2026-10-19 15:38:51"
+      "vip_started_at": "2026-10-19 15:39:15",
+      "vip_expires_at": "2027-01-19 15:39:15",
+      "updated_at": "2026-10-19 15:39:15"
     },
     {
       "username": "Anh Quy",
