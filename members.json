@@ -642,22 +642,6 @@
       "vip_plan": "1m",
       "vip_started_at": "2026-10-19 16:07:17",
       "vip_expires_at": "2026-11-19 16:07:17"
-    },
-    {
-      "username": "nguyen2uangminholx@gmail.com",
-      "name": "Nguyễn Quang Minh",
-      "phone": "0867204850",
-      "class": "",
-      "account_type": "FREE",
-      "status": "ON",
-      "requested_package": null,
-      "package_status": "rejected",
-      "password_sha256": "0b80e29bbe80fd731c55641464bcca0602ff21e9eacf426ea6ce0dd9a58d2019",
-      "password_enc": "v1:sTOZZgOSvtu1NkBQEOWz",
-      "updated_at": "2026-10-19 16:04:45",
-      "package": null,
-      "vip_expires_at": "",
-      "vip_plan": ""
     }
   ]
 }
