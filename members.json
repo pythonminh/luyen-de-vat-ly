@@ -380,11 +380,39 @@
     {
       "username": "Nguyễn Dương Nhã Thư",
       "name": "Nguyễn Dương Nhã Thư",
-      "class": "",
-      "account_type": "FREE",
+      "class": "10+11+12",
+      "account_type": "VIP",
       "status": "ON",
       "password_sha256": "cd446f5c322f63a0c9d71c3600ba11d22bf2dde2c11ad44ba4b8d2dbcb579f5a",
-      "password_enc": "v1:yGiaRBTj9ILT"
+      "password_enc": "v1:yGiaRBTj9ILT",
+      "package": {
+        "kind": "mon2",
+        "grades": [
+          "10",
+          "11",
+          "12"
+        ],
+        "subjects": [
+          "Toán",
+          "Vật lý"
+        ]
+      },
+      "grades": [
+        "10",
+        "11",
+        "12"
+      ],
+      "subjects": [
+        "Toán",
+        "Vật lý"
+      ],
+      "package_status": "approved",
+      "grade": "10+11+12",
+      "requested_package": null,
+      "vip_plan": "3m",
+      "vip_started_at": "2026-10-19 16:14:13",
+      "vip_expires_at": "2027-01-19 16:14:13",
+      "updated_at": "2026-10-19 16:14:13"
     },
     {
       "username": "Nguyễn Trần Minh Long",
