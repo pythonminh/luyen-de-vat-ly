@@ -1,0 +1,536 @@
+<!--hp-title:TcO0IHThuqMgZGFvIMSR4buZbmcgxJFp4buBdSBow7Jh-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bài 2 - Mô tả dao động điều hòa</title>
+<style>
+:root{
+  --navy:#10234b;--blue:#2458c8;
+  --bg:#f1f5fb;--border:#dbe4f1;
+  --text:#18263d
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);
+  color:var(--text);
+  font:16px/1.6 system-ui,Arial,sans-serif
+}
+button,input{font:inherit}
+button{cursor:pointer}
+header{
+  background:var(--navy);color:white;
+  padding:12px 20px;display:flex;
+  justify-content:space-between;
+  align-items:center;gap:12px;flex-wrap:wrap
+}
+header strong{font-size:19px}
+header small{display:block;opacity:.8}
+.layout{
+  display:grid;grid-template-columns:220px minmax(0,1fr);
+  gap:14px;padding:14px;
+  max-width:1600px;margin:auto
+}
+.panel{
+  background:white;border:1px solid var(--border);
+  border-radius:14px;min-width:0
+}
+aside{padding:13px;align-self:start}
+nav{
+  display:grid;grid-template-columns:1fr 1fr;gap:7px
+}
+nav button{
+  padding:10px 4px;border:1px solid var(--border);
+  border-radius:8px;background:#f6f8fe
+}
+nav button.active{
+  background:var(--navy);color:white
+}
+nav button.done{border:2px solid #15966c}
+main h1{
+  font-size:clamp(19px,2.5vw,27px);
+  margin:0;padding:17px;color:var(--navy);
+  border-bottom:1px solid var(--border)
+}
+.workspace{
+  display:grid;grid-template-columns:1fr 1.3fr;
+  gap:14px;padding:14px
+}
+.visual,.problem{
+  min-width:0;border:1px solid var(--border);
+  border-radius:12px;padding:15px
+}
+.visual{background:#f7faff}
+.formula{
+  background:white;padding:12px;
+  border-radius:10px;margin:12px 0;
+  font-size:19px;overflow-x:auto
+}
+.question{font-size:19px;line-height:1.8}
+.choices{display:grid;gap:9px;margin:16px 0}
+.choice{
+  display:flex;align-items:center;gap:10px;
+  border:1px solid var(--border);
+  border-radius:9px;padding:10px;
+  background:white
+}
+.choice:has(input:checked){
+  background:#e9f1ff;border-color:var(--blue)
+}
+.answers{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));
+  gap:10px;margin:16px 0
+}
+.answers input{
+  display:block;width:100%;padding:10px;
+  border:1px solid #cbd5e1;border-radius:8px
+}
+.actions,.bottom{
+  display:flex;gap:9px;flex-wrap:wrap;margin-top:14px
+}
+button.btn{
+  border:1px solid var(--border);border-radius:9px;
+  padding:10px 13px;background:white;
+  font-weight:600
+}
+button.primary{background:var(--blue);color:white}
+button.swap{background:#ffedc4;color:#774500}
+.result,.solution{
+  padding:13px;border-radius:10px;margin-top:12px;
+  white-space:pre-line
+}
+.result.ok{background:#e6f7ef;color:#08623e}
+.result.bad{background:#fff0e2;color:#8b4018}
+.solution{background:#edf3ff}
+.figure{
+  width:100%;height:auto;background:white;
+  border:1px solid var(--border);border-radius:9px
+}
+svg text{font:12px Arial;fill:#526078}
+.note{font-size:13px;color:#64748b}
+@media(max-width:1000px){
+ .layout{grid-template-columns:1fr}
+ nav{grid-template-columns:repeat(6,1fr)}
+}
+@media(max-width:720px){
+ .layout{padding:8px;gap:8px}
+ .workspace{grid-template-columns:1fr;padding:9px}
+ nav{grid-template-columns:repeat(6,1fr);gap:4px}
+ nav button{font-size:12px}
+ .question{font-size:17px}
+ .actions button{flex:1}
+ header{padding:10px}
+}
+</style>
+</head>
+<body>
+<header>
+ <div>
+  <strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
+  <small>lophocthayminh.onrender.com</small>
+ </div>
+ <button class="btn" onclick="full()">⛶ Toàn màn hình</button>
+</header>
+
+<div class="layout">
+ <aside class="panel">
+  <b>Danh sách 11 câu</b>
+  <nav id="nav"></nav>
+  <p class="note">6 câu trắc nghiệm · 5 câu tự luận</p>
+ </aside>
+ <main class="panel">
+  <h1>BÀI 2. MÔ TẢ DAO ĐỘNG ĐIỀU HÒA</h1>
+  <div class="workspace">
+   <section class="visual">
+    <h3>Đồ thị và công thức</h3>
+    <div id="graph"></div>
+    <div class="formula" id="formula"></div>
+    <div class="note" id="hint"></div>
+   </section>
+   <section class="problem">
+    <h2 id="number"></h2>
+    <div class="question" id="question"></div>
+    <div id="answerArea"></div>
+    <div class="actions">
+     <button class="btn swap" onclick="reroll()">↻ Đổi đề bài mới</button>
+     <button class="btn primary" onclick="check()">✓ Kiểm tra</button>
+     <button class="btn" onclick="showSolution()">Xem lời giải</button>
+    </div>
+    <div id="feedback"></div>
+    <div id="solution"></div>
+   </section>
+  </div>
+  <div class="bottom" style="padding:14px">
+   <button class="btn" onclick="move(-1)">← Câu trước</button>
+   <button class="btn" onclick="move(1)">Câu sau →</button>
+  </div>
+ </main>
+</div>
+
+<script>
+"use strict";
+const PI=Math.PI;
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[rnd(0,a.length-1)];
+const fmt=x=>Number.isInteger(x)?String(x):
+  String(Number(x.toFixed(8))).replace(".",",");
+const esc=x=>String(x).replaceAll("&","&amp;")
+ .replaceAll("<","&lt;").replaceAll(">","&gt;");
+const mc=(correct,choices,steps)=>({correct,choices,steps});
+let questions=[],index=0,completed=new Set();
+
+function make(i,change=false){
+ let A,T,k,n,s,f,w,answer,steps;
+ switch(i){
+ case 1:{
+  T=change?pick([0.25,0.5,1,2,4]):1;
+  k=2/T;
+  return {
+   type:"mc",T,A:4,phi:0,
+   text:`Một chất điểm dao động điều hòa có chu kì T = ${fmt(T)} s. Tần số góc ω là`,
+   formula:"ω = 2π/T",
+   ...mc(`${fmt(k)}π rad/s`,
+    [`${fmt(k/2)}π rad/s`,`${fmt(k)}π rad/s`,
+     `${fmt(k)} rad/s`,`${fmt(k*2)} rad/s`],
+    `ω = 2π/T = 2π/${fmt(T)} = ${fmt(k)}π rad/s.`)
+  };
+ }
+ case 2:{
+  k=change?pick([2,4,6,8,10,12,16]):10;
+  return {
+   type:"mc",A:4,T:2/k,phi:0,
+   text:`Một chất điểm dao động điều hòa có tần số góc ω = ${k}π rad/s. Tần số của dao động là`,
+   formula:"f = ω/(2π)",
+   ...mc(`${fmt(k/2)} Hz`,
+    [`${fmt(k/2)} Hz`,`${k} Hz`,
+     `${k*2} Hz`,`${k/2}π Hz`],
+    `f = ${k}π/(2π) = ${fmt(k/2)} Hz.`)
+  };
+ }
+ case 3:{
+  s=change?pick([30,60,90,120]):60;
+  T=change?pick([0.5,1,1.5,2,3,4]):2;
+  n=s/T;
+  return {
+   type:"mc",A:4,T,phi:0,
+   text:`Trong ${s} giây, vật thực hiện ${fmt(n)} dao động. Chu kì dao động là`,
+   formula:"T = t/N",
+   ...mc(`${fmt(T)} s`,
+    [`${fmt(T)} s`,`${fmt(n)} s`,
+     `${fmt(1/T)} s`,`${fmt(s/2)} s`],
+    `T = t/N = ${s}/${fmt(n)} = ${fmt(T)} s.`)
+  };
+ }
+ case 4:{
+  k=change?pick([2,4,6,8,10,12]):10;
+  A=change?rnd(2,9):5;
+  return {
+   type:"mc",A:A*Math.sqrt(3),T:2/k,phi:PI/3,
+   text:`Một chất điểm có phương trình x = ${A}√3 cos(${k}πt + π/3) (cm). Tần số của dao động là`,
+   formula:"f = ω/(2π)",
+   ...mc(`${k/2} Hz`,
+    [`${k} Hz`,`${k*2} Hz`,
+     `${k}π Hz`,`${k/2} Hz`],
+    `Từ phương trình: ω = ${k}π rad/s.\nf = ω/(2π) = ${k/2} Hz.`)
+  };
+ }
+ case 5:{
+  k=change?pick([1,2,4,5,8,10]):4;
+  A=change?rnd(3,12):6;
+  T=2/k;
+  return {
+   type:"mc",A,T,phi:PI/3,
+   text:`Một chất điểm có phương trình x = ${A}cos(${k}πt + π/3) (cm). Chu kì dao động là`,
+   formula:"T = 2π/ω",
+   ...mc(`${fmt(T)} s`,
+    [`${fmt(T*8)} s`,`${fmt(T*4)} s`,
+     `${fmt(T/2)} cm`,`${fmt(T)} s`],
+    `T = 2π/(${k}π) = ${fmt(T)} s.`)
+  };
+ }
+ case 6:{
+  A=change?pick([8,10,12,15]):10;
+  let x=change?pick([3,4,5,6]):6;
+  k=change?pick([2,3,4,6]):3;
+  T=2*k;
+  let m=change?pick([1,3,5]):3;
+  let dt=m*T/2;
+  let next=-x;
+  let correct=`${next} cm, đang hướng về vị trí biên`;
+  let choices=change?[
+   correct,`${x} cm, đang hướng về vị trí cân bằng`,
+   `${next} cm, đang hướng về vị trí cân bằng`,
+   `${x} cm, đang hướng về vị trí biên`
+  ]:[
+   "3 cm đang hướng về vị trí cân bằng",
+   "−3 cm đang hướng về vị trí biên",
+   "6 cm đang hướng về vị trí biên",
+   "−6 cm đang hướng về vị trí cân bằng"
+  ];
+  return {
+   type:"mc",A,T,phi:PI/2,
+   invalid:!change,
+   text:`Một vật dao động theo phương trình x = ${A}cos(πt/${k} + π/2) (cm). Tại thời điểm t, vật có li độ ${x} cm và đang hướng về vị trí cân bằng. Sau ${fmt(dt)} s vật ở trạng thái nào?`,
+   formula:"x(t + mT/2) = (−1)ᵐ x(t)",
+   ...mc(correct,choices,
+    `ω = π/${k}, nên T = ${T} s.\nΔt = ${fmt(dt)} s = ${m}T/2.\nVì m lẻ, li độ và vận tốc đều đổi dấu.\nVậy x = ${next} cm và vật hướng về vị trí biên.\n${change?"":"Đề gốc không có phương án đúng."}`)
+  };
+ }
+ case 7:{
+  A=change?pick([4,6,8,10,12]):5;
+  k=change?pick([4,6,8,10,12]):10;
+  let ratio=change?pick([0.25,0.5]):0.5;
+  let t=Math.asin(ratio)/(k*PI);
+  let expression=ratio===0.5?
+   `1/${6*k}`:`arcsin(1/4)/(${k}π)`;
+  return {
+   type:"num",A,T:2/k,phi:-PI/2,
+   text:`Cho x = ${A}cos(${k}πt − π/2) (cm). Tính thời gian ngắn nhất để vật đi được quãng đường ${fmt(A*ratio)} cm kể từ t = 0. Đơn vị giây.`,
+   formula:"x = A sin(ωt); s = A sin(ωt)",
+   expected:t,answer:expression,
+   steps:`x = ${A}sin(${k}πt).\nBan đầu vật qua vị trí cân bằng theo chiều dương.\n${A}sin(${k}πt) = ${fmt(A*ratio)}.\nsin(${k}πt) = ${fmt(ratio)}.\nt = ${expression} s.`
+  };
+ }
+ case 8:{
+  A=change?pick([10,15,20,25,30]):20;
+  T=change?pick([0.4,0.6,0.8,1,1.2]):0.8;
+  return {
+   type:"fields",A,T,phi:PI,
+   text:`Quan sát đồ thị x–t bên trái.\n a) Xác định biên độ, chu kì và pha ban đầu.\n b) Viết phương trình dao động.\n c) Tính x tại ${fmt(T/2)} s, ${fmt(3*T/4)} s và ${fmt(T)} s.`,
+   formula:"x = A cos(2πt/T + φ)",
+   fields:[
+    ["A (cm)",A],["T (s)",T],["φ (rad)",PI],
+    ["x(T/2) (cm)",A],
+    ["x(3T/4) (cm)",0],
+    ["x(T) (cm)",-A]
+   ],
+   steps:`Biên độ A = ${A} cm.\nChu kì T = ${fmt(T)} s.\nTại t=0, x=−A nên φ=π.\nω=2π/T=${fmt(2/T)}π rad/s.\nx=${A}cos(${fmt(2/T)}πt+π) cm.\nx(${fmt(T/2)})=${A} cm.\nx(${fmt(3*T/4)})=0 cm.\nx(${fmt(T)})=−${A} cm.`
+  };
+ }
+ case 9:{
+  A=change?pick([12,16,20,24,30]):20;
+  let B=change?pick([4,6,8,10,12,15]):10;
+  T=change?pick([0.6,0.8,1,1.2]):0.8;
+  return {
+   type:"fields",A,T,phi:-PI/2,
+   second:{A:B,phi:PI},
+   text:`Quan sát hai đồ thị x₁ và x₂.\n a) Xác định độ lệch pha nhỏ nhất giữa hai dao động.\n b) Viết phương trình của x₁ và x₂.`,
+   formula:"Δφ = độ lệch pha nhỏ nhất",
+   fields:[
+    ["Δφ (rad)",PI/2],
+    ["A₁ (cm)",A],["A₂ (cm)",B],
+    ["T (s)",T],
+    ["φ₁ (rad)",-PI/2],
+    ["φ₂ (rad)",PI]
+   ],
+   steps:`Hai vật có T = ${fmt(T)} s.\nω = ${fmt(2/T)}π rad/s.\nx₁(0)=0 và đang tăng, nên φ₁=−π/2.\nx₂(0)=−A₂ nên φ₂=π.\nx₁=${A}cos(${fmt(2/T)}πt−π/2) cm.\nx₂=${B}cos(${fmt(2/T)}πt+π) cm.\nĐộ lệch pha nhỏ nhất là π/2 rad.`
+  };
+ }
+ case 10:{
+  T=change?pick([1,2,3,4]):2;
+  A=change?pick([4,6,8,10,12,15]):10;
+  return {
+   type:"fields",A,T,phi:-PI/2,
+   text:`Một vật dao động điều hòa với chu kì T = ${fmt(T)} s. Trong ${fmt(1.5*T)} s, vật đi được quãng đường ${6*A} cm. Khi t=0 vật qua vị trí cân bằng theo chiều dương. Viết phương trình dao động.`,
+   formula:"S(3T/2)=6A; ω=2π/T",
+   fields:[
+    ["A (cm)",A],
+    ["ω/π (rad/s)",2/T],
+    ["φ (rad)",-PI/2]
+   ],
+   steps:`Thời gian bằng 3T/2.\nQuãng đường bằng 6A.\nA=${6*A}/6=${A} cm.\nω=2π/${fmt(T)}=${fmt(2/T)}π rad/s.\nVật qua VTCB chiều dương nên φ=−π/2.\nx=${A}cos(${fmt(2/T)}πt−π/2) cm.`
+  };
+ }
+ case 11:{
+  A=change?pick([4,6,8,10,12,15]):10;
+  T=change?pick([0.5,1,2]):1;
+  let t1=change?pick([0.5,1,2]):1;
+  let t2=t1+1.5*T;
+  return {
+   type:"num",A,T,phi:5*PI/6,
+   text:`Một chất điểm có phương trình x = ${A}cos(${fmt(2/T)}πt + 5π/6) (cm). Tính quãng đường vật đi được từ t₁ = ${fmt(t1)} s đến t₂ = ${fmt(t2)} s. Đơn vị cm.`,
+   formula:"S(3T/2)=6A",
+   expected:6*A,answer:String(6*A),
+   steps:`ω=${fmt(2/T)}π rad/s.\nT=${fmt(T)} s.\nΔt=${fmt(t2-t1)} s=3T/2.\nTrong 3T/2 vật đi 6A.\nS=6×${A}=${6*A} cm.`
+  };
+ }
+ }
+}
+
+questions=Array.from({length:11},(_,i)=>make(i+1));
+
+function graph(g){
+ let W=600,H=245,L=48,R=15,top=20,bottom=35;
+ let max=Math.max(g.A,g.second?.A||0);
+ let end=1.6*g.T;
+ const X=t=>L+t/end*(W-L-R);
+ const Y=y=>top+(1.15*max-y)/(2.3*max)*(H-top-bottom);
+ function path(A,phi){
+  let d="";
+  for(let i=0;i<=350;i++){
+   let t=end*i/350;
+   let y=A*Math.cos(2*PI*t/g.T+phi);
+   d+=(i?"L":"M")+X(t).toFixed(2)+","+
+      Y(y).toFixed(2)+" ";
+  }
+  return d;
+ }
+ let grid="";
+ for(let i=0;i<=8;i++){
+  let t=end*i/8;
+  grid+=`<line x1="${X(t)}" y1="${top}" x2="${X(t)}" y2="${H-bottom}" stroke="#e4ebf5"/>`;
+  grid+=`<text x="${X(t)}" y="${H-13}" text-anchor="middle">${fmt(t)}</text>`;
+ }
+ for(let i=-2;i<=2;i++){
+  let y=max*i/2;
+  grid+=`<line x1="${L}" y1="${Y(y)}" x2="${W-R}" y2="${Y(y)}" stroke="#e4ebf5"/>`;
+  grid+=`<text x="${L-7}" y="${Y(y)+4}" text-anchor="end">${fmt(y)}</text>`;
+ }
+ return `<svg class="figure" viewBox="0 0 ${W} ${H}">
+  ${grid}
+  <line x1="${L}" y1="${Y(0)}" x2="${W-R}" y2="${Y(0)}" stroke="#66758a"/>
+  <line x1="${L}" y1="${top}" x2="${L}" y2="${H-bottom}" stroke="#66758a"/>
+  <path d="${path(g.A,g.phi)}" stroke="#2458c8" stroke-width="3" fill="none"/>
+  ${g.second?`<path d="${path(g.second.A,g.second.phi)}" stroke="#e16824" stroke-width="3" fill="none"/>`:''}
+  <text x="8" y="14">x (cm)</text>
+  <text x="${W-45}" y="${H-5}">t (s)</text>
+  ${g.second?`<text x="455" y="18">x₁: xanh · x₂: cam</text>`:""}
+ </svg>`;
+}
+
+function render(){
+ let q=questions[index];
+ document.getElementById("number").textContent="Câu "+(index+1);
+ document.getElementById("question").innerHTML=q.text.replaceAll("\n","<br>");
+ document.getElementById("graph").innerHTML=graph(q);
+ document.getElementById("formula").textContent=q.formula;
+ let area=document.getElementById("answerArea");
+ if(q.type==="mc"){
+  area.innerHTML=`<div class="choices">${
+   q.choices.map((v,i)=>`<label class="choice">
+    <input type="radio" name="option" value="${i}">
+    <b>${"ABCD"[i]}.</b> ${esc(v)}
+   </label>`).join("")
+  }</div>`;
+ }else if(q.type==="num"){
+  area.innerHTML=`<div class="answers"><label>Nhập đáp án
+   <input id="single" placeholder="Ví dụ: 1/60 hoặc 0,5">
+   </label></div>`;
+ }else{
+  area.innerHTML=`<div class="answers">${
+   q.fields.map((v,i)=>`<label>${esc(v[0])}
+    <input id="field${i}" placeholder="Nhập giá trị">
+   </label>`).join("")
+  }</div>`;
+ }
+ document.getElementById("feedback").innerHTML="";
+ document.getElementById("solution").innerHTML="";
+ document.getElementById("nav").innerHTML=questions.map((_,i)=>
+  `<button onclick="go(${i})" class="${i===index?"active":""} ${completed.has(i)?"done":""}">Câu ${i+1}</button>`
+ ).join("");
+}
+
+function parseValue(s){
+ s=(s||"").trim().toLowerCase().replaceAll(",",".")
+ .replaceAll("π","pi").replace(/\s+/g,"");
+ if(!s)return NaN;
+ if(s==="pi"||s==="+pi")return PI;
+ if(s==="-pi")return -PI;
+ // Chỉ nhận biểu thức toán học dạng đơn giản.
+ let parts=s.split("/");
+ if(parts.length>2)return NaN;
+ function atom(v){
+  if(v==="pi")return PI;
+  if(v==="-pi")return -PI;
+  let m=v.match(/^([+-]?\d+(?:\.\d+)?)\*?pi$/);
+  if(m)return Number(m[1])*PI;
+  return /^[-+]?\d+(?:\.\d+)?$/.test(v)?Number(v):NaN;
+ }
+ let a=atom(parts[0]);
+ let b=parts.length===2?atom(parts[1]):1;
+ return b===0?NaN:a/b;
+}
+function equal(s,x){
+ let y=parseValue(s);
+ return Number.isFinite(y)&&Math.abs(x-y)<1e-5*Math.max(1,Math.abs(x));
+}
+function check(){
+ let q=questions[index],ok=false,msg="";
+ if(q.type==="mc"){
+  let selected=document.querySelector('input[name="option"]:checked');
+  if(!selected){
+   feedback("Hãy chọn một đáp án.",false);return;
+  }
+  if(q.invalid){
+   feedback("Bốn phương án trong đề gốc đều sai. Hãy xem lời giải hoặc đổi đề mới.",false);
+   return;
+  }
+  ok=q.choices[Number(selected.value)]===q.correct;
+  msg=ok?"Chính xác!":"Chưa đúng. Hãy xem lại công thức.";
+ }else if(q.type==="num"){
+  ok=equal(document.getElementById("single").value,q.expected);
+  msg=ok?"Chính xác!":"Chưa đúng. Hãy kiểm tra lại phép tính.";
+ }else{
+  let wrong=[];
+  q.fields.forEach((v,i)=>{
+   if(!equal(document.getElementById("field"+i).value,v[1]))
+    wrong.push(v[0]);
+  });
+  ok=wrong.length===0;
+  msg=ok?"Chính xác tất cả các ý!":
+   "Các ô cần kiểm tra lại: "+wrong.join(", ");
+ }
+ if(ok)completed.add(index);
+ feedback(msg,ok);
+ document.getElementById("nav").children[index].classList.toggle("done",ok);
+}
+function feedback(msg,ok){
+ document.getElementById("feedback").innerHTML=
+  `<div class="result ${ok?"ok":"bad"}">${esc(msg)}</div>`;
+}
+function showSolution(){
+ let q=questions[index],ans="";
+ if(q.type==="mc"){
+  let pos=q.choices.indexOf(q.correct);
+  ans=q.invalid?"Đề gốc không có phương án đúng.":
+   `Đáp án ${"ABCD"[pos]}: ${q.correct}`;
+ }else if(q.type==="num"){
+  ans="Đáp án: "+q.answer;
+ }else{
+  ans=q.fields.map(v=>v[0]+" = "+fmt(v[1])).join("; ");
+ }
+ document.getElementById("solution").innerHTML=
+  `<div class="solution">
+    <h3>HƯỚNG DẪN GIẢI</h3>
+    <b>${esc(ans)}</b>
+    <p>${esc(q.steps).replaceAll("\n","<br>")}</p>
+   </div>`;
+}
+function reroll(){
+ let next;
+ for(let i=0;i<30;i++){
+  next=make(index+1,true);
+  if(next.text!==questions[index].text)break;
+ }
+ questions[index]=next;
+ completed.delete(index);
+ render();
+}
+function go(i){
+ index=i;render();
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+function move(delta){
+ go((index+delta+11)%11);
+}
+function full(){
+ if(document.fullscreenElement)
+  document.exitFullscreen?.();
+ else
+  document.documentElement.requestFullscreen?.();
+}
+render();
+</script>
+</body>
+</html>
