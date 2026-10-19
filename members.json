@@ -472,10 +472,14 @@
       "username": "Thu Trúc",
       "name": "Trần Thị Thu Trúc",
       "phone": "0705335540",
-      "class": "",
-      "account_type": "FREE",
+      "class": "10",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "e086504c4a4b8c6df889fec9946e13b6cfd3bd190e2dcb7acdfa65a5f031aa57",
+      "password_enc": "v1:_XaGREDg_IbTbiIQ",
+      "package": {
         "kind": "mon1",
         "grades": [
           "10"
@@ -484,9 +488,17 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "e086504c4a4b8c6df889fec9946e13b6cfd3bd190e2dcb7acdfa65a5f031aa57",
-      "password_enc": "v1:_XaGREDg_IbTbiIQ"
+      "grades": [
+        "10"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "10",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-19 16:07:24",
+      "vip_expires_at": "2026-11-19 16:07:24",
+      "updated_at": "2026-10-19 16:07:24"
     },
     {
       "username": "Bảo Nhi",
