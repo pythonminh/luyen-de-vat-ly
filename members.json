@@ -566,10 +566,18 @@
       "username": "M nguyên",
       "name": "Nguyễn Đặng Minh Nguyên",
       "phone": "0393610210",
-      "class": "",
-      "account_type": "FREE",
+      "class": "11",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "e13645e3b8ba3f8d3c8bb32765c8e32585da1e5ceccdbc4c973714c767656320",
+      "password_enc": "v1:wWuQTx-ypA==",
+      "also_usernames": [
+        "minh Nguyên"
+      ],
+      "updated_at": "2026-10-19 16:07:17",
+      "package": {
         "kind": "mon2",
         "grades": [
           "11"
@@ -579,13 +587,17 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "e13645e3b8ba3f8d3c8bb32765c8e32585da1e5ceccdbc4c973714c767656320",
-      "password_enc": "v1:wWuQTx-ypA==",
-      "also_usernames": [
-        "minh Nguyên"
+      "grades": [
+        "11"
       ],
-      "updated_at": "2026-10-19 16:03:25"
+      "subjects": [
+        "Toán",
+        "Vật lý"
+      ],
+      "grade": "11",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-19 16:07:17",
+      "vip_expires_at": "2026-11-19 16:07:17"
     },
     {
       "username": "nguyen2uangminholx@gmail.com",
