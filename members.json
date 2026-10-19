@@ -255,15 +255,6 @@
       "password_enc": "v1:yEK_cjCd_Io="
     },
     {
-      "username": "minh Nguyên",
-      "name": "Nguyễn Đặng Minh Nguyên",
-      "class": "",
-      "account_type": "FREE",
-      "status": "ON",
-      "password_sha256": "69060b692a35ed2b1c99315e811d0a4fdcbdf57c628277301602af9044796bf5",
-      "password_enc": "v1:4WuQUxCj_YHSag=="
-    },
-    {
       "username": "nguyenquangminh11qt1",
       "name": "nguyenquangminh11qt1",
       "class": "11",
@@ -556,7 +547,11 @@
       },
       "package_status": "pending",
       "password_sha256": "e13645e3b8ba3f8d3c8bb32765c8e32585da1e5ceccdbc4c973714c767656320",
-      "password_enc": "v1:wWuQTx-ypA=="
+      "password_enc": "v1:wWuQTx-ypA==",
+      "also_usernames": [
+        "minh Nguyên"
+      ],
+      "updated_at": "2026-10-19 16:03:25"
     },
     {
       "username": "nguyen2uangminholx@gmail.com",
