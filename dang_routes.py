@@ -3245,6 +3245,9 @@ def member_html_practice():
                    '<input type="hidden" name="action" value="rename">'
                    '<input name="title" required maxlength="150" value="'+html.escape(selected_title,quote=True)+'"> <button>Lưu tên</button></form></details>')
     if manager and selected:
+        from html_code_editor import code_editor_html
+        editor += code_editor_html(path, dang, item, session['html_practice_csrf'])
+    if manager and selected:
         from html_ai_editor import editor_html
         editor += editor_html(path, dang, item, session['html_practice_csrf'])
     body = ('<div class="wrap"><h2>' + html.escape(selected_title if selected else '📁 HTML đổi số') + '</h2><p>' + html.escape(dang or 'Cả bài') + '</p>'
@@ -3667,3 +3670,7 @@ def _saved_html_player(title, src):
 <style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:white;font-family:Arial,sans-serif}#savedFrame{position:fixed;inset:0;width:100%;height:100vh;height:100dvh;border:0;display:block}#savedToggle{position:fixed;z-index:3;right:calc(8px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));border:1px solid #cbd5e1;border-radius:50%;width:42px;height:42px;background:#132d4cee;color:white;font-size:21px;cursor:pointer}#savedTools{position:fixed;z-index:2;top:calc(56px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));max-width:calc(100% - 16px);display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#132d4cf5;color:white;padding:12px;border-radius:12px;box-shadow:0 4px 20px #0003}#savedTools[hidden]{display:none}#savedTools a,#savedTools button{border:1px solid #ffffff77;color:white;background:transparent;font:inherit;text-decoration:none;padding:10px;border-radius:7px;min-height:44px;cursor:pointer}#savedTools strong{flex-basis:100%;font-size:14px;overflow-wrap:anywhere}@media(orientation:landscape) and (max-height:500px){#savedTools strong{display:none}#savedTools{padding:6px;top:8px;right:58px}}</style></head><body>
 <iframe id="savedFrame" title="''' + html.escape(title, quote=True) + '" src="' + html.escape(src, quote=True) + '''" sandbox="allow-scripts allow-forms allow-modals allow-downloads" allow="fullscreen"></iframe><button id="savedToggle" aria-label="Mở điều khiển" aria-controls="savedTools" aria-expanded="false">☰</button><nav id="savedTools" hidden><strong>''' + html.escape(title) + '''</strong><a href="/member/html-menu">← Kho HTML</a><button id="savedFull" type="button">⛶ Toàn màn hình</button></nav>
 <script>(()=>{const toggle=document.getElementById('savedToggle'),tools=document.getElementById('savedTools'),full=document.getElementById('savedFull');toggle.onclick=()=>{tools.hidden=!tools.hidden;toggle.setAttribute('aria-expanded',String(!tools.hidden))};full.onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else{tools.hidden=true;toggle.setAttribute('aria-expanded','false')}}catch(e){tools.hidden=true;toggle.setAttribute('aria-expanded','false')}};document.addEventListener('fullscreenchange',()=>{full.textContent=document.fullscreenElement?'✕ Thoát toàn màn hình':'⛶ Toàn màn hình'})})();</script></body></html>''')
+
+
+# ADMIN source editor for saved standalone HTML exercises.
+import html_code_editor  # noqa: E402,F401
