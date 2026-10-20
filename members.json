@@ -687,6 +687,26 @@
       "vip_started_at": "2026-10-20 13:04:54",
       "vip_expires_at": "2027-10-20 13:04:54",
       "updated_at": "2026-10-20 13:04:54"
+    },
+    {
+      "username": "Hoang Phat Nguyen",
+      "name": "Nguyễn Hoàng Phát",
+      "phone": "0762695673",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "requested_package": {
+        "kind": "mon1",
+        "grades": [
+          "12"
+        ],
+        "subjects": [
+          "Vật lý"
+        ]
+      },
+      "package_status": "pending",
+      "password_sha256": "1eb3f4c9dcae79c2d4789c7e31fd8f5c02e8f3a2dfc69d70bc51443df3f5d059",
+      "password_enc": "v1:wWuSSRajpNKVbCcRQg=="
     }
   ]
 }
