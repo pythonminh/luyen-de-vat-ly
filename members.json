@@ -638,10 +638,14 @@
       "username": "nguyễn tuấn phong",
       "name": "nguyễn tuấn phong",
       "phone": "0902317944",
-      "class": "",
-      "account_type": "FREE",
+      "class": "10",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "62a051e789bd8fac4e57ace6a060411ae1cf736f9fe5790ed27a88c72cdf502d",
+      "password_enc": "v1:0TO-RieLrt3UbUdTJK6C",
+      "package": {
         "kind": "mon1",
         "grades": [
           "10"
@@ -650,9 +654,17 @@
           "Toán"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "62a051e789bd8fac4e57ace6a060411ae1cf736f9fe5790ed27a88c72cdf502d",
-      "password_enc": "v1:0TO-RieLrt3UbUdTJK6C"
+      "grades": [
+        "10"
+      ],
+      "subjects": [
+        "Toán"
+      ],
+      "grade": "10",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-20 13:19:08",
+      "vip_expires_at": "2026-11-20 13:19:08",
+      "updated_at": "2026-10-20 13:19:08"
     },
     {
       "username": "Thanh Khang",
