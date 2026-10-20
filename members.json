@@ -772,10 +772,15 @@
       "username": "sungbachiu",
       "name": "Trần Lê Gia Hiếu",
       "phone": "0906823742",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "be7fa201e6413bd5e0dda2e5141d0c74112732fa2b4e69c36fdec90d331a4d57",
+      "password_enc": "v1:4W2WUh-8jILTbScUQQ==",
+      "updated_at": "2026-10-20 13:23:07",
+      "package": {
         "kind": "mon1",
         "grades": [
           "12"
@@ -784,10 +789,16 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "be7fa201e6413bd5e0dda2e5141d0c74112732fa2b4e69c36fdec90d331a4d57",
-      "password_enc": "v1:4W2WUh-8jILTbScUQQ==",
-      "updated_at": "2026-10-20 13:22:13"
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-20 13:23:07",
+      "vip_expires_at": "2026-11-20 13:23:07"
     }
   ]
 }
