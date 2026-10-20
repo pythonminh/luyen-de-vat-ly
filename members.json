@@ -712,21 +712,35 @@
       "username": "thvy",
       "name": "Nguyễn Ngọc Thảo Vy",
       "phone": "0906974392",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
-        "kind": "lop1",
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "8d608ac6095f5073c581cb14fa9ff7bc56c999ff3d8bdf783753aa4ea7fc7d57",
+      "password_enc": "v1:333CFUDi_Iqh",
+      "package": {
+        "kind": "mon2",
         "grades": [
           "12"
         ],
         "subjects": [
+          "Toán",
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "8d608ac6095f5073c581cb14fa9ff7bc56c999ff3d8bdf783753aa4ea7fc7d57",
-      "password_enc": "v1:333CFUDi_Iqh"
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Toán",
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-20 13:18:41",
+      "vip_expires_at": "2026-11-20 13:18:41",
+      "updated_at": "2026-10-20 13:18:41"
     }
   ]
 }
