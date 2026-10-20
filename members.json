@@ -667,10 +667,14 @@
       "username": "Thanh Khang",
       "name": "Nguyễn Thanh Khang",
       "phone": "0901360142",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+      "password_enc": "v1:uDbAE0Tl",
+      "package": {
         "kind": "mon2",
         "grades": [
           "12"
@@ -680,9 +684,18 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
-      "password_enc": "v1:uDbAE0Tl"
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Toán",
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-20 13:04:52",
+      "vip_expires_at": "2026-11-20 13:04:52",
+      "updated_at": "2026-10-20 13:04:52"
     }
   ]
 }
