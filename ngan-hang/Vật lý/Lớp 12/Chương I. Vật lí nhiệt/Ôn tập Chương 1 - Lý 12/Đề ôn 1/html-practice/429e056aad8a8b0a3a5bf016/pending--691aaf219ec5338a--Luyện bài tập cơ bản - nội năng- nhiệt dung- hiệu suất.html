@@ -1,0 +1,857 @@
+<!--hp-title:THV54buHbiBiw6BpIHThuq1wIGPGoSBi4bqjbiAtIG7hu5lpIG7Eg25nLSBuaGnhu4d0IGR1bmctIGhp4buHdSBzdeG6pXQ=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vật lí 12 - 6 câu trả lời ngắn</title>
+<style>
+:root {
+  --navy:#112f52;
+  --blue:#1766c3;
+  --bg:#f2f6fc;
+  --line:#dbe5f0;
+  --text:#20334a;
+}
+* { box-sizing:border-box }
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:16px/1.65 system-ui,Arial,sans-serif;
+}
+header {
+  background:linear-gradient(110deg,#102745,#1b497e);
+  color:white;
+  padding:18px 22px;
+}
+header strong {
+  display:block;
+  font-size:clamp(18px,2.5vw,25px);
+}
+header small { opacity:.8 }
+.wrap {
+  max-width:1250px;
+  padding:16px;
+  margin:auto;
+}
+.top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+h1 { font-size:23px; margin:0 }
+.clock {
+  padding:8px 15px;
+  border-radius:30px;
+  background:white;
+  border:1px solid var(--line);
+  font-weight:bold;
+}
+.layout {
+  display:grid;
+  grid-template-columns:260px minmax(0,1fr);
+  gap:16px;
+  align-items:start;
+}
+.card {
+  background:white;
+  border:1px solid var(--line);
+  border-radius:15px;
+  padding:20px;
+  box-shadow:0 4px 16px #1027450d;
+}
+aside { position:sticky; top:12px }
+aside h2 { margin-top:0; font-size:18px }
+.stats {
+  background:#eef5ff;
+  border-radius:10px;
+  padding:10px;
+  font-weight:bold;
+}
+.nav {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-top:14px;
+}
+button {
+  font:inherit;
+  cursor:pointer;
+  border:0;
+  border-radius:10px;
+  padding:11px 14px;
+  font-weight:700;
+  touch-action:manipulation;
+}
+button:disabled { opacity:.45; cursor:not-allowed }
+.nav button {
+  background:#edf4ff;
+  color:#244e78;
+}
+.nav button.active {
+  background:var(--navy);
+  color:white;
+}
+.nav button.done {
+  background:#dbf4e8;
+  color:#156243;
+}
+.nav button.done.active {
+  background:#176748;
+  color:white;
+}
+.info {
+  margin-top:18px;
+  padding:12px;
+  background:#fff8e8;
+  border-left:4px solid #e3b03d;
+  border-radius:8px;
+  font-size:13px;
+}
+.tag { color:var(--blue);font-weight:bold }
+.stem {
+  font-size:19px;
+  line-height:1.8;
+  margin:20px 0;
+}
+.stem strong { color:#11538e }
+.inputrow {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.inputrow input {
+  padding:12px 15px;
+  border:1.5px solid #b9cfe7;
+  border-radius:10px;
+  font-size:19px;
+  width:min(310px,100%);
+}
+.inputrow input:disabled { background:#f1f5f9 }
+.unit { font-weight:bold;color:#14558b }
+.actions {
+  display:flex;
+  gap:9px;
+  flex-wrap:wrap;
+  margin-top:24px;
+}
+.primary { background:var(--navy);color:white }
+.blue { background:var(--blue);color:white }
+.soft { background:#eaf3ff;color:#194d80 }
+.green { background:#177951;color:white }
+.outline {
+  background:white;
+  border:1px solid var(--line);
+  color:#294b6c;
+}
+.feedback {
+  margin-top:20px;
+  padding:14px;
+  background:#eefaf4;
+  border:1px solid #a8d9bc;
+  border-radius:12px;
+}
+.feedback.wrong {
+  background:#fff5ed;
+  border-color:#e9c49e;
+}
+.solution {
+  margin-top:15px;
+  padding:18px;
+  background:#f4f9ff;
+  border:1px solid #c7dbef;
+  border-radius:12px;
+}
+.solution h3 { margin-top:0;color:#125189 }
+.solution li { margin:9px 0 }
+.final {
+  background:#e5f1ff;
+  padding:10px;
+  border-radius:8px;
+  font-weight:bold;
+}
+.bottom {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:15px;
+}
+.result {
+  display:none;
+  background:#eaf9f1;
+  border:1px solid #a5d7ba;
+  padding:18px;
+  border-radius:12px;
+  margin-top:15px;
+}
+.result.show { display:block }
+.note {
+  color:#698096;
+  font-size:13px;
+  margin-top:12px;
+}
+[hidden] { display:none!important }
+@media(max-width:760px) {
+  .layout { grid-template-columns:1fr }
+  aside { position:static }
+  .nav { grid-template-columns:repeat(6,1fr) }
+  .card { padding:16px }
+  .actions button { flex:1 1 42% }
+  .stem { font-size:17px }
+}
+@media(max-width:400px) {
+  .nav { grid-template-columns:repeat(3,1fr) }
+}
+</style>
+</head>
+<body>
+
+<header>
+<strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
+<small>lophocthayminh.onrender.com</small>
+</header>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>VẬT LÍ 12 – 6 CÂU TRẢ LỜI NGẮN</h1>
+      <div class="note">Phần III – Theo đề gốc</div>
+    </div>
+    <div class="clock" id="clock">⏱ 00:00</div>
+  </div>
+
+  <div class="layout">
+    <aside class="card">
+      <h2>Danh sách câu hỏi</h2>
+      <div class="stats" id="progress">Đã nộp: 0/6</div>
+      <div class="nav" id="nav"></div>
+      <div class="info">
+        <b>Hướng dẫn:</b>
+        Nhập kết quả và bấm <b>Nộp câu này</b>.
+        Câu đã nộp sẽ khóa đáp số và hiển thị lời giải
+        chi tiết. Các câu khác vẫn làm bình thường.
+      </div>
+    </aside>
+
+    <main>
+      <section class="card">
+        <div class="tag" id="label">Câu 1/6</div>
+        <div class="stem" id="stem"></div>
+
+        <div class="inputrow">
+          <label for="answer"><b>Đáp số:</b></label>
+          <input id="answer" type="text"
+                 inputmode="decimal"
+                 autocomplete="off"
+                 placeholder="Nhập số hoặc phân số">
+          <span class="unit" id="unit"></span>
+        </div>
+
+        <p class="note">
+          Chỉ nhập kết quả, không nhập đơn vị.
+          Có thể dùng dấu phẩy, dấu chấm hoặc phân số.
+        </p>
+
+        <div id="feedback"></div>
+        <div id="solution"></div>
+
+        <div class="actions">
+          <button class="outline" id="prev">← Câu trước</button>
+          <button class="outline" id="next">Câu sau →</button>
+          <button class="soft" id="change">↻ Đổi số</button>
+          <button class="primary" id="submit">Nộp câu này</button>
+          <button class="green" id="view" hidden>
+            Xem lời giải
+          </button>
+        </div>
+      </section>
+
+      <div class="bottom">
+        <button class="soft" id="changeAll">
+          ↻ Đổi số cả 6 câu
+        </button>
+        <button class="outline" id="full">
+          ⛶ Toàn màn hình
+        </button>
+        <button class="blue" id="restart" hidden>
+          Làm bộ đề mới
+        </button>
+      </div>
+
+      <div class="result" id="result"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+
+const rand = (a,b) =>
+  Math.floor(Math.random()*(b-a+1))+a;
+
+const pick = a => a[rand(0,a.length-1)];
+
+const fmt = n =>
+  Number(n).toLocaleString("vi-VN",{
+    maximumFractionDigits:12
+  });
+
+const gcd = (a,b) => {
+  a=Math.abs(Math.round(a));
+  b=Math.abs(Math.round(b));
+  while(b) [a,b]=[b,a%b];
+  return a||1;
+};
+
+const fraction = (n,d) => {
+  let g=gcd(n,d);
+  return `${fmt(n/g)}/${fmt(d/g)}`;
+};
+
+const approx = n => fmt(Math.round(n*100)/100);
+
+let questions=[];
+let current=0;
+let seconds=0;
+let ticker=null;
+
+function makeQuestion(id, original=false) {
+  let data={},stem="",answer=0,unit="",eps=1e-8;
+
+  // CÂU 1: NHIỆT LƯỢNG CỦA MIẾNG ĐỒNG
+  if(id===1) {
+    const m=original?500:pick([200,250,400,500,600,750]);
+    const t=original?137:rand(10,18)*10;
+    const delta=original?100:rand(2,8)*10;
+
+    const Q=m/1000*380*delta;
+    answer=t-delta;
+    unit="°C";
+    data={m,t,delta,Q};
+
+    stem=`
+      Một miếng đồng có khối lượng là
+      <strong>${m} gam</strong> đang ở nhiệt độ
+      <strong>${t}°C</strong>.
+      Nếu nó tỏa ra môi trường bên ngoài một
+      nhiệt lượng là <strong>${fmt(Q/1000)} kJ</strong>
+      thì nhiệt độ lúc sau của nó là bao nhiêu?
+      Biết nhiệt dung riêng của đồng là
+      380 J/(kg·K).
+    `;
+  }
+
+  // CÂU 2: NGUYÊN LÍ I NHIỆT ĐỘNG LỰC HỌC
+  if(id===2) {
+    const dV=original?0.02:rand(1,5)/100;
+    const dU=original?1280:pick([
+      1000,1200,1280,1500,1600,1800,2000
+    ]);
+    const p=original?2:rand(1,4);
+
+    const A=p*100000*dV;
+    answer=dU+A;
+    unit="J";
+    data={dV,dU,p,A};
+
+    stem=`
+      Một lượng khí khi bị nung nóng đã tăng
+      thể tích <strong>${fmt(dV)} m³</strong>
+      và nội năng biến thiên
+      <strong>${fmt(dU)} J</strong>.
+      Biết quá trình trên áp suất không đổi là
+      <strong>${p}·10<sup>5</sup> Pa</strong>.
+      Nhiệt lượng đã truyền cho khí là bao nhiêu J?
+    `;
+  }
+
+  // CÂU 3: HIỆU SUẤT ĐỘNG CƠ NHIỆT
+  if(id===3) {
+    let hot=5,cold=4;
+    if(!original) {
+      hot=pick([4,5,6,8,10]);
+      cold=rand(1,hot-1);
+    }
+
+    answer=100*(hot-cold)/hot;
+    eps=0.011;
+    unit="%";
+    data={hot,cold};
+
+    stem=`
+      Một động cơ nhiệt mỗi giây nhận từ nguồn
+      nóng nhiệt lượng
+      <strong>${hot}·10<sup>4</sup> J</strong>,
+      đồng thời nhường cho nguồn lạnh
+      <strong>${cold}·10<sup>4</sup> J</strong>.
+      Hiệu suất của động cơ là bao nhiêu?
+    `;
+  }
+
+  // CÂU 4: NHIỆT NÓNG CHẢY CỦA VÀNG
+  if(id===4) {
+    const m=original?74:rand(5,15)*10+rand(0,9);
+    const lambda=64000;
+
+    answer=m/1000*lambda;
+    unit="J";
+    data={m,lambda};
+
+    stem=`
+      Một thợ kim hoàn muốn nấu chảy một thỏi
+      vàng có khối lượng <strong>${m} g</strong>
+      để đúc một tấm thẻ bài nhỏ.
+      Nhiệt lượng cần cung cấp để nấu chảy
+      thỏi vàng ở nhiệt độ nóng chảy của nó
+      là bao nhiêu?
+      Biết nhiệt nóng chảy riêng của vàng là
+      <strong>0,64·10<sup>5</sup> J/kg</strong>.
+    `;
+  }
+
+  // CÂU 5: NHIỆT HÓA HƠI VÀ NHIỆT NÓNG CHẢY
+  if(id===5) {
+    const m=original?1:pick([0.5,1,1.5,2,2.5,3]);
+    const L=2300000;
+    const lambda=334000;
+
+    answer=m*L/lambda;
+    unit="kg";
+    eps=0.051;
+    data={m,L,lambda};
+
+    stem=`
+      Cho biết nhiệt nóng chảy riêng của nước đá
+      và nhiệt hóa hơi riêng của nước lần lượt là
+      <strong>3,34·10<sup>5</sup> J/kg</strong>
+      và <strong>2,3·10<sup>6</sup> J/kg</strong>.
+      Năng lượng cần thiết để hóa hơi hoàn toàn
+      <strong>${fmt(m)} kg nước</strong>
+      ở nhiệt độ sôi của nó có thể làm nóng chảy
+      khoảng bao nhiêu kilôgam nước đá?
+    `;
+  }
+
+  // CÂU 6: KHỐI LƯỢNG NƯỚC HÓA HƠI
+  if(id===6) {
+    const P=original?450:pick([
+      300,400,450,500,600,750,900
+    ]);
+    const t=original?15:pick([5,8,10,12,15,20]);
+    const L=2300000;
+
+    answer=P*t*60/L*1000;
+    unit="g";
+    eps=0.501;
+    data={P,t,L};
+
+    stem=`
+      Một ấm điện có công suất
+      <strong>${P} W</strong> được dùng để
+      đun sôi nước. Giả sử không có mất mát
+      năng lượng nhiệt.
+      Khi ấm đã sôi được
+      <strong>${t} phút</strong>
+      thì có khoảng bao nhiêu gam hơi nước
+      đã bốc hơi?
+      Nhiệt hóa hơi riêng của nước là
+      <strong>2,3·10<sup>6</sup> J/kg</strong>.
+    `;
+  }
+
+  return {
+    id,stem,answer,unit,eps,data,
+    response:"",
+    submitted:false,
+    correct:false,
+    solutionOpen:false
+  };
+}
+
+// TẠO LỜI GIẢI CHI TIẾT THEO SỐ LIỆU HIỆN TẠI
+function explanation(q) {
+  const d=q.data;
+  let steps=[];
+  let result="";
+
+  if(q.id===1) {
+    steps=[
+      `Đổi khối lượng:
+       m = ${d.m}/1000 = ${fmt(d.m/1000)} kg.`,
+      `Miếng đồng tỏa nhiệt:
+       Q = mc(t₁ − t₂).`,
+      `Suy ra:
+       t₂ = t₁ − Q/(mc).`,
+      `Thay số:
+       t₂ = ${d.t} − ${fmt(d.Q)}/
+       (${fmt(d.m/1000)} × 380)
+       = ${fmt(q.answer)} °C.`
+    ];
+    result=`${fmt(q.answer)} °C`;
+  }
+
+  if(q.id===2) {
+    steps=[
+      `Khí nở ra và thực hiện công:
+       A = pΔV.`,
+      `A = (${d.p} × 10⁵) × ${fmt(d.dV)}
+       = ${fmt(d.A)} J.`,
+      `Theo nguyên lí I nhiệt động lực học:
+       Q = ΔU + A.`,
+      `Q = ${fmt(d.dU)} + ${fmt(d.A)}
+       = ${fmt(q.answer)} J.`
+    ];
+    result=`${fmt(q.answer)} J`;
+  }
+
+  if(q.id===3) {
+    steps=[
+      `Nhiệt lượng động cơ nhận:
+       Q₁ = ${d.hot} × 10⁴ J.`,
+      `Nhiệt lượng thải cho nguồn lạnh:
+       Q₂ = ${d.cold} × 10⁴ J.`,
+      `Công có ích:
+       A = Q₁ − Q₂.`,
+      `Hiệu suất:
+       H = (Q₁ − Q₂)/Q₁ × 100%.`,
+      `H = (${d.hot} − ${d.cold})/
+       ${d.hot} × 100%
+       ≈ ${approx(q.answer)}%.`
+    ];
+    result=`${approx(q.answer)}%`;
+  }
+
+  if(q.id===4) {
+    steps=[
+      `Đổi khối lượng:
+       m = ${d.m}/1000 = ${fmt(d.m/1000)} kg.`,
+      `Nhiệt nóng chảy riêng:
+       λ = 0,64 × 10⁵ = 64 000 J/kg.`,
+      `Nhiệt lượng cần cung cấp:
+       Q = mλ.`,
+      `Q = ${fmt(d.m/1000)} × 64 000
+       = ${fmt(q.answer)} J.`
+    ];
+    result=`${fmt(q.answer)} J`;
+  }
+
+  if(q.id===5) {
+    const Q=d.m*d.L;
+    const f=fraction(Q,d.lambda);
+    steps=[
+      `Nhiệt lượng hóa hơi nước:
+       Q = mL.`,
+      `Q = ${fmt(d.m)} × 2 300 000
+       = ${fmt(Q)} J.`,
+      `Dùng nhiệt lượng này làm tan nước đá:
+       Q = mđá λ.`,
+      `Suy ra:
+       mđá = Q/λ.`,
+      `mđá = ${fmt(Q)}/334 000
+       = ${f} kg.`,
+      `Giá trị gần đúng:
+       mđá ≈ ${approx(q.answer)} kg.`
+    ];
+    result=`${f} kg ≈ ${approx(q.answer)} kg`;
+  }
+
+  if(q.id===6) {
+    const time=d.t*60;
+    const Q=d.P*time;
+    const f=fraction(Q,2300);
+    steps=[
+      `Đổi thời gian:
+       t = ${d.t} × 60 = ${time} s.`,
+      `Nhiệt lượng ấm cung cấp:
+       Q = Pt.`,
+      `Q = ${d.P} × ${time}
+       = ${fmt(Q)} J.`,
+      `Nhiệt lượng hóa hơi:
+       Q = mL.`,
+      `Suy ra:
+       m = Q/L = ${fmt(Q)}/2 300 000 kg.`,
+      `Đổi sang gam:
+       m = ${fmt(Q)}/2300
+       = ${f} g.`,
+      `Giá trị gần đúng:
+       m ≈ ${approx(q.answer)} g.`
+    ];
+    result=`${f} g ≈ ${approx(q.answer)} g`;
+  }
+
+  return `
+    <div class="solution">
+      <h3>Lời giải chi tiết – Câu ${q.id}</h3>
+      <ol>
+        ${steps.map(s=>`<li>${s}</li>`).join("")}
+      </ol>
+      <div class="final">Đáp số: ${result}</div>
+    </div>
+  `;
+}
+
+// ĐỌC SỐ VÀ PHÂN SỐ DO HỌC SINH NHẬP
+function parseAnswer(text) {
+  const s=String(text).trim()
+    .replace(/\s+/g,"")
+    .replace(/−/g,"-")
+    .replace(/,/g,".");
+
+  if(!s) return NaN;
+
+  const parts=s.split("/");
+  if(parts.length>2) return NaN;
+
+  const pattern=/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
+
+  if(!parts.every(x=>pattern.test(x))) return NaN;
+
+  const n=Number(parts[0]);
+  const d=parts.length===2?Number(parts[1]):1;
+
+  if(d===0) return NaN;
+  return n/d;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g,c=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[c]));
+}
+
+function countSubmitted() {
+  return questions.filter(q=>q.submitted).length;
+}
+
+function refreshNav() {
+  const nav=$("nav");
+  nav.innerHTML="";
+
+  questions.forEach((q,i)=>{
+    const b=document.createElement("button");
+    b.textContent=`${i+1}${q.submitted?" ✓":""}`;
+
+    if(i===current) b.classList.add("active");
+    if(q.submitted) b.classList.add("done");
+
+    b.onclick=()=>{
+      current=i;
+      render();
+    };
+    nav.appendChild(b);
+  });
+
+  const n=countSubmitted();
+  $("progress").textContent=`Đã nộp: ${n}/6`;
+  $("changeAll").disabled=n>0;
+  $("restart").hidden=n!==6;
+
+  if(n===6) {
+    clearInterval(ticker);
+
+    const score=questions.filter(q=>q.correct).length;
+    $("result").classList.add("show");
+    $("result").innerHTML=`
+      <h2>Hoàn thành bài luyện tập</h2>
+      <p><b>Kết quả: ${score}/6 câu đúng</b></p>
+      <p>Thời gian:
+      ${Math.floor(seconds/60)} phút
+      ${seconds%60} giây.</p>
+      <p>Chọn lại từng câu để xem lời giải.</p>
+    `;
+  } else {
+    $("result").classList.remove("show");
+  }
+}
+
+function render() {
+  const q=questions[current];
+
+  $("label").textContent=
+    `Câu ${current+1}/6 ${q.submitted?"· Đã nộp":""}`;
+
+  $("stem").innerHTML=q.stem;
+  $("answer").value=q.response;
+  $("answer").disabled=q.submitted;
+  $("unit").textContent=q.unit;
+
+  $("prev").disabled=current===0;
+  $("next").disabled=current===5;
+  $("change").disabled=q.submitted;
+
+  $("submit").hidden=q.submitted;
+  $("view").hidden=!q.submitted;
+  $("view").textContent=
+    q.solutionOpen?"Ẩn lời giải":"Xem lời giải";
+
+  $("feedback").innerHTML="";
+  $("solution").innerHTML="";
+
+  if(q.submitted) {
+    const cls=q.correct?"feedback":"feedback wrong";
+    const text=q.correct?"✓ Chính xác":"✕ Chưa chính xác";
+
+    $("feedback").innerHTML=`
+      <div class="${cls}">
+        <b>${text} – Câu ${q.id} đã nộp</b>
+        <div>
+          Đáp án học sinh: ${esc(q.response)} ${q.unit}
+        </div>
+        <small>Câu đã khóa, không được sửa đáp án.</small>
+      </div>
+    `;
+
+    if(q.solutionOpen) {
+      $("solution").innerHTML=explanation(q);
+    }
+  }
+
+  refreshNav();
+}
+
+function newTest(original=false) {
+  questions=Array.from(
+    {length:6},
+    (_,i)=>makeQuestion(i+1,original)
+  );
+
+  current=0;
+  seconds=0;
+
+  clearInterval(ticker);
+  $("clock").textContent="⏱ 00:00";
+
+  ticker=setInterval(()=>{
+    if(countSubmitted()===6) return;
+
+    seconds++;
+    const m=String(Math.floor(seconds/60)).padStart(2,"0");
+    const s=String(seconds%60).padStart(2,"0");
+
+    $("clock").textContent=`⏱ ${m}:${s}`;
+  },1000);
+
+  render();
+}
+
+// NHẬP CÂU TRẢ LỜI
+$("answer").addEventListener("input",e=>{
+  const q=questions[current];
+  if(!q.submitted) q.response=e.target.value;
+});
+
+// NỘP RIÊNG TỪNG CÂU
+$("submit").onclick=()=>{
+  const q=questions[current];
+
+  if(q.submitted) return;
+
+  const value=parseAnswer(q.response);
+
+  if(!Number.isFinite(value)) {
+    alert("Vui lòng nhập đáp số hợp lệ.");
+    $("answer").focus();
+    return;
+  }
+
+  q.correct=Math.abs(value-q.answer)<=q.eps;
+  q.submitted=true;
+  q.solutionOpen=true;
+
+  render();
+  $("feedback").scrollIntoView({
+    behavior:"smooth",
+    block:"nearest"
+  });
+};
+
+// XEM / ẨN LỜI GIẢI SAU KHI NỘP
+$("view").onclick=()=>{
+  const q=questions[current];
+  if(!q.submitted) return;
+
+  q.solutionOpen=!q.solutionOpen;
+  render();
+};
+
+// ĐỔI SỐ CÂU HIỆN TẠI
+$("change").onclick=()=>{
+  const q=questions[current];
+
+  if(q.submitted) {
+    alert("Câu đã nộp không thể đổi số.");
+    return;
+  }
+
+  let next;
+  let attempts=0;
+  do {
+    next=makeQuestion(q.id,false);
+    attempts++;
+  } while(next.stem===q.stem&&attempts<100);
+
+  questions[current]=next;
+  render();
+};
+
+// ĐỔI SỐ TOÀN BỘ KHI CHƯA NỘP CÂU NÀO
+$("changeAll").onclick=()=>{
+  if(countSubmitted()>0) {
+    alert("Đã nộp ít nhất một câu. Không thể đổi toàn bộ.");
+    return;
+  }
+
+  if(questions.some(q=>q.response.trim())) {
+    if(!confirm("Đổi số sẽ xóa các câu đã nhập. Tiếp tục?"))
+      return;
+  }
+
+  newTest(false);
+};
+
+// ĐIỀU HƯỚNG CÂU HỎI
+$("prev").onclick=()=>{
+  if(current>0) {
+    current--;
+    render();
+  }
+};
+
+$("next").onclick=()=>{
+  if(current<5) {
+    current++;
+    render();
+  }
+};
+
+// LÀM ĐỀ MỚI
+$("restart").onclick=()=>{
+  if(countSubmitted()===6) newTest(false);
+};
+
+// TOÀN MÀN HÌNH
+$("full").onclick=()=>{
+  if(document.fullscreenElement) {
+    document.exitFullscreen?.();
+  } else {
+    document.documentElement.requestFullscreen?.();
+  }
+};
+
+// GIỮ NGUYÊN SỐ LIỆU GỐC LẦN ĐẦU
+newTest(true);
+
+</script>
+</body>
+</html>
