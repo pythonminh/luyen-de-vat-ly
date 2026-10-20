@@ -764,39 +764,23 @@
       ],
       "grade": "12",
       "vip_plan": "1m",
-      "vip_started_at": "2026-10-20 13:18:41",
-      "vip_expires_at": "2026-11-20 13:18:41",
-      "updated_at": "2026-10-20 13:18:41"
+      "vip_started_at": "2026-10-20 13:25:47",
+      "vip_expires_at": "2026-11-20 13:25:47",
+      "updated_at": "2026-10-20 13:25:47"
     },
     {
       "username": "sungbachiu",
       "name": "Trần Lê Gia Hiếu",
       "phone": "0906823742",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
-        "kind": "mon1",
-        "grades": [
-          "12"
-        ],
-        "subjects": [
-          "Vật lý"
-        ]
-      },
-      "package_status": "pending",
+      "requested_package": null,
+      "package_status": "approved",
       "password_sha256": "be7fa201e6413bd5e0dda2e5141d0c74112732fa2b4e69c36fdec90d331a4d57",
       "password_enc": "v1:4W2WUh-8jILTbScUQQ==",
-      "updated_at": "2026-10-20 13:22:13"
-    },
-    {
-      "username": "TienPhi",
-      "name": "Nguyễn Hoàng Tiến Phi",
-      "phone": "0789771704",
-      "class": "",
-      "account_type": "FREE",
-      "status": "ON",
-      "requested_package": {
+      "updated_at": "2026-10-20 13:23:56",
+      "package": {
         "kind": "mon1",
         "grades": [
           "12"
@@ -805,9 +789,16 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "3172d53c2e1697c194a410235d5caa5d48ca9c148e81214669a8cb39424e890c",
-      "password_enc": "v1:3W2WSSG7pYLWbic="
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-20 13:23:56",
+      "vip_expires_at": "2026-11-20 13:23:56"
     }
   ]
 }
