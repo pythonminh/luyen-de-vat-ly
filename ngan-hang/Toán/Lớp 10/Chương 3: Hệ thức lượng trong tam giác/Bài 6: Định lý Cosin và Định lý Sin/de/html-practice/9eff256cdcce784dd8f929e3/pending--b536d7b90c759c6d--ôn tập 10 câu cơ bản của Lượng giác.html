@@ -1,0 +1,1089 @@
+<!--hp-title:w7RuIHThuq1wIDEwIGPDonUgY8ahIGLhuqNuIGPhu6dhIEzGsOG7o25nIGdpw6Fj-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trắc nghiệm lượng giác - Toán 10</title>
+<style>
+:root{
+  --navy:#12294c;
+  --blue:#2563eb;
+  --green:#168052;
+  --red:#cb3745;
+  --line:#dce4f0;
+  --bg:#f2f5fa;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,system-ui,sans-serif;
+  color:#172c47;
+  background:var(--bg);
+}
+header{
+  background:var(--navy);
+  color:#fff;
+  padding:15px 22px;
+}
+header strong{
+  font-size:21px;
+  display:block;
+}
+header small{color:#bed3f2}
+.top{
+  max-width:1200px;
+  margin:18px auto;
+  padding:0 13px;
+}
+h1{font-size:24px;margin:0 0 8px}
+.subtitle{color:#687a90}
+.layout{
+  display:grid;
+  grid-template-columns:290px minmax(0,1fr);
+  gap:16px;
+  max-width:1200px;
+  margin:auto;
+  padding:0 13px 30px;
+}
+.panel{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 5px 18px #172c4710;
+  min-width:0;
+}
+.stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin-bottom:16px;
+}
+.stat{
+  padding:13px;
+  background:#f0f5fc;
+  border-radius:10px;
+}
+.stat small{display:block;color:#64758b}
+.stat strong{font-size:23px}
+.nav{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+  margin:15px 0;
+}
+button{
+  font:inherit;
+  cursor:pointer;
+  border:1px solid #cedaea;
+  background:#fff;
+  color:#203955;
+  border-radius:9px;
+  padding:11px 13px;
+  min-height:43px;
+}
+button:hover{background:#edf4ff}
+button:focus-visible{
+  outline:3px solid #f5b942;
+  outline-offset:2px;
+}
+.nav button{
+  padding:8px 0;
+  font-weight:bold;
+}
+.nav .active{
+  background:var(--blue);
+  color:#fff;
+}
+.nav .done{
+  background:#e1f0ff;
+  border-color:#8ab4f8;
+}
+.nav .right{
+  background:#def6e7;
+  color:#067342;
+}
+.nav .wrong{
+  background:#ffe6e6;
+  color:#ad303a;
+}
+.primary{
+  background:var(--blue);
+  color:white;
+  border-color:var(--blue);
+}
+.primary:hover{background:#1e4fd1}
+.dark{
+  background:var(--navy);
+  color:white;
+  border-color:var(--navy);
+}
+.dark:hover{background:#244775}
+.wide{width:100%;margin-top:8px}
+.formulas{
+  margin-top:20px;
+  border-top:1px solid var(--line);
+  padding-top:14px;
+}
+.formula{
+  background:#f4f7fc;
+  padding:12px;
+  margin:9px 0;
+  border-radius:10px;
+  line-height:1.8;
+  font-size:14px;
+}
+.formula b{color:#153c76}
+.qhead{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.tag{
+  background:#e8f0ff;
+  color:#2254a8;
+  font-size:13px;
+  padding:7px 11px;
+  border-radius:30px;
+  font-weight:bold;
+}
+#question{
+  font-size:23px;
+  line-height:1.6;
+  margin:25px 0 19px;
+}
+.answers{
+  display:grid;
+  gap:11px;
+}
+.answer{
+  width:100%;
+  min-height:63px;
+  display:flex;
+  gap:15px;
+  align-items:center;
+  text-align:left;
+  border:2px solid #e0e6ef;
+  border-radius:12px;
+  font-size:19px;
+}
+.answer .letter{
+  display:grid;
+  place-items:center;
+  flex:none;
+  width:37px;
+  height:37px;
+  background:#edf2f9;
+  border-radius:8px;
+  font-weight:bold;
+}
+.answer.selected{
+  border-color:var(--blue);
+  background:#eef5ff;
+}
+.answer.good{
+  border-color:var(--green);
+  background:#e6f8ee;
+}
+.answer.bad{
+  border-color:var(--red);
+  background:#fff0f0;
+}
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  margin-top:23px;
+}
+.actions button{flex:1 1 auto}
+.notice{
+  padding:13px 15px;
+  border-radius:10px;
+  margin-top:15px;
+  font-weight:bold;
+}
+.success{
+  color:#08724a;
+  background:#e6f7ee;
+}
+.error{
+  color:#a72b38;
+  background:#fff0f1;
+}
+.solution{
+  background:#f2f7ff;
+  border:1px solid #cadcf5;
+  padding:16px;
+  border-radius:12px;
+  margin-top:17px;
+  line-height:1.9;
+}
+.solution h3{margin:0 0 9px}
+.solution .step{
+  background:white;
+  border:1px solid #e0e9f5;
+  padding:10px;
+  margin:7px 0;
+  border-radius:8px;
+  overflow-wrap:anywhere;
+}
+.scorebox{
+  background:#eaf3ff;
+  border:1px solid #c6daf8;
+  padding:15px;
+  border-radius:12px;
+  margin-top:17px;
+  font-weight:bold;
+}
+.scorebox strong{
+  font-size:27px;
+  color:#174da2;
+}
+.hidden{display:none!important}
+@media(max-width:800px){
+  .layout{grid-template-columns:1fr}
+  .panel{padding:15px}
+  .nav{grid-template-columns:repeat(10,1fr);gap:4px}
+  .nav button{font-size:12px;padding:7px 0}
+  #question{font-size:19px}
+  .answer{font-size:17px}
+  .actions button{flex:1 1 42%}
+  .formulas{display:none}
+  .formulas.show{display:block}
+}
+@media(max-width:420px){
+  header strong{font-size:17px}
+  .nav{grid-template-columns:repeat(5,1fr)}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
+  <small>lophocthayminh.onrender.com</small>
+</header>
+
+<section class="top">
+  <h1>TRẮC NGHIỆM LƯỢNG GIÁC VÀ TAM GIÁC</h1>
+  <div class="subtitle">
+    Toán 10 · 10 câu · 10 điểm · Đổi số tự động
+  </div>
+</section>
+
+<div class="layout">
+
+<aside class="panel">
+  <div class="stats">
+    <div class="stat">
+      <small>Đã trả lời</small>
+      <strong id="answered">0/10</strong>
+    </div>
+    <div class="stat">
+      <small>Điểm đã chấm</small>
+      <strong id="score">0/10</strong>
+    </div>
+    <div class="stat">
+      <small>Thời gian</small>
+      <strong id="clock">00:00</strong>
+    </div>
+    <div class="stat">
+      <small>Tổng câu</small>
+      <strong>10</strong>
+    </div>
+  </div>
+
+  <b>DANH SÁCH CÂU HỎI</b>
+  <div class="nav" id="navigation"></div>
+
+  <button class="primary wide" onclick="gradeAll()">
+    ✓ Chấm điểm toàn bài
+  </button>
+  <button class="wide" onclick="newAll()">
+    ↻ Đổi toàn bộ đề
+  </button>
+  <button class="wide" onclick="toggleFormula()">
+    📖 Hiện / Ẩn công thức
+  </button>
+  <button class="wide" onclick="fullScreen()">
+    ⛶ Toàn màn hình
+  </button>
+
+  <div class="formulas" id="formulas">
+    <b>BẢNG CÔNG THỨC</b>
+
+    <div class="formula">
+      <b>1. Góc bù nhau</b><br>
+      sin(180° − α) = sin α<br>
+      cos(180° − α) = −cos α<br>
+      tan(180° − α) = −tan α
+    </div>
+
+    <div class="formula">
+      <b>2. Định lý cos</b><br>
+      a² = b² + c² − 2bc·cos A
+    </div>
+
+    <div class="formula">
+      <b>3. Định lý sin</b><br>
+      a/sin A = b/sin B = c/sin C
+    </div>
+
+    <div class="formula">
+      <b>4. Diện tích tam giác</b><br>
+      S = bc·sin A / 2<br>
+      p = (a+b+c)/2<br>
+      S = √[p(p−a)(p−b)(p−c)]
+    </div>
+
+    <div class="formula">
+      <b>5. Lượng giác</b><br>
+      sin²α + cos²α = 1<br>
+      sin 30° = 1/2<br>
+      cos 30° = √3/2<br>
+      sin 45° = cos 45° = √2/2<br>
+      sin 60° = √3/2<br>
+      cos 60° = 1/2
+    </div>
+  </div>
+</aside>
+
+<main class="panel">
+  <div class="qhead">
+    <span class="tag" id="number"></span>
+    <span class="tag" id="topic"></span>
+  </div>
+
+  <h2 id="question"></h2>
+  <div class="subtitle">
+    Chọn một trong bốn phương án A, B, C, D.
+  </div>
+
+  <div id="answers" class="answers"></div>
+
+  <div class="actions">
+    <button onclick="previous()">← Câu trước</button>
+    <button onclick="next()">Câu tiếp →</button>
+    <button class="primary" onclick="checkAnswer()">
+      ✓ Kiểm tra
+    </button>
+    <button onclick="regenerate()">
+      ↻ Đổi số câu này
+    </button>
+    <button onclick="showSolution()">
+      📘 Xem / Ẩn lời giải
+    </button>
+  </div>
+
+  <div id="feedback"></div>
+  <div id="solution" class="hidden"></div>
+  <div id="result" class="hidden"></div>
+</main>
+
+</div>
+
+<script>
+"use strict";
+
+// ============================================
+// BIỂU DIỄN GIÁ TRỊ CHÍNH XÁC
+// n*sqrt(r)/d
+// Không dùng làm tròn số thập phân.
+// ============================================
+
+function gcd(a,b){
+  a=Math.abs(a);
+  b=Math.abs(b);
+  while(b){
+    let t=a%b;
+    a=b;
+    b=t;
+  }
+  return a||1;
+}
+
+function V(n,d=1,r=1){
+  if(!Number.isInteger(n) ||
+     !Number.isInteger(d) ||
+     !Number.isInteger(r) ||
+     d===0 || r<1){
+    throw Error("Giá trị không hợp lệ");
+  }
+
+  if(d<0){n=-n;d=-d}
+  if(n===0)return {n:0,d:1,r:1};
+
+  for(let k=2;k*k<=r;k++){
+    while(r%(k*k)===0){
+      r/=k*k;
+      n*=k;
+    }
+  }
+
+  let g=gcd(n,d);
+  return {n:n/g,d:d/g,r};
+}
+
+function neg(x){return V(-x.n,x.d,x.r)}
+function scale(x,k){return V(x.n*k,x.d,x.r)}
+function half(x){return V(x.n,x.d*2,x.r)}
+function multiply(x,y){
+  return V(x.n*y.n,x.d*y.d,x.r*y.r);
+}
+function divide(x,y){
+  if(y.n===0)throw Error("Chia cho 0");
+  return V(
+    x.n*y.d,
+    x.d*y.n*y.r,
+    x.r*y.r
+  );
+}
+function key(x){return `${x.n}/${x.d}/${x.r}`}
+
+function fmt(x){
+  if(x.n===0)return "0";
+  let sign=x.n<0?"−":"";
+  let n=Math.abs(x.n);
+  let s=x.r===1?
+    String(n):
+    (n===1?"":n)+"√"+x.r;
+  return sign+s+(x.d===1?"":"/"+x.d);
+}
+
+function pick(a){
+  return a[Math.floor(Math.random()*a.length)];
+}
+
+function shuffle(a){
+  a=[...a];
+  for(let i=a.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+const SIN={
+  30:V(1,2),
+  45:V(1,2,2),
+  60:V(1,2,3),
+  90:V(1)
+};
+const COS={
+  30:V(1,2,3),
+  45:V(1,2,2),
+  60:V(1,2)
+};
+const TAN={
+  30:V(1,3,3),
+  45:V(1),
+  60:V(1,1,3)
+};
+
+const extras=[
+  V(0),V(1),V(-1),V(2),V(-2),
+  V(1,2),V(-1,2),
+  V(1,2,2),V(-1,2,2),
+  V(1,2,3),V(-1,2,3),
+  V(1,3,3),V(-1,3,3),
+  V(1,1,3),V(-1,1,3),
+  V(3,4),V(-3,4),
+  V(3),V(4),V(5),V(6),
+  V(8),V(10),V(12),V(24)
+];
+
+// ============================================
+// TẠO 4 PHƯƠNG ÁN KHÔNG TRÙNG NHAU
+// ============================================
+
+function makeQuestion(topic,text,correct,wrong,solution){
+  const seen=new Set([key(correct)]);
+  const distractors=[];
+
+  for(const x of [...wrong,...extras]){
+    if(!x || seen.has(key(x)))continue;
+    seen.add(key(x));
+    distractors.push(x);
+    if(distractors.length===3)break;
+  }
+
+  let options=shuffle([
+    {value:correct,right:true},
+    ...distractors.map(x=>({
+      value:x,right:false
+    }))
+  ]);
+
+  return {
+    topic,text,correct,solution,options,
+    selected:null,
+    checked:false,
+    revealed:false
+  };
+}
+
+// ============================================
+// CÂU 1: COS(180° - α)
+// ============================================
+
+function question1(){
+  let a=pick([30,45,60]);
+  let ans=neg(COS[a]);
+
+  return makeQuestion(
+    "Góc 180° − α",
+    `Cho α = ${a}°. Tính cos(180° − α).`,
+    ans,
+    [COS[a],SIN[a],neg(SIN[a]),V(1)],
+    `cos(180° − α) = −cos α<br>
+     cos(180° − ${a}°)
+     = −cos ${a}°
+     = <b>${fmt(ans)}</b>`
+  );
+}
+
+// ============================================
+// CÂU 2: SIN(180° - α)
+// ============================================
+
+function question2(){
+  let a=pick([30,45,60]);
+  let ans=SIN[a];
+
+  return makeQuestion(
+    "Góc 180° − α",
+    `Cho α = ${a}°. Giá trị sin(180° − α) là`,
+    ans,
+    [neg(ans),COS[a],neg(COS[a]),V(0)],
+    `sin(180° − α) = sin α<br>
+     sin(180° − ${a}°)
+     = sin ${a}°
+     = <b>${fmt(ans)}</b>`
+  );
+}
+
+// ============================================
+// CÂU 3: TAN(180° - α)
+// ============================================
+
+function question3(){
+  let a=pick([30,45,60]);
+  let ans=neg(TAN[a]);
+
+  return makeQuestion(
+    "Hàm tan",
+    `Cho α = ${a}°. Tính tan(180° − α).`,
+    ans,
+    [TAN[a],COS[a],neg(COS[a]),V(0)],
+    `tan(180° − α) = −tan α<br>
+     tan(180° − ${a}°)
+     = −tan ${a}°
+     = <b>${fmt(ans)}</b>`
+  );
+}
+
+// ============================================
+// CÂU 4: GIÁ TRỊ LƯỢNG GIÁC
+// ============================================
+
+function question4(){
+  let [p,q]=pick([
+    [3,5],[4,5],[5,13],
+    [12,13],[8,17],[15,17]
+  ]);
+  let x=V(p,q);
+  let ans=neg(x);
+
+  return makeQuestion(
+    "Giá trị lượng giác",
+    `Góc α nhọn, biết cos α = ${fmt(x)}.
+     Tính cos(180° − α).`,
+    ans,
+    [x,V(-q,p),V(q,p),V(q-p,q)],
+    `Áp dụng công thức góc bù:<br>
+     cos(180° − α) = −cos α<br>
+     = −(${fmt(x)})
+     = <b>${fmt(ans)}</b>`
+  );
+}
+
+// ============================================
+// CÂU 5: ĐỊNH LÝ COS
+// ============================================
+
+function question5(){
+  let [c,b,a]=pick([
+    [5,7,8],[5,6,7],
+    [7,8,9],[4,5,7],
+    [6,8,10],[8,9,13],
+    [9,10,11]
+  ]);
+
+  let numerator=b*b+c*c-a*a;
+  let denominator=2*b*c;
+  let ans=V(numerator,denominator);
+
+  return makeQuestion(
+    "Định lý cos",
+    `Cho tam giác ABC có AB = ${c} cm,
+     AC = ${b} cm, BC = ${a} cm.
+     Tính cos A.`,
+    ans,
+    [
+      neg(ans),
+      V(a*a+b*b-c*c,denominator),
+      V(a*a+c*c-b*b,denominator),
+      V(b*b+c*c+a*a,denominator)
+    ],
+    `Theo định lý cos:<br>
+     BC² = AB² + AC² − 2·AB·AC·cos A<br>
+     cos A = (AB² + AC² − BC²) /
+     (2·AB·AC)<br>
+     = (${c}² + ${b}² − ${a}²) /
+     (2·${c}·${b})<br>
+     = <b>${fmt(ans)}</b>`
+  );
+}
+
+// ============================================
+// CÂU 6: ĐỊNH LÝ SIN - TÍNH CẠNH
+// ============================================
+
+function question6(){
+  let [A,B]=pick([
+    [30,60],[30,90],[45,90],
+    [60,30],[60,90],
+    [90,30],[90,60]
+  ]);
+
+  let a=pick([4,6,8,10,12]);
+  let ans=scale(divide(SIN[B],SIN[A]),a);
+
+  return makeQuestion(
+    "Định lý sin",
+    `Tam giác ABC có BC = ${a} cm,
+     góc A = ${A}° và góc B = ${B}°.
+     Tính cạnh CA.`,
+    ans,
+    [
+      V(a),
+      scale(ans,2),
+      half(ans),
+      scale(divide(SIN[A],SIN[B]),a)
+    ],
+    `Theo định lý sin:<br>
+     BC/sin A = CA/sin B<br>
+     CA = BC·sin B/sin A<br>
+     = ${a}·sin ${B}°/sin ${A}°<br>
+     = ${a}·(${fmt(SIN[B])})/
+     (${fmt(SIN[A])})<br>
+     = <b>${fmt(ans)} cm</b>`
+  );
+}
+
+// ============================================
+// CÂU 7: ĐỊNH LÝ SIN - TÍNH SIN B
+// ============================================
+
+function question7(){
+  let A=pick([30,45,60]);
+  let a=pick([8,10,12,15,18,20]);
+  let b=pick(
+    [3,4,5,6,7,8,9,10,12].filter(x=>x<a)
+  );
+
+  let ans=multiply(V(b,a),SIN[A]);
+
+  return makeQuestion(
+    "Định lý sin",
+    `Trong tam giác ABC, biết BC = ${a} cm,
+     CA = ${b} cm và góc A = ${A}°.
+     Tính sin B.`,
+    ans,
+    [
+      V(b,a),V(a,b),
+      scale(ans,2),
+      half(ans),
+      SIN[A]
+    ],
+    `Theo định lý sin:<br>
+     sin B / CA = sin A / BC<br>
+     sin B = CA·sin A/BC<br>
+     = ${b}·sin ${A}°/${a}<br>
+     = <b>${fmt(ans)}</b>`
+  );
+}
+
+// ============================================
+// CÂU 8: DIỆN TÍCH QUA HAI CẠNH VÀ GÓC
+// ============================================
+
+function question8(){
+  let A=pick([30,45,60,90,120,135,150]);
+  let b=pick([4,6,8,10,12]);
+  let c=pick([4,6,8,10,12]);
+
+  let sinA={
+    30:SIN[30],
+    45:SIN[45],
+    60:SIN[60],
+    90:SIN[90],
+    120:SIN[60],
+    135:SIN[45],
+    150:SIN[30]
+  }[A];
+
+  let ans=half(scale(sinA,b*c));
+
+  return makeQuestion(
+    "Diện tích tam giác",
+    `Tam giác ABC có AB = ${c} cm,
+     AC = ${b} cm và góc A = ${A}°.
+     Tính diện tích tam giác ABC.`,
+    ans,
+    [
+      scale(ans,2),
+      half(ans),
+      V(b*c),
+      V(b*c,2)
+    ],
+    `S = 1/2·AB·AC·sin A<br>
+     = 1/2·${c}·${b}·sin ${A}°<br>
+     = 1/2·${c}·${b}·(${fmt(sinA)})<br>
+     = <b>${fmt(ans)} cm²</b>`
+  );
+}
+
+// ============================================
+// CÂU 9: CÔNG THỨC HERON
+// ============================================
+
+function question9(){
+  let [a,b,c,S]=pick([
+    [3,4,5,6],
+    [5,5,6,12],
+    [5,12,13,30],
+    [13,14,15,84],
+    [6,8,10,24],
+    [7,15,20,42],
+    [9,10,17,36],
+    [10,13,13,60]
+  ]);
+
+  let p=(a+b+c)/2;
+  let ans=V(S);
+
+  return makeQuestion(
+    "Công thức Heron",
+    `Một tam giác có ba cạnh lần lượt là
+     ${a} cm, ${b} cm và ${c} cm.
+     Tính diện tích tam giác.`,
+    ans,
+    [
+      V(2*S),
+      V(S,2),
+      V(a*b,2),
+      V(S+6)
+    ],
+    `Nửa chu vi:<br>
+     p = (${a}+${b}+${c})/2
+     = ${p} cm<br>
+     Công thức Heron:<br>
+     S = √[p(p−a)(p−b)(p−c)]<br>
+     = √[${p}·${p-a}·${p-b}·${p-c}]<br>
+     = <b>${S} cm²</b>`
+  );
+}
+
+// ============================================
+// CÂU 10: CÁC GÓC LƯỢNG GIÁC ĐẶC BIỆT
+// ============================================
+
+function question10(){
+  let [fn,angle,ans,formula]=pick([
+    ["cos",120,V(-1,2),
+     "cos(180°−60°) = −cos 60°"],
+    ["sin",150,V(1,2),
+     "sin(180°−30°) = sin 30°"],
+    ["tan",135,V(-1),
+     "tan(180°−45°) = −tan 45°"],
+    ["sin",225,V(-1,2,2),
+     "sin(180°+45°) = −sin 45°"],
+    ["cos",240,V(-1,2),
+     "cos(180°+60°) = −cos 60°"],
+    ["sin",300,V(-1,2,3),
+     "sin(360°−60°) = −sin 60°"],
+    ["cos",315,V(1,2,2),
+     "cos(360°−45°) = cos 45°"],
+    ["cos",330,V(1,2,3),
+     "cos(360°−30°) = cos 30°"]
+  ]);
+
+  return makeQuestion(
+    "Góc đặc biệt",
+    `Không dùng máy tính, hãy tính
+     ${fn} ${angle}°.`,
+    ans,
+    [
+      neg(ans),V(1,2),
+      V(-1,2),V(1),
+      V(-1),V(0),
+      V(1,2,3)
+    ],
+    `Quy về góc đặc biệt và xét dấu:<br>
+     ${formula}<br>
+     Kết quả: <b>${fmt(ans)}</b>`
+  );
+}
+
+// ============================================
+// ĐIỀU KHIỂN BÀI LUYỆN
+// ============================================
+
+const generators=[
+  question1,question2,question3,question4,
+  question5,question6,question7,question8,
+  question9,question10
+];
+
+let bank=generators.map(fn=>fn());
+let current=0;
+let startTime=Date.now();
+
+const $=id=>document.getElementById(id);
+
+function isCorrect(q){
+  return q.selected!==null &&
+         q.options[q.selected].right;
+}
+
+function render(){
+  const q=bank[current];
+
+  $("number").textContent=
+    `CÂU ${current+1}/10 · 1 ĐIỂM`;
+  $("topic").textContent=q.topic;
+  $("question").textContent=q.text;
+
+  $("answers").innerHTML=q.options.map((o,i)=>{
+    let cls="answer";
+    if(q.selected===i)cls+=" selected";
+
+    if(q.checked && q.selected===i){
+      cls+=o.right?" good":" bad";
+    }
+    if(q.revealed && o.right){
+      cls+=" good";
+    }
+
+    return `
+      <button class="${cls}"
+              onclick="choose(${i})">
+        <span class="letter">${"ABCD"[i]}</span>
+        <span>${fmt(o.value)}</span>
+      </button>
+    `;
+  }).join("");
+
+  let message="";
+
+  if(q.checked){
+    if(q.selected===null){
+      message='<div class="notice error">Chưa chọn đáp án. Câu này được 0 điểm.</div>';
+    }else if(isCorrect(q)){
+      message='<div class="notice success">✓ Chính xác! Đạt 1/1 điểm.</div>';
+    }else{
+      message='<div class="notice error">✗ Chưa chính xác. Đạt 0/1 điểm.</div>';
+    }
+  }
+
+  $("feedback").innerHTML=message;
+
+  if(q.revealed){
+    let rightIndex=q.options.findIndex(x=>x.right);
+    $("solution").className="solution";
+    $("solution").innerHTML=`
+      <h3>📘 LỜI GIẢI CHI TIẾT</h3>
+      <div class="step">${q.solution}</div>
+      <p>
+        <b>Đáp án đúng:
+        ${"ABCD"[rightIndex]}.
+        ${fmt(q.correct)}</b>
+      </p>
+    `;
+  }else{
+    $("solution").className="hidden";
+    $("solution").innerHTML="";
+  }
+
+  updateNavigation();
+  updateStats();
+}
+
+function updateNavigation(){
+  $("navigation").innerHTML=bank.map((q,i)=>{
+    let cls="";
+
+    if(i===current)cls="active";
+    else if(q.checked){
+      cls=isCorrect(q)?"right":"wrong";
+    }else if(q.selected!==null){
+      cls="done";
+    }
+
+    return `
+      <button class="${cls}"
+              onclick="go(${i})">
+        ${i+1}
+      </button>
+    `;
+  }).join("");
+}
+
+function updateStats(){
+  let answered=bank.filter(
+    q=>q.selected!==null
+  ).length;
+
+  let points=bank.filter(
+    q=>q.checked && isCorrect(q)
+  ).length;
+
+  $("answered").textContent=answered+"/10";
+  $("score").textContent=points+"/10";
+}
+
+function hideResult(){
+  $("result").className="hidden";
+}
+
+function choose(i){
+  let q=bank[current];
+  q.selected=i;
+  q.checked=false;
+  q.revealed=false;
+  hideResult();
+  render();
+}
+
+function go(i){
+  current=i;
+  render();
+
+  if(window.innerWidth<=800){
+    document.querySelector("main")
+      .scrollIntoView({
+        behavior:"smooth",
+        block:"start"
+      });
+  }
+}
+
+function previous(){
+  go(Math.max(0,current-1));
+}
+
+function next(){
+  go((current+1)%10);
+}
+
+function checkAnswer(){
+  bank[current].checked=true;
+  render();
+}
+
+function showSolution(){
+  let q=bank[current];
+  q.revealed=!q.revealed;
+  render();
+}
+
+function regenerate(){
+  const old=bank[current];
+  let q=generators[current]();
+
+  for(let i=0;i<30;i++){
+    if(q.text!==old.text)break;
+    q=generators[current]();
+  }
+
+  bank[current]=q;
+  hideResult();
+  render();
+}
+
+function newAll(){
+  bank=generators.map(fn=>fn());
+  current=0;
+  startTime=Date.now();
+  hideResult();
+  render();
+}
+
+function gradeAll(){
+  bank.forEach(q=>q.checked=true);
+
+  let points=bank.filter(isCorrect).length;
+  let blank=bank.filter(
+    q=>q.selected===null
+  ).length;
+  let wrong=10-points-blank;
+
+  $("result").className="scorebox";
+  $("result").innerHTML=`
+    KẾT QUẢ BÀI LÀM:
+    <strong>${points}/10 điểm</strong><br>
+    ✓ Đúng: ${points} câu<br>
+    ✗ Sai: ${wrong} câu<br>
+    ○ Chưa làm: ${blank} câu
+    <p style="font-size:13px;font-weight:normal">
+      Chọn từng câu để kiểm tra và xem lời giải.
+    </p>
+  `;
+
+  render();
+}
+
+function toggleFormula(){
+  $("formulas").classList.toggle("show");
+}
+
+async function fullScreen(){
+  try{
+    if(document.fullscreenElement){
+      await document.exitFullscreen();
+    }else{
+      await document.documentElement
+        .requestFullscreen();
+    }
+  }catch(e){
+    alert("Trình duyệt không hỗ trợ toàn màn hình.");
+  }
+}
+
+function updateClock(){
+  let seconds=Math.floor(
+    (Date.now()-startTime)/1000
+  );
+
+  let m=String(
+    Math.floor(seconds/60)
+  ).padStart(2,"0");
+
+  let s=String(
+    seconds%60
+  ).padStart(2,"0");
+
+  $("clock").textContent=m+":"+s;
+}
+
+setInterval(updateClock,1000);
+updateClock();
+render();
+
+</script>
+</body>
+</html>
