@@ -824,10 +824,15 @@
       "username": "danh0608",
       "name": "Phạm Tất Danh",
       "phone": "0344343623",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "e3d7595bd6b2f4f2e2eff31c06784083f46aaea8394d7970a932d70f78775c2f",
+      "password_enc": "v1:vzzBF0Hk_YHS",
+      "updated_at": "2026-10-21 04:42:51",
+      "package": {
         "kind": "mon1",
         "grades": [
           "12"
@@ -836,10 +841,16 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "e3d7595bd6b2f4f2e2eff31c06784083f46aaea8394d7970a932d70f78775c2f",
-      "password_enc": "v1:vzzBF0Hk_YHS",
-      "updated_at": "2026-10-21 04:42:22"
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-21 04:42:51",
+      "vip_expires_at": "2026-11-21 04:42:51"
     }
   ]
 }
