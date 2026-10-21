@@ -1,0 +1,1165 @@
+<!--hp-title:w7RuIHThuq1wIGNoxrDGoW5nIDEgbeG7qWMgY8ahIGLhuqNu-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ôn tập Vật lí 12</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --navy:#102d4d;
+  --blue:#176d91;
+  --bg:#eef3f8;
+  --text:#18314a;
+  --border:#dce5ef;
+}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:16px/1.65 system-ui,-apple-system,Arial,sans-serif;
+}
+header{background:var(--navy);color:white;padding:18px}
+header>div{max-width:1050px;margin:auto}
+header small{display:block;color:#c1d2e5}
+main{max-width:1050px;padding:20px;margin:auto}
+h1{font-size:28px;margin:8px 0}
+h2{font-size:22px;color:#164d77}
+button{
+  background:var(--blue);
+  color:white;
+  border:0;
+  border-radius:10px;
+  padding:12px 17px;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+}
+button:disabled{opacity:.5;cursor:default}
+button.secondary{background:#e4edf5;color:#193c5b}
+nav{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}
+nav a{
+  text-decoration:none;
+  background:white;
+  color:#164d77;
+  padding:9px 15px;
+  border:1px solid var(--border);
+  border-radius:9px;
+}
+.card{
+  background:white;
+  border:1px solid var(--border);
+  border-radius:15px;
+  padding:20px;
+  margin:14px 0;
+}
+.note{
+  background:#e0edf7;
+  padding:14px 17px;
+  border-radius:12px;
+}
+.muted{color:#61778b}
+.option{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  border:1px solid var(--border);
+  padding:10px;
+  margin:8px 0;
+  border-radius:9px;
+  cursor:pointer;
+}
+.option:has(input:checked){
+  background:#e9f5fc;
+  border-color:#2385af;
+}
+input[type=radio]{
+  accent-color:#177da3;
+  width:18px;
+  height:18px;
+  flex-shrink:0;
+  margin-top:5px;
+}
+input[type=text]{
+  padding:12px;
+  font-size:18px;
+  border:1px solid #aebfce;
+  border-radius:9px;
+  width:260px;
+  max-width:100%;
+}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+.statement{
+  background:#f7f9fc;
+  border:1px solid var(--border);
+  padding:12px;
+  border-radius:10px;
+  margin:10px 0;
+}
+.choices{display:flex;gap:25px;margin-top:8px}
+.choices label{cursor:pointer}
+.ex{
+  background:#edf8f3;
+  border-left:4px solid #29876b;
+  padding:15px;
+  border-radius:0 10px 10px 0;
+  margin-top:15px;
+}
+.right{color:#11714f}
+.wrong{color:#b12e3e}
+.score{font-size:34px;font-weight:800;color:#155e83}
+svg{display:block;max-width:540px;width:100%;margin:15px auto}
+section,#result{scroll-margin-top:15px}
+.tools{
+  position:sticky;
+  bottom:0;
+  z-index:10;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  background:#fffffff2;
+  border:1px solid var(--border);
+  border-radius:12px 12px 0 0;
+  padding:12px;
+}
+.progress{
+  height:7px;
+  background:#dce6ef;
+  border-radius:10px;
+  overflow:hidden;
+}
+.progress>div{
+  background:#218bab;
+  height:100%;
+  width:0;
+  transition:width .2s;
+}
+p{margin:10px 0}
+button:focus,input:focus,a:focus{outline:3px solid #ebbc62}
+@media(max-width:600px){
+  main{padding:12px}
+  header{padding:14px}
+  .card{padding:14px}
+  h1{font-size:23px}
+  h2{font-size:20px}
+  .tools button{flex:1}
+}
+@media print{
+  nav,.tools{display:none}
+  body{background:white}
+  .card{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <b>Lớp Học Thầy Minh · Zalo 0946111107</b>
+    <small>lophocthayminh.onrender.com</small>
+  </div>
+</header>
+
+<main>
+  <h1>Ôn tập Vật lí 12</h1>
+
+  <p class="muted">
+    18 câu trắc nghiệm · 4 câu đúng–sai · 6 câu trả lời ngắn
+  </p>
+
+  <div class="note">
+    <b>Hướng dẫn:</b>
+    Làm đủ ba phần rồi bấm <b>Nộp bài & chấm điểm</b>.
+    Đáp án và lời giải chỉ xuất hiện sau khi nộp.
+    Bấm <b>Làm lượt mới · đổi số</b> để luyện tiếp.
+    <br>
+    <b>Thang điểm:</b>
+    Phần I: 0,25 điểm/câu.
+    Phần II: đúng 1/2/3/4 ý được 0,1/0,25/0,5/1 điểm.
+    Phần III: 0,25 điểm/câu.
+  </div>
+
+  <nav>
+    <a href="#part0">Phần I</a>
+    <a href="#part1">Phần II</a>
+    <a href="#part2">Phần III</a>
+    <button id="fullscreen" type="button">Toàn màn hình</button>
+  </nav>
+
+  <div id="result" aria-live="polite"></div>
+  <div id="exam"></div>
+
+  <div class="tools">
+    <div style="flex:1;min-width:180px">
+      <div id="status"></div>
+      <small id="clock" class="muted"></small>
+      <div class="progress"><div id="bar"></div></div>
+    </div>
+    <button id="submit" type="button">Nộp bài & chấm điểm</button>
+    <button id="new" type="button" disabled>Làm lượt mới · đổi số</button>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+const $=s=>document.querySelector(s);
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+function shuffle(array){
+  const a=[...array];
+  for(let i=a.length-1;i>0;i--){
+    const j=rand(0,i);
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",
+    '"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function fmt(x){
+  return String(Number(x.toFixed(8))).replace(".",",");
+}
+
+function round(x,n){
+  return Number(x.toFixed(n));
+}
+
+function gcd(a,b){
+  a=Math.abs(a);
+  b=Math.abs(b);
+  while(b){[a,b]=[b,a%b]}
+  return a||1;
+}
+
+function fraction(a,b){
+  const d=gcd(a,b);
+  a/=d;
+  b/=d;
+  return b===1?String(a):`${a}/${b}`;
+}
+
+const clone=x=>JSON.parse(JSON.stringify(x));
+const st=(text,truth,ex)=>({text,truth,ex});
+
+let turn=1;
+let submitted=false;
+let started=Date.now();
+let finished=0;
+let parts=[];
+let previousSignature="";
+
+/* Đồ thị nhiệt độ – thời gian của nước. */
+function waterGraph(t0,tb,tc){
+  const x=t=>60+370*t/tc;
+  const y=t=>205-1.6*t;
+
+  return `
+  <svg viewBox="0 0 510 265" role="img"
+    aria-label="A: 0 phút, ${t0} độ C; B: ${tb} phút, 100 độ C; C: ${tc} phút, 100 độ C">
+    <path d="M60 18V205H475"
+      fill="none" stroke="#65778a" stroke-width="2"/>
+    <text x="6" y="16">t (°C)</text>
+    <text x="385" y="255">τ (phút)</text>
+    <path d="M60 45H430 M${x(tb)} 45V205 M430 45V205"
+      fill="none" stroke="#b3c2cf" stroke-dasharray="5 4"/>
+    <path d="M60 ${y(t0)}L${x(tb)} 45H430"
+      fill="none" stroke="#11879f" stroke-width="4"/>
+    <g fill="#18314a" font-size="15">
+      <text x="20" y="50">100</text>
+      <text x="24" y="${y(t0)+5}">${t0}</text>
+      <text x="51" y="228">0</text>
+      <text x="${x(tb)-5}" y="228">${tb}</text>
+      <text x="424" y="228">${tc}</text>
+      <text x="68" y="${y(t0)-8}">A</text>
+      <text x="${x(tb)+4}" y="35">B</text>
+      <text x="438" y="40">C</text>
+    </g>
+  </svg>`;
+}
+
+/* Đồ thị đun nóng – nóng chảy – đun chất lỏng. */
+function phaseGraph(tb,tc,td,cold,hot){
+  const ymax=Math.max(cold,hot);
+  const x=t=>65+365*t/td;
+  const y=t=>150-95*t/ymax;
+
+  return `
+  <svg viewBox="0 0 510 310" role="img"
+    aria-label="A: 0 phút, âm ${cold} độ C; B: ${tb} phút, 0 độ C; C: ${tc} phút, 0 độ C; D: ${td} phút, ${hot} độ C">
+    <path d="M55 20V260H475"
+      fill="none" stroke="#65778a" stroke-width="2"/>
+    <text x="6" y="16">t (°C)</text>
+    <text x="390" y="300">τ (phút)</text>
+    <path d="M65 ${y(-cold)}L${x(tb)} 150H${x(tc)}L430 ${y(hot)}"
+      fill="none" stroke="#11879f" stroke-width="4"/>
+    <g fill="#18314a" font-size="14">
+      ${[
+        [0,-cold,"A"],
+        [tb,0,"B"],
+        [tc,0,"C"],
+        [td,hot,"D"]
+      ].map(([t,v,l])=>`
+        <path d="M${x(t)} ${y(v)}V260"
+          stroke="#b8c7d3" stroke-dasharray="4 4"/>
+        <text x="${x(t)-5}" y="282">${t}</text>
+        <text x="${x(t)+6}" y="${y(v)-8}">${l}</text>
+      `).join("")}
+      <text x="14" y="${y(-cold)+5}">−${cold}</text>
+      <text x="28" y="155">0</text>
+      <text x="14" y="${y(hot)+5}">${fmt(hot)}</text>
+    </g>
+  </svg>`;
+}
+
+/* Đồ thị p–V có tỉ lệ tuyến tính. */
+function pvGraph(pa,pb,va,vb){
+  const x=v=>60+365*v/(vb+1);
+  const y=p=>220-170*p/(pb+0.5);
+
+  return `
+  <svg viewBox="0 0 510 285" role="img"
+    aria-label="A: ${va} lít, ${pa} nhân 10 mũ 5 Pa; B: ${vb} lít, ${pb} nhân 10 mũ 5 Pa">
+    <path d="M60 24V220H475"
+      fill="none" stroke="#65778a" stroke-width="2"/>
+    <text x="5" y="17">p (10⁵ Pa)</text>
+    <text x="407" y="272">V (lít)</text>
+    <path d="M${x(va)} ${y(pa)}L${x(vb)} ${y(pb)}"
+      fill="none" stroke="#11879f" stroke-width="4"/>
+    <g fill="#18314a" font-size="15">
+      <text x="48" y="242">0</text>
+      ${[[pa,va,"A"],[pb,vb,"B"]].map(([p,v,l])=>`
+        <path d="M60 ${y(p)}H${x(v)}V220"
+          fill="none" stroke="#b8c7d3" stroke-dasharray="4 4"/>
+        <text x="30" y="${y(p)+5}">${fmt(p)}</text>
+        <text x="${x(v)-5}" y="242">${v}</text>
+        <text x="${x(v)+7}" y="${y(p)-9}">${l}</text>
+      `).join("")}
+    </g>
+  </svg>`;
+}
+
+/* Kiến thức dùng chung. */
+const THEORY=[
+  {
+    q:"Theo nguyên lí I nhiệt động lực học ΔU = Q + A, khi hệ nhận công và truyền nhiệt ra môi trường thì:",
+    opts:["Q < 0; A > 0.","Q > 0; A > 0.","Q > 0; A < 0.","Q < 0; A < 0."],
+    a:0,
+    e:"Hệ nhận công nên A > 0; hệ truyền nhiệt ra môi trường nên Q < 0."
+  },
+  {
+    q:"Chọn phát biểu sai về sự chuyển thể của cùng một chất.",
+    opts:[
+      "Kích thước nguyên tử thay đổi rõ rệt khi chuyển thể.",
+      "Khoảng cách giữa các phân tử có thể thay đổi.",
+      "Trật tự sắp xếp các phân tử có thể thay đổi.",
+      "Khối lượng riêng của chất có thể thay đổi."
+    ],
+    a:0,
+    e:"Chuyển thể làm thay đổi sự sắp xếp, khoảng cách và chuyển động của các hạt; không làm thay đổi kích thước nguyên tử."
+  },
+  {
+    q:"Ý nào không đúng với mô hình động học phân tử?",
+    opts:[
+      "Phân tử chuyển động càng nhanh thì thể tích của vật luôn càng lớn.",
+      "Các phân tử chuyển động không ngừng.",
+      "Giữa các phân tử có lực tương tác.",
+      "Chất được cấu tạo từ các hạt riêng biệt."
+    ],
+    a:0,
+    e:"Không thể suy ra thể tích luôn tăng từ việc chuyển động nhiệt nhanh hơn. Thể tích còn phụ thuộc điều kiện và trạng thái của vật."
+  },
+  {
+    q:"Lực tương tác giữa các phân tử:",
+    opts:[
+      "Gồm cả lực hút và lực đẩy.",
+      "Chỉ là lực hút.",
+      "Chỉ là lực đẩy.",
+      "Không tồn tại ở chất rắn."
+    ],
+    a:0,
+    e:"Tương tác phân tử gồm lực hút và lực đẩy; độ lớn của chúng phụ thuộc khoảng cách giữa các phân tử."
+  },
+  {
+    q:"Theo nguyên lí I nhiệt động lực học, độ biến thiên nội năng bằng:",
+    opts:[
+      "Tổng công và nhiệt lượng hệ nhận, xét theo quy ước dấu.",
+      "Tích công và nhiệt lượng hệ nhận.",
+      "Thương công và nhiệt lượng hệ nhận.",
+      "Luôn bằng nhiệt lượng hệ nhận."
+    ],
+    a:0,
+    e:"Nguyên lí I: ΔU = Q + A. Q, A phải được lấy đúng dấu."
+  },
+  {
+    q:"Với Q là nhiệt lượng hóa hơi hoàn toàn khối lượng m, nhiệt hóa hơi riêng L bằng:",
+    opts:["Q/m.","Qm.","m/Q.","Q/(mΔt)."],
+    a:0,
+    e:"Từ Q = mL suy ra L = Q/m. Đơn vị: J/kg."
+  },
+  {
+    q:"Nhiệt lượng để chất lỏng hóa hơi hoàn toàn ở nhiệt độ không đổi phụ thuộc:",
+    opts:[
+      "Khối lượng và bản chất chất lỏng.",
+      "Chỉ khối lượng.",
+      "Chỉ bản chất chất lỏng.",
+      "Không phụ thuộc khối lượng hay bản chất."
+    ],
+    a:0,
+    e:"Q = mL. Nhiệt lượng phụ thuộc khối lượng m và nhiệt hóa hơi riêng L."
+  },
+  {
+    q:"Thả sắt nóng vào nước lạnh trong bình cách nhiệt. Bỏ qua nhiệt dung bình. Khi cân bằng nhiệt:",
+    opts:[
+      "Nhiệt lượng nước thu bằng nhiệt lượng sắt tỏa.",
+      "Độ tăng nhiệt độ của nước luôn bằng độ giảm nhiệt độ của sắt.",
+      "Nhiệt dung riêng của sắt luôn lớn hơn của nước.",
+      "Nhiệt độ cuối thấp hơn nhiệt độ ban đầu của nước."
+    ],
+    a:0,
+    e:"Hệ cách nhiệt: Q thu = Q tỏa. Độ thay đổi nhiệt độ còn phụ thuộc khối lượng và nhiệt dung riêng."
+  },
+  {
+    q:"Lực tương tác phân tử ở chất rắn thường mạnh vì:",
+    opts:[
+      "Khoảng cách giữa các phân tử nhỏ.",
+      "Khoảng cách giữa các phân tử rất lớn.",
+      "Các phân tử hoàn toàn đứng yên.",
+      "Chất rắn không có chuyển động nhiệt."
+    ],
+    a:0,
+    e:"Các phân tử chất rắn nằm gần nhau, tương tác thường mạnh và dao động quanh vị trí cân bằng."
+  },
+  {
+    q:"Nước đá tinh khiết đang tan ở áp suất khí quyển tiêu chuẩn có nhiệt độ:",
+    opts:["0 °C.","100 °C.","0 K.","273 °C."],
+    a:0,
+    e:"Ở áp suất khí quyển tiêu chuẩn, nước đá tinh khiết nóng chảy ở 0 °C."
+  },
+  {
+    q:"Nhiệt kế rượu etylic không thích hợp để đo nhiệt độ nước sôi ở áp suất chuẩn vì:",
+    opts:[
+      "Rượu etylic sôi ở nhiệt độ thấp hơn 100 °C.",
+      "Rượu etylic không nở vì nhiệt.",
+      "Nước sôi có nhiệt độ 0 °C.",
+      "Rượu etylic luôn đông đặc ở nhiệt độ phòng."
+    ],
+    a:0,
+    e:"Rượu etylic sôi khoảng 78 °C ở áp suất chuẩn, thấp hơn nhiệt độ sôi của nước."
+  },
+  {
+    q:"Truyền nhiệt để làm tan một phần nước đá trong hỗn hợp nước và đá ở 0 °C, áp suất chuẩn. Khi vẫn còn cả nước và đá:",
+    opts:[
+      "Nội năng tăng nhưng nhiệt độ không đổi.",
+      "Nội năng và nhiệt độ đều không đổi.",
+      "Nhiệt độ tăng nhưng nội năng không đổi.",
+      "Nội năng giảm."
+    ],
+    a:0,
+    e:"Nhiệt cung cấp dùng cho sự nóng chảy, làm tăng nội năng; nhiệt độ giữ ở 0 °C khi vẫn còn hai pha."
+  },
+  {
+    q:"Nhiệt dung riêng của một chất là nhiệt lượng cần để:",
+    opts:[
+      "1 kg chất tăng nhiệt độ thêm 1 K.",
+      "Mọi khối lượng chất tăng nhiệt độ thêm 1 K.",
+      "1 kg chất nóng chảy hoàn toàn.",
+      "1 kg chất hóa hơi hoàn toàn."
+    ],
+    a:0,
+    e:"Nhiệt dung riêng c ứng với 1 kg chất tăng nhiệt độ thêm 1 K. Công thức: Q = mcΔt."
+  }
+];
+
+function mcNumber(q,answer,wrong,e,unit=""){
+  const values=[answer,...wrong];
+  return {
+    q,
+    opts:values.map(x=>`${fmt(x)}${unit?" "+unit:""}`),
+    a:0,
+    e
+  };
+}
+
+/* Sinh các câu tính toán trắc nghiệm. */
+function numericalMC(){
+  const out=[];
+
+  const lam=rand(55,80)*1000;
+  out.push({
+    q:`Một chất có nhiệt nóng chảy riêng λ = ${lam} J/kg. Phát biểu nào đúng?`,
+    opts:[
+      `1 kg chất cần thu ${lam} J để nóng chảy hoàn toàn ở nhiệt độ nóng chảy.`,
+      `Mọi khối lượng chất đều cần ${lam} J để nóng chảy.`,
+      `1 kg chất tỏa ${lam} J khi nóng chảy.`,
+      "Chất nóng chảy không cần thu nhiệt."
+    ],
+    a:0,
+    e:"Theo định nghĩa: Q = mλ. Với m = 1 kg, nhiệt lượng cần thu bằng λ."
+  });
+
+  const a=rand(25,65),q=rand(5,20),u=a-q;
+  out.push(mcNumber(
+    `Nén khí bằng công ${a} J; khí tỏa nhiệt ${q} J. Độ biến thiên nội năng bằng bao nhiêu?`,
+    u,[a+q,-u,-a-q],
+    `A = ${a} J; Q = −${q} J. ΔU = Q + A = ${a} − ${q} = ${u} J.`,
+    "J"
+  ));
+
+  const mh=rand(2,4)/10,ml=rand(2,4)/10;
+  const cap=rand(1,2)*420,tl=rand(15,25);
+  const rise=rand(10,16);
+  const th=tl+rise*(mh+ml+cap/4200)/mh;
+  const te=tl+rise;
+
+  out.push(mcNumber(
+    `Trộn ${fmt(mh)} kg nước ở ${fmt(th)} °C với ${fmt(ml)} kg nước ở ${tl} °C trong bình có nhiệt dung ${cap} J/K. Ban đầu bình ở ${tl} °C. Cho c nước = 4200 J/(kg·K), bỏ qua thất thoát nhiệt. Nhiệt độ cân bằng bằng bao nhiêu?`,
+    te,[te+4,te+10,tl],
+    `Cân bằng nhiệt: m nóng·c·(t nóng − t) = (m lạnh·c + C bình)(t − t lạnh). Thay số suy ra t = ${te} °C.`,
+    "°C"
+  ));
+
+  const p=rand(1,4)*100000,dv=rand(1,5);
+  const heat=rand(8,18)*100,w=p*dv/1000;
+  const du=heat-w;
+
+  out.push(mcNumber(
+    `Khí nhận nhiệt ${heat} J, nở đẳng áp ở ${p} Pa, thể tích tăng ${dv} lít. Độ biến thiên nội năng bằng bao nhiêu?`,
+    du,[heat+w,heat,-heat-w],
+    `ΔV = ${dv}·10⁻³ m³. Công khí thực hiện W = pΔV = ${w} J. Công khí nhận A = −W. ΔU = Q − W = ${du} J.`,
+    "J"
+  ));
+
+  let mi,mw,hot,energy;
+  do{
+    mi=rand(1,3)/10;
+    mw=rand(6,10)/10;
+    hot=rand(35,55);
+    energy=mw*4200*hot-mi*334000;
+  }while(energy<=0);
+
+  const eq=energy/((mi+mw)*4200);
+  const near=round(eq,1);
+
+  out.push(mcNumber(
+    `Thả ${fmt(mi)} kg đá ở 0 °C vào ${fmt(mw)} kg nước ở ${hot} °C trong bình cách nhiệt. Cho c nước = 4200 J/(kg·K), λ = 334000 J/kg. Bỏ qua nhiệt dung bình. Nhiệt độ cân bằng gần nhất bằng bao nhiêu?`,
+    near,[near+5,near+10,0],
+    `Nước nóng về 0 °C tỏa ${fmt(mw*4200*hot)} J, lớn hơn nhiệt làm tan đá ${fmt(mi*334000)} J. Đá tan hết. t = [${fmt(mw)}·4200·${hot} − ${fmt(mi)}·334000]/[(${fmt(mi)} + ${fmt(mw)})·4200] ≈ ${fmt(near)} °C.`,
+    "°C"
+  ));
+
+  let water,mix,drop,end,ice;
+  do{
+    water=rand(20,35)*10;
+    mix=rand(20,30);
+    drop=rand(4,6);
+    end=rand(8,12);
+    ice=(water*4.2*drop-mix*4.2*end)/330;
+  }while(ice<=0 || ice>mix-3);
+
+  const liquid=round(mix-ice,1);
+  out.push(mcNumber(
+    `Thả ${mix} g hỗn hợp nước và đá ở 0 °C vào ${water} g nước ở ${end+drop} °C. Cân bằng ở ${end} °C. Cho c = 4200 J/(kg·K), λ = 330000 J/kg. Bỏ qua nhiệt dung bình và thất thoát nhiệt. Khối lượng nước có sẵn trong hỗn hợp gần nhất bằng bao nhiêu?`,
+    liquid,[round(liquid+2,1),round(liquid+4,1),round(liquid-2,1)],
+    `Nước nóng tỏa Q₁ = ${water/1000}·4200·${drop} = ${fmt(water*4.2*drop)} J. Nhiệt làm nóng hỗn hợp sau khi tan Q₂ = ${mix/1000}·4200·${end} = ${fmt(mix*4.2*end)} J. Khối lượng đá tính bằng gam là (Q₁ − Q₂)/330. Khối lượng nước ban đầu = ${mix} − (Q₁ − Q₂)/330 ≈ ${fmt(liquid)} g.`,
+    "g"
+  ));
+
+  const tb=rand(1,3),span=rand(5,9),duration=rand(1,3);
+  const cold=rand(1,3)*10;
+  const ratio=[1,2,4][rand(0,2)];
+  const hotend=cold*duration*ratio/tb;
+
+  out.push({
+    q:"Một chất tinh khiết được đun với công suất truyền nhiệt không đổi. Chất rắn trong AB, nóng chảy trong BC, chất lỏng trong CD. Bỏ qua thất thoát nhiệt. Tỉ số cᵣ/cₗ bằng bao nhiêu?",
+    opts:[0.5,1,2,4].map(fmt),
+    a:[0.5,1,2,4].indexOf(ratio),
+    g:phaseGraph(tb,tb+span,tb+span+duration,cold,hotend),
+    e:`Với cùng khối lượng và công suất: c = PΔτ/(mΔt). Vì vậy cᵣ/cₗ = (${tb}/${cold})/(${duration}/${fmt(hotend)}) = ${ratio}.`
+  });
+
+  const start=rand(10,35),boil=rand(4,10),finish=boil+rand(3,7);
+  out.push({
+    q:"Đồ thị nhiệt độ theo thời gian khi đun nước ở áp suất khí quyển tiêu chuẩn. Trong BC, nước đang:",
+    opts:["Sôi và hóa hơi.","Nóng chảy.","Đông đặc.","Ngưng tụ."],
+    a:0,
+    g:waterGraph(start,boil,finish),
+    e:"BC nằm ngang ở 100 °C. Nước tiếp tục nhận nhiệt để sôi và hóa hơi, nhiệt độ không đổi."
+  });
+
+  return out;
+}
+
+/* Sinh câu đúng – sai. */
+function makeTF(){
+  const out=[];
+  const m=rand(4,9)/10,cu=rand(2,6)/10;
+  const temp=rand(20,35),ev=rand(1,3)/10;
+  const q1=(m*4180+cu*380)*(100-temp);
+  const q2=ev*2300000;
+
+  out.push({
+    q:`Đun ${fmt(m)} kg nước từ ${temp} °C trong ấm đồng ${fmt(cu)} kg đến 100 °C, rồi hóa hơi ${fmt(ev)} kg nước. Cho c nước = 4180 J/(kg·K), c đồng = 380 J/(kg·K), L = 2300000 J/kg. Bỏ qua thất thoát nhiệt.`,
+    items:[
+      st(`Nhiệt làm nóng nước và ấm là ${fmt(q1)} J.`,
+        true,
+        `Q₁ = (${fmt(m)}·4180 + ${fmt(cu)}·380)(100 − ${temp}) = ${fmt(q1)} J.`),
+      st(`Nhiệt hóa hơi là ${fmt(q2-10000)} J.`,
+        false,
+        `Q₂ = m hơi·L = ${fmt(ev)}·2300000 = ${fmt(q2)} J.`),
+      st(`Tổng nhiệt cung cấp là ${fmt(q1+q2)} J.`,
+        true,
+        `Q = Q₁ + Q₂ = ${fmt(q1+q2)} J.`),
+      st(`Hiệu Q₂ − Q₁ bằng ${fmt(q2-q1+10000)} J.`,
+        false,
+        `Q₂ − Q₁ = ${fmt(q2-q1)} J.`)
+    ]
+  });
+
+  const mass=rand(1,5)/10,h1=rand(14,23),h2=rand(5,12);
+  const loss=mass*10*(h1-h2),after=mass*10*h2;
+
+  out.push({
+    q:`Bóng khối lượng ${fmt(mass*1000)} g rơi từ ${h1} m rồi nảy lên ${h2} m. Lấy g = 10 m/s², mốc thế năng ở sàn. Bỏ qua lực cản không khí.`,
+    items:[
+      st("Cơ năng bảo toàn trong cả quá trình rơi và va chạm nảy lên.",
+        false,
+        "Va chạm làm giảm cơ năng; một phần chuyển sang nội năng, âm thanh và các dạng năng lượng khác."),
+      st(`Cơ năng giảm ${fmt(loss)} J.`,
+        true,
+        `E giảm = mg(h₁ − h₂) = ${fmt(mass)}·10·(${h1} − ${h2}) = ${fmt(loss)} J.`),
+      st("Toàn bộ cơ năng giảm đều chuyển thành nội năng riêng quả bóng.",
+        false,
+        "Năng lượng còn truyền cho sàn và môi trường; không thể kết luận tất cả thuộc riêng quả bóng."),
+      st(`Cơ năng tại độ cao cực đại sau nảy là ${fmt(after)} J.`,
+        true,
+        `Tại độ cao cực đại, vận tốc bằng 0. E = mgh₂ = ${fmt(after)} J.`)
+    ]
+  });
+
+  out.push({
+    q:"Xét cấu tạo và tính chất của chất rắn, chất lỏng và chất khí.",
+    items:[
+      st("Lực tương tác phân tử ở chất rắn thường mạnh hơn ở chất khí.",
+        true,
+        "Các phân tử chất rắn nằm gần nhau và tương tác thường mạnh hơn."),
+      st("Chất lỏng có cả hình dạng và thể tích riêng không xác định.",
+        false,
+        "Chất lỏng có thể tích riêng xác định; hình dạng phụ thuộc phần bình chứa."),
+      st("Khí trong bình kín chiếm toàn bộ thể tích bình.",
+        true,
+        "Khí không có hình dạng và thể tích riêng xác định."),
+      st("Cùng một chất, khối lượng riêng ở thể khí thường lớn hơn ở thể lỏng.",
+        false,
+        "Khối lượng riêng ở thể khí thường nhỏ hơn rất nhiều so với thể lỏng.")
+    ]
+  });
+
+  if(Math.random()<0.5){
+    const P=rand(3,9)*100,t0=rand(10,35);
+    const tb=rand(4,10),tc=tb+rand(3,7);
+    out.push({
+      q:`Đun nước ở áp suất chuẩn với công suất truyền nhiệt không đổi ${P} W. Bỏ qua thất thoát nhiệt, nhiệt dung bình. Sau phút ${tc}, trong bình vẫn còn nước.`,
+      g:waterGraph(t0,tb,tc),
+      items:[
+        st(`Trong AB, nhiệt độ tăng từ ${t0} °C lên 100 °C.`,
+          true,
+          "Đọc nhiệt độ tại điểm A và B trên đồ thị."),
+        st(`BC kéo dài ${tc-tb} phút.`,
+          true,
+          `Δτ = ${tc} − ${tb} = ${tc-tb} phút.`),
+        st(`Nhiệt lượng trong BC là ${P*(tc-tb)} J.`,
+          false,
+          `Phải đổi phút sang giây: Q = PΔτ = ${P}·${tc-tb}·60 = ${P*(tc-tb)*60} J.`),
+        st("Trong BC, nước không nhận nhiệt vì nhiệt độ không đổi.",
+          false,
+          "Nước vẫn nhận nhiệt để hóa hơi; nhiệt độ không đổi trong quá trình sôi.")
+      ]
+    });
+  }else{
+    const pa=rand(1,2),pb=pa+rand(1,3);
+    const va=rand(1,3),vb=va+rand(3,6);
+    const w=(pa+pb)*100000*(vb-va)/2000;
+    const heat=w+rand(3,9)*100;
+
+    out.push({
+      q:`Khí biến đổi từ A đến B theo đoạn thẳng trên đồ thị p–V và nhận nhiệt ${heat} J. Dùng ΔU = Q + A, với A là công khí nhận.`,
+      g:pvGraph(pa,pb,va,vb),
+      items:[
+        st(`Công khí nhận A = ${fmt(w)} J.`,
+          false,
+          `Khí nở nên công khí nhận âm: A = −${fmt(w)} J.`),
+        st(`Độ tăng thể tích bằng ${vb-va}·10⁻³ m³.`,
+          true,
+          `ΔV = ${vb} − ${va} = ${vb-va} lít = ${vb-va}·10⁻³ m³.`),
+        st(`Nội năng tăng ${fmt(heat-w)} J.`,
+          true,
+          `ΔU = Q − W = ${heat} − ${fmt(w)} = ${fmt(heat-w)} J.`),
+        st(`Công khí thực hiện là ${fmt(w)} J.`,
+          true,
+          `W bằng diện tích hình thang: W = (pA + pB)ΔV/2 = ${fmt(w)} J.`)
+      ]
+    });
+  }
+
+  return shuffle(out.map(x=>({
+    ...x,
+    items:shuffle(x.items)
+  })));
+}
+
+/* Ngân hàng câu trả lời ngắn, lấy 6 câu mỗi lượt. */
+function shortPool(){
+  const out=[];
+
+  let a=rand(13,35)*10,q=rand(3,11)*10;
+  out.push({
+    q:`Nén khí bằng công ${a} J; khí tỏa nhiệt ${q} J. Tính độ biến thiên nội năng theo J.`,
+    a:a-q,
+    e:`A = ${a} J; Q = −${q} J. ΔU = Q + A = ${a-q} J.`
+  });
+
+  let P=rand(3,9)*100,tb=rand(4,10),tc=tb+rand(3,7),t0=rand(10,35);
+  out.push({
+    q:`Đun nước bằng nguồn truyền nhiệt có công suất không đổi ${P} W. Tính nhiệt lượng nước nhận trong AB, theo kJ.`,
+    g:waterGraph(t0,tb,tc),
+    a:P*tb*60/1000,
+    e:`ΔτAB = ${tb} phút = ${tb*60} s. Q = PΔτ = ${P}·${tb*60} = ${P*tb*60} J = ${fmt(P*tb*60/1000)} kJ.`
+  });
+
+  let temp=rand(15,65);
+  out.push({
+    q:`Đổi ${temp} °C sang kelvin. Dùng T = t + 273. Chỉ ghi giá trị theo K.`,
+    a:temp+273,
+    e:`T = ${temp} + 273 = ${temp+273} K.`
+  });
+
+  temp=rand(12,45);
+  out.push({
+    q:`Đổi ${temp} °C sang °F. Dùng t°F = 1,8t°C + 32.`,
+    a:round(1.8*temp+32,1),
+    e:`t°F = 1,8·${temp} + 32 = ${fmt(1.8*temp+32)} °F.`
+  });
+
+  let mi=rand(2,6)/10,mw=rand(3,8)/10;
+  let mh=rand(10,15)/10,th=rand(45,70);
+  let remaining=mh*4200*th-mi*340000;
+  let eq=remaining<=0?0:remaining/((mi+mw+mh)*4200);
+
+  out.push({
+    q:`Trộn ${fmt(mi)} kg đá ở 0 °C và ${fmt(mw)} kg nước ở 0 °C với ${fmt(mh)} kg nước ở ${th} °C trong bình cách nhiệt. Cho c nước = 4200 J/(kg·K), λ = 340000 J/kg. Bỏ qua nhiệt dung bình. Tính nhiệt độ cân bằng theo °C, làm tròn hai chữ số thập phân.`,
+    a:round(eq,2),
+    e:remaining<=0
+      ? `Nước nóng về 0 °C tỏa ${fmt(mh*4200*th)} J, không lớn hơn nhiệt cần làm tan hết đá ${fmt(mi*340000)} J. Hệ cân bằng ở 0 °C.`
+      : `Đá tan hết vì ${fmt(mh*4200*th)} > ${fmt(mi*340000)} J. Cân bằng: ${fmt(mh)}·4200(${th} − t) = ${fmt(mi)}·340000 + (${fmt(mi)} + ${fmt(mw)})·4200t. Suy ra t = ${fmt(remaining)}/${fmt((mi+mw+mh)*4200)} ≈ ${fmt(round(eq,2))} °C.`
+  });
+
+  let mass=rand(2,9)/10,initial=rand(15,25),dt=rand(8,20);
+  out.push({
+    q:`${fmt(mass)} kg nước tăng từ ${initial} °C lên ${initial+dt} °C. Cho c = 4200 J/(kg·K). Tính nhiệt lượng nước nhận theo kJ.`,
+    a:mass*4200*dt/1000,
+    e:`Δt = ${dt} K. Q = mcΔt = ${fmt(mass)}·4200·${dt} = ${fmt(mass*4200*dt)} J = ${fmt(mass*4200*dt/1000)} kJ.`
+  });
+
+  let power=rand(8,15)*100,eff=rand(7,9)/10;
+  let water=rand(5,15)/10,start=rand(15,30),evap=rand(1,5)/100;
+  let useful=water*4200*(100-start)+evap*2300000;
+  let time=useful/(eff*power);
+
+  out.push({
+    q:`Ấm điện công suất ${power} W, hiệu suất ${fmt(eff*100)}%, đun ${fmt(water)} kg nước từ ${start} °C đến 100 °C rồi hóa hơi ${fmt(evap)} kg nước. Cho c = 4200 J/(kg·K), L = 2300000 J/kg. Bỏ qua nhiệt dung ấm. Tính thời gian theo giây, làm tròn đến giây.`,
+    a:Math.round(time),
+    e:`Q ích = mc(100 − t₀) + m hơi·L = ${fmt(useful)} J. Thời gian τ = Q ích/(HP) = ${fmt(useful)}/(${fmt(eff)}·${power}) ≈ ${Math.round(time)} giây.`
+  });
+
+  let ice,cold,hot,net;
+  do{
+    ice=rand(1,2)/10;
+    water=rand(5,8)/10;
+    cold=rand(5,15);
+    hot=rand(30,45);
+    net=water*4200*hot-ice*(2100*cold+334000);
+  }while(net<=0);
+
+  eq=net/((ice+water)*4200);
+
+  out.push({
+    q:`Trộn ${fmt(ice)} kg đá ở −${cold} °C với ${fmt(water)} kg nước ở ${hot} °C trong bình cách nhiệt. Cho c đá = 2100 J/(kg·K), c nước = 4200 J/(kg·K), λ = 334000 J/kg. Bỏ qua nhiệt dung bình. Tính nhiệt độ cân bằng theo °C, làm tròn một chữ số thập phân.`,
+    a:round(eq,1),
+    e:`Nhiệt làm đá lên 0 °C và tan hết: Q đá = ${fmt(ice)}(2100·${cold} + 334000) = ${fmt(ice*(2100*cold+334000))} J. Nước nóng về 0 °C tỏa ${fmt(water*4200*hot)} J nên đá tan hết. t = ${fmt(net)}/${fmt((ice+water)*4200)} ≈ ${fmt(round(eq,1))} °C.`
+  });
+
+  let mm=rand(1,4)/10,power2=rand(1,3)*100,H=rand(6,9)/10;
+  let tb2=rand(1,3),span=rand(5,10),tc2=tb2+span;
+  let td2=tc2+rand(1,3),latent=H*power2*span*60/mm/1000;
+
+  out.push({
+    q:`Đun ${fmt(mm)} kg chất tinh khiết bằng bếp ${power2} W, hiệu suất ${fmt(H*100)}%. Chất nóng chảy trong BC. Bỏ qua nhiệt dung bình. Tính nhiệt nóng chảy riêng theo kJ/kg.`,
+    g:phaseGraph(tb2,tc2,td2,20,40),
+    a:latent,
+    e:`ΔτBC = ${tc2} − ${tb2} = ${span} phút = ${span*60} s. λ = HPΔτ/m = ${fmt(H)}·${power2}·${span*60}/${fmt(mm)} J/kg = ${fmt(latent)} kJ/kg.`
+  });
+
+  let cap=rand(1,3)*100,wm=rand(2,4)/10,metal=rand(2,5)/10;
+  let ti=rand(15,25),balance=ti+rand(8,15),mt=rand(90,120);
+  let specific=(cap+wm*4200)*(balance-ti)/(metal*(mt-balance));
+
+  out.push({
+    q:`Cốc có nhiệt dung ${cap} J/K chứa ${fmt(wm)} kg nước ở ${ti} °C. Thả vào ${fmt(metal)} kg kim loại ở ${mt} °C, cân bằng ở ${balance} °C. Cho c nước = 4200 J/(kg·K), bỏ qua thất thoát nhiệt. Tính nhiệt dung riêng kim loại theo J/(kg·K), làm tròn hàng đơn vị.`,
+    a:Math.round(specific),
+    e:`Kim loại tỏa nhiệt bằng nước và cốc thu: ${fmt(metal)}·c·(${mt} − ${balance}) = (${fmt(wm)}·4200 + ${cap})(${balance} − ${ti}). Suy ra c ≈ ${Math.round(specific)} J/(kg·K).`
+  });
+
+  let pressure=rand(1,4)*50000;
+  let v1=rand(1,3),v2=v1+rand(3,6),heat=rand(9,16)*100;
+  let work=pressure*(v2-v1)/1000;
+
+  out.push({
+    q:`Khí nở đẳng áp ở ${pressure} Pa từ ${v1} lít đến ${v2} lít, nhận nhiệt ${heat} J. Tính độ biến thiên nội năng theo J.`,
+    a:heat-work,
+    e:`W = p(V₂ − V₁) = ${pressure}·(${v2} − ${v1})·10⁻³ = ${work} J. ΔU = Q − W = ${heat-work} J.`
+  });
+
+  let steam=rand(1,4)/100,waterMass=rand(4,8)/10;
+  let waterTemp=rand(15,30);
+  let finalT=(steam*2300000+steam*4200*100+
+    waterMass*4200*waterTemp)/((steam+waterMass)*4200);
+
+  out.push({
+    q:`Dẫn ${fmt(steam)} kg hơi nước ở 100 °C vào ${fmt(waterMass)} kg nước ở ${waterTemp} °C trong bình cách nhiệt. Cho c = 4200 J/(kg·K), L = 2300000 J/kg. Toàn bộ hơi ngưng tụ, bỏ qua nhiệt dung bình. Tính nhiệt độ cân bằng theo °C, làm tròn một chữ số thập phân.`,
+    a:round(finalT,1),
+    e:`Hơi ngưng tụ rồi nước ngưng nguội từ 100 °C xuống t. Cân bằng: ${fmt(steam)}·2300000 + ${fmt(steam)}·4200(100 − t) = ${fmt(waterMass)}·4200(t − ${waterTemp}). Suy ra t ≈ ${fmt(round(finalT,1))} °C.`
+  });
+
+  return out;
+}
+
+function generate(){
+  /* 13 câu kiến thức + 5 câu tính toán/đồ thị = 18 câu. */
+  let mc=[
+    ...clone(THEORY),
+    ...shuffle(numericalMC()).slice(0,5)
+  ];
+
+  mc=shuffle(mc.map(x=>{
+    const options=shuffle(x.opts.map((text,i)=>({
+      text,correct:i===x.a
+    })));
+
+    return {
+      ...x,
+      opts:options.map(o=>o.text),
+      a:options.findIndex(o=>o.correct)
+    };
+  }));
+
+  const tf=makeTF();
+
+  /* Chọn 3 câu từ mỗi nửa ngân hàng để có nhiều dạng. */
+  const pool=shortPool();
+  const sa=shuffle([
+    ...shuffle(pool.slice(0,6)).slice(0,3),
+    ...shuffle(pool.slice(6)).slice(0,3)
+  ]);
+
+  return [mc,tf,sa];
+}
+
+function render(){
+  submitted=false;
+  started=Date.now();
+  finished=0;
+
+  let signature;
+  do{
+    parts=generate();
+    signature=JSON.stringify(parts);
+  }while(signature===previousSignature);
+
+  previousSignature=signature;
+  $("#result").innerHTML="";
+
+  const titles=[
+    "I. Trắc nghiệm chọn một phương án",
+    "II. Trắc nghiệm đúng–sai",
+    "III. Trả lời ngắn"
+  ];
+
+  $("#exam").innerHTML=parts.map((arr,p)=>`
+    <section id="part${p}">
+      <h2>PHẦN ${titles[p]}</h2>
+      ${arr.map((x,i)=>{
+        let fields="";
+
+        if(p===0){
+          fields=x.opts.map((o,j)=>`
+            <label class="option">
+              <input type="radio" name="a${p}-${i}" value="${j}">
+              <span><b>${"ABCD"[j]}.</b> ${esc(o)}</span>
+            </label>
+          `).join("");
+        }else if(p===1){
+          fields=x.items.map((s,j)=>`
+            <div class="statement">
+              <div><b>${"abcd"[j]})</b> ${esc(s.text)}</div>
+              <div class="choices">
+                <label>
+                  <input type="radio"
+                    name="a${p}-${i}-${j}" value="true"> Đúng
+                </label>
+                <label>
+                  <input type="radio"
+                    name="a${p}-${i}-${j}" value="false"> Sai
+                </label>
+              </div>
+            </div>
+          `).join("");
+        }else{
+          fields=`
+            <p>
+              <input type="text"
+                inputmode="decimal"
+                name="a${p}-${i}"
+                aria-label="Trả lời câu ${i+1} phần III"
+                placeholder="Nhập giá trị số">
+            </p>
+            <small class="muted">
+              Dùng dấu phẩy hoặc dấu chấm thập phân.
+            </small>`;
+        }
+
+        return `
+          <article class="card" id="q${p}-${i}">
+            <div><b>Câu ${i+1}.</b> ${esc(x.q)}</div>
+            ${x.g||""}
+            <fieldset>${fields}</fieldset>
+            <div class="solution"></div>
+          </article>`;
+      }).join("")}
+    </section>
+  `).join("");
+
+  $("#submit").disabled=false;
+  $("#new").disabled=true;
+  updateProgress();
+  updateClock();
+}
+
+function selected(name){
+  return document.querySelector(
+    `input[name="${name}"]:checked`
+  )?.value;
+}
+
+function parseNumber(raw){
+  const s=raw.trim().replace(",",".").replace("−","-");
+  if(!s) return NaN;
+  return /^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(s)
+    ? Number(s)
+    : NaN;
+}
+
+function updateProgress(){
+  let count=0;
+
+  parts.forEach((arr,p)=>arr.forEach((x,i)=>{
+    if(p===0){
+      if(selected(`a${p}-${i}`)!==undefined) count++;
+    }else if(p===1){
+      x.items.forEach((_,j)=>{
+        if(selected(`a${p}-${i}-${j}`)!==undefined) count++;
+      });
+    }else{
+      const input=document.querySelector(
+        `[name="a${p}-${i}"]`
+      );
+      if(input?.value.trim()) count++;
+    }
+  }));
+
+  $("#status").textContent=
+    `Lượt ${turn} · Đã trả lời ${count}/40 ô`;
+
+  $("#bar").style.width=`${count/40*100}%`;
+  return count;
+}
+
+function updateClock(){
+  const end=finished||Date.now();
+  const total=Math.floor((end-started)/1000);
+  const m=String(Math.floor(total/60)).padStart(2,"0");
+  const s=String(total%60).padStart(2,"0");
+
+  $("#clock").textContent=
+    `${submitted?"Thời gian làm":"Đã làm"}: ${m}:${s}`;
+}
+
+function submitExam(){
+  if(submitted) return;
+
+  if(updateProgress()<40 &&
+    !confirm("Còn câu hoặc ý chưa trả lời. Bạn vẫn muốn nộp bài?")){
+    return;
+  }
+
+  submitted=true;
+  finished=Date.now();
+
+  const scores=[0,0,0];
+  const correctCount=[0,0,0];
+
+  parts.forEach((arr,p)=>arr.forEach((x,i)=>{
+    let html="";
+
+    if(p===0){
+      const v=selected(`a${p}-${i}`);
+      const ok=v!==undefined && Number(v)===x.a;
+
+      if(ok){
+        scores[0]+=0.25;
+        correctCount[0]++;
+      }
+
+      html=`
+        <b class="${ok?"right":"wrong"}">
+          ${ok?"Đúng":"Chưa đúng"}
+          · Bạn chọn: ${v===undefined?"Bỏ trống":"ABCD"[Number(v)]}
+          · Đáp án: ${"ABCD"[x.a]}
+        </b>
+        <p><b>Phương án đúng:</b> ${esc(x.opts[x.a])}</p>
+        <p>${esc(x.e)}</p>`;
+    }else if(p===1){
+      let n=0;
+
+      html=x.items.map((s,j)=>{
+        const v=selected(`a${p}-${i}-${j}`);
+        const ok=v===String(s.truth);
+        if(ok) n++;
+
+        const your=v===undefined
+          ? "Bỏ trống"
+          : v==="true"?"Đúng":"Sai";
+
+        return `
+          <p>
+            <b class="${ok?"right":"wrong"}">
+              ${"abcd"[j]}) Bạn chọn: ${your}
+              · Đáp án: ${s.truth?"Đúng":"Sai"}
+            </b>
+            <br>${esc(s.ex)}
+          </p>`;
+      }).join("");
+
+      const mark=[0,0.1,0.25,0.5,1][n];
+      scores[1]+=mark;
+      correctCount[1]+=n;
+
+      html=`<b>Đúng ${n}/4 ý · ${fmt(mark)} điểm</b>`+html;
+    }else{
+      const raw=document.querySelector(
+        `[name="a${p}-${i}"]`
+      ).value;
+
+      const value=parseNumber(raw);
+      const ok=Number.isFinite(value) &&
+        Math.abs(value-x.a)<1e-7;
+
+      if(ok){
+        scores[2]+=0.25;
+        correctCount[2]++;
+      }
+
+      html=`
+        <b class="${ok?"right":"wrong"}">
+          ${ok?"Đúng":"Chưa đúng"}
+          · Bạn trả lời: ${raw.trim()?esc(raw):"Bỏ trống"}
+          · Đáp án: ${fmt(x.a)}
+        </b>
+        <p>${esc(x.e)}</p>`;
+    }
+
+    document.querySelector(
+      `#q${p}-${i} .solution`
+    ).innerHTML=`<div class="ex">${html}</div>`;
+  }));
+
+  document.querySelectorAll("fieldset").forEach(el=>{
+    el.disabled=true;
+  });
+
+  const total=scores.reduce((a,b)=>a+b,0);
+  const seconds=Math.floor((finished-started)/1000);
+
+  $("#result").innerHTML=`
+    <div class="card">
+      <div class="score">${fmt(round(total,2))} / 10 điểm</div>
+      <p>
+        Phần I: ${fmt(scores[0])}/4,5
+        · Đúng ${correctCount[0]}/18 câu
+        <br>
+        Phần II: ${fmt(round(scores[1],2))}/4
+        · Đúng ${correctCount[1]}/16 ý
+        <br>
+        Phần III: ${fmt(scores[2])}/1,5
+        · Đúng ${correctCount[2]}/6 câu
+      </p>
+      <p>
+        Thời gian làm: ${Math.floor(seconds/60)} phút
+        ${seconds%60} giây.
+      </p>
+      <p>
+        ${total>=8
+          ?"Làm tốt! Hãy xem lại các câu chưa đúng rồi luyện lượt mới."
+          :total>=5
+          ?"Hãy củng cố quy ước dấu, đổi đơn vị và phương trình cân bằng nhiệt qua các lời giải bên dưới."
+          :"Hãy đọc kỹ lời giải từng câu, ôn các công thức nền tảng rồi làm lại với bộ số mới."}
+      </p>
+      <b>Đáp án và lời giải đã mở bên dưới từng câu.</b>
+      <p class="muted">
+        Bạn có thể xem lại trước khi bắt đầu lượt mới.
+      </p>
+    </div>`;
+
+  $("#submit").disabled=true;
+  $("#new").disabled=false;
+
+  updateClock();
+  $("#result").scrollIntoView({behavior:"smooth"});
+}
+
+$("#exam").addEventListener("change",updateProgress);
+$("#exam").addEventListener("input",updateProgress);
+
+$("#submit").addEventListener("click",submitExam);
+
+$("#new").addEventListener("click",()=>{
+  if(!submitted) return;
+  turn++;
+  render();
+  window.scrollTo({top:0,behavior:"smooth"});
+});
+
+$("#fullscreen").addEventListener("click",async()=>{
+  try{
+    if(document.fullscreenElement){
+      await document.exitFullscreen();
+    }else{
+      await document.documentElement.requestFullscreen();
+    }
+  }catch{
+    alert("Trình duyệt chưa hỗ trợ toàn màn hình. Có thể xoay ngang điện thoại để xem rộng hơn.");
+  }
+});
+
+setInterval(updateClock,1000);
+render();
+</script>
+</body>
+</html>
