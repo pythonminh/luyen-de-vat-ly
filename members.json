@@ -840,6 +840,26 @@
       "password_sha256": "e3d7595bd6b2f4f2e2eff31c06784083f46aaea8394d7970a932d70f78775c2f",
       "password_enc": "v1:vzzBF0Hk_YHS",
       "updated_at": "2026-10-21 04:44:49"
+    },
+    {
+      "username": "knhan_0711",
+      "name": "Kim Nhàn",
+      "phone": "0818730711",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "requested_package": {
+        "kind": "lop1",
+        "grades": [
+          "11"
+        ],
+        "subjects": [
+          "Vật lý"
+        ]
+      },
+      "package_status": "pending",
+      "password_sha256": "16064059e29e9c1c2fd5fab49900cf4abc2f4d49ff2823126e5801b2fe9dfa56",
+      "password_enc": "v1:uTPCFkPj_YM="
     }
   ]
 }
