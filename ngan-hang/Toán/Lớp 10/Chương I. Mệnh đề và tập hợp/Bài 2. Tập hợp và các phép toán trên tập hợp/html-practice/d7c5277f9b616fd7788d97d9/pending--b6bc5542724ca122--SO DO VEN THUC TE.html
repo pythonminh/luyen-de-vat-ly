@@ -1,0 +1,231 @@
+<!--hp-title:U08gRE8gVkVOIFRIVUMgVEU=-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luyện tập hợp của hai tập hợp</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef3f9;color:#17263e;font-family:Arial,sans-serif;line-height:1.6}
+header{background:#102747;color:white;padding:18px 20px}
+header strong{display:block;font-size:clamp(18px,3vw,25px)}
+header small{color:#c5d6ef}
+main{max-width:1100px;margin:24px auto;padding:0 16px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.badge{background:#dae8ff;color:#164584;border-radius:30px;padding:7px 15px;font-weight:bold}
+.layout{display:grid;grid-template-columns:0.9fr 1.1fr;gap:20px}
+.card{background:white;border:1px solid #dce5f0;border-radius:18px;padding:24px;box-shadow:0 8px 25px #152b4810}
+h1{font-size:24px;margin:0 0 16px}
+h2{font-size:19px;margin:0 0 12px}
+svg{display:block;width:100%;height:auto}
+.note{font-size:14px;color:#53657e}
+.formula{background:#eef5ff;border-left:4px solid #3274ce;padding:14px;border-radius:8px;text-align:center;font-size:18px}
+.question{font-size:19px}
+label{display:block;font-weight:bold;margin:20px 0 8px}
+.answer-row{display:flex;gap:12px;align-items:center}
+input{width:100%;min-width:0;border:2px solid #c5d2e3;padding:13px;border-radius:10px;font-size:22px}
+input:focus{outline:3px solid #dbeafe;border-color:#3478d3}
+button{border:0;border-radius:10px;padding:12px 17px;font:inherit;font-weight:bold;cursor:pointer;background:#e9eff7;color:#193456}
+button:hover{filter:brightness(.96)}
+button:focus-visible{outline:3px solid #70a7f3;outline-offset:3px}
+.primary{background:#1963b9;color:white}
+.green{background:#087e70;color:white}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+#feedback{margin-top:16px;font-weight:bold}
+.ok{color:#087447}
+.bad{color:#b43d29}
+.solution{margin-top:20px;padding:18px;background:#f0faf5;border:1px solid #bce4cc;border-radius:12px}
+.solution p{margin:8px 0}
+.calculation{font-size:21px;font-weight:bold;color:#135a42}
+[hidden]{display:none!important}
+footer{text-align:center;color:#62738a;font-size:13px;margin:22px 0}
+@media(max-width:740px){
+.layout{grid-template-columns:1fr}
+main{margin-top:16px}
+.card{padding:18px}
+.question{font-size:18px}
+.toolbar{align-items:flex-start}
+}
+</style>
+</head>
+<body>
+<header>
+  <strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
+  <small>lophocthayminh.onrender.com</small>
+</header>
+
+<main>
+  <div class="toolbar">
+    <span class="badge">Câu 1 · Hợp của hai tập hợp</span>
+    <button id="fullscreen" type="button">Toàn màn hình</button>
+  </div>
+
+  <div class="layout">
+    <section class="card">
+      <h2>Sơ đồ hai tập hợp</h2>
+      <svg viewBox="0 0 460 285" role="img" aria-labelledby="vennTitle vennDesc">
+        <title id="vennTitle">Sơ đồ các hộ nuôi chó và nuôi mèo</title>
+        <desc id="vennDesc"></desc>
+        <rect x="8" y="8" width="444" height="265" rx="16" fill="#f8fafc" stroke="#d8e2ef"/>
+        <circle cx="175" cy="145" r="104" fill="#60a5fa" fill-opacity=".27" stroke="#2563eb" stroke-width="3"/>
+        <circle cx="285" cy="145" r="104" fill="#fb923c" fill-opacity=".27" stroke="#ea771d" stroke-width="3"/>
+        <text x="125" y="115" text-anchor="middle" font-size="18" fill="#174a9e" font-weight="bold">Nuôi chó</text>
+        <text id="dogLabel" x="125" y="145" text-anchor="middle" font-size="17" fill="#174a9e"></text>
+        <text x="335" y="115" text-anchor="middle" font-size="18" fill="#984b0f" font-weight="bold">Nuôi mèo</text>
+        <text id="catLabel" x="335" y="145" text-anchor="middle" font-size="17" fill="#984b0f"></text>
+        <text x="230" y="135" text-anchor="middle" font-size="14" fill="#25354c">Cả hai</text>
+        <text id="bothLabel" x="230" y="165" text-anchor="middle" font-size="23" font-weight="bold" fill="#25354c"></text>
+        <text x="230" y="258" text-anchor="middle" font-size="13" fill="#52647a">Mỗi hộ nuôi ít nhất một trong hai loại</text>
+      </svg>
+      <p class="note">Số hộ ghi cho mỗi loại là tổng số hộ thuộc cả vòng tròn, bao gồm phần giao. Sơ đồ không biểu diễn theo tỉ lệ.</p>
+      <div class="formula">n(A ∪ B) = n(A) + n(B) − n(A ∩ B)</div>
+      <p class="note">Gợi ý: Khi cộng số hộ nuôi chó với số hộ nuôi mèo, các hộ nuôi cả hai được tính hai lần.</p>
+    </section>
+
+    <section class="card">
+      <h1>Tính số hộ được khảo sát</h1>
+      <div id="question" class="question"></div>
+      <form id="answerForm" novalidate>
+        <label for="answer">Số hộ gia đình đã khảo sát:</label>
+        <div class="answer-row">
+          <input id="answer" type="text" inputmode="numeric" autocomplete="off"
+                 placeholder="Nhập số hộ" aria-describedby="feedback">
+          <span>hộ</span>
+        </div>
+        <div class="actions">
+          <button class="primary" type="submit">Kiểm tra</button>
+          <button id="showSolution" type="button">Xem lời giải</button>
+          <button id="newQuestion" class="green" type="button">Đổi đề bài mới</button>
+        </div>
+      </form>
+
+      <div id="feedback" role="status" aria-live="polite"></div>
+      <section id="solution" class="solution" hidden></section>
+
+      <div class="actions">
+        <button id="resetOriginal" type="button">Về số liệu ban đầu</button>
+      </div>
+    </section>
+  </div>
+  <footer>Đổi số tự động · Chạy offline · Tính đáp án bằng JavaScript</footer>
+</main>
+
+<script>
+"use strict";
+const original = Object.freeze({ dogs:40, cats:27, both:11 });
+let data = {...original};
+const $ = id => document.getElementById(id);
+const total = () => data.dogs + data.cats - data.both;
+const randomInt = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
+
+function render(){
+  const {dogs,cats,both}=data;
+  $("question").textContent=
+    `Một nhóm tình nguyện khảo sát các hộ gia đình nuôi thú cưng trong một khu phố và ghi nhận: có ${dogs} hộ nuôi chó, ${cats} hộ nuôi mèo, trong đó có ${both} hộ nuôi cả chó và mèo. Biết rằng mỗi hộ được khảo sát đều nuôi ít nhất một trong hai loại vật nuôi trên. Hỏi nhóm đã khảo sát bao nhiêu hộ gia đình?`;
+  $("dogLabel").textContent=`Tổng: ${dogs} hộ`;
+  $("catLabel").textContent=`Tổng: ${cats} hộ`;
+  $("bothLabel").textContent=`${both} hộ`;
+  $("vennDesc").textContent=
+    `${dogs} hộ nuôi chó, ${cats} hộ nuôi mèo, ${both} hộ nuôi cả hai.`;
+  $("answer").value="";
+  $("feedback").textContent="";
+  $("feedback").className="";
+  $("solution").hidden=true;
+  $("solution").innerHTML="";
+  $("showSolution").textContent="Xem lời giải";
+}
+
+$("answerForm").addEventListener("submit",event=>{
+  event.preventDefault();
+  const value=$("answer").value.trim();
+  if(!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))){
+    $("feedback").className="bad";
+    $("feedback").textContent="Em hãy nhập số hộ bằng một số nguyên không âm.";
+    return;
+  }
+  const correct=Number(value)===total();
+  $("feedback").className=correct?"ok":"bad";
+  $("feedback").textContent=correct
+    ?`Chính xác! Nhóm đã khảo sát ${total()} hộ gia đình.`
+    :"Chưa đúng. Em hãy kiểm tra phần hộ nuôi cả hai loại đã bị tính lặp.";
+});
+
+$("answer").addEventListener("input",()=>{
+  $("feedback").textContent="";
+  $("feedback").className="";
+});
+
+$("showSolution").addEventListener("click",()=>{
+  if(!$("solution").hidden){
+    $("solution").hidden=true;
+    $("showSolution").textContent="Xem lời giải";
+    return;
+  }
+  const {dogs,cats,both}=data;
+  $("solution").innerHTML=`
+    <h2>Lời giải chi tiết</h2>
+    <p><b>Bước 1. Xác định các tập hợp.</b><br>
+    Gọi A là tập hợp các hộ nuôi chó; B là tập hợp các hộ nuôi mèo.</p>
+    <p>Ta có: n(A) = ${dogs}; n(B) = ${cats}; n(A ∩ B) = ${both}.</p>
+    <p><b>Bước 2. Xác định số hộ cần tìm.</b><br>
+    Mỗi hộ đều nuôi ít nhất một trong hai loại nên số hộ được khảo sát chính là n(A ∪ B).</p>
+    <p><b>Bước 3. Áp dụng công thức.</b><br>
+    n(A ∪ B) = n(A) + n(B) − n(A ∩ B).</p>
+    <p>Phải trừ ${both} hộ nuôi cả hai vì các hộ này đã được tính hai lần trong tổng.</p>
+    <p class="calculation">n(A ∪ B) = ${dogs} + ${cats} − ${both}<br>
+    = ${dogs+cats} − ${both} = ${total()}.</p>
+    <p><b>Vậy nhóm đã khảo sát ${total()} hộ gia đình.</b></p>`;
+  $("solution").hidden=false;
+  $("showSolution").textContent="Ẩn lời giải";
+});
+
+$("newQuestion").addEventListener("click",()=>{
+  const previous=data;
+  let next;
+  do{
+    // Sinh phần giao và hai phần riêng để luôn có dữ kiện hợp lý.
+    const both=randomInt(5,24);
+    next={
+      dogs:both+randomInt(12,45),
+      cats:both+randomInt(10,38),
+      both
+    };
+  }while(
+    next.dogs===previous.dogs ||
+    next.cats===previous.cats ||
+    next.both===previous.both ||
+    next.dogs+next.cats-next.both===
+      previous.dogs+previous.cats-previous.both
+  );
+  data=next;
+  render();
+  $("answer").focus();
+});
+
+$("resetOriginal").addEventListener("click",()=>{
+  data={...original};
+  render();
+});
+
+$("fullscreen").addEventListener("click",async()=>{
+  try{
+    if(document.fullscreenElement){
+      await document.exitFullscreen();
+    }else if(document.documentElement.requestFullscreen){
+      await document.documentElement.requestFullscreen();
+    }else{
+      alert("Trình duyệt này chưa hỗ trợ nút toàn màn hình. Em có thể dùng chế độ toàn màn hình của trình duyệt.");
+    }
+  }catch{
+    alert("Chưa thể bật toàn màn hình trên trình duyệt này.");
+  }
+});
+document.addEventListener("fullscreenchange",()=>{
+  $("fullscreen").textContent=document.fullscreenElement
+    ?"Thoát toàn màn hình":"Toàn màn hình";
+});
+render();
+</script>
+</body>
+</html>
