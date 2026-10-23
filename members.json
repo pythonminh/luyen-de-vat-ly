@@ -804,15 +804,36 @@
       "username": "vohuy",
       "name": "Võ Gia Huy",
       "phone": "0906327187",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "requested_package": {
+        "kind": "lop1",
+        "grades": [
+          "12"
+        ],
+        "subjects": [
+          "Vật lý"
+        ]
+      },
+      "package_status": "pending",
+      "password_sha256": "53ac0ffe2db82b36e0cb7b242797d098ee50bc16b88b666be337e12e54949c11",
+      "password_enc": "v1:wXGKFkPg-IY="
+    },
+    {
+      "username": "danh0608",
+      "name": "Phạm Tất Danh",
+      "phone": "0344343623",
       "class": "12",
       "account_type": "VIP",
       "status": "ON",
       "requested_package": null,
       "package_status": "approved",
-      "password_sha256": "53ac0ffe2db82b36e0cb7b242797d098ee50bc16b88b666be337e12e54949c11",
-      "password_enc": "v1:wXGKFkPg-IY=",
+      "password_sha256": "e3d7595bd6b2f4f2e2eff31c06784083f46aaea8394d7970a932d70f78775c2f",
+      "password_enc": "v1:vzzBF0Hk_YHS",
+      "updated_at": "2026-10-23 16:05:11",
       "package": {
-        "kind": "lop1",
+        "kind": "mon1",
         "grades": [
           "12"
         ],
@@ -828,30 +849,8 @@
       ],
       "grade": "12",
       "vip_plan": "1m",
-      "vip_started_at": "2026-10-23 16:04:56",
-      "vip_expires_at": "2026-11-23 16:04:56",
-      "updated_at": "2026-10-23 16:04:56"
-    },
-    {
-      "username": "danh0608",
-      "name": "Phạm Tất Danh",
-      "phone": "0344343623",
-      "class": "",
-      "account_type": "FREE",
-      "status": "ON",
-      "requested_package": {
-        "kind": "mon1",
-        "grades": [
-          "12"
-        ],
-        "subjects": [
-          "Vật lý"
-        ]
-      },
-      "package_status": "pending",
-      "password_sha256": "e3d7595bd6b2f4f2e2eff31c06784083f46aaea8394d7970a932d70f78775c2f",
-      "password_enc": "v1:vzzBF0Hk_YHS",
-      "updated_at": "2026-10-21 04:44:49"
+      "vip_started_at": "2026-10-23 16:05:11",
+      "vip_expires_at": "2026-11-23 16:05:11"
     },
     {
       "username": "knhan_0711",
