@@ -804,10 +804,14 @@
       "username": "vohuy",
       "name": "Võ Gia Huy",
       "phone": "0906327187",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "53ac0ffe2db82b36e0cb7b242797d098ee50bc16b88b666be337e12e54949c11",
+      "password_enc": "v1:wXGKFkPg-IY=",
+      "package": {
         "kind": "lop1",
         "grades": [
           "12"
@@ -816,9 +820,17 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "53ac0ffe2db82b36e0cb7b242797d098ee50bc16b88b666be337e12e54949c11",
-      "password_enc": "v1:wXGKFkPg-IY="
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-23 16:04:56",
+      "vip_expires_at": "2026-11-23 16:04:56",
+      "updated_at": "2026-10-23 16:04:56"
     },
     {
       "username": "danh0608",
