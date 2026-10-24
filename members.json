@@ -961,6 +961,26 @@
       "vip_plan": "1m",
       "vip_started_at": "2026-10-23 16:04:07",
       "vip_expires_at": "2026-11-23 16:04:07"
+    },
+    {
+      "username": "Trọng Nghĩa",
+      "name": "Trọng Nghĩa",
+      "phone": "0984288360",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "requested_package": {
+        "kind": "lop1",
+        "grades": [
+          "12"
+        ],
+        "subjects": [
+          "Vật lý"
+        ]
+      },
+      "package_status": "pending",
+      "password_sha256": "1fdde1196e683ea53fe4c65f0411c3dbb2f712a5f5304e5c9de9763ff35f7563",
+      "password_enc": "v1:x2ObThCT_IXRaSERR6U="
     }
   ]
 }
