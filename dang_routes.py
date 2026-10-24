@@ -3595,6 +3595,7 @@ def admin_html_saved_approve():
 
 
 def _saved_html_menu():
+    import secrets
     member = member_current()
     selected = str(request.args.get('path') or '').strip()
     rows = []
