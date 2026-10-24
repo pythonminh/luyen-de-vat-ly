@@ -266,6 +266,61 @@ function togglePass(id,btn){{const x=document.getElementById(id);if(!x)return;x.
     return authoritative_page("Đăng nhập", body)
 
 
+@app.get("/member/device-notice")
+def member_device_notice():
+    """Show the one-device policy after successful student login."""
+    if session.get("role") != "member":
+        return redirect("/member/login")
+    import html as _html
+    from flask import request as _request
+    ua = (_request.headers.get("User-Agent") or "").lower()
+    if "iphone" in ua:
+        device = "iPhone"
+    elif "ipad" in ua:
+        device = "iPad"
+    elif "android" in ua:
+        device = "Điện thoại / máy tính bảng Android"
+    elif "windows" in ua:
+        device = "Máy tính Windows"
+    elif "macintosh" in ua or "mac os" in ua:
+        device = "Máy tính Mac"
+    elif "linux" in ua:
+        device = "Máy tính Linux"
+    else:
+        device = "Thiết bị hiện tại"
+    browser = ("Edge" if "edg/" in ua else "Chrome" if "chrome/" in ua
+               else "Firefox" if "firefox/" in ua else "Safari" if "safari/" in ua
+               else "Trình duyệt hiện tại")
+    name = _html.escape(str(session.get("name") or session.get("username") or "Học viên"))
+    label = _html.escape(device + " · " + browser)
+    return ("""<!doctype html><html lang="vi"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thông báo thiết bị đăng nhập</title>
+<body style="margin:0;background:#eef3f9;color:#152b49;font:16px Arial,sans-serif">
+<main style="max-width:620px;margin:7vh auto;padding:24px">
+<section style="background:white;border:1px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 8px 25px #152b4914">
+<h2>⚠️ QUY ĐỊNH SỬ DỤNG THIẾT BỊ</h2>
+<p>Xin chào <b>""" + name + """</b>. Bạn vừa đăng nhập bằng:</p>
+<p style="background:#edf5ff;padding:14px;border-radius:10px"><b>📱 """ + label + """</b><br><small>Thông tin nhận diện dựa trên trình duyệt; không phải số sê-ri thiết bị.</small></p>
+<p><b>Mỗi tài khoản học viên chỉ được sử dụng trên 01 thiết bị để làm bài kiểm tra và mở HTML Practice.</b></p>
+<p style="color:#9a3412"><b>Không tự ý đổi sang điện thoại, máy tính hoặc trình duyệt khác.</b> Việc đổi thiết bị có thể khiến bạn không được truy cập bài kiểm tra và HTML Practice.</p>
+<p>Nếu cần đổi thiết bị, hãy liên hệ <b>ADMIN</b> để được duyệt và mở khóa trước.</p>
+<form method="post" action="/member/device-notice/continue">
+<button style="background:#185b9f;color:white;border:0;border-radius:10px;padding:14px 20px;font-size:16px;cursor:pointer;width:100%">Tôi đã hiểu — tiếp tục vào học</button></form>
+</section></main></body></html>""")
+
+
+@app.post("/member/device-notice/continue")
+def member_device_notice_continue():
+    if session.get("role") != "member":
+        return redirect("/member/login")
+    session["device_notice_acknowledged"] = True
+    target = str(session.pop("device_notice_next", "/member"))
+    if not target.startswith("/") or target.startswith("//") or "\\\\" in target:
+        target = "/member"
+    return redirect(target)
+
+
 def unified_member_auth(*args, **kwargs):
     if request.method == "POST":
         action = (request.form.get("action") or "login").strip().lower()
@@ -313,7 +368,8 @@ def unified_member_auth(*args, **kwargs):
             session.update(role="member", username=username, name=member["name"])
             session.permanent = remember
             base.bind_member_device(username)
-            return redirect("/member/goi")
+            session["device_notice_next"] = "/member/goi"
+            return redirect("/member/device-notice")
 
         data, found = _member_lookup(username, password)
         admin_ok = False
@@ -340,7 +396,8 @@ def unified_member_auth(*args, **kwargs):
             session.permanent = remember
             session.update(role="member", username=found.get("username"), name=str(found.get("name") or username))
             base.bind_member_device(found.get("username"))
-            return redirect(base.safe_next_url())
+            session["device_notice_next"] = base.safe_next_url()
+            return redirect("/member/device-notice")
         return _auth_page("Sai tài khoản hoặc mật khẩu.", "login", request.form)
 
     return _auth_page("", "login")
