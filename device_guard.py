@@ -79,7 +79,7 @@ def issue_device_cookie(response):
     token = request.environ.get("student_device_new_token")
     if token and response.status_code < 400:
         response.set_cookie(COOKIE,token,max_age=365*24*3600,httponly=True,
-                            secure=request.is_secure,samesite="Lax",path="/")
+                            secure=True,samesite="Lax",path="/")
     return response
 
 @app.route("/admin/device-locks", methods=["GET","POST"])
