@@ -4,12 +4,22 @@ import hashlib
 import html
 import os
 import secrets
-from flask import request, session, redirect, make_response
+from flask import request, session, redirect, make_response, url_for
 from werkzeug.exceptions import Forbidden
 import app as base
 
 app = base.app
 COOKIE = "thayminh_device"
+NOTICE = "Mỗi tài khoản học viên chỉ được sử dụng trên đúng 1 thiết bị. Nếu cần đổi điện thoại hoặc máy tính, hãy liên hệ ADMIN để được duyệt trước khi mở bài kiểm tra hoặc HTML Practice."
+
+def device_notice(message=NOTICE, status=200, confirm=False):
+    import html as _html
+    warning = _html.escape(message)
+    action = ("<form method=\"post\" action=\"/member/device-confirm\">"
+              "<input type=\"hidden\" name=\"csrf\" value=\"" + _html.escape(session.get("device_confirm_csrf", ""), quote=True) + "\">"
+              "<button type=\"submit\">Tôi đã hiểu — sử dụng thiết bị này</button></form>") if confirm else ""
+    return ("<!doctype html><html lang=\"vi\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Cảnh báo thiết bị</title><main style=\"font:17px Arial;max-width:650px;margin:8vh auto;padding:24px;border:2px solid #d97706;border-radius:14px\"><h2>⚠️ Quy định sử dụng thiết bị</h2><p>" + warning + "</p>" + action + "<p><a href=\"/member\">Quay về trang học viên</a></p></main></html>", status)
+
 DDL = """
 CREATE TABLE IF NOT EXISTS student_device_bindings (
  username TEXT PRIMARY KEY,
@@ -51,6 +61,10 @@ def enforce_student_device():
     if not username:
         raise Forbidden("Không xác định được tài khoản.")
     token = request.cookies.get(COOKIE, "")
+    if not session.get("device_confirmed"):
+        session["device_pending_path"] = request.full_path.rstrip("?") if request.method == "GET" else "/member"
+        session.setdefault("device_confirm_csrf", secrets.token_hex(24))
+        return device_notice(confirm=True)
     if len(token) != 64 or any(c not in "0123456789abcdef" for c in token):
         token = secrets.token_hex(32)
         # Only a newly generated token may be set on the successful response.
@@ -66,7 +80,7 @@ def enforce_student_device():
                 records = cur.fetchall()
                 if records:
                     if len(records) != 1 or records[0] != (username,digest):
-                        return ("Thiết bị hoặc tài khoản đã được liên kết. Liên hệ ADMIN để mở khóa.", 403)
+                        return device_notice("Thiết bị hoặc tài khoản này đã liên kết với tài khoản khác. Không thể tự đổi máy. Vui lòng liên hệ ADMIN để được duyệt và mở khóa trước khi tiếp tục.", 403)
                 else:
                     cur.execute("INSERT INTO student_device_bindings(username,token_hash) VALUES (%s,%s)", (username,digest))
                     cur.execute("INSERT INTO student_device_audit(username,event) VALUES (%s,'bind')", (username,))
@@ -117,3 +131,18 @@ def admin_device_locks():
         body += "<tr><td>"+u+"</td><td>"+html.escape(str(created))+"</td><td><form method='post'><input type='hidden' name='csrf' value='"+csrf+"'><input type='hidden' name='username' value='"+u+"'><button onclick='return confirm(&quot;Mở khóa thiết bị?&quot;)'>Mở khóa</button></form></td></tr>"
     body += "</table>"
     return make_response("<!doctype html><html lang='vi'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Quản lý thiết bị</title><body style='font:16px Arial;max-width:1000px;margin:24px auto;padding:12px'>"+body+"</body></html>")
+
+@app.post("/member/device-confirm")
+def confirm_device_warning():
+    if session.get("role") != "member":
+        return redirect("/member/login")
+    supplied = str(request.form.get("csrf") or "")
+    expected = str(session.get("device_confirm_csrf") or "")
+    if not expected or not secrets.compare_digest(supplied, expected):
+        raise Forbidden("Xác nhận không hợp lệ.")
+    session["device_confirmed"] = True
+    session.pop("device_confirm_csrf", None)
+    target = str(session.pop("device_pending_path", "/member"))
+    if not target.startswith("/") or target.startswith("//"):
+        target = "/member"
+    return redirect(target)
