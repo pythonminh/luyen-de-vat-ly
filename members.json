@@ -281,11 +281,37 @@
     {
       "username": "Anh Quy",
       "name": "Hoàng Anh Quy",
-      "class": "",
-      "account_type": "FREE",
+      "class": "10+11+12",
+      "account_type": "VIP",
       "status": "ON",
       "password_sha256": "88e9c230e8b4223f2bbd5c52166327903b9a2877a52b1085c36bf28c2b609199",
-      "password_enc": "v1:yGqbVgSq_YHSeg=="
+      "password_enc": "v1:yGqbVgSq_YHSeg==",
+      "package": {
+        "kind": "mon1",
+        "grades": [
+          "10",
+          "11",
+          "12"
+        ],
+        "subjects": [
+          "Vật lý"
+        ]
+      },
+      "grades": [
+        "10",
+        "11",
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "package_status": "approved",
+      "grade": "10+11+12",
+      "requested_package": null,
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-24 17:17:23",
+      "vip_expires_at": "2026-11-24 17:17:23",
+      "updated_at": "2026-10-24 17:17:23"
     },
     {
       "username": "hoanggvy2009@gmail.com",
