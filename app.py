@@ -72,15 +72,8 @@ ZALO_LOCK = "0946111107"
 
 
 def bind_member_device(username):
-    """Mỗi tài khoản học viên chỉ một máy. Đăng nhập máy mới đá máy cũ."""
-    u = str(username or "").strip().casefold()
-    if not u:
-        return ""
-    sid = secrets.token_hex(16)
-    with _DEVICE_LOCK:
-        _DEVICE_SID[u] = sid
-    session["device_sid"] = sid
-    return sid
+    """Do not bind on login. A protected route will establish a session."""
+    return str(session.get("device_sid") or "")
 
 
 def release_member_device():
@@ -96,13 +89,13 @@ def release_member_device():
 
 
 def _skip_device_check(path):
-    p = str(path or "")
-    if p in {"/member/kicked", "/member/login", "/member/register", "/member/logout", "/sw.js", "/manifest.webmanifest"}:
-        return True
-    for pre in ("/static/", "/tikz/", "/favicon"):
-        if p.startswith(pre):
-            return True
-    return False
+    """Protect only active exam and HTML practice routes."""
+    p = str(path or "").rstrip("/")
+    if p in {"/member/html-practice", "/member/start", "/member/practice", "/member/answer"}:
+        return False
+    if p.startswith(("/api/practice/", "/api/exam/", "/member/exam/")):
+        return False
+    return True
 
 
 @app.before_request
