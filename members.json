@@ -980,7 +980,8 @@
       },
       "package_status": "pending",
       "password_sha256": "1fdde1196e683ea53fe4c65f0411c3dbb2f712a5f5304e5c9de9763ff35f7563",
-      "password_enc": "v1:x2ObThCT_IXRaSERR6U="
+      "password_enc": "v1:x2ObThCT_IXRaSERR6U=",
+      "updated_at": "2026-10-24 18:44:25"
     }
   ]
 }
