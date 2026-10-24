@@ -89,12 +89,7 @@ def release_member_device():
 
 
 def _skip_device_check(path):
-    """Protect only active exam and HTML practice routes."""
-    p = str(path or "").rstrip("/")
-    if p in {"/member/html-practice", "/member/start", "/member/practice", "/member/answer"}:
-        return False
-    if p.startswith(("/api/practice/", "/api/exam/", "/member/exam/")):
-        return False
+    """Legacy in-memory lock disabled; device_guard owns protected routes."""
     return True
 
 
@@ -5364,4 +5359,4 @@ try:
 except Exception:
     pass
 
-if __name__=='__main__':app.run(host='0.0.0.0',port=int(os.getenv('PORT','5000')))
+import device_guard  # noqa: E402,F401 - persistent scoped device guard\n\nif __name__=='__main__':app.run(host='0.0.0.0',port=int(os.getenv('PORT','5000')))
