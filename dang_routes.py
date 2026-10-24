@@ -3451,7 +3451,7 @@ def member_html_menu():
     const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(!entry.isIntersecting)return;observer.unobserve(entry.target);const el=entry.target,c=data[Number(el.dataset.index)];load(c.path).then(items=>{const firstLoad=!c.items;c.items=items[c.dang]||[];const status=el.querySelector('.hg-status'),open=el.querySelector('.hg-open'),preview=el.querySelector('.hg-preview a');status.textContent=c.items.length?'Đã có HTML · '+c.items.length+' bài':'Chưa có HTML';if(c.items.length){open.textContent='Mở luyện tập';open.href=url(c,c.items.length===1?c.items[0]:null);preview.href=open.href;fetch(url(c,c.items[0])+'&content=1').then(r=>r.json()).then(d=>{if(!d.ok||!el.isConnected)return;const frame=document.createElement('iframe');frame.setAttribute('sandbox','');frame.setAttribute('aria-hidden','true');frame.tabIndex=-1;frame.srcdoc=d.source;el.querySelector('.hg-preview').prepend(frame);preview.classList.add('has-preview')}).catch(()=>{})}else{el.classList.add('hg-unavailable');preview.textContent='Chưa có bài luyện HTML';if(!manager){open.removeAttribute('href');open.setAttribute('aria-disabled','true');open.textContent='Đang chuẩn bị';preview.removeAttribute('href')}}if(firstLoad&&$('hgReady').value)draw()}).catch(()=>{el.querySelector('.hg-status').textContent='Không tải được trạng thái HTML'})}),{rootMargin:'100px'});
     function draw(){observer.disconnect();const search=fold($('hgSearch').value),ready=$('hgReady').value,rows=data.map((c,i)=>({c,i})).filter(({c})=>match(c)&&fold(c.dang+' '+c.lesson).includes(search)&&(!ready||(c.items&&(ready==='yes'?c.items.length:!c.items.length))));$('hgCount').textContent=rows.length+' dạng bài';$('hgEmpty').hidden=!!rows.length;$('hgCards').className='hg-grid'+(list?' hg-list':'');$('hgCards').innerHTML=rows.map(({c,i})=>{const target=url(c,c.items?.length===1?c.items[0]:null);return '<article class="hg-card" data-index="'+i+'"><div class="hg-preview"><a href="'+E(target)+'" aria-label="'+E(c.dang)+'">Bài luyện tương tác</a></div><div class="hg-info"><h3>'+E(c.dang||'Chưa phân dạng')+'</h3><p>'+E(c.subject+' · Lớp '+c.grade+' · '+c.lesson)+'</p><div class="hg-tags">'+['TN','DS','TLN','TL'].map(k=>'<span>'+E(k==='DS'?'ĐS':k)+' '+Number(c.kinds[k]||0)+'</span>').join('')+'<span>'+Number(c.count)+' câu</span></div><p class="hg-status">'+(c.items?(c.items.length?'Đã có HTML · '+c.items.length+' bài':'Chưa có HTML'):'Đang kiểm tra HTML…')+'</p><a class="hg-open" href="'+E(target)+'">'+(c.items?.length?'Mở luyện tập':manager?'Thêm / Mở HTML':'Xem HTML')+'</a></div></article>'}).join('');document.querySelectorAll('.hg-card').forEach(el=>observer.observe(el))}
     filters.forEach(([id])=>$(id).onchange=()=>{options();draw()});$('hgSearch').oninput=draw;$('hgReady').onchange=()=>{if($('hgReady').value)Promise.allSettled([...new Set(data.filter(c=>match(c)).map(c=>c.path))].map(p=>load(p).then(items=>data.filter(c=>c.path===p).forEach(c=>c.items=items[c.dang]||[])))).then(draw);draw()};$('hgView').onclick=()=>{list=!list;$('hgView').textContent=list?'Lưới':'Danh sách';draw()};$('hgReset').onclick=()=>{filters.forEach(([id])=>$(id).value='');$('hgReady').value='';$('hgSearch').value='';options();draw()};options();draw();
-    })();</script>'''.replace('SEED', seed).replace('MANAGER', 'true' if can_manage_bank() else 'false')
+    })();</script>'''.replace('SEED', seed).replace('CSRF_TOKEN', html.escape(gallery_csrf, quote=True)).replace('MANAGER', 'true' if can_manage_bank() else 'false')
     return page('Kho luyện tập HTML', body)
 
 
@@ -3563,10 +3563,44 @@ def _saved_html_paths():
     return result
 
 
+@app.post('/admin/html-saved/approve')
+def admin_html_saved_approve():
+    """Approve one pending HTML item from the saved gallery."""
+    if not can_manage_bank():
+        return 'Chỉ ADMIN được duyệt bài HTML.', 403
+    import secrets
+    csrf = str(request.form.get('csrf') or '')
+    if not csrf or not secrets.compare_digest(csrf, str(session.get('html_gallery_csrf') or '')):
+        return 'Phiên xác nhận không hợp lệ. Tải lại trang.', 403
+    rel = str(request.form.get('file') or '').strip()
+    try:
+        rel, _ = _safe_repo_file(rel)
+        if '/html-practice/' not in rel or not rel.endswith('.html') or not rel.rsplit('/',1)[-1].startswith('pending--'):
+            raise ValueError('Không phải bài HTML đang chờ duyệt.')
+        if not _html_is_approved(rel):
+            from app import github_token
+            if not github_token():
+                raise ValueError('Render chưa cấu hình quyền ghi GitHub.')
+            marker = rel + '.approved'
+            github_put_text(marker, 'approved\\n', 'ADMIN duyệt bài HTML đã lưu', None)
+            _, marker_local = _safe_repo_file(marker)
+            marker_local.parent.mkdir(parents=True, exist_ok=True)
+            marker_local.write_text('approved\\n', encoding='utf-8')
+            _HTML_LIST_CACHE.clear()
+            global _SAVED_HTML_CACHE
+            _SAVED_HTML_CACHE = (0, [])
+    except Exception as exc:
+        return 'Không thể duyệt HTML: ' + html.escape(str(exc)), 400
+    return redirect('/member/html-menu?approved=1')
+
+
 def _saved_html_menu():
     member = member_current()
     selected = str(request.args.get('path') or '').strip()
     rows = []
+    manager = can_manage_bank()
+    if manager:
+        session.setdefault('html_gallery_csrf', secrets.token_urlsafe(32))
     for rel in _saved_html_paths():
         parent = rel.split('/html-practice/', 1)[0]
         lesson_path = parent + '/de.tex'
@@ -3578,10 +3612,12 @@ def _saved_html_menu():
         fallback = rel.rsplit('/', 1)[-1].split('--', 1)[-1][:-5]
         if re.fullmatch(r'[0-9a-f]{24}', fallback):
             fallback = 'Bài luyện tập'
-        rows.append({'title': _html_saved_title(rel, fallback) + (' · 🟠 Chờ duyệt' if not _html_is_approved(rel) else ''), 'subject': parts[1] if len(parts)>1 else '',
+        pending = not _html_is_approved(rel)
+        rows.append({'title': _html_saved_title(rel, fallback) + (' · 🟠 Chờ duyệt' if pending else ' · Đã duyệt'), 'pending': bool(pending), 'approve_file': rel if manager and pending else '', 'subject': parts[1] if len(parts)>1 else '',
                      'grade': parts[2] if len(parts)>2 else '', 'chapter': parts[3] if len(parts)>3 else '',
                      'lesson': parts[-1], 'url': '/member/html-saved?' + urllib.parse.urlencode({'file': rel})})
     seed = base64.b64encode(json.dumps(rows, ensure_ascii=False).encode()).decode()
+    gallery_csrf = session.get('html_gallery_csrf', '') if manager else ''
     body = r'''<div class="wrap saved-gallery"><header>Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>
 <div class="sg-heading"><h2>Kho bài HTML đã lưu</h2><button type="button" id="sgFull">⛶ Toàn màn hình</button></div><p><a class="btn" href="/member">← Ngân hàng</a> <a class="btn" href="/member/html-menu?mode=types">Quản lý HTML theo dạng bài</a></p>
 <div class="sg-filters"><input id="sgSearch" placeholder="Tìm tên bài HTML…" aria-label="Tìm bài HTML"><select id="sgGrade" aria-label="Lớp"></select><select id="sgSubject" aria-label="Môn"></select><select id="sgChapter" aria-label="Chương"></select><select id="sgLesson" aria-label="Bài"></select><button id="sgReset">Xóa bộ lọc</button></div><p id="sgCount" role="status"></p><div id="sgCards"></div>
