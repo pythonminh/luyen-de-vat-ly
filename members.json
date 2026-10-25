@@ -1106,10 +1106,14 @@
       "username": "Võ Nguyễn Gia Bảo",
       "name": "Võ Nguyễn Gia Bảo",
       "phone": "0703777460",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "e1bf4266d201f70069f4ca2ac9d067d79667be6342dc3a3df173046448280e4b",
+      "password_enc": "v1:30q0ZTHi_IPTbio=",
+      "package": {
         "kind": "mon1",
         "grades": [
           "12"
@@ -1118,9 +1122,17 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "e1bf4266d201f70069f4ca2ac9d067d79667be6342dc3a3df173046448280e4b",
-      "password_enc": "v1:30q0ZTHi_IPTbio="
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-25 14:25:02",
+      "vip_expires_at": "2026-11-25 14:25:02",
+      "updated_at": "2026-10-25 14:25:02"
     }
   ]
 }
