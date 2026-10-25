@@ -993,6 +993,26 @@
       "vip_plan": "1m",
       "vip_started_at": "2026-10-25 10:49:26",
       "vip_expires_at": "2026-11-25 10:49:26"
+    },
+    {
+      "username": "ankhangduong",
+      "name": "Dương An Khang",
+      "phone": "0967171863",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "requested_package": {
+        "kind": "lop1",
+        "grades": [
+          "12"
+        ],
+        "subjects": [
+          "Vật lý"
+        ]
+      },
+      "package_status": "pending",
+      "password_sha256": "bbeb326c3a2ebe5337d70ee8fd022190d878334e48d0304b5fbb2427e20e02df",
+      "password_enc": "v1:6GqYTxC9q9eUMX1GRq7n"
     }
   ]
 }
