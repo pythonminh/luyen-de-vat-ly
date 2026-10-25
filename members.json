@@ -894,10 +894,14 @@
       "username": "knhan_0711",
       "name": "Kim Nhàn",
       "phone": "0818730711",
-      "class": "",
-      "account_type": "FREE",
+      "class": "11",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "16064059e29e9c1c2fd5fab49900cf4abc2f4d49ff2823126e5801b2fe9dfa56",
+      "password_enc": "v1:uTPCFkPj_YM=",
+      "package": {
         "kind": "lop1",
         "grades": [
           "11"
@@ -906,9 +910,17 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "16064059e29e9c1c2fd5fab49900cf4abc2f4d49ff2823126e5801b2fe9dfa56",
-      "password_enc": "v1:uTPCFkPj_YM="
+      "grades": [
+        "11"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "11",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-25 14:25:06",
+      "vip_expires_at": "2026-11-25 14:25:06",
+      "updated_at": "2026-10-25 14:25:06"
     },
     {
       "username": "vohuyy",
