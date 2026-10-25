@@ -1074,10 +1074,14 @@
       "username": "loc",
       "name": "Nguyễn Tấn Lộc",
       "phone": "0345356594",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "b8c1b80c217dd2a1ce019ef98be278b8aa077c0b4d15e6007169398d2c657fa9",
+      "password_enc": "v1:5WuQVBCkrdeA",
+      "package": {
         "kind": "lop1",
         "grades": [
           "12"
@@ -1086,9 +1090,17 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "b8c1b80c217dd2a1ce019ef98be278b8aa077c0b4d15e6007169398d2c657fa9",
-      "password_enc": "v1:5WuQVBCkrdeA"
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-25 11:39:27",
+      "vip_expires_at": "2026-11-25 11:39:27",
+      "updated_at": "2026-10-25 11:39:27"
     }
   ]
 }
