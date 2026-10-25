@@ -966,10 +966,15 @@
       "username": "Trọng Nghĩa",
       "name": "Trọng Nghĩa",
       "phone": "0984288360",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "1fdde1196e683ea53fe4c65f0411c3dbb2f712a5f5304e5c9de9763ff35f7563",
+      "password_enc": "v1:x2ObThCT_IXRaSERR6U=",
+      "updated_at": "2026-10-25 10:49:26",
+      "package": {
         "kind": "lop1",
         "grades": [
           "12"
@@ -978,10 +983,16 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "1fdde1196e683ea53fe4c65f0411c3dbb2f712a5f5304e5c9de9763ff35f7563",
-      "password_enc": "v1:x2ObThCT_IXRaSERR6U=",
-      "updated_at": "2026-10-24 18:44:25"
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-25 10:49:26",
+      "vip_expires_at": "2026-11-25 10:49:26"
     }
   ]
 }
