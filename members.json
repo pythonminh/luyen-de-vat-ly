@@ -615,43 +615,6 @@
       "vip_expires_at": "2026-11-19 16:07:29"
     },
     {
-      "username": "M nguyên",
-      "name": "Nguyễn Đặng Minh Nguyên",
-      "phone": "0393610210",
-      "class": "11",
-      "account_type": "VIP",
-      "status": "ON",
-      "requested_package": null,
-      "package_status": "approved",
-      "password_sha256": "e13645e3b8ba3f8d3c8bb32765c8e32585da1e5ceccdbc4c973714c767656320",
-      "password_enc": "v1:wWuQTx-ypA==",
-      "also_usernames": [
-        "minh Nguyên"
-      ],
-      "updated_at": "2026-10-19 16:07:17",
-      "package": {
-        "kind": "mon2",
-        "grades": [
-          "11"
-        ],
-        "subjects": [
-          "Toán",
-          "Vật lý"
-        ]
-      },
-      "grades": [
-        "11"
-      ],
-      "subjects": [
-        "Toán",
-        "Vật lý"
-      ],
-      "grade": "11",
-      "vip_plan": "1m",
-      "vip_started_at": "2026-10-19 16:07:17",
-      "vip_expires_at": "2026-11-19 16:07:17"
-    },
-    {
       "username": "nguyễn tuấn phong",
       "name": "nguyễn tuấn phong",
       "phone": "0902317944",
