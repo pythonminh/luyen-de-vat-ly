@@ -1168,10 +1168,15 @@
       "username": "dinhgiahuy",
       "name": "Đinh Gia Huy",
       "phone": "0792982581",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "e1887443b63b3a82562b4a99318bceab4766e888176a2c48ec15c5ce12d77217",
+      "password_enc": "v1:uDbATwSq",
+      "updated_at": "2026-10-26 15:38:00",
+      "package": {
         "kind": "lop1",
         "grades": [
           "12"
@@ -1180,10 +1185,16 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "e1887443b63b3a82562b4a99318bceab4766e888176a2c48ec15c5ce12d77217",
-      "password_enc": "v1:uDbATwSq",
-      "updated_at": "2026-10-26 15:32:25"
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-26 15:38:00",
+      "vip_expires_at": "2026-11-26 15:38:00"
     }
   ]
 }
