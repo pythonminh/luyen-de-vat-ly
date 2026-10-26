@@ -1136,10 +1136,14 @@
       "username": "TienPhi",
       "name": "Nguyễn Phi",
       "phone": "0789771704",
-      "class": "",
-      "account_type": "FREE",
+      "class": "12",
+      "account_type": "VIP",
       "status": "ON",
-      "requested_package": {
+      "requested_package": null,
+      "package_status": "approved",
+      "password_sha256": "fa5018a627a111d3cd5ab7dcf94fa015af39e1aefad2e737313bb6c4de319241",
+      "password_enc": "v1:3W2WSSG7pYLWbidh",
+      "package": {
         "kind": "mon1",
         "grades": [
           "12"
@@ -1148,9 +1152,17 @@
           "Vật lý"
         ]
       },
-      "package_status": "pending",
-      "password_sha256": "fa5018a627a111d3cd5ab7dcf94fa015af39e1aefad2e737313bb6c4de319241",
-      "password_enc": "v1:3W2WSSG7pYLWbidh"
+      "grades": [
+        "12"
+      ],
+      "subjects": [
+        "Vật lý"
+      ],
+      "grade": "12",
+      "vip_plan": "1m",
+      "vip_started_at": "2026-10-26 15:37:52",
+      "vip_expires_at": "2026-11-26 15:37:52",
+      "updated_at": "2026-10-26 15:37:52"
     },
     {
       "username": "dinhgiahuy",
