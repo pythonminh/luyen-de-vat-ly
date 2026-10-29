@@ -3121,6 +3121,26 @@ def member_html_practice():
             return 'Chỉ ADMIN được lưu bài HTML.', 403
         if not secrets.compare_digest(str(request.form.get('csrf') or ''), session['html_practice_csrf']):
             return 'Phiên đã hết hạn. Tải lại trang.', 403
+        if request.form.get('studio') == '1':
+            # Không tin đường dẫn/nhãn ẩn gửi từ trình duyệt: đối chiếu lại
+            # đủ Môn → Lớp → Chương → Bài theo ngân hàng máy chủ.
+            candidates = [x for x in index_data().get('lessons', [])
+                          if str(x.get('path') or x.get('file') or '') == path]
+            if not candidates:
+                return 'Không tìm thấy bài học trong ngân hàng.', 400
+            row = candidates[0]
+            required = {
+                'studio_mon': str(row.get('Mon') or ''),
+                'studio_lop': str(row.get('Lop') or ''),
+                'studio_chuong': str(row.get('Chuong') or ''),
+                'studio_bai': str(row.get('BaiHoc') or row.get('De') or ''),
+            }
+            if any(str(request.form.get(k) or '') != v for k, v in required.items()):
+                return 'Vị trí lưu không đúng Môn/Lớp/Chương/Bài đã chọn. Tải lại trang.', 400
+            if dang:
+                valid_dang = {str(q.get('dang') or '').strip() for q in parse_lesson_questions(path)}
+                if dang not in valid_dang:
+                    return 'Dạng bài không thuộc bài học đã chọn.', 400
         try:
             if request.form.get('action') == 'approve':
                 from app import github_token
@@ -3380,7 +3400,7 @@ def member_html_menu():
     seed = base64.b64encode(json.dumps(cards, ensure_ascii=False).encode()).decode()
     body = r'''<div class="wrap hg-shell"><header class="hg-brand">Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>
     <h2>Kho luyện tập HTML</h2><p><a class="btn" href="/member">← Ngân hàng bài tập</a> <a class="btn" href="/member/html-menu">Tất cả dạng bài</a></p>
-    <div class="hg-layout"><aside class="hg-filters"><h3>Bộ lọc</h3><label>Lớp<select id="hgGrade"></select></label><label>Môn<select id="hgSubject"></select></label><label>Chương<select id="hgChapter"></select></label><label>Bài<select id="hgLesson"></select></label><label>HTML<select id="hgReady"><option value="">Tất cả</option><option value="yes">Đã có HTML</option><option value="no">Chưa có HTML</option></select></label><button id="hgReset" type="button">Xóa bộ lọc</button></aside>
+    <div class="hg-layout"><aside class="hg-filters"><h3>Bộ lọc</h3><label>Môn<select id="hgSubject"></select></label><label>Lớp<select id="hgGrade"></select></label><label>Chương<select id="hgChapter"></select></label><label>Bài<select id="hgLesson"></select></label><label>HTML<select id="hgReady"><option value="">Tất cả</option><option value="yes">Đã có HTML</option><option value="no">Chưa có HTML</option></select></label><button id="hgReset" type="button">Xóa bộ lọc</button></aside>
     <main><div class="hg-tools"><input id="hgSearch" type="search" placeholder="Tìm tên dạng bài…" aria-label="Tìm dạng bài"><button id="hgView" type="button">Danh sách</button></div><p id="hgCount" role="status"></p><div id="hgCards" class="hg-grid"></div><p id="hgEmpty" hidden>Không có dạng bài phù hợp.</p></main></div></div>
     <style>.hg-brand{background:#102746;color:white;padding:15px;border-radius:10px;font-weight:700}.hg-brand small{display:block;font-weight:400;margin-top:5px}.hg-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px}.hg-filters{border:1px solid #dde4ee;padding:16px;border-radius:12px;align-self:start}.hg-filters label{display:block;margin:12px 0}.hg-filters select{display:block;width:100%;padding:8px;margin-top:5px}.hg-tools{display:flex;gap:10px}.hg-tools input{flex:1;min-width:0;padding:10px}.hg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}.hg-card{border:1px solid #d7dfe9;border-radius:12px;overflow:hidden;background:white}.hg-preview{height:150px;background:#eef4fc;position:relative;overflow:hidden}.hg-preview iframe{width:900px;height:600px;border:0;transform:scale(.25);transform-origin:top left;pointer-events:none}.hg-preview a{position:absolute;inset:0;display:grid;place-items:center;text-decoration:none;color:#20496f;font-size:38px}.hg-preview a.has-preview{color:transparent}.hg-info{padding:12px}.hg-info h3{font-size:16px;margin:0 0 8px}.hg-info p{font-size:12px;color:#54657c;margin:6px 0}.hg-tags{display:flex;flex-wrap:wrap;gap:4px;font-size:11px}.hg-tags span{border:1px solid #dce3ed;border-radius:20px;padding:3px 6px}.hg-open{display:inline-block;background:#165fc0;color:white!important;padding:8px 12px;border-radius:7px;text-decoration:none;margin-top:10px}.hg-grid.hg-list{display:block}.hg-list .hg-card{display:flex;margin-bottom:12px}.hg-list .hg-preview{width:220px;flex-shrink:0}.hg-info{min-width:0;overflow-wrap:anywhere}@media(min-width:1450px){.hg-layout{grid-template-columns:250px minmax(0,1fr)}}@media(max-width:700px){.hg-layout{grid-template-columns:1fr;gap:12px}.hg-filters{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hg-filters h3{grid-column:1/-1;margin:0}.hg-filters label{margin:0}.hg-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.hg-preview{height:115px}.hg-info{padding:9px}.hg-list .hg-preview{width:120px}}@media(max-width:380px){.hg-grid{grid-template-columns:1fr}}</style>
 <style>
@@ -3441,7 +3461,7 @@ def member_html_menu():
 @media(max-width:700px){.hg-shell{padding:12px!important}.hg-shell .hg-layout{grid-template-columns:1fr}.hg-shell .hg-brand{display:block;font-size:13px}.hg-shell .hg-brand small{margin-top:3px}.hg-shell .hg-filters{padding:10px;gap:8px}.hg-shell .hg-filters label{margin:0}.hg-shell .hg-filters h3{margin:0}.hg-shell .hg-grid{gap:10px}.hg-shell>h2{font-size:20px;margin-top:14px}}
 </style>
     <script>(function(){
-    const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0)))),manager=MANAGER,$=id=>document.getElementById(id),filters=[['hgGrade','grade'],['hgSubject','subject'],['hgChapter','chapter'],['hgLesson','lesson']];
+    const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0)))),manager=MANAGER,$=id=>document.getElementById(id),filters=[['hgSubject','subject'],['hgGrade','grade'],['hgChapter','chapter'],['hgLesson','lesson']];
     const E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fold=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
     let list=false;const loaded=new Map();
     function url(c,item){const q=new URLSearchParams({path:c.path,dang:c.dang});if(item){if(item.legacy)q.set('legacy','1');else q.set('item',item.name)}return '/member/html-practice?'+q}
@@ -3627,9 +3647,9 @@ def _saved_html_menu():
     gallery_csrf = session.get('html_gallery_csrf', '') if manager else ''
     body = r'''<div class="wrap saved-gallery"><header>Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>
 <div class="sg-heading"><h2>Kho bài HTML đã lưu</h2><button type="button" id="sgFull">⛶ Toàn màn hình</button></div><p><a class="btn" href="/member">← Ngân hàng</a> <a class="btn" href="/member/html-menu?mode=types">Quản lý HTML theo dạng bài</a></p>
-<div class="sg-filters"><input id="sgSearch" placeholder="Tìm tên bài HTML…" aria-label="Tìm bài HTML"><select id="sgGrade" aria-label="Lớp"></select><select id="sgSubject" aria-label="Môn"></select><select id="sgChapter" aria-label="Chương"></select><select id="sgLesson" aria-label="Bài"></select><button id="sgReset">Xóa bộ lọc</button></div><p id="sgCount" role="status"></p><div id="sgCards"></div>
+<div class="sg-filters"><input id="sgSearch" placeholder="Tìm tên bài HTML…" aria-label="Tìm bài HTML"><select id="sgSubject" aria-label="Môn"></select><select id="sgGrade" aria-label="Lớp"></select><select id="sgChapter" aria-label="Chương"></select><select id="sgLesson" aria-label="Bài"></select><button id="sgReset">Xóa bộ lọc</button></div><p id="sgCount" role="status"></p><div id="sgCards"></div>
 <style>.saved-gallery{max-width:1400px!important;padding:18px!important;color:#23354d}.saved-gallery header{background:#132d4c;color:white;padding:16px;border-radius:12px;font-weight:bold}.saved-gallery header small{display:block;font-weight:normal;margin-top:5px}.sg-filters{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}.sg-filters input,.sg-filters select,.sg-filters button{padding:10px;border:1px solid #d8e1eb;border-radius:8px;max-width:100%;background:white}.sg-filters input{flex:1;min-width:180px}.sg-filters select{flex:1;min-width:150px}#sgCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}.sg-card{border:1px solid #dde5ef;border-radius:12px;padding:18px;background:white;display:flex;flex-direction:column;gap:10px;overflow-wrap:anywhere}.sg-card h3{margin:0;font-size:17px}.sg-card p{margin:0;color:#708095;font-size:13px}.sg-card a{align-self:flex-start;margin-top:auto;background:#255f9e;color:white;padding:9px 15px;border-radius:7px;text-decoration:none}#sgCount{color:#65758a}@media(max-width:600px){.saved-gallery{padding:10px!important}.sg-filters select{min-width:130px}#sgCards{grid-template-columns:1fr}}</style>
-<script>(()=>{const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0)))),$=id=>document.getElementById(id),fs=[['sgGrade','grade'],['sgSubject','subject'],['sgChapter','chapter'],['sgLesson','lesson']],E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fold=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
+<script>(()=>{const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0)))),$=id=>document.getElementById(id),fs=[['sgSubject','subject'],['sgGrade','grade'],['sgChapter','chapter'],['sgLesson','lesson']],E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fold=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
 function match(c,n=fs.length){return fs.slice(0,n).every(([id,k])=>!$(id).value||$(id).value===c[k])}function options(){fs.forEach(([id,k],i)=>{const old=$(id).value,values=[...new Set(data.filter(c=>match(c,i)).map(c=>c[k]))].sort((a,b)=>a.localeCompare(b,'vi',{numeric:true}));$(id).innerHTML='<option value="">'+({grade:'Tất cả lớp',subject:'Tất cả môn',chapter:'Tất cả chương',lesson:'Tất cả bài'}[k])+'</option>'+values.map(v=>'<option>'+E(v)+'</option>').join('');if(values.includes(old))$(id).value=old})}function draw(){const q=fold($('sgSearch').value),rows=data.filter(c=>match(c)&&fold(c.title+' '+c.lesson).includes(q));$('sgCount').textContent=rows.length+' / '+data.length+' bài HTML đã lưu';$('sgCards').innerHTML=rows.length?rows.map(c=>'<article class="sg-card"><p>HTML · '+E(c.subject+' · '+c.grade)+'</p><h3>'+E(c.title)+'</h3><p>'+E(c.chapter)+'</p><p>'+E(c.lesson)+'</p><a href="'+E(c.url)+'">▶ Mở luyện tập</a>'+(c.approve_file?'<form method="post" action="/admin/html-saved/approve"><input type="hidden" name="csrf" value="'+E(c.csrf)+'"><input type="hidden" name="file" value="'+E(c.approve_file)+'"><button type="submit">✓ Duyệt bài</button></form>':'')+'<\/article>').join(''):'<p>Không có bài HTML phù hợp với bộ lọc.</p>'}fs.forEach(([id])=>$(id).onchange=()=>{options();draw()});$('sgSearch').oninput=draw;$('sgReset').onclick=()=>{fs.forEach(([id])=>$(id).value='');$('sgSearch').value='';options();draw()};options();draw()})();</script></div>'''.replace('SEED', seed).replace('CSRF_TOKEN', html.escape(gallery_csrf, quote=True))
     body += _html_gallery_responsive()
     return page('Kho bài HTML đã lưu', body)
@@ -3760,7 +3780,7 @@ def admin_html_studio():
       <label>Môn<select id="hsMon" required></select></label><label>Lớp<select id="hsLop" required disabled></select></label>
       <label>Chương<select id="hsChuong" required disabled></select></label><label>Bài<select id="hsBai" required disabled></select></label>
       <label>Dạng bài<select id="hsDang"><option value="">Tất cả dạng</option></select></label>
-      <p id="hsCount" role="status" class="hs-muted">Chọn bài học để lấy các câu trong ngân hàng.</p>
+      <p id="hsCount" role="status" class="hs-muted">Chọn bài học để lấy các câu trong ngân hàng.</p><p class="hs-folder" id="hsFolder" aria-live="polite">Thư mục HTML: Chưa chọn</p>
       <section id="goi-y"><h2>2. 💡 Gợi ý tạo bài</h2><div id="hsIdeas" class="hs-ideas"></div>
       <label>Yêu cầu bổ sung<textarea id="hsReq" rows="3" placeholder="Ví dụ: 6 câu từ dễ đến khó, thêm đồ thị SVG và lời giải từng bước"></textarea></label>
       <div class="hs-actions"><button type="button" id="hsCopy">📋 Sao chép prompt</button><button type="button" id="hsPromptShow">Xem gợi ý chi tiết</button><a id="hsGemini" target="_blank" rel="noopener" href="https://gemini.google.com/app">✨ Mở Gemini</a></div>
@@ -3794,7 +3814,7 @@ def admin_html_studio():
 .hs-card textarea{resize:vertical}.hs-card #hsSource{font:13px/1.5 ui-monospace,Consolas,monospace;color:#e8f3ff;background:#111f33;min-height:320px}
 .hs-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}.hs-actions button,.hs-actions a,.hs-file{border:1px solid #b9c9db;background:#ecf3fb;padding:9px 11px;border-radius:8px;color:#18436e;text-decoration:none;cursor:pointer;font-size:13px;font-weight:600;margin:0!important}
 .hs-actions .hs-save{color:white;background:#1d5fae;border-color:#1d5fae}
-.hs-muted{color:#60768d;font-size:12px}.hs-status{font-size:13px;background:#eaf2fa;border-radius:8px;padding:10px}
+.hs-muted{color:#60768d;font-size:12px}.hs-folder{font-size:12px;line-height:1.5;border:1px solid #bfd6ee;border-radius:7px;background:#f3f8fd;padding:9px;overflow-wrap:anywhere}.hs-status{font-size:13px;background:#eaf2fa;border-radius:8px;padding:10px}
 .hs-ideas p{border-left:3px solid #387fba;border-radius:5px;background:#f0f6fd;padding:8px;font-size:13px;margin:8px 0}
 #hsFrame{width:100%;height:460px;border:1px solid #c6d5e5;border-radius:9px;background:white}#hsPrompt[hidden]{display:none}
 body.hs-expanded #hsFrame{position:fixed;inset:0;width:100vw;height:100dvh;z-index:9998;border:0}
@@ -3816,6 +3836,7 @@ function onLop(){choices('hsChuong',unique(rowsLop().map(r=>r.chuong)).map(x=>[x
 function onChuong(){choices('hsBai',rowsChuong().map(r=>[r.bai,r.path]),'-- Chọn bài học --');onBai()}
 function onBai(){chosen=rowsChuong().find(r=>r.path===$('hsBai').value)||null;
 $('hsPath').value=chosen?.path||'';$('hsMonVal').value=chosen?.mon||'';$('hsLopVal').value=chosen?.lop||'';$('hsChuongVal').value=chosen?.chuong||'';$('hsBaiVal').value=chosen?.bai||'';
+$('hsFolder').textContent=chosen?'Lưu vào: '+chosen.mon+' / Lớp '+chosen.lop+' / '+chosen.chuong+' / '+chosen.bai+' / html-practice':'Thư mục HTML: Chưa chọn';
 $('hsTitle').value='';loadKinds()}
 async function json(url){const r=await fetch(url,{credentials:'same-origin'});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Không lấy được dữ liệu');return d}
 async function loadKinds(){const ticket=++serial;examples=[];$('hsDangVal').value='';choices('hsDang',[],'Tất cả dạng');$('hsIdeas').textContent='';if(!chosen){$('hsCount').textContent='Chọn đủ Môn → Lớp → Chương → Bài để lấy gợi ý.';return}
