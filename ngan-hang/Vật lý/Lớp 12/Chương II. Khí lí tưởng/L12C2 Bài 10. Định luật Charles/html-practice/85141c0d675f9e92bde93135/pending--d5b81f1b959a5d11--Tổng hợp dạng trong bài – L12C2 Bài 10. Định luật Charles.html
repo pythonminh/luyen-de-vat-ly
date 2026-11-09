@@ -1,0 +1,512 @@
+<!--hp-title:VOG7lW5nIGjhu6NwIGThuqFuZyB0cm9uZyBiw6BpIOKAkyBMMTJDMiBCw6BpIDEwLiDEkOG7i25oIGx14bqtdCBDaGFybGVz-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luyện tập Vật Lí - Lớp Học Thầy Minh</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            line-height: 1.6;
+        }
+        header {
+            background-color: #1a365d;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        header h1 {
+            font-size: 1.25rem;
+            margin-bottom: 3px;
+            font-weight: bold;
+        }
+        header p {
+            font-size: 0.85rem;
+            color: #cbd5e0;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-wrap: wrap;
+            overflow: hidden;
+        }
+        .left-panel {
+            flex: 1;
+            min-width: 300px;
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .right-panel {
+            flex: 1.5;
+            min-width: 320px;
+            padding: 25px;
+        }
+        .formula-box {
+            background: white;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            padding: 15px;
+            width: 100%;
+            text-align: center;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .formula-box h3 {
+            font-size: 0.95rem;
+            color: #2b6cb0;
+            margin-bottom: 10px;
+        }
+        .lake-sketch {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            background: linear-gradient(to bottom, #e0f2fe, #bae6fd);
+            border: 1px solid #7dd3fc;
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+        .water-surface {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 15px;
+            background: #0284c7;
+            color: white;
+            font-size: 0.7rem;
+            text-align: center;
+            line-height: 15px;
+        }
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1.5px solid #0284c7;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #0369a1;
+        }
+        .bubble-bottom {
+            bottom: 20px;
+            left: 45%;
+            width: 35px;
+            height: 35px;
+        }
+        .bubble-top {
+            top: 25px;
+            left: 55%;
+            width: 42px;
+            height: 42px;
+        }
+        .depth-line {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            bottom: 20px;
+            width: 2px;
+            background: #334155;
+        }
+        .depth-line::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -4px;
+            width: 10px;
+            height: 2px;
+            background: #334155;
+        }
+        .depth-line::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: -4px;
+            width: 10px;
+            height: 2px;
+            background: #334155;
+        }
+        .depth-label {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: rgba(255,255,255,0.8);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .question-title {
+            font-size: 1.05rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #1e293b;
+        }
+        .choices-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+        .choice-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        .choice-item:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+        .choice-item input {
+            margin-right: 10px;
+        }
+        .choice-item.correct {
+            background: #def7ec;
+            border-color: #84e1bc;
+            color: #03543f;
+        }
+        .choice-item.incorrect {
+            background: #fde8e8;
+            border-color: #f8b4b4;
+            color: #9b1c1c;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary {
+            background: #2b6cb0;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2c5282;
+        }
+        .btn-secondary {
+            background: #4a5568;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #2d3748;
+        }
+        .btn-success {
+            background: #2f855a;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #22543d;
+        }
+        .feedback {
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        .solution-box {
+            margin-top: 20px;
+            background: #f7fafc;
+            border-left: 4px solid #3182ce;
+            padding: 15px;
+            border-radius: 0 6px 6px 0;
+            display: none;
+        }
+        .solution-box h4 {
+            color: #2b6cb0;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        .solution-content {
+            font-size: 0.9rem;
+            color: #2d3748;
+        }
+        .solution-content p {
+            margin-bottom: 8px;
+        }
+        sup, sub {
+            font-size: 0.75em;
+            line-height: 0;
+            position: relative;
+            vertical-align: baseline;
+        }
+        sup {
+            top: -0.5em;
+        }
+        sub {
+            bottom: -0.25em;
+        }
+        .frac {
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            font-size: 0.9em;
+            padding: 0 2px;
+        }
+        .frac > span {
+            display: block;
+        }
+        .frac > span.numerator {
+            border-bottom: 1px solid currentColor;
+            padding-bottom: 1px;
+        }
+        .frac > span.denominator {
+            padding-top: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Lớp Học Thầy Minh · Zalo 0946111107</h1>
+        <p>lophocthayminh.onrender.com</p>
+    </header>
+
+    <div class="container">
+        <div class="left-panel">
+            <div class="formula-box">
+                <h3>Tóm tắt công thức</h3>
+                <div style="margin: 10px 0; font-size: 0.95rem;">
+                    p = p<sub>0</sub> + d·h<br>
+                    p<sub>0</sub>·V<sub>1</sub> = p<sub>2</sub>·V<sub>2</sub><br>
+                    h = <span class="frac"><span class="numerator">(k − 1)·p<sub>0</sub></span><span class="denominator">d</span></span>
+                </div>
+            </div>
+            <div class="lake-sketch">
+                <div class="water-surface">Mặt nước (p<sub>0</sub>)</div>
+                <div class="bubble bubble-top" id="sketchV2">V<sub>2</sub></div>
+                <div class="bubble bubble-bottom" id="sketchV1">V<sub>1</sub></div>
+                <div class="depth-line"></div>
+                <div class="depth-label" id="sketchH">h = ?</div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="question-title" id="questionText">
+                Một bọt khí khi nổi lên từ một đáy hồ có độ lớn gấp 1,2 lần khi đến mặt nước. Biết trọng lượng riêng của nước là d = 10<sup>4</sup> N/m<sup>3</sup>, áp suất khí quyển là 10<sup>5</sup> N/m<sup>2</sup>. Độ sâu của đáy hồ là
+            </div>
+
+            <ul class="choices-list" id="choicesList">
+                <!-- Rendered dynamically -->
+            </ul>
+
+            <div class="btn-group">
+                <button class="btn-success" id="checkBtn" onclick="checkAnswer()">Kiểm tra</button>
+                <button class="btn-secondary" onclick="toggleSolution()">Xem lời giải</button>
+                <button class="btn-primary" onclick="generateNewProblem()">«Đổi đề bài mới»</button>
+            </div>
+
+            <div class="feedback" id="feedbackMsg"></div>
+
+            <div class="solution-box" id="solutionBox">
+                <h4>Lời giải chi tiết</h4>
+                <div class="solution-content" id="solutionContent">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentData = {
+            k: 1.2,
+            p0: 100000,
+            d: 10000,
+            correctH: 2,
+            choices: [],
+            correctIndex: 2
+        };
+
+        function formatNum(num) {
+            if (Number.isInteger(num)) {
+                return num.toLocaleString('en-US');
+            }
+            return num;
+        }
+
+        function generateNewProblem() {
+            // k choices: 1.15, 1.2, 1.25, 1.3, 1.4, 1.5, 1.6, 1.8, 2.0
+            const kValues = [1.15, 1.2, 1.25, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2.0];
+            const k = kValues[Math.floor(Math.random() * kValues.length)];
+            
+            // p0 choices: 10^5 (100000), 1.01 x 10^5 (101000)
+            const p0Options = [100000, 101000, 100000];
+            const p0 = p0Options[Math.floor(Math.random() * p0Options.length)];
+
+            // d choices: 10^4 (10000), 9800
+            const dOptions = [10000, 10000, 10000];
+            const d = dOptions[Math.floor(Math.random() * dOptions.length)];
+
+            // Calculate correct depth h = (k - 1) * p0 / d
+            let correctH = ((k - 1) * p0) / d;
+            
+            // Ensure clean values if possible, or round to reasonable decimals (1 decimal place)
+            correctH = Math.round(correctH * 10) / 10;
+            if (correctH <= 0) correctH = 1;
+
+            // Recalculate k precisely based on rounded h if needed to keep consistency
+            // k = (h * d / p0) + 1
+            const exactK = (correctH * d) / p0 + 1;
+
+            // Generate 4 distinct choices including correctH
+            let choiceValues = [correctH];
+            while (choiceValues.length < 4) {
+                let offset = (Math.random() * 2 - 1);
+                if (Math.abs(offset) < 0.3) offset = 0.5 * (Math.random() > 0.5 ? 1 : -1);
+                let altH = Math.round((correctH + offset) * 10) / 10;
+                if (altH > 0 && !choiceValues.includes(altH)) {
+                    choiceValues.push(altH);
+                }
+            }
+
+            // Shuffle choices
+            choiceValues.sort(() => Math.random() - 0.5);
+            const correctIndex = choiceValues.indexOf(correctH);
+
+            currentData = {
+                k: Math.round(exactK * 100) / 100,
+                p0: p0,
+                d: d,
+                correctH: correctH,
+                choices: choiceValues,
+                correctIndex: correctIndex
+            };
+
+            renderProblem();
+        }
+
+        function renderProblem() {
+            const k = currentData.k;
+            const p0 = currentData.p0;
+            const d = currentData.d;
+            const correctH = currentData.correctH;
+
+            // Update Question Text
+            const qText = `Một bọt khí khi nổi lên từ một đáy hồ có độ lớn gấp ${k} lần khi đến mặt nước. Biết trọng lượng riêng của nước là d = ${formatNum(d)} N/m<sup>3</sup>, áp suất khí quyển là ${formatNum(p0)} N/m<sup>2</sup>. Độ sâu của đáy hồ là`;
+            document.getElementById('questionText').innerHTML = qText;
+
+            // Update Sketch
+            document.getElementById('sketchV1').innerHTML = `V<sub>1</sub>`;
+            document.getElementById('sketchV2').innerHTML = `V<sub>2</sub>`;
+            document.getElementById('sketchH').innerHTML = `h = ${correctH} m`;
+
+            // Update Choices
+            let choicesHTML = '';
+            const letters = ['A', 'B', 'C', 'D'];
+            currentData.choices.forEach((val, idx) => {
+                choicesHTML += `
+                    <li class="choice-item" onclick="selectChoice(${idx})">
+                        <input type="radio" name="choice" id="choice${idx}" value="${idx}">
+                        <label for="choice${idx}"><b>${letters[idx]}.</b> ${val} m</label>
+                    </li>
+                `;
+            });
+            document.getElementById('choicesList').innerHTML = choicesHTML;
+
+            // Reset Feedback & Solution
+            document.getElementById('feedbackMsg').innerHTML = '';
+            document.getElementById('solutionBox').style.display = 'none';
+
+            // Update Solution Content
+            const deltaK = Math.round((k - 1) * 100) / 100;
+            const numeratorVal = Math.round(deltaK * p0);
+            const solutionHTML = `
+                <p>Gọi áp suất bọt khí tại mặt nước là p<sub>0</sub>. Áp suất khí tại đáy hồ là p = p<sub>0</sub> + d·h.</p>
+                <p>Theo định luật Boyle-Mariotte, ta có:</p>
+                <p>p<sub>0</sub>·V<sub>2</sub> = p·V<sub>1</sub> = (p<sub>0</sub> + d·h)·V<sub>1</sub></p>
+                <p>Theo đề bài, thể tích bọt khí khi đến mặt nước gấp ${k} lần khi ở đáy hồ, tức là V<sub>2</sub> = ${k}·V<sub>1</sub>.</p>
+                <p>Thay vào phương trình ta được:</p>
+                <p>p<sub>0</sub>·(${k}·V<sub>1</sub>) = (p<sub>0</sub> + d·h)·V<sub>1</sub></p>
+                <p>${k}·p<sub>0</sub> = p<sub>0</sub> + d·h &rArr; ${deltaK}·p<sub>0</sub> = d·h</p>
+                <p>h = <span class="frac"><span class="numerator">${deltaK}·p<sub>0</sub></span><span class="denominator">d</span></span></p>
+                <p>Thay số: p<sub>0</sub> = ${formatNum(p0)} N/m<sup>2</sup>, d = ${formatNum(d)} N/m<sup>3</sup>.</p>
+                <p>h = <span class="frac"><span class="numerator">${deltaK} × ${formatNum(p0)}</span><span class="denominator">${formatNum(d)}</span></span> = <span class="frac"><span class="numerator">${formatNum(numeratorVal)}</span><span class="denominator">${formatNum(d)}</span></span> = <b>${correctH} m</b>.</p>
+            `;
+            document.getElementById('solutionContent').innerHTML = solutionHTML;
+        }
+
+        function selectChoice(idx) {
+            document.getElementById(`choice${idx}`).checked = true;
+            document.querySelectorAll('.choice-item').forEach((item, i) => {
+                item.classList.remove('correct', 'incorrect');
+            });
+        }
+
+        function checkAnswer() {
+            const selected = document.querySelector('input[name="choice"]:checked');
+            const feedback = document.getElementById('feedbackMsg');
+            
+            if (!selected) {
+                feedback.style.color = '#c53030';
+                feedback.innerHTML = 'Vui lòng chọn một phương án trước khi kiểm tra!';
+                return;
+            }
+
+            const selectedIdx = parseInt(selected.value);
+            const choiceItems = document.querySelectorAll('.choice-item');
+
+            choiceItems.forEach((item, i) => {
+                item.classList.remove('correct', 'incorrect');
+                if (i === currentData.correctIndex) {
+                    item.classList.add('correct');
+                } else if (i === selectedIdx && i !== currentData.correctIndex) {
+                    item.classList.add('incorrect');
+                }
+            });
+
+            if (selectedIdx === currentData.correctIndex) {
+                feedback.style.color = '#2f855a';
+                feedback.innerHTML = 'Chính xác! Bạn đã làm rất tốt.';
+            } else {
+                feedback.style.color = '#c53030';
+                feedback.innerHTML = 'Chưa đúng. Hãy xem lời giải chi tiết bên dưới nhé.';
+            }
+        }
+
+        function toggleSolution() {
+            const box = document.getElementById('solutionBox');
+            if (box.style.display === 'block') {
+                box.style.display = 'none';
+            } else {
+                box.style.display = 'block';
+            }
+        }
+
+        // Initialize with original data
+        window.onload = function() {
+            renderProblem();
+        };
+    </script>
+</body>
+</html>
