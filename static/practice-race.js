@@ -2,7 +2,7 @@
   'use strict';
   const cfg = window.RACE_CONFIG, $ = id => document.getElementById(id);
   let lastHostShown;
-  let state, questions = [], answers = {}, pos = 0, loaded = false, rendered = '', queue = Promise.resolve(), serverOffset = 0, submitting = false, saveTimer, controlsKey = '', gradingKey = '', resultsKey = '', joinName = cfg.name || '';
+  let state, questions = [], answers = {}, pos = 0, loaded = false, rendered = '', queue = Promise.resolve(), serverOffset = 0, submitting = false, saveTimer, controlsKey = '', gradingKey = '', resultsKey = '', joinName = '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clock = seconds => { seconds = Math.max(0, Math.floor(seconds)); return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0'); };
   const note = text => { $('raceNotice').textContent = text; };
@@ -79,11 +79,11 @@
       if (state.state !== 'closed') button('■ Kết thúc phòng', async () => { if (confirm('Kết thúc và chấm bài tất cả thành viên?')) update(await enqueue({action:'close'})); }, el);
     } else if (!state.joined && state.state !== 'closed') {
       const label = document.createElement('label'), input = document.createElement('input');
-      label.textContent = 'Tên học sinh: ';
-      input.type = 'text'; input.id = 'racePlayerName'; input.maxLength = 80; input.minLength = 2; input.autocomplete = 'name'; input.placeholder = 'Nhập họ tên để tham gia'; input.value = joinName;
+      label.textContent = 'Họ và tên học sinh (bắt buộc): ';
+      input.type = 'text'; input.id = 'racePlayerName'; input.maxLength = 80; input.minLength = 2; input.autocomplete = 'name'; input.placeholder = 'Ví dụ: Nguyễn Văn An'; input.required = true; input.value = joinName;
       input.oninput = () => { joinName = input.value; }; label.append(input); el.append(label);
       button('🏁 Vào làm bài · Nhận đề riêng', async () => {
-        if (joinName.trim().length < 2) { input.focus(); throw Error('Em hãy nhập họ tên trước khi tham gia.'); }
+        if (joinName.trim().split(/\s+/).length < 2 || joinName.trim().length < 2) { input.focus(); throw Error('Em hãy nhập đầy đủ họ và tên trước khi tham gia phòng.'); }
         update(await enqueue({action:'join', name:joinName.trim()}));
       }, el);
     }
