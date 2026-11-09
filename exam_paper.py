@@ -1889,6 +1889,7 @@ def save_exam_archive():
 
 @app.get("/member/exams/saved")
 def member_saved_exams():
+    """Trang quản lý đề đã lưu: tìm kiếm/sắp xếp tại trình duyệt, giữ nguyên quyền và thao tác mở đề."""
     if not can_manage_bank():
         return redirect("/member/login")
     try:
@@ -1907,22 +1908,110 @@ def member_saved_exams():
             continue
         try:
             saved, _ = _saved_load(name[:-5])
-            title = _esc(saved.get("title") or "Đề kiểm tra")
-            created = _esc(saved.get("created") or "")
+            raw_title = str(saved.get("title") or "Đề kiểm tra")
+            title = _esc(raw_title)
+            created_raw = str(saved.get("created") or "")
+            created = _esc(created_raw)
             code = _esc(name[:-5])
             copies = saved.get("exam", {}).get("copies") or []
             n = len((copies[0] if copies else {}).get("ids") or [])
-            items.append("<div style='padding:12px;border:1px solid #cbd5e1;border-radius:10px;margin:10px 0'>"
-                "<b>" + title + "</b><div style='color:#64748b'>Ngày lưu: " + created + " · " + str(n) + " câu · " + str(len(copies)) + " mã đề</div>"
-                "<form method='post' action='/member/exams/open' style='margin-top:8px'>"
-                "<input type='hidden' name='id' value='" + code + "'>"
-                "<button class='btn primary'>📖 Mở lại đề này</button></form></div>")
+            cnt = len(copies)
+            items.append({
+                "title": raw_title,
+                "created": created_raw,
+                "markup": (
+                    "<article class='exam-item' data-name='" + _esc(raw_title.casefold()) +
+                    "' data-created='" + created + "' data-count='" + str(n) + "'>"
+                    "<div class='exam-card-top'><div><h3>" + title + "</h3>"
+                    "<p class='exam-muted'>Lưu: " + created + "</p></div>"
+                    "<span class='exam-badge'>Đã lưu</span></div>"
+                    "<div class='exam-metrics'><span>📄 <b>" + str(n) + "</b> câu hỏi</span>"
+                    "<span>🔀 <b>" + str(cnt) + "</b> mã đề</span></div>"
+                    "<div class='exam-actions'><form method='post' action='/member/exams/open'>"
+                    "<input type='hidden' name='id' value='" + code + "'>"
+                    "<button type='submit' class='btn primary'>📖 Mở / chỉnh sửa</button>"
+                    "</form><button type='button' class='btn exam-copy' data-id='" + code +
+                    "' aria-label='Sao chép mã đề đã lưu'>📋 Sao chép mã</button></div>"
+                    "</article>"
+                )
+            })
         except Exception:
             continue
-    note = "<p class='success'>✅ Đã lưu đề và đáp án thành công.</p>" if request.args.get("new") else ""
-    return page("Đề đã lưu", "<div class='wrap'><h2>📚 Đề kiểm tra đã lưu</h2>" + note +
-                ("".join(items) if items else "<p>Chưa có đề được lưu.</p>") +
-                "<p><a class='btn' href='/member/exam'>← Quay lại đề hiện tại</a></p></div>")
+    items.sort(key=lambda x: x["created"], reverse=True)
+    cards = "".join(x["markup"] for x in items)
+    note = "<p class='success' role='status'>✅ Đã lưu đề và đáp án thành công.</p>" if request.args.get("new") else ""
+    stylesheet = """
+    <style>
+    .exam-hub{max-width:1180px;margin:18px auto;padding:18px}
+    .exam-head{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}
+    .exam-head h2{margin:0;color:#102947}.exam-muted{color:#64748b;margin:5px 0;font-size:14px}
+    .exam-quick{display:flex;flex-wrap:wrap;gap:10px;margin:15px 0}
+    .exam-quick a{display:inline-block;text-decoration:none}
+    .exam-tools{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:#f4f8fc;padding:13px;border-radius:12px;margin:16px 0;border:1px solid #dbe6f0}
+    .exam-tools label{font-weight:600}.exam-tools input,.exam-tools select{border:1px solid #b7c9da;border-radius:8px;padding:10px;max-width:100%}
+    .exam-tools input{flex:1;min-width:230px}
+    .exam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:14px}
+    .exam-item{background:#fff;border:1px solid #d7e3ee;border-radius:14px;padding:16px;box-shadow:0 3px 12px #1029470a;min-width:0}
+    .exam-card-top{display:flex;justify-content:space-between;gap:8px;align-items:start}
+    .exam-item h3{font-size:18px;margin:0;overflow-wrap:anywhere;color:#102947}
+    .exam-badge{background:#edf3f9;color:#425c73;border-radius:30px;padding:5px 9px;font-size:12px;white-space:nowrap}
+    .exam-metrics{display:flex;gap:12px;flex-wrap:wrap;margin:15px 0;color:#364d64;font-size:14px}
+    .exam-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .exam-actions form{margin:0}.exam-actions button{cursor:pointer}
+    .exam-count{color:#52657a;font-size:14px}
+    @media(max-width:650px){.exam-hub{padding:12px}.exam-quick a{flex:1;text-align:center}.exam-tools input{min-width:100%}}
+    </style>
+    """
+    script = """
+    <script>
+    (function(){
+      const input=document.getElementById('examSearch'),sort=document.getElementById('examSort');
+      const grid=document.getElementById('examGrid'),count=document.getElementById('examShown');
+      const cards=Array.from(grid.querySelectorAll('.exam-item'));
+      function update(){
+        const term=input.value.trim().toLocaleLowerCase('vi');
+        let visible=cards.filter(c=>(c.dataset.name||'').toLocaleLowerCase('vi').includes(term));
+        const order=sort.value;
+        visible.sort((a,b)=>order==='title'?a.dataset.name.localeCompare(b.dataset.name,'vi'):
+          order==='oldest'?a.dataset.created.localeCompare(b.dataset.created):
+          b.dataset.created.localeCompare(a.dataset.created));
+        cards.forEach(c=>c.hidden=true);
+        visible.forEach(c=>{c.hidden=false;grid.appendChild(c)});
+        count.textContent='Hiển thị '+visible.length+' / '+cards.length+' đề';
+        document.getElementById('examEmpty').hidden=visible.length>0;
+      }
+      input.addEventListener('input',update);sort.addEventListener('change',update);update();
+      grid.addEventListener('click',async e=>{
+        const btn=e.target.closest('.exam-copy');if(!btn)return;
+        const value=btn.dataset.id;
+        try{await navigator.clipboard.writeText(value);btn.textContent='✓ Đã sao chép';}
+        catch(_){window.prompt('Sao chép mã đề:',value);}
+      });
+    })();
+    </script>
+    """
+    body = (
+        stylesheet + "<div class='wrap exam-hub'>"
+        "<div class='exam-head'><div><h2>📚 Đề thi của tôi</h2>"
+        "<p class='exam-muted'>Quản lý đề kiểm tra, mã đề và đáp án đã lưu.</p></div>"
+        "<a class='btn primary' href='/member/exam'>＋ Tạo / mở đề hiện tại</a></div>"
+        + note +
+        "<nav class='exam-quick' aria-label='Thao tác nhanh'>"
+        "<a class='btn' href='/member/exam'>📝 Soạn và trộn đề</a>"
+        "<a class='btn' href='/member/html-saved'>🧩 Kho HTML luyện tập</a>"
+        "</nav>"
+        "<div class='exam-tools'><label for='examSearch'>Tìm đề</label>"
+        "<input id='examSearch' type='search' placeholder='Nhập tên đề thi...' autocomplete='off'>"
+        "<label for='examSort'>Sắp xếp</label><select id='examSort'>"
+        "<option value='newest'>Mới nhất</option><option value='oldest'>Cũ nhất</option>"
+        "<option value='title'>Tên A–Z</option></select>"
+        "<span class='exam-count' id='examShown'></span></div>"
+        "<div id='examGrid' class='exam-grid'>" + cards + "</div>"
+        "<p id='examEmpty' hidden>Không tìm thấy đề phù hợp.</p>"
+        "<p class='exam-muted'>Muốn in, xuất Word/Excel hoặc đổi số: chọn Mở / chỉnh sửa để dùng các công cụ của đề hiện tại.</p>"
+        "</div>" + script
+    )
+    return page("Đề đã lưu", body)
 
 
 @app.post("/member/exams/open")
