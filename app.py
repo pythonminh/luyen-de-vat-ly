@@ -250,6 +250,25 @@ details.ai-intake-fold .ai-intake{border-radius:0;border:0;border-top:1px solid 
  details.admindang-fold .admindang{padding:9px}
 }
 
+
+/* Lesson navigator v2: filters collapse instead of consuming three full rows. */
+.lesson-workspace-controls{margin:4px 0 10px;display:flex;flex-direction:column;gap:7px}
+.lesson-filter-fold{display:block;border:1px solid #c7d9ec;border-radius:11px;overflow:hidden;background:#fff}
+.lesson-filter-fold>summary{list-style:none;cursor:pointer;padding:11px 14px;background:#f3f8ff;color:#104b8a;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font:700 14px/1.4 Segoe UI,Arial,sans-serif}
+.lesson-filter-fold>summary::-webkit-details-marker{display:none}
+.lesson-filter-fold>summary:after{content:'▾';margin-left:auto;font-size:16px}
+.lesson-filter-fold[open]>summary:after{content:'▴'}
+.lesson-filter-icon{background:#dbeafe;padding:2px 7px;border-radius:6px}
+.lesson-filter-state{font-size:12px;font-weight:600;color:#476581;overflow-wrap:anywhere}
+.lesson-filter-fold>.subnav{position:static!important;top:auto!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+.lesson-filter-fold:not([open])>.subnav{display:none!important}
+.lesson-filter-fold .dangtabs{display:flex;flex-wrap:wrap;gap:6px;background:#fff}
+.lesson-filter-fold .kindtabs,.lesson-filter-fold .lvltabs{display:flex;flex-wrap:wrap;gap:6px}
+.lesson-filter-fold .kindtabs .ktab{flex:0 1 auto;min-width:85px}
+.lesson-workspace-controls>details.admindang-fold{margin:0;border:1px solid #d7e2ee}
+.lesson-workspace-controls>details.admindang-fold>summary{background:#f8fafc;padding:10px 14px;color:#385b79}
+.lesson-workspace-controls>details.admindang-fold:not([open]) .ai-intake{display:none!important}
+@media(max-width:600px){.lesson-filter-fold>summary{padding:10px}.lesson-filter-state{flex-basis:100%}}
 .admindang .muted{display:none}
 .admindang .btn,.admindang a.btn{padding:6px 8px;font-size:12px}
 .admindang input,#aiSrcUrl{flex:1 1 12rem;min-width:10rem;padding:6px 8px;border:1px solid #cbd8e6;border-radius:7px}
@@ -4093,6 +4112,7 @@ def admin_dang_bar_html(path, qs, dang=''):
     )
 
 def lesson_switch_html(path, qs, dang='', kind='', guest=False, muc=''):
+    """Compact lesson controls: question list first, filters available on demand."""
     scoped = questions_in_scope(qs, dang)
     muc = norm_muc(muc)
     try:
@@ -4106,14 +4126,32 @@ def lesson_switch_html(path, qs, dang='', kind='', guest=False, muc=''):
         lt_bar = _lt.companion_bar_html(path, guest=guest)
     except Exception:
         lt_bar = ''
+    kind_normal = norm_kind_tab(kind)
+    filtered = bool(dang or kind_normal or muc)
+    filter_count = len(scoped)
+    if kind_normal:
+        filter_count = sum(1 for q in scoped if str(q.get('kind') or '') == kind_normal)
+    filter_label = html.escape(dang if dang else 'Cả bài')
+    filter_kind = html.escape(kind_normal or 'Tất cả')
+    filter_level = html.escape(muc_label(muc) if muc else 'Mọi mức')
+    filter_summary = (
+        "<span class='lesson-filter-icon'>☷</span> "
+        "<strong>Bộ lọc câu hỏi</strong> "
+        "<span class='lesson-filter-state'>" + filter_label +
+        " · " + filter_kind + " · " + filter_level + "</span>"
+    )
     return (
-        "<nav class='subnav'>"
+        "<div class='lesson-workspace-controls'>"
         + lt_bar
+        + "<details class='lesson-filter-fold'" + (" open" if filtered else "") + ">"
+        + "<summary>" + filter_summary + "</summary>"
+        + "<nav class='subnav'>"
         + dang_tabs_html(path, qs, current_dang=dang, kind=kind, guest=guest, practice=practice, muc=muc)
         + kind_tabs_html(path, dang=dang, current=kind, counts=kind_counts_for(scoped), guest=guest, practice=practice, muc=muc)
         + level_tabs_html(path, dang=dang, kind=kind, current=muc, counts=level_counts_for(scoped, kind), guest=guest, practice=practice)
-        + "</nav>"
+        + "</nav></details>"
         + admin_dang_bar_html(path, qs, dang=dang)
+        + "</div>"
     )
 
 def _go_kind_href(path, dang, kind, guest=False, practice=None, muc=''):
