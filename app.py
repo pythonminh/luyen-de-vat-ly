@@ -937,6 +937,8 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         out_href = "/admin/logout" if role == "admin" else "/member/logout"
         nav += [
             "<a href='/admin' title='Quản trị'>🏠 Quản trị</a>",
+            "<a href='/member/exams/saved' title='Danh sách đề thi đã lưu'>📚 Kho đề</a>",
+            "<a href='/member/exam' title='Soạn đề và trộn mã đề'>📝 Soạn đề</a>",
             "<details class='top-tools'><summary>☰ Công cụ</summary><div class='top-tools-list'>",
             "<a href='/member/ai'>🤖 Gemini</a>",
             "<a href='/member/race'>🏁 Thi đua luyện đề</a>",
@@ -969,6 +971,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "<time class='clock' id='ldvlClock' datetime=''>…</time>"
         + (f"<span class='whobar'>{who}</span>" if who else "")
         + admin_jump
+        + ("<a href='/member/exams/saved' class='examWarehouseQuickLink' title='Kho đề thi đã lưu' style='padding:6px 10px;border:1px solid #ffffff70;border-radius:7px;color:white;text-decoration:none;font-size:13px;font-weight:800;white-space:nowrap'>📚 Kho đề</a>" if admin_ui else "")
         + "<a id='htmlWarehouseQuickLink' href='/member/html-menu' title='Mở kho luyện tập HTML' style='display:inline-flex;align-items:center;gap:4px;flex-shrink:0;padding:5px 9px;border:1px solid #ffffff80;border-radius:6px;background:#ffffff20;color:white;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap'>▦ Kho HTML</a>"
         + "<button type='button' class='navtoggle' id='ldvlNavToggle' aria-expanded='false' aria-controls='ldvlNav' title='Thu / mở menu'>☰</button>"
         + "<div class='nav' id='ldvlNav'>" + "".join(nav)
@@ -4439,7 +4442,37 @@ def member_index():
         who="<div class='notice'>👤 <b>"+html.escape(str(m.get('name') or m.get('username')))+"</b> · Tài khoản <b>"+html.escape(str(m.get('username')))+"</b> · Quyền <b>"+html.escape(str(m.get('account_type','FREE')))+"</b>"+extra+"</div>"
     else:
         who="<div class='notice'>👁 <b>Xem đề không cần đăng nhập.</b> Cần VIP (ADMIN cấp gói) để làm bài. <a href='/member/login'>Đăng nhập</a> hoặc <a href='/member/register'>Đăng ký</a>.</div>"
-    body=("<div class='wrap'><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>"+str(len(items))+" bài</span><span class='tag'>"+str(idx.get('total_questions',0))+" câu</span></div><div class='body'>"+who+"<form method='get' class='catsearch'><input name='q' placeholder='Tìm ID câu, bài, chương...' value='"+html.escape(q)+"'><select name='mon'><option value=''>Tất cả môn</option>"+subjopts+"</select><select name='lop'><option value=''>Tất cả lớp</option>"+classopts+"</select><button class='btn'>Tìm</button></form></div></div>"+id_block+(''.join(sections) or ('' if id_block else "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp.</div></div>"))+"</div>")
+    catalog = ("<div class='panel'><div class='head'>📚 NGÂN HÀNG CÂU HỎI <span class='tag'>"+str(len(items))+" bài</span><span class='tag'>"+str(idx.get('total_questions',0))+" câu</span></div><div class='body'>"+who+"<form method='get' class='catsearch'><input name='q' placeholder='Tìm ID câu, bài, chương...' value='"+html.escape(q)+"'><select name='mon'><option value=''>Tất cả môn</option>"+subjopts+"</select><select name='lop'><option value=''>Tất cả lớp</option>"+classopts+"</select><button class='btn'>Tìm</button></form></div></div>"+id_block+(''.join(sections) or ('' if id_block else "<div class='panel' style='margin-top:10px'><div class='body muted'>Không có bài phù hợp.</div></div>")))
+    if can_manage_bank():
+        sidebar = (
+            "<aside class='teacher-side'><div class='teacher-logo'>🎓 Lớp Học Thầy Minh</div>"
+            "<div class='teacher-side-label'>QUẢN LÝ</div>"
+            "<a href='/admin'>▦ Tổng quan</a>"
+            "<a class='active' href='/member'>▤ Ngân hàng câu hỏi</a>"
+            "<a href='/member/exams/saved'>▣ Đề của tôi · Kho đề</a>"
+            "<a href='/member/exam'>✎ Soạn đề / Trộn đề</a>"
+            "<div class='teacher-side-label'>HỌC LIỆU</div>"
+            "<a href='/member/html-menu'>▧ HTML đổi số</a>"
+            "<a href='/member/race'>🏁 Thi đua luyện đề</a>"
+            "<div class='teacher-side-label'>CÔNG CỤ</div>"
+            "<a href='/member/ai'>✦ Gemini</a>"
+            "<a href='/admin/ly-thuyet'>▤ Lý thuyết & dạng mẫu</a>"
+            "<a href='/admin/members'>♙ Học viên</a></aside>"
+        )
+        style = """<style>
+        .teacher-layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
+        .teacher-side{position:sticky;top:82px;background:#fff;border:1px solid #e1e8f2;border-radius:15px;padding:14px 10px;display:flex;flex-direction:column;gap:3px;max-height:calc(100vh - 96px);overflow-y:auto}
+        .teacher-logo{font-size:16px;font-weight:900;color:#1757a2;padding:10px 12px 15px;border-bottom:1px solid #e8eef6}
+        .teacher-side-label{color:#8597b2;font-size:11px;letter-spacing:1px;font-weight:800;margin:15px 12px 5px}
+        .teacher-side a{display:block;text-decoration:none;color:#294463;border-radius:9px;padding:11px 12px;font-size:14px;font-weight:600}
+        .teacher-side a:hover{background:#f2f6fd}.teacher-side a.active{background:#e9effe;color:#2455ca}
+        .teacher-content{min-width:0}.teacher-content .panel{margin-bottom:12px}
+        .teacher-content .catsearch{padding:10px 0}
+        @media(max-width:900px){.teacher-layout{grid-template-columns:1fr}.teacher-side{position:static;display:flex;flex-direction:row;gap:7px;overflow-x:auto;max-height:none;white-space:nowrap;padding:7px}.teacher-side .teacher-logo,.teacher-side .teacher-side-label{display:none}.teacher-side a{flex:0 0 auto;padding:9px 11px}}
+        </style>"""
+        body = style + "<div class='wrap teacher-layout'>" + sidebar + "<main class='teacher-content'>" + catalog + "</main></div>"
+    else:
+        body = "<div class='wrap'>" + catalog + "</div>"
     return page('Mục lục',body)
 
 @app.get('/member/select')
