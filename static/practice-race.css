@@ -108,3 +108,31 @@
 @media(max-width:520px){.race-review-pair{grid-template-columns:minmax(0,1fr);gap:8px}.race-student-review{padding:12px}.racegrid section.race-report-question{padding:12px}}
 
 .race-room-status{flex-basis:100%;box-sizing:border-box;padding:12px 14px;border-radius:9px;font-size:14px;font-weight:600;line-height:1.5;background:#eff6ff;color:#1e40af}.race-room-status.running{background:#ecfdf5;color:#166534}.race-room-status.closed{background:#fff1f2;color:#9f1239}
+
+
+/* Classroom participation: phone-first, readable choices and projector controls. */
+@media (max-width: 800px) {
+  .racegrid {display:flex!important;flex-direction:column!important;gap:12px!important}
+  .racegrid section {order:0}.racegrid aside {order:1}
+  #raceQuestion {font-size:clamp(17px,4.2vw,21px)!important;line-height:1.62!important}
+  #raceQuestion h3 {font-size:19px!important;line-height:1.4!important}
+  #raceQuestion label:not(.race-component-fields label) {min-height:54px!important;gap:12px!important;margin:9px 0!important;padding:13px 14px!important;font-size:16px!important;line-height:1.45!important;align-items:center!important}
+  #raceQuestion input[type=radio],#raceQuestion input[type=checkbox] {width:21px!important;height:21px!important;flex-shrink:0}
+  #raceActions .btn,#raceControls .btn,.race-join .btn {min-height:46px!important;padding:11px 15px!important;font-size:15px!important;font-weight:800}
+  #raceNav .btn{min-height:40px!important;min-width:40px!important;font-size:14px!important}
+  #raceClock{font-size:28px!important;font-weight:900!important;font-variant-numeric:tabular-nums}
+  #racePlayerName{display:block;width:100%!important;min-height:50px;font-size:17px!important}
+  #raceControls label{display:block;width:100%;font-size:16px;font-weight:700}
+  #raceActions{display:flex;flex-wrap:wrap;gap:10px}
+  #raceActions .btn{flex:1 1 125px}
+  #raceRanks{width:100%;overflow-x:auto}
+  .race-qr img{display:block;width:min(70vw,260px)!important;max-width:100%!important;height:auto;margin-inline:auto}
+  .race mjx-container[display=true],.race mjx-container[display="true"]{max-width:100%!important;overflow-x:auto!important}
+}
+@media(min-width:1100px){
+  body.race-page:fullscreen .racegrid{grid-template-columns:minmax(0,3fr) minmax(290px,1fr)}
+  body.race-page:fullscreen #raceQuestion{font-size:clamp(23px,2vw,34px);line-height:1.6}
+  body.race-page:fullscreen #raceQuestion label{font-size:clamp(20px,1.5vw,27px);padding:16px}
+  body.race-page:fullscreen #raceClock{font-size:40px}
+  body.race-page:fullscreen .race-qr img{width:min(27vw,360px);height:auto}
+}
