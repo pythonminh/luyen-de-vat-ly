@@ -1,5 +1,24 @@
 
-\begin{bt}
+\begin{bt}\begin{tikzpicture}[scale=0.8]
+    % Định nghĩa các điểm
+    \coordinate (A) at (0,0);
+    \coordinate (B) at (6,0);
+    \coordinate (C) at ({8*cos(60)}, {8*sin(60)});
+
+    % Vẽ các cạnh của tam giác
+    \draw (A) -- (B) node[midway, below] {\text{6}};
+    \draw (A) -- (C) node[midway, left] {\text{8}};
+    \draw (B) -- (C) node[midway, right] {\text{BC}};
+
+    % Đánh dấu góc A
+    \draw (A) ++(0.8,0) arc (0:60:0.8);
+    \node at (A) ++(0.6,0.3) {\text{60}$^\circ$};
+
+    % Đặt tên các đỉnh
+    \node[left] at (A) {\text{A}};
+    \node[right] at (B) {\text{B}};
+    \node[above] at (C) {\text{C}};
+\end{tikzpicture}
 Cho tam giác \(ABC\) có \(AB=6,\ AC=8,\ \widehat{A}=60^\circ\). Tính \(BC\).
 \shortans{\(\sqrt{52}=2\sqrt{13}\)}
 \loigiai{
