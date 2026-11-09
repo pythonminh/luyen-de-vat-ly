@@ -3848,7 +3848,7 @@ def member_html_lesson():
     <input id="hlSearch" type="search" placeholder="Tìm dạng luyện tập…" aria-label="Tìm bài">
     <nav id="hlItems"></nav></aside>
     <main class="hl-view"><div class="hl-viewtop"><strong id="hlTitle"></strong><a id="hlNewTab" target="_blank" rel="noopener">Mở riêng ↗</a></div>
-    <div id="hlStatus" role="status" aria-live="polite" hidden></div><iframe id="hlFrame" title="Bài luyện HTML" sandbox="allow-scripts allow-forms allow-modals allow-downloads" referrerpolicy="same-origin"></iframe></main></div></div>
+    <div class="hl-mobile-note">📱 Chọn bài bằng cách vuốt danh sách. Nếu nội dung quá rộng, dùng “Mở riêng” để xem toàn màn hình.</div><div id="hlStatus" role="status" aria-live="polite" hidden></div><iframe id="hlFrame" title="Bài luyện HTML" sandbox="allow-scripts allow-forms allow-modals allow-downloads" referrerpolicy="same-origin"></iframe></main></div></div>
     <style>
     .hl-wrap{max-width:1700px;margin:auto;padding:14px}.hl-wrap *{box-sizing:border-box}
     .hl-header{background:white;border:1px solid #dae6f1;padding:14px 20px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -3861,8 +3861,27 @@ def member_html_lesson():
     .hl-item{display:block;width:100%;border:1px solid #e2eaf2;text-align:left;margin:7px 0;padding:10px;border-radius:8px;background:#f9fbfe;color:#244463;cursor:pointer;font-size:13px}
     .hl-item.active{border-color:#2270c4;background:#eaf3fe;font-weight:800}.hl-item small{display:block;margin-top:4px;color:#617890}
     .hl-viewtop{padding:13px 15px;display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #dce5ef}
-    .hl-viewtop a{font-size:12px}#hlStatus{padding:12px 15px;background:#fff7e6;color:#89530e;font-size:13px;font-weight:700}#hlFrame{display:block;width:100%;height:calc(100vh - 255px);min-height:520px;border:0;background:white}
-    @media(max-width:850px){.hl-layout{grid-template-columns:1fr}.hl-menu{position:static;max-height:250px}#hlFrame{height:75vh}}
+    .hl-viewtop a{font-size:12px}
+    .hl-mobile-note{display:none;font-size:12px;line-height:1.4;color:#4c6683;padding:9px 12px;background:#eff6ff;border-bottom:1px solid #dbe5f0}
+    #hlStatus{padding:12px 15px;background:#fff7e6;color:#89530e;font-size:13px;font-weight:700}#hlFrame{display:block;width:100%;height:calc(100vh - 255px);min-height:520px;border:0;background:white}
+    @media(max-width:850px){
+      .hl-wrap{padding:8px!important}
+      .hl-header{padding:12px;align-items:flex-start;flex-direction:column}
+      .hl-header h2{font-size:20px;line-height:1.3}
+      .hl-layout{grid-template-columns:minmax(0,1fr);gap:8px}
+      .hl-menu{position:static;max-height:none;overflow:visible;padding:10px}
+      .hl-menu h3{font-size:15px;margin:0 0 8px}
+      .hl-menu input{font-size:16px;min-height:44px}
+      #hlItems{display:flex;gap:8px;max-width:100%;overflow-x:auto;padding:4px 0 8px;scroll-snap-type:x proximity}
+      .hl-item{flex:0 0 min(82vw,260px);min-height:64px;margin:0;scroll-snap-align:start;font-size:15px;padding:11px}
+      .hl-view{min-width:0;width:100%;overflow:hidden}
+      .hl-viewtop{padding:10px;gap:8px}
+      .hl-viewtop strong{font-size:15px;line-height:1.4}
+      .hl-viewtop a{white-space:nowrap;font-size:13px;min-height:40px;display:flex;align-items:center}
+      .hl-mobile-note{display:block}
+      #hlFrame{width:100%;height:calc(100dvh - 275px);min-height:480px}
+    }
+    @media(max-width:390px){.hl-viewtop{flex-wrap:wrap}#hlFrame{min-height:520px}}
     </style>
     <script>(()=>{const items=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0))));const $=id=>document.getElementById(id);
     const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
