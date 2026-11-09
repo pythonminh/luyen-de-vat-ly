@@ -552,9 +552,9 @@ def race_api(code):
             if not player:
                 if r['state'] == 'closed' or (r['state'] == 'running' and now >= r['started'] + r['duration']):
                     return jsonify(ok=False, error='Phòng đã kết thúc. Hãy vào lượt mới do ADMIN tạo.'), 409
-                name = ' '.join(str(data.get('name') or m.get('name') or '').split())
-                if not 2 <= len(name) <= 80 or not name.isprintable():
-                    return jsonify(ok=False, error='Nhập tên học sinh từ 2 đến 80 ký tự.'), 400
+                name = ' '.join(str(data.get('name') or '').split())
+                if not 2 <= len(name) <= 80 or not name.isprintable() or len(name.split()) < 2:
+                    return jsonify(ok=False, error='Em phải nhập đầy đủ họ và tên (ít nhất 2 từ, tối đa 80 ký tự) để tham gia phòng.'), 400
                 original_name, suffix = name, 2
                 while c.execute('SELECT 1 FROM race_players WHERE room=? AND name=?', (code, name)).fetchone():
                     name = original_name + ' (' + str(suffix) + ')'
