@@ -222,6 +222,34 @@ details.rwfold{display:block;margin:8px 0 0;border:1px dashed #7dd3fc;border-rad
 details.rwfold>summary{cursor:pointer;padding:7px 10px;font:800 12px/1.3 Segoe UI,Arial,sans-serif;color:#0369a1;list-style:none}
 details.rwfold>summary::-webkit-details-marker{display:none}
 details.rwfold .rwbar{margin:0;border:0;border-radius:0;border-top:1px dashed #7dd3fc}details.phat{display:block;margin:10px 0;border:1px solid #86efac;border-radius:10px;background:#f0fdf4}details.phat>summary{cursor:pointer;padding:8px 10px;font:800 13px/1.3 Segoe UI,Arial,sans-serif;color:#166534;list-style:none}details.phat>summary::-webkit-details-marker{display:none}details.phat .phatitem{padding:8px 10px;border-top:1px solid #bbf7d0}details.phat .solution{margin-top:8px}
+
+/* Lesson workspace: keep question content visible and tuck secondary admin work away. */
+.subnav{position:relative;box-shadow:none!important;border:1px solid #d7e2ee;border-radius:10px;overflow:visible;margin-bottom:6px}
+.subnav .dangtabs{padding:5px 8px;gap:5px}
+.subnav .dtab{padding:5px 9px;max-width:18rem}
+.subnav .kindtabs{padding:5px 8px;gap:5px}
+.subnav .kindtabs .ktab{flex:0 1 auto;min-width:75px;padding:6px 10px}
+.subnav .lvltabs{padding:5px 8px;gap:5px}
+.subnav .lvltabs .ltab{padding:5px 9px}
+details.admindang-fold{margin:6px 0 10px;border:1px solid #d4e1ec;border-radius:10px;background:#fff;overflow:hidden}
+details.admindang-fold>summary.admindang-sum{background:#f5f8fc;color:#294a6a;padding:9px 13px;font-size:13px}
+details.admindang-fold:not([open])>.admindang{display:none!important}
+details.admindang-fold[open]>summary.admindang-sum{border-bottom:1px solid #d7e2ee}
+details.admindang-fold .admindang{align-items:center;gap:8px;padding:12px}
+details.ai-intake-fold{flex:1 1 100%;min-width:0;border:1px solid #d2e2f0;background:#fff;border-radius:9px}
+details.ai-intake-fold>summary{cursor:pointer;padding:10px 12px;font-weight:800;color:#145bb0;list-style:none}
+details.ai-intake-fold>summary::-webkit-details-marker{display:none}
+details.ai-intake-fold:not([open])>.ai-intake{display:none!important}
+details.ai-intake-fold .ai-intake{border-radius:0;border:0;border-top:1px solid #d2e2f0}
+@media(min-width:1050px){
+ .subnav .kindtabs,.subnav .lvltabs{min-height:40px}
+ .subnav .dangtabs{min-height:42px}
+}
+@media(max-width:760px){
+ .subnav .kindtabs .ktab{flex:1 1 auto;min-width:65px}
+ details.admindang-fold .admindang{padding:9px}
+}
+
 .admindang .muted{display:none}
 .admindang .btn,.admindang a.btn{padding:6px 8px;font-size:12px}
 .admindang input,#aiSrcUrl{flex:1 1 12rem;min-width:10rem;padding:6px 8px;border:1px solid #cbd8e6;border-radius:7px}
@@ -4045,6 +4073,7 @@ def admin_dang_bar_html(path, qs, dang=''):
         "<button type='button' class='btn' id='aiGap'>1. 🤖 Soát dạng · đếm thiếu</button>"
         "<button type='button' class='btn green' id='aiFill'>2. ✍️ AI viết các câu còn thiếu</button>"
         "<button type='button' class='btn' id='aiNb'>📋 Prompt NotebookLM</button>"
+        "<details class='ai-intake-fold'><summary>📥 Nhập tài liệu · Word / PDF / TEX / Ảnh / link</summary>"
         "<div class='ai-intake' id='aiIntake' tabindex='0'>"
         "<div class='ai-intake-bar'>"
         "<strong>Nhận đề</strong>"
@@ -4058,7 +4087,7 @@ def admin_dang_bar_html(path, qs, dang=''):
         "<div class='ai-shots' id='aiShots'></div>"
         "<textarea id='aiPaste' rows='3' placeholder='Thả nhiều file Word, PDF, TEX cùng lúc (tối đa 6 Word/PDF). Ảnh trong Word hiện ngay, không cần Save As.'></textarea>"
         "<input id='aiSrcUrl' type='url' placeholder='"+html.escape('Link http tuỳ chọn — không dán ổ đĩa G:\\...', quote=True)+"'>"
-        "</div>"
+        "</div></details>"
         "<span class='muted'>"+hint+"</span>"
         "<div id='aiGapOut'></div></div></details>"
     )
