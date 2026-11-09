@@ -3841,8 +3841,9 @@ def member_html_lesson():
         return page('HTML bài học',"<div class='wrap'><p>Chưa có bài HTML được phép xem.</p><a href='/member/html-menu'>← Kho HTML</a></div>")
     seed=base64.b64encode(json.dumps(items,ensure_ascii=False).encode('utf-8')).decode('ascii')
     title=parent.rsplit('/',1)[-1]
+    race_url='/member/race?'+urllib.parse.urlencode({'path':path})
     body=r"""<div class="hl-wrap">
-    <header class="hl-header"><div><a href="/member/html-menu">← Kho HTML</a><h2>LESSON_TITLE</h2><p>Một bài học · nhiều dạng luyện tập</p></div><span id="hlCount"></span></header>
+    <header class="hl-header"><div><a href="/member/html-menu">← Kho HTML</a><h2>LESSON_TITLE</h2><p>Một bài học · nhiều dạng luyện tập</p></div><div class="hl-quick">MANAGER_RACE<span id="hlCount"></span></div></header>
     <div class="hl-layout"><aside class="hl-menu"><h3>Danh sách bài luyện</h3>
     <input id="hlSearch" type="search" placeholder="Tìm dạng luyện tập…" aria-label="Tìm bài">
     <nav id="hlItems"></nav></aside>
@@ -3851,7 +3852,7 @@ def member_html_lesson():
     <style>
     .hl-wrap{max-width:1700px;margin:auto;padding:14px}.hl-wrap *{box-sizing:border-box}
     .hl-header{background:white;border:1px solid #dae6f1;padding:14px 20px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
-    .hl-header a{font-size:13px}.hl-header h2{margin:5px 0;color:#143e68}.hl-header p{margin:0;color:#708198;font-size:12px}
+    .hl-header a{font-size:13px}.hl-quick{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.hl-quick a.hl-race{background:#176bd3;color:#fff;padding:9px 12px;border-radius:8px;text-decoration:none;font-weight:800}.hl-header h2{margin:5px 0;color:#143e68}.hl-header p{margin:0;color:#708198;font-size:12px}
     #hlCount{font-size:13px;color:#40658a}
     .hl-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:12px;margin-top:12px;align-items:start}
     .hl-menu,.hl-view{background:#fff;border:1px solid #dae6f1;border-radius:12px;overflow:hidden}
@@ -3900,7 +3901,10 @@ def member_html_lesson():
     $('hlCount').textContent=items.length+' bài HTML';
     $('hlItems').addEventListener('click',e=>{const btn=e.target.closest('button[data-i]');if(btn)open(Number(btn.dataset.i));});
     $('hlSearch').addEventListener('input',render);open(0);
-    })();</script>""".replace('SEED',seed).replace('LESSON_TITLE',html.escape(title))
+    })();</script>""".replace('SEED',seed).replace('LESSON_TITLE',html.escape(title)).replace(
+        'MANAGER_RACE',
+        '<a class="hl-race" href="' + html.escape(race_url,quote=True) + '">📺 Tạo phòng QR từ ngân hàng câu hỏi</a>' if manager else ''
+    )
     return page('HTML tổng hợp · '+title,body)
 
 
