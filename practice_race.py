@@ -335,7 +335,7 @@ def selected_race_kinds(values):
     """No filter means all types, for backward-compatible room creation."""
     if isinstance(values, str):
         values = values.split(',') if values else []
-    selected = set(values or [])
+    selected = {part for value in (values or []) for part in str(value).split(',') if part}
     if selected - set(RACE_KIND_LABELS):
         raise ValueError('Loại câu hỏi không hợp lệ.')
     return selected or set(RACE_KIND_LABELS)
