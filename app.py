@@ -937,9 +937,8 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         out_href = "/admin/logout" if role == "admin" else "/member/logout"
         nav += [
             "<a href='/admin' title='Quản trị'>🏠 Quản trị</a>",
-            "<a href='/member/exams/saved' title='Danh sách đề thi đã lưu'>📚 Kho đề</a>",
-            "<a href='/member/exam' title='Soạn đề và trộn mã đề'>📝 Soạn đề</a>",
             "<details class='top-tools'><summary>☰ Công cụ</summary><div class='top-tools-list'>",
+            "<a href='/member/exam'>📝 Soạn đề / Trộn đề</a>",
             "<a href='/member/ai'>🤖 Gemini</a>",
             "<a href='/member/race'>🏁 Thi đua luyện đề</a>",
             "<a href='/xem'>📺 Chiếu</a>",
