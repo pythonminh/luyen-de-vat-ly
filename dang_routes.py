@@ -3847,7 +3847,7 @@ def member_html_lesson():
     <input id="hlSearch" type="search" placeholder="Tìm dạng luyện tập…" aria-label="Tìm bài">
     <nav id="hlItems"></nav></aside>
     <main class="hl-view"><div class="hl-viewtop"><strong id="hlTitle"></strong><a id="hlNewTab" target="_blank" rel="noopener">Mở riêng ↗</a></div>
-    <iframe id="hlFrame" title="Bài luyện HTML" sandbox="allow-scripts allow-forms allow-modals allow-downloads" referrerpolicy="same-origin"></iframe></main></div></div>
+    <div id="hlStatus" role="status" aria-live="polite" hidden></div><iframe id="hlFrame" title="Bài luyện HTML" sandbox="allow-scripts allow-forms allow-modals allow-downloads" referrerpolicy="same-origin"></iframe></main></div></div>
     <style>
     .hl-wrap{max-width:1700px;margin:auto;padding:14px}.hl-wrap *{box-sizing:border-box}
     .hl-header{background:white;border:1px solid #dae6f1;padding:14px 20px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -3860,14 +3860,43 @@ def member_html_lesson():
     .hl-item{display:block;width:100%;border:1px solid #e2eaf2;text-align:left;margin:7px 0;padding:10px;border-radius:8px;background:#f9fbfe;color:#244463;cursor:pointer;font-size:13px}
     .hl-item.active{border-color:#2270c4;background:#eaf3fe;font-weight:800}.hl-item small{display:block;margin-top:4px;color:#617890}
     .hl-viewtop{padding:13px 15px;display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #dce5ef}
-    .hl-viewtop a{font-size:12px}#hlFrame{display:block;width:100%;height:calc(100vh - 255px);min-height:520px;border:0;background:white}
+    .hl-viewtop a{font-size:12px}#hlStatus{padding:12px 15px;background:#fff7e6;color:#89530e;font-size:13px;font-weight:700}#hlFrame{display:block;width:100%;height:calc(100vh - 255px);min-height:520px;border:0;background:white}
     @media(max-width:850px){.hl-layout{grid-template-columns:1fr}.hl-menu{position:static;max-height:250px}#hlFrame{height:75vh}}
     </style>
     <script>(()=>{const items=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0))));const $=id=>document.getElementById(id);
     const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     let current=0;
     function render(){const q=$('hlSearch').value.trim().toLowerCase();$('hlItems').innerHTML=items.map((x,i)=>({x,i})).filter(o=>o.x.title.toLowerCase().includes(q)).map(o=>'<button class="hl-item'+(current===o.i?' active':'')+'" data-i="'+o.i+'">'+esc(o.x.title)+'<small>'+(o.x.pending?'Chờ duyệt':'Đã duyệt')+'</small></button>').join('');}
-    function open(i){current=i;const x=items[i];$('hlFrame').src=x.url;$('hlTitle').textContent=x.title;$('hlNewTab').href=x.url;render();}
+    let loadNumber=0;
+    async function open(i){
+      current=i;
+      const x=items[i], n=++loadNumber, frame=$('hlFrame'), status=$('hlStatus');
+      $('hlTitle').textContent=x.title;
+      $('hlNewTab').href=x.url;
+      render();
+      frame.removeAttribute('src');
+      frame.srcdoc='';
+      status.hidden=false;
+      status.textContent='Đang tải bài luyện…';
+      try{
+        // Fetch in the authenticated parent, not in a nested sandboxed player.
+        const sourceUrl=x.url+(x.url.includes('?')?'&':'?')+'content=1';
+        const response=await fetch(sourceUrl,{credentials:'same-origin',cache:'no-store'});
+        if(!response.ok)throw new Error(response.status===401?'Phiên đăng nhập đã hết hạn.':response.status===403?'Tài khoản không có quyền mở bài này.':'Không thể tải bài (HTTP '+response.status+').');
+        const contentType=response.headers.get('content-type')||'';
+        if(!contentType.includes('text/html'))throw new Error('Máy chủ không trả về tài liệu HTML.');
+        const html=await response.text();
+        if(n!==loadNumber)return;
+        if(!/<(?:html|body|main|div)\b/i.test(html))throw new Error('Nội dung bài HTML không hợp lệ.');
+        // Untrusted exercise code runs in an opaque-origin sandbox; never allow-same-origin.
+        frame.srcdoc=html;
+        status.hidden=true;
+      }catch(error){
+        if(n!==loadNumber)return;
+        status.hidden=false;
+        status.textContent=error.message+' Có thể bấm “Mở riêng” để kiểm tra.';
+      }
+    }
     $('hlCount').textContent=items.length+' bài HTML';
     $('hlItems').addEventListener('click',e=>{const btn=e.target.closest('button[data-i]');if(btn)open(Number(btn.dataset.i));});
     $('hlSearch').addEventListener('input',render);open(0);
