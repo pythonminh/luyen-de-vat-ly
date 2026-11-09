@@ -1,485 +1,160 @@
 <!--hp-title:VOG7lW5nIGjhu6NwIGThuqFuZyB0cm9uZyBiw6BpIOKAkyBMMTJDMiBCw6BpIDkuIMSQ4buLbmggbHXhuq10IEJveWxl-->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bọt khí – Định luật Boyle | Lớp Học Thầy Minh</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Luyện tập định luật Boyle — Lớp Học Thầy Minh</title>
 <style>
-:root{
-  --navy:#102947;
-  --blue:#1674d1;
-  --green:#16834d;
-  --red:#c83232;
-  --bg:#f1f5fa;
-}
-*{box-sizing:border-box}
-body{
-  margin:0;
-  background:var(--bg);
-  font-family:Arial,sans-serif;
-  color:#1b2b3b;
-  line-height:1.65;
-}
-header{
-  background:var(--navy);
-  color:white;
-  padding:14px 24px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  flex-wrap:wrap;
-  gap:8px;
-}
-header strong{font-size:20px}
-header small{color:#d6e5f7}
-main{
-  max-width:1250px;
-  margin:22px auto;
-  padding:0 14px;
-  display:grid;
-  grid-template-columns:42% 58%;
-  gap:16px;
-}
-.panel{
-  background:white;
-  border-radius:14px;
-  padding:22px;
-  box-shadow:0 4px 20px #10294714;
-  min-width:0;
-}
-h2{margin:0 0 12px;color:var(--navy);font-size:21px}
-h3{color:var(--navy)}
-svg{width:100%;height:auto;display:block}
-.formula{
-  background:#ecf5ff;
-  border-left:4px solid var(--blue);
-  padding:12px 15px;
-  margin-top:14px;
-  border-radius:8px;
-}
-.question{
-  font-size:19px;
-  line-height:1.8;
-  margin-bottom:22px;
-}
-.option{
-  border:2px solid #dce5ef;
-  padding:13px 15px;
-  margin-bottom:11px;
-  border-radius:10px;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-.option:hover{background:#eef6ff}
-.option.selected{
-  background:#e7f2ff;
-  border-color:var(--blue);
-}
-.option.correct{
-  background:#e5f7ed;
-  border-color:var(--green);
-}
-.option.wrong{
-  background:#fff0f0;
-  border-color:var(--red);
-}
-.option input{accent-color:var(--blue);width:18px;height:18px}
-.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
-button{
-  border:0;
-  border-radius:9px;
-  padding:13px 19px;
-  color:white;
-  background:var(--blue);
-  cursor:pointer;
-  font-size:15px;
-  font-weight:700;
-}
-button:hover{filter:brightness(.92)}
-button:disabled{opacity:.55;cursor:not-allowed}
-button.check{background:var(--green)}
-button.solution-btn{background:#596579}
-#feedback{
-  margin-top:18px;
-  font-weight:bold;
-  font-size:17px;
-}
-#solution{
-  display:none;
-  margin-top:20px;
-  background:#f7faff;
-  border:1px solid #dce8f5;
-  border-radius:12px;
-  padding:18px;
-  line-height:1.9;
-}
-.step{margin:10px 0}
-.math{
-  text-align:center;
-  font-family:Georgia,"Times New Roman",serif;
-  font-size:20px;
-  padding:7px;
-  overflow-wrap:anywhere;
-}
-.answer{
-  color:var(--green);
-  font-weight:bold;
-  font-size:20px;
-}
-.note{font-size:13px;color:#66788b;margin-top:12px}
-@media(max-width:820px){
-  main{grid-template-columns:1fr}
-  header strong{font-size:17px}
-  .panel{padding:16px}
-}
+:root{--navy:#102947;--blue:#1769b2;--green:#167548;--red:#ae3030;--muted:#50657a}
+*{box-sizing:border-box}body{margin:0;background:#edf3f9;color:#172c40;font:16px/1.55 system-ui,Arial,sans-serif}
+header{background:var(--navy);color:white;padding:13px clamp(14px,3vw,32px)}header strong{font-size:20px}header small{display:block;color:#d6e5f5}
+main{max-width:1440px;margin:auto;padding:16px;display:grid;grid-template-columns:minmax(270px,40%) minmax(0,60%);gap:16px}
+article{min-width:0;background:white;border-radius:14px;padding:20px;box-shadow:0 4px 18px #0d2e4d12}h2{font-size:20px;margin:0 0 12px;color:var(--navy)}h3{font-size:17px;color:var(--navy)}
+svg{width:100%;max-height:390px}#modelLabel{font-weight:700;color:var(--navy)}.formula{background:#eaf3fe;border-left:4px solid var(--blue);border-radius:8px;padding:12px;margin-top:14px}
+fieldset{border:0;margin:0;padding:0}legend{font-weight:700;margin-bottom:8px}.types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.types button{background:#f2f6fc;color:#22445f;border:1px solid #bdccdb;padding:9px;border-radius:8px;text-align:left;font-weight:600}.types button.active{background:#123f70;color:white}
+.progress{color:var(--muted);margin:12px 0}#question{font-size:18px;line-height:1.8;margin:12px 0 18px}
+.option{display:flex;gap:10px;align-items:center;border:2px solid #d9e4ee;border-radius:9px;padding:11px;margin:9px 0;cursor:pointer}.option:has(input:checked){background:#e6f2ff;border-color:#216cae}.option input{width:17px;height:17px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}button{cursor:pointer;border:0;border-radius:8px;padding:11px 15px;background:var(--blue);color:#fff;font-weight:700;font-size:14px}button:focus-visible,.option:focus-within{outline:3px solid #ffbf47;outline-offset:2px}
+button.secondary{background:#54667a}button.check{background:var(--green)}button:disabled{opacity:.5;cursor:not-allowed}
+#feedback{margin-top:12px;min-height:27px;font-weight:700}#solution{display:none;background:#f1f7fc;padding:15px;border-radius:10px;margin-top:14px;border:1px solid #d1e2ee}
+#solution p{margin:8px 0}.math{font-family:Georgia,serif;font-size:19px;overflow-wrap:anywhere}.small{font-size:13px;color:var(--muted)}
+@media(max-width:850px){main{grid-template-columns:1fr}article{padding:15px}}@media(max-width:500px){.types{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-
-<header>
-  <div>
-    <strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
-    <div><small>lophocthayminh.onrender.com</small></div>
-  </div>
-  <div>VẬT LÍ 12 · ĐỊNH LUẬT BOYLE</div>
-</header>
-
+<header><strong>Lớp Học Thầy Minh · Zalo 0946111107</strong><small>lophocthayminh.onrender.com</small></header>
 <main>
-  <section class="panel">
-    <h2>Mô hình bọt khí trong hồ nước</h2>
-
-    <svg viewBox="0 0 460 490" role="img"
-         aria-label="Mô hình bọt khí nổi từ đáy hồ lên mặt nước">
-      <defs>
-        <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#72d5f6"/>
-          <stop offset="100%" stop-color="#1554a2"/>
-        </linearGradient>
-        <radialGradient id="bubble">
-          <stop offset="0%" stop-color="#fff" stop-opacity=".9"/>
-          <stop offset="80%" stop-color="#d9f5ff" stop-opacity=".45"/>
-          <stop offset="100%" stop-color="#fff" stop-opacity=".95"/>
-        </radialGradient>
-      </defs>
-
-      <rect x="40" y="78" width="340" height="340"
-            rx="8" fill="url(#water)"/>
-      <path d="M40 78 Q82 63 125 78 T210 78 T295 78 T380 78"
-            fill="none" stroke="#0b90cf" stroke-width="5"/>
-      <path d="M40 418 Q125 399 210 418 T380 418"
-            fill="none" stroke="#98754e" stroke-width="12"/>
-
-      <text x="45" y="35" font-size="16" fill="#24415b">
-        Mặt thoáng: p₀
-      </text>
-      <text x="45" y="55" font-size="15" fill="#24415b"
-            id="surfaceVolume">V₂ = 1,2V₁</text>
-
-      <circle cx="205" cy="110" r="31"
-              fill="url(#bubble)" stroke="#fff" stroke-width="2"/>
-      <text x="205" y="116" font-size="15"
-            text-anchor="middle" fill="#113f68">V₂</text>
-
-      <circle cx="205" cy="368" r="22"
-              fill="url(#bubble)" stroke="#fff" stroke-width="2"/>
-      <text x="205" y="373" font-size="14"
-            text-anchor="middle" fill="#113f68">V₁</text>
-
-      <path d="M205 328 L205 158"
-            stroke="white" stroke-width="3" stroke-dasharray="7 7"/>
-      <path d="M195 171 L205 150 L215 171"
-            fill="none" stroke="white" stroke-width="3"/>
-
-      <line x1="400" y1="78" x2="400" y2="418"
-            stroke="#243f59" stroke-width="2"/>
-      <path d="M394 88 L400 78 L406 88 M394 408 L400 418 L406 408"
-            stroke="#243f59" fill="none" stroke-width="2"/>
-      <text x="420" y="250" font-size="17"
-            fill="#243f59" id="depthLabel">h = ?</text>
-
-      <text x="60" y="455" font-size="15" fill="#25405a"
-            id="bottomPressure">Áp suất đáy: p = p₀ + dh</text>
-      <text x="60" y="477" font-size="14" fill="#66788b">
-        Hình minh họa, không theo tỉ lệ.
-      </text>
-    </svg>
-
-    <div class="formula">
-      <strong>Công thức cần nhớ</strong>
-      <div class="math">p<sub>1</sub>V<sub>1</sub> =
-      p<sub>2</sub>V<sub>2</sub></div>
-      <div class="math">p<sub>đáy</sub> = p<sub>0</sub> + dh</div>
-      <p>
-        Khi bọt khí nổi lên, áp suất giảm nên thể tích
-        tăng (giả sử nhiệt độ không đổi).
-      </p>
-    </div>
-  </section>
-
-  <section class="panel">
-    <h2>Bài tập trắc nghiệm – Đổi số</h2>
-
-    <div class="question" id="question"></div>
-    <div id="options"></div>
-
-    <div class="actions">
-      <button onclick="newQuestion()">Đổi đề bài mới</button>
-      <button class="check" onclick="checkAnswer()">Kiểm tra</button>
-      <button class="solution-btn" onclick="showSolution()">
-        Xem lời giải
-      </button>
-    </div>
-
-    <div id="feedback" aria-live="polite"></div>
-    <div id="solution"></div>
-    <p class="note">
-      Lần đầu mở giữ số liệu gốc. Mỗi lần đổi đề,
-      dữ kiện và đáp án được tính lại bằng JavaScript.
-    </p>
-  </section>
+<article>
+<h2>Mô hình và công thức</h2>
+<div id="modelLabel">Bọt khí nổi trong nước</div>
+<svg viewBox="0 0 440 350" role="img" aria-label="Mô hình hai trạng thái khí với thể tích thay đổi">
+<rect x="30" y="45" width="380" height="265" rx="10" fill="#e3f2ff" stroke="#87b7e4" stroke-width="2"/>
+<line x1="30" y1="45" x2="410" y2="45" stroke="#2382cf" stroke-width="5"/>
+<g fill="#a9dcf6" stroke="#1b77b4" stroke-width="2">
+<circle id="bubble2" cx="142" cy="105" r="39"/><circle id="bubble1" cx="142" cy="255" r="29"/>
+</g>
+<path d="M142 210V157m-8 10 8-10 8 10" stroke="#1b77b4" fill="none" stroke-width="3"/>
+<text x="194" y="106" font-size="18" fill="#153e62">V₂ (trạng thái 2)</text>
+<text x="194" y="257" font-size="18" fill="#153e62">V₁ (trạng thái 1)</text>
+<text id="diagramData" x="220" y="332" font-size="15" text-anchor="middle" fill="#173d61">V₂ = 1,2 V₁</text>
+</svg>
+<div class="formula"><strong>Định luật Boyle — nhiệt độ không đổi</strong>
+<div class="math" style="text-align:center">p₁V₁ = p₂V₂ = hằng số</div>
+<div class="math" style="text-align:center">p₁ / p₂ = V₂ / V₁</div>
+<div id="extraFormula">Áp suất đáy hồ: p₁ = p₀ + dh.</div></div>
+<p class="small">Mô hình minh hoạ theo tỉ số thể tích, không biểu diễn kích thước thật của thiết bị.</p>
+</article>
+<article>
+<h2>Vật lí 12 — Bài 9. Định luật Boyle</h2>
+<fieldset><legend>Chọn dạng bài</legend><div class="types" id="types"></div></fieldset>
+<div class="progress" id="progress"></div>
+<div id="question"></div>
+<form id="answerForm"><fieldset><legend>Chọn một đáp án</legend><div id="options"></div></fieldset>
+<div class="actions">
+<button class="check" type="submit">Kiểm tra</button>
+<button class="secondary" type="button" id="solutionBtn">Xem lời giải</button>
+<button type="button" id="newBtn">Đổi đề bài mới</button>
+<button class="secondary" type="button" id="nextBtn">Câu tiếp theo</button>
+</div></form>
+<div id="feedback" aria-live="polite"></div><div id="solution" aria-live="polite"></div>
+<p class="small">Dữ kiện ban đầu được giữ đúng đề gốc. Bài mới tự tính lại bốn phương án, đáp án và lời giải. Đáp án chỉ được tiết lộ khi mở lời giải.</p>
+</article>
 </main>
-
 <script>
 "use strict";
-
-let current = null;
-let selected = null;
-let checked = false;
-
-const fmt = (n, digits = 4) => {
-  const rounded = Number(n.toFixed(digits));
-  return rounded.toLocaleString("vi-VN", {
-    maximumFractionDigits: digits
-  });
-};
-
-const scientific = n => {
-  if (n === 100000) return "10⁵";
-  if (n === 10000) return "10⁴";
-  return fmt(n);
-};
-
-function shuffle(array) {
-  const a = [...array];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+const labels=["Bọt khí trong hồ","Tính áp suất","Tính thể tích","Tỉ số biến đổi","Pít-tông đẳng nhiệt","Đồ thị p–V"];
+let kind=0,seq=1,q=null,answer=null,checked=false,seen=new Set();
+const byId=id=>document.getElementById(id);
+const fmt=n=>Number(n.toFixed(6)).toLocaleString("vi-VN",{maximumFractionDigits:6});
+const random=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){let j=random(0,i);[a[i],a[j]]=[a[j],a[i]];}return a};
+function choices(value,initial){
+ const raw=initial||[value,value*2,value/2,value+Math.max(1,value/4),value*1.5,value+2,value*0.75];
+ const vals=[];for(const n of raw){if(n>0&&!vals.some(x=>Math.abs(x-n)<1e-8))vals.push(n);if(vals.length===4)break}
+ if(vals.length!==4||!vals.some(x=>Math.abs(x-value)<1e-8))throw Error("Phương án không hợp lệ");
+ return initial?vals:shuffle(vals);
 }
-
-function originalQuestion() {
-  return {
-    k: 1.2,
-    p0: 100000,
-    d: 10000,
-    h: 2,
-    answers: [4, 3, 2, 1],
-    correctIndex: 2
-  };
+function make(k,first=false){
+ let x,y,z,correct,opts,question,steps,kRatio=1;
+ if(k===0){
+  const h=first?2:random(1,10),p0=100000,d=10000;
+  const ratio=1+h/10;kRatio=ratio;correct=h;
+  question="Một bọt khí nổi từ đáy hồ lên mặt nước có thể tích tăng gấp <b>"+fmt(ratio)+"</b> lần. Trọng lượng riêng của nước d = <b>10⁴ N/m³</b>, áp suất khí quyển p₀ = <b>10⁵ N/m²</b>. Nhiệt độ không đổi. Độ sâu của hồ là bao nhiêu?";
+  steps=["Ở đáy: p₁ = p₀ + dh, thể tích V₁.","Ở mặt nước: p₂ = p₀, V₂ = "+fmt(ratio)+"V₁.","Boyle: (p₀ + dh)V₁ = p₀V₂.","Suy ra h = ("+fmt(ratio)+" − 1)·"+fmt(p0)+"/"+fmt(d)+" = <b>"+fmt(h)+" m</b>."];
+  opts=choices(correct,first?[4,3,2,1]:null);
+ }else if(k===1){
+  const p1=first?100:random(4,15)*10,v1=random(2,8),v2=v1*2;
+  correct=p1/2;kRatio=2;
+  question="Một lượng khí đẳng nhiệt ở áp suất p₁ = <b>"+fmt(p1)+" kPa</b> và thể tích V₁ = <b>"+fmt(v1)+" lít</b>. Khí giãn nở đến V₂ = <b>"+fmt(v2)+" lít</b>. Tính áp suất p₂.";
+  steps=["Trạng thái 1: p₁ = "+fmt(p1)+" kPa; V₁ = "+fmt(v1)+" lít.","Trạng thái 2: V₂ = "+fmt(v2)+" lít; p₂ chưa biết.","p₂ = p₁V₁/V₂ = "+fmt(p1)+"·"+fmt(v1)+"/"+fmt(v2)+" = <b>"+fmt(correct)+" kPa</b>."];
+  opts=choices(correct);
+ }else if(k===2){
+  const p1=random(4,12)*10,v1=random(2,8),p2=p1/2;
+  correct=v1*2;kRatio=2;
+  question="Một lượng khí ở áp suất p₁ = <b>"+fmt(p1)+" kPa</b> có thể tích V₁ = <b>"+fmt(v1)+" lít</b>. Nhiệt độ không đổi, giảm áp suất còn p₂ = <b>"+fmt(p2)+" kPa</b>. Tính V₂.";
+  steps=["Trạng thái 1: p₁ = "+fmt(p1)+" kPa; V₁ = "+fmt(v1)+" lít.","Trạng thái 2: p₂ = "+fmt(p2)+" kPa; V₂ chưa biết.","V₂ = p₁V₁/p₂ = "+fmt(p1)+"·"+fmt(v1)+"/"+fmt(p2)+" = <b>"+fmt(correct)+" lít</b>."];
+  opts=choices(correct);
+ }else if(k===3){
+  const a=random(2,5);correct=a;kRatio=a;
+  question="Trong quá trình đẳng nhiệt, thể tích của một khối khí tăng <b>"+a+" lần</b>. Áp suất ban đầu lớn gấp bao nhiêu lần áp suất cuối?";
+  steps=["Định luật Boyle: p₁V₁ = p₂V₂.","V₂ = "+a+"V₁ nên p₁/p₂ = V₂/V₁ = <b>"+a+"</b>."];opts=choices(correct);
+ }else if(k===4){
+  const area= random(2,8)*10,p1=random(3,9)*10,p2=p1*2;correct=area/2;kRatio=0.5;
+  question="Khí trong xi lanh có áp suất <b>"+fmt(p1)+" kPa</b> và thể tích <b>"+fmt(area)+" cm³</b>. Pít-tông nén từ từ, nhiệt độ không đổi, đến áp suất <b>"+fmt(p2)+" kPa</b>. Thể tích cuối bằng bao nhiêu?";
+  steps=["Trạng thái đầu: p₁ = "+fmt(p1)+" kPa, V₁ = "+fmt(area)+" cm³.","Trạng thái cuối: p₂ = "+fmt(p2)+" kPa.","V₂ = p₁V₁/p₂ = "+fmt(p1)+"·"+fmt(area)+"/"+fmt(p2)+" = <b>"+fmt(correct)+" cm³</b>."];
+  opts=choices(correct);
+ }else{
+  const v1=random(2,8),p1=random(3,8)*10,v2=v1*2;correct=p1/2;kRatio=2;
+  question="Trên đường đẳng nhiệt p–V, điểm A có tọa độ <b>(V = "+fmt(v1)+" lít; p = "+fmt(p1)+" kPa)</b>. Điểm B trên cùng đường có V = <b>"+fmt(v2)+" lít</b>. Tính tung độ áp suất tại B.";
+  steps=["Vì hai điểm nằm trên cùng một đường đẳng nhiệt: pAVA = pBVB.","pB = pAVA/VB = "+fmt(p1)+"·"+fmt(v1)+"/"+fmt(v2)+" = <b>"+fmt(correct)+" kPa</b>."];
+  opts=choices(correct);
+ }
+ return {kind:k,question,correct,opts,steps,ratio:kRatio,unit:["m","kPa","lít","lần","cm³","kPa"][k]};
 }
-
-function generateQuestion() {
-  // Chọn độ sâu theo nửa mét để đáp án dễ đọc.
-  const depths = [
-    1, 1.5, 2, 2.5, 3, 3.5, 4,
-    4.5, 5, 6, 7, 8, 9, 10
-  ];
-  const pressures = [80000, 90000, 100000, 110000, 120000];
-  const densities = [9000, 10000, 11000, 12000];
-
-  const h = depths[Math.floor(Math.random() * depths.length)];
-  const p0 = pressures[Math.floor(Math.random() * pressures.length)];
-  const d = densities[Math.floor(Math.random() * densities.length)];
-
-  // Đảm bảo k = V_mặt / V_đáy luôn khớp dữ kiện.
-  const k = 1 + d * h / p0;
-
-  // Tạo ba đáp án nhiễu, không trùng đáp án đúng.
-  const pool = [
-    h * 0.5,
-    h * 1.5,
-    h * 2,
-    h + 1,
-    h + 2,
-    h + 3,
-    h / 2,
-    h * 0.75,
-    h * 1.25
-  ];
-
-  const unique = [];
-  for (const v of shuffle(pool)) {
-    if (
-      v > 0 &&
-      Math.abs(v - h) > 1e-7 &&
-      !unique.some(x => Math.abs(x - v) < 1e-7)
-    ) {
-      unique.push(v);
-    }
-    if (unique.length === 3) break;
-  }
-
-  const answers = shuffle([h, ...unique]);
-  const correctIndex = answers.findIndex(v => Math.abs(v - h) < 1e-7);
-
-  return { k, p0, d, h, answers, correctIndex };
+function render(){
+ answer=null;checked=false;
+ byId("progress").textContent="Câu "+seq+" · "+labels[kind];
+ byId("question").innerHTML=q.question;
+ byId("options").innerHTML=q.opts.map((n,i)=>'<label class="option"><input type="radio" name="a" value="'+i+'"><b>'+("ABCD"[i])+'.</b> '+fmt(n)+' '+(kind===3?"":q.unit)+'</label>').join("");
+ byId("feedback").textContent="";byId("solution").style.display="none";byId("solution").innerHTML="";
+ byId("modelLabel").textContent=labels[kind];byId("diagramData").textContent="V₂ / V₁ = "+fmt(q.ratio);
+ byId("extraFormula").textContent=kind===0?"Áp suất đáy hồ: p₁ = p₀ + dh.":"Quan hệ nghịch biến: khi thể tích tăng, áp suất giảm.";
+ const r=Math.max(14,Math.min(48,29*Math.cbrt(q.ratio)));byId("bubble2").setAttribute("r",r);
+ byId("bubble1").setAttribute("r","29");
+ for(const [i,b] of [...byId("types").children].entries()){b.classList.toggle("active",i===kind);b.setAttribute("aria-pressed",String(i===kind));}
 }
-
-function renderQuestion() {
-  selected = null;
-  checked = false;
-
-  const q = current;
-
-  document.getElementById("question").innerHTML = `
-    <strong>Câu 1.</strong>
-    Một bọt khí khi nổi lên từ đáy hồ có thể tích
-    gấp <strong>${fmt(q.k)}</strong> lần khi đến mặt nước.
-    Biết trọng lượng riêng của nước là
-    <strong>d = ${scientific(q.d)} N/m³</strong>,
-    áp suất khí quyển là
-    <strong>p₀ = ${scientific(q.p0)} N/m²</strong>.
-    Coi nhiệt độ không đổi trong quá trình bọt khí nổi lên.
-    <strong>Độ sâu của đáy hồ là</strong>
-  `;
-
-  document.getElementById("options").innerHTML =
-    q.answers.map((value, index) => `
-      <label class="option" id="opt${index}">
-        <input type="radio" name="answer" value="${index}"
-               onchange="selectAnswer(${index})">
-        <span><strong>${"ABCD"[index]}.</strong>
-        ${fmt(value)} m</span>
-      </label>
-    `).join("");
-
-  document.getElementById("feedback").textContent = "";
-  document.getElementById("solution").style.display = "none";
-  document.getElementById("solution").innerHTML = "";
-
-  document.getElementById("surfaceVolume").textContent =
-    "V₂ = " + fmt(q.k) + "V₁";
-  document.getElementById("bottomPressure").textContent =
-    "Áp suất đáy: p = p₀ + dh";
-
-  document.getElementById("depthLabel").textContent = "h = ?";
+function setQuestion(k,first=false){
+ kind=k;q=make(k,first);render();
 }
-
-function selectAnswer(index) {
-  if (checked) return;
-
-  selected = index;
-  document.querySelectorAll(".option").forEach((el, i) => {
-    el.classList.toggle("selected", i === index);
-  });
+byId("types").innerHTML=labels.map((s,i)=>'<button type="button" data-kind="'+i+'">'+(i+1)+'. '+s+'</button>').join("");
+byId("types").addEventListener("click",e=>{const b=e.target.closest("button[data-kind]");if(!b)return;seq++;setQuestion(Number(b.dataset.kind));});
+byId("answerForm").addEventListener("submit",e=>{
+ e.preventDefault();const el=document.querySelector('input[name="a"]:checked');
+ if(!el){byId("feedback").textContent="Hãy chọn một đáp án.";return}
+ answer=Number(el.value);checked=true;
+ const ok=Math.abs(q.opts[answer]-q.correct)<1e-8;
+ byId("feedback").style.color=ok?"#167548":"#ae3030";
+ byId("feedback").textContent=ok?"✓ Chính xác!":"✗ Chưa đúng. Em hãy kiểm tra lại công thức, hoặc xem lời giải.";
+});
+byId("solutionBtn").addEventListener("click",()=>{
+ const box=byId("solution");box.style.display="block";
+ box.innerHTML="<h3>Lời giải chi tiết</h3>"+q.steps.map((s,i)=>"<p><b>Bước "+(i+1)+".</b> "+s+"</p>").join("")+
+ "<p><b>Đáp án đúng: "+("ABCD"[q.opts.findIndex(n=>Math.abs(n-q.correct)<1e-8)])+". "+fmt(q.correct)+" "+(kind===3?"":q.unit)+"</b></p>";
+});
+byId("newBtn").addEventListener("click",()=>{seq++;setQuestion(kind);});
+byId("nextBtn").addEventListener("click",()=>{seq++;setQuestion((kind+1)%labels.length);});
+// Self-test: xác nhận 4 phương án phân biệt và đúng duy nhất với 600 lần sinh đề.
+function verifyGenerator(){
+ for(let k=0;k<labels.length;k++)for(let n=0;n<100;n++){
+  const p=make(k,false);
+  if(p.opts.length!==4||new Set(p.opts).size!==4||
+  p.opts.filter(v=>Math.abs(v-p.correct)<1e-8).length!==1||
+  p.steps.length<2||!Number.isFinite(p.correct))throw Error("Dữ kiện sinh không hợp lệ: "+k);
+ }
+ return true;
 }
-
-function checkAnswer() {
-  if (selected === null) {
-    document.getElementById("feedback").textContent =
-      "Vui lòng chọn một phương án trước khi kiểm tra.";
-    return;
-  }
-
-  checked = true;
-  document.querySelectorAll('input[name="answer"]').forEach(el => {
-    el.disabled = true;
-  });
-
-  const correct = current.correctIndex;
-  const feedback = document.getElementById("feedback");
-
-  document.getElementById("opt" + correct).classList.add("correct");
-
-  if (selected === correct) {
-    feedback.style.color = "#16834d";
-    feedback.textContent = "✓ Chính xác! Em đã chọn đúng.";
-  } else {
-    document.getElementById("opt" + selected).classList.add("wrong");
-    feedback.style.color = "#c83232";
-    feedback.textContent =
-      "✗ Chưa đúng. Hãy xem lại định luật Boyle và thử đề mới.";
-  }
-}
-
-function showSolution() {
-  const q = current;
-  const box = document.getElementById("solution");
-
-  const delta = q.k - 1;
-  const numerator = delta * q.p0;
-
-  box.innerHTML = `
-    <h3>Lời giải chi tiết</h3>
-
-    <div class="step">
-      <strong>Bước 1. Xác định các trạng thái.</strong>
-      <p>Trạng thái 1 – ở đáy hồ:</p>
-      <div class="math">
-        p₁ = p₀ + dh; &nbsp; V₁
-      </div>
-      <p>Trạng thái 2 – ở mặt nước:</p>
-      <div class="math">
-        p₂ = p₀; &nbsp; V₂ = ${fmt(q.k)}V₁
-      </div>
-    </div>
-
-    <div class="step">
-      <strong>Bước 2. Áp dụng định luật Boyle.</strong>
-      <div class="math">p₁V₁ = p₂V₂</div>
-      <div class="math">
-        (p₀ + dh)V₁ = p₀ · ${fmt(q.k)}V₁
-      </div>
-      <div class="math">
-        p₀ + dh = ${fmt(q.k)}p₀
-      </div>
-      <div class="math">
-        dh = (${fmt(q.k)} − 1)p₀
-      </div>
-    </div>
-
-    <div class="step">
-      <strong>Bước 3. Tính độ sâu.</strong>
-      <div class="math">
-        h = [(${fmt(q.k)} − 1) · ${fmt(q.p0)}] / ${fmt(q.d)}
-      </div>
-      <div class="math">
-        h = ${fmt(numerator)} / ${fmt(q.d)}
-      </div>
-      <div class="math answer">
-        h = ${fmt(q.h)} m
-      </div>
-    </div>
-
-    <p class="answer">
-      Đáp án đúng: ${"ABCD"[q.correctIndex]}.
-      ${fmt(q.h)} m.
-    </p>
-
-    <p>
-      <strong>Nhận xét:</strong>
-      Bọt khí càng lên gần mặt nước thì áp suất
-      bên ngoài càng nhỏ, vì vậy thể tích tăng.
-      Trong quá trình đẳng nhiệt, áp suất và thể tích
-      tỉ lệ nghịch.
-    </p>
-  `;
-
-  box.style.display =
-    box.style.display === "block" ? "none" : "block";
-}
-
-function newQuestion() {
-  current = generateQuestion();
-  renderQuestion();
-}
-
-current = originalQuestion();
-renderQuestion();
+try{verifyGenerator();setQuestion(0,true)}
+catch(err){byId("feedback").textContent="Lỗi kiểm tra bài: "+err.message;byId("newBtn").disabled=true;byId("nextBtn").disabled=true;}
 </script>
-</body>
-</html>
+</body></html>
