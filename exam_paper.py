@@ -649,6 +649,112 @@ def exam_css():
 """
 
 
+
+def _exam_audit(qs, copies):
+    """Validate all current exam copies without mutating the question bank."""
+    by = {}
+    for q in qs:
+        try:
+            by[int(q.get("idx"))] = q
+        except (TypeError, ValueError):
+            continue
+    audit = []
+    for cp in copies or []:
+        code = str(cp.get("code") or "")
+        positions = {k: 0 for k in KIND_ORDER}
+        for raw_idx in cp.get("ids") or []:
+            try:
+                idx = int(raw_idx)
+            except (ValueError, TypeError):
+                continue
+            original = by.get(idx)
+            if original is None:
+                audit.append(dict(code=code, kind="?", seq=0, error=True, message="Không tìm thấy câu gốc", idx=idx))
+                continue
+            k = str(original.get("kind") or "TL")
+            if k not in KIND_ORDER:
+                k = "TL"
+            positions[k] += 1
+            seq = positions[k]
+            q = apply_perm(original, cp)
+            messages = []
+            stem = str(q.get("text") or "").strip()
+            if not stem:
+                messages.append((True, "Câu hỏi trống"))
+            if k == "TN":
+                opts = q.get("options") or []
+                if len(opts) != 4:
+                    messages.append((True, "Trắc nghiệm phải có 4 phương án"))
+                ncorrect = sum(1 for x in opts if isinstance(x, dict) and x.get("correct"))
+                if ncorrect != 1:
+                    messages.append((True, "Cần đúng 1 đáp án A–D"))
+                if any(not str(x.get("text") or "").strip() for x in opts if isinstance(x, dict)):
+                    messages.append((True, "Có phương án trống"))
+            elif k == "DS":
+                opts = q.get("statements") or []
+                if len(opts) != 4:
+                    messages.append((True, "Đúng/Sai phải có đủ 4 ý"))
+                if any(not isinstance(x, dict) or not str(x.get("text") or "").strip()
+                       or "correct" not in x for x in opts):
+                    messages.append((True, "Thiếu nội dung hoặc đáp án Đ/S"))
+            elif k == "TLN":
+                if not str(q.get("answer") or "").strip():
+                    messages.append((True, "Chưa có đáp án trả lời ngắn"))
+            if not str(q.get("solution") or "").strip():
+                messages.append((False, "Chưa có lời giải"))
+            for is_error, message in messages:
+                audit.append(dict(code=code, kind=k, seq=seq, error=is_error,
+                                  message=message, idx=idx))
+    return audit
+
+
+def _exam_audit_ui(qs, copies):
+    errors = _exam_audit(qs, copies)
+    counts = {k: 0 for k in KIND_ORDER}
+    first = (copies or [{}])[0]
+    by = {int(q.get("idx")): q for q in qs if str(q.get("idx")).isdigit()}
+    for idx in first.get("ids") or []:
+        try:
+            q = by.get(int(idx))
+        except (TypeError, ValueError):
+            q = None
+        if q:
+            kind = str(q.get("kind") or "TL")
+            counts[kind if kind in KIND_ORDER else "TL"] += 1
+    critical = sum(bool(e["error"]) for e in errors)
+    warning = len(errors) - critical
+    out = [
+        "<aside class='exam-audit noprint' aria-label='Kiểm soát câu hỏi và đáp án'>",
+        "<div class='exam-audit-head'><b>☷ Kiểm soát đề</b>"
+        f"<div>{critical} lỗi · {warning} cảnh báo · {len(copies)} mã đề</div></div>",
+        "<p class='audit-help'>Bấm vào dòng lỗi để đến đúng câu và chọn ✏️ Sửa câu này trong đề.</p>",
+    ]
+    if critical:
+        out.append("<p class='audit-alert'>⛔ Đề chưa đạt kiểm tra đáp án. Chưa thể lưu vào Kho đề.</p>")
+    elif warning:
+        out.append("<p class='audit-warn'>⚠️ Đủ đáp án bắt buộc, nhưng còn cảnh báo cần xem lại.</p>")
+    else:
+        out.append("<p class='audit-ok'>✓ Đã kiểm tra cấu trúc và đáp án của các mã đề.</p>")
+    for kind in KIND_ORDER:
+        issues = [e for e in errors if e["kind"] == kind]
+        out.append("<details class='audit-section' open><summary>"
+                   + _esc(KIND_LABEL.get(kind, kind)) +
+                   f" <small>{counts[kind]} câu · {len(issues)} cảnh báo/lỗi</small></summary>")
+        if not issues:
+            out.append("<p class='audit-empty'>Chưa phát hiện lỗi cấu trúc.</p>")
+        else:
+            for issue in issues:
+                ident = "exq-" + issue["code"] + "-" + kind + "-" + str(issue["seq"])
+                label = "Lỗi" if issue["error"] else "Lưu ý"
+                out.append("<a class='audit-row " + ("bad" if issue["error"] else "warn")
+                           + "' href='#" + _esc(ident) + "'>"
+                           + "<span>" + label + " · Mã " + _esc(issue["code"])
+                           + " · Câu " + str(issue["seq"]) + "</span>"
+                           + "<small>" + _esc(issue["message"]) + "</small></a>")
+        out.append("</details>")
+    out.append("</aside>")
+    return "".join(out), critical
+
 def render_exam(auto_print=False):
     if not can_manage_bank():
         return redirect("/member/login")
@@ -673,6 +779,7 @@ def render_exam(auto_print=False):
         html_copy, key = _copy_html(qs, copy, title, show_key=show_key, ruled=ruled)
         papers.append(html_copy)
         keys.append(key)
+    audit_html, audit_critical = _exam_audit_ui(qs, copies)
     dang = str(exam.get("dang") or "")
     back = str(exam.get("back") or "")
     if not back:
@@ -1053,9 +1160,10 @@ def render_exam(auto_print=False):
         + duplicates_panel
         + direct_answer_panel
         + variant_panel
-        + "<div class='exampaper'>"
+        + "<div class='exam-editor-layout'><main class='exampaper' aria-label='Xem trước các mã đề'>"
         + "".join(papers)
-        + "</div></div>"
+        + "</main>" + audit_html + "</div></div>"
+        + "\n<style>\n.exam-editor-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start;padding:0 12px}\n.exam-editor-layout>.exampaper{min-width:0}\n.exam-audit{position:sticky;top:76px;max-height:calc(100vh - 90px);overflow-y:auto;border:1px solid #d7e3f0;border-radius:12px;background:#fff;padding:12px;box-shadow:0 3px 16px #19324d15}\n.exam-audit-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:14px;color:#15488a}\n.exam-audit-head div,.audit-help{font-size:12px;color:#64748b}\n.audit-help{margin:8px 0 12px}\n.audit-alert,.audit-warn,.audit-ok{border-radius:8px;padding:9px;font-size:12px;font-weight:700}\n.audit-alert{background:#fff1f2;color:#a51c30}.audit-warn{background:#fff7e6;color:#925800}.audit-ok{background:#eaf9f0;color:#166534}\n.audit-section{border:1px solid #e0e7ef;border-radius:9px;margin:8px 0;overflow:hidden}\n.audit-section summary{cursor:pointer;display:flex;justify-content:space-between;gap:8px;padding:10px;font-size:12px;font-weight:800;background:#f4f7fb}\n.audit-section small{font-size:11px;font-weight:500;color:#596d81}\n.audit-row{display:block;text-decoration:none;margin:6px;padding:7px 9px;border-radius:7px;border:1px solid #f7cbd0;color:#a51c30}\n.audit-row.warn{background:#fffbf0;border-color:#ffe5ae;color:#875400}\n.audit-row.bad{background:#fff5f5}\n.audit-row span,.audit-row small{display:block;font-size:12px}\n.audit-empty{font-size:12px;padding:8px;color:#64748b}\n.exq:target{outline:3px solid #f59e0b;outline-offset:4px;scroll-margin-top:90px}\n@media(max-width:980px){.exam-editor-layout{grid-template-columns:1fr}.exam-audit{position:static;max-height:none;order:-1}}\n@media print{.exam-editor-layout{display:block;padding:0}.exam-audit{display:none}}\n</style>\n"
         + exam_css()
         + print_js
         + variant_script
@@ -1867,6 +1975,10 @@ def save_exam_archive():
         qs = load_exam_qs(exam)
         if not qs:
             raise ValueError("Không tìm thấy câu hỏi.")
+        fatal = [e for e in _exam_audit(qs, exam.get("copies") or []) if e["error"]]
+        if fatal:
+            raise ValueError("Đề có " + str(len(fatal)) +
+                             " lỗi đáp án/cấu trúc. Mở bảng Kiểm soát đề, sửa các câu bị báo đỏ trước khi lưu.")
         frozen = dict(exam)
         frozen["snapshot_qs"] = qs
         frozen["show_key"] = False
