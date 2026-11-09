@@ -3672,6 +3672,22 @@ def _saved_html_menu():
             'lesson': parts[-1],
             'url': '/member/html-saved?' + urllib.parse.urlencode({'file': rel}),
         })
+    # One lesson card instead of one file card; preserve standalone HTML files.
+    grouped = {}
+    for item in rows:
+        key = (item['subject'], item['grade'], item['chapter'], item['lesson'])
+        rec = grouped.setdefault(key, {
+            'subject': item['subject'], 'grade': item['grade'],
+            'chapter': item['chapter'], 'lesson': item['lesson'],
+            'title': item['lesson'], 'pending': False, 'count': 0,
+            'approved': 0, 'url': '/member/html-lesson?' + urllib.parse.urlencode({
+                'path': 'ngan-hang/' + '/'.join([item['subject'], item['grade'], item['chapter'], item['lesson']]) + '/de.tex'
+            }), 'approve_file': '', 'csrf': ''
+        })
+        rec['count'] += 1
+        rec['pending'] |= item['pending']
+        rec['approved'] += int(not item['pending'])
+    rows = list(grouped.values())
     seed = base64.b64encode(json.dumps(rows, ensure_ascii=False).encode('utf-8')).decode('ascii')
     body = r"""<div class="wrap saved-gallery sg-redesign">
       <header class="sg-topbar">
@@ -3722,6 +3738,13 @@ def _saved_html_menu():
       .sg-card-actions a,.sg-card-actions button{display:inline-flex;justify-content:center;align-items:center;border:1px solid #c5d8ed;border-radius:8px;padding:9px 13px;text-decoration:none;background:#f2f7fd;color:#16568e;font:700 13px/1.3 Arial,sans-serif;cursor:pointer}
       .sg-card-actions a.primary{background:#176bd3;color:white;border-color:#176bd3}.sg-card-actions form{margin:0}
       .sg-group{grid-column:1/-1;font-size:14px;color:#265a91;font-weight:800;padding:8px 3px 4px;border-bottom:1px solid #d8e3ef}
+      .sg-card-list{display:block}
+      details.sg-chapter{margin:12px 0;border:1px solid #d6e4f2;border-radius:12px;overflow:hidden;background:#fff}
+      details.sg-chapter>summary{cursor:pointer;padding:14px;background:#eaf3fd;color:#164b82;font-weight:800;display:flex;justify-content:space-between}
+      details.sg-chapter>summary small{font-size:12px;color:#536b86}
+      .sg-chapter-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr));gap:12px;padding:12px}
+      .sg-card .sg-path{font-size:12px;color:#62758d}
+
       #sgEmpty{background:white;padding:30px;border-radius:10px;text-align:center;color:#64748b}
       @media(max-width:1150px){.sg-filter-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
       @media(max-width:700px){.sg-redesign{padding:10px!important}.sg-topbar{padding:14px}.sg-filter-row{grid-template-columns:repeat(2,minmax(0,1fr))}.sg-overview>div{padding:10px;display:block}.sg-overview strong{display:block;font-size:21px}.sg-topbar h1{font-size:19px}}
@@ -3744,9 +3767,9 @@ def _saved_html_menu():
           if(vals.includes(old))$(id).value=old;
         });
       }
-      $('sgTotal').textContent=data.length;
-      $('sgApproved').textContent=data.filter(x=>!x.pending).length;
-      $('sgPending').textContent=data.filter(x=>x.pending).length;
+      $('sgTotal').textContent=data.reduce((n,x)=>n+x.count,0);
+      $('sgApproved').textContent=data.reduce((n,x)=>n+x.approved,0);
+      $('sgPending').textContent=data.reduce((n,x)=>n+(x.count-x.approved),0);
       function draw(){
         const q=fold($('sgSearch').value),status=$('sgStatus').value,sort=$('sgSort').value;
         const rows=data.filter(c=>matching(c)&&(!status||(status==='pending' ? c.pending : !c.pending))
@@ -3756,16 +3779,24 @@ def _saved_html_menu():
           if(sort==='status')return Number(b.pending)-Number(a.pending)||sortText(a.lesson,b.lesson);
           return sortText(a.subject,b.subject)||sortText(a.grade,b.grade)||sortText(a.chapter,b.chapter)||sortText(a.lesson,b.lesson)||sortText(a.title,b.title);
         });
-        $('sgCount').textContent=rows.length+' / '+data.length+' bài';
+        $('sgCount').textContent=rows.length+' / '+data.length+' bài học';
         $('sgEmpty').hidden=rows.length>0;
-        let last='',out='';
+        const chapters=new Map();
         rows.forEach(c=>{
-          const group=c.subject+' · '+c.grade;
-          if(sort==='lesson'&&group!==last){out+='<div class="sg-group">'+esc(group)+'</div>';last=group;}
-          out+='<article class="sg-card"><div class="sg-card-head"><h3>'+esc(c.title)+'</h3><span class="sg-pill'+(c.pending?' pending':'')+'">'+(c.pending?'Chờ duyệt':'Đã duyệt')+'</span></div>'
-             +'<div class="sg-path">'+esc([c.subject,c.grade,c.chapter,c.lesson].filter(Boolean).join(' / '))+'</div>'
-             +'<div class="sg-card-actions"><a class="primary" href="'+esc(c.url)+'">▶ Mở bài</a>'
-             +(c.approve_file?'<form method="post" action="/admin/html-saved/approve"><input type="hidden" name="csrf" value="'+esc(c.csrf)+'"><input type="hidden" name="file" value="'+esc(c.approve_file)+'"><button type="submit">✓ Duyệt bài</button></form>':'')+'</div></article>';
+          const key=[c.subject,c.grade,c.chapter].join('|');
+          if(!chapters.has(key))chapters.set(key,[]);
+          chapters.get(key).push(c);
+        });
+        let out='';
+        [...chapters.entries()].sort((a,b)=>sortText(a[0],b[0])).forEach(([key,lessons])=>{
+          const first=lessons[0];
+          out+='<details class="sg-chapter" open><summary>📚 '+esc([first.subject,first.grade,first.chapter].filter(Boolean).join(' · '))+' <small>'+lessons.length+' bài học</small></summary><div class="sg-chapter-items">';
+          lessons.sort((a,b)=>sortText(a.lesson,b.lesson)).forEach(c=>{
+            out+='<article class="sg-card"><div class="sg-card-head"><h3>📖 '+esc(c.lesson)+'</h3><span class="sg-pill'+(c.pending?' pending':'')+'">'+c.count+' HTML</span></div>'
+              +'<p class="sg-path">'+c.approved+' đã duyệt · '+(c.count-c.approved)+' chờ duyệt</p>'
+              +'<div class="sg-card-actions"><a class="primary" href="'+esc(c.url)+'">▶ Mở bài tổng hợp</a></div></article>';
+          });
+          out+='</div></details>';
         });
         $('sgCards').innerHTML=out;
       }
@@ -3777,6 +3808,71 @@ def _saved_html_menu():
         'MANAGER_CREATE', '<a href="/admin/html-studio">＋ Tạo HTML</a>' if manager else ''
     )
     return page('Kho luyện tập HTML', body)
+
+
+@app.get('/member/html-lesson')
+def member_html_lesson():
+    """Single entry/viewer for all HTML exercises belonging to a lesson."""
+    member=member_current()
+    if not member:
+        return redirect(login_url(request.full_path))
+    path=str(request.args.get('path') or '').strip()
+    if not path.startswith('ngan-hang/') or not path.endswith('/de.tex'):
+        return 'Đường dẫn bài học không hợp lệ.', 400
+    if not can_view(member,path) or not can_access(member,path):
+        return 'Không có quyền xem bài học.', 403
+    parent=path.rsplit('/',1)[0]
+    manager=can_manage_bank()
+    items=[]
+    for rel in _saved_html_paths():
+        if rel.split('/html-practice/',1)[0]!=parent:
+            continue
+        if not _html_can_open(rel,manager):
+            continue
+        pending=not _html_is_approved(rel)
+        title=_html_saved_title(rel,rel.rsplit('/',1)[-1].split('--',1)[-1][:-5])
+        items.append({
+            'title':title,'pending':pending,
+            'url':'/member/html-saved?'+urllib.parse.urlencode({'file':rel}),
+            'file':rel,
+        })
+    items.sort(key=lambda x:(x['pending'],x['title'].casefold()))
+    if not items:
+        return page('HTML bài học',"<div class='wrap'><p>Chưa có bài HTML được phép xem.</p><a href='/member/html-menu'>← Kho HTML</a></div>")
+    seed=base64.b64encode(json.dumps(items,ensure_ascii=False).encode('utf-8')).decode('ascii')
+    title=parent.rsplit('/',1)[-1]
+    body=r"""<div class="hl-wrap">
+    <header class="hl-header"><div><a href="/member/html-menu">← Kho HTML</a><h2>LESSON_TITLE</h2><p>Một bài học · nhiều dạng luyện tập</p></div><span id="hlCount"></span></header>
+    <div class="hl-layout"><aside class="hl-menu"><h3>Danh sách bài luyện</h3>
+    <input id="hlSearch" type="search" placeholder="Tìm dạng luyện tập…" aria-label="Tìm bài">
+    <nav id="hlItems"></nav></aside>
+    <main class="hl-view"><div class="hl-viewtop"><strong id="hlTitle"></strong><a id="hlNewTab" target="_blank" rel="noopener">Mở riêng ↗</a></div>
+    <iframe id="hlFrame" title="Bài luyện HTML" sandbox="allow-scripts allow-forms allow-modals allow-downloads" referrerpolicy="same-origin"></iframe></main></div></div>
+    <style>
+    .hl-wrap{max-width:1700px;margin:auto;padding:14px}.hl-wrap *{box-sizing:border-box}
+    .hl-header{background:white;border:1px solid #dae6f1;padding:14px 20px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .hl-header a{font-size:13px}.hl-header h2{margin:5px 0;color:#143e68}.hl-header p{margin:0;color:#708198;font-size:12px}
+    #hlCount{font-size:13px;color:#40658a}
+    .hl-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:12px;margin-top:12px;align-items:start}
+    .hl-menu,.hl-view{background:#fff;border:1px solid #dae6f1;border-radius:12px;overflow:hidden}
+    .hl-menu{position:sticky;top:80px;max-height:calc(100vh - 100px);overflow:auto;padding:12px}
+    .hl-menu h3{font-size:15px;margin:5px 0 10px}.hl-menu input{width:100%;padding:9px;border:1px solid #ccdbea;border-radius:8px}
+    .hl-item{display:block;width:100%;border:1px solid #e2eaf2;text-align:left;margin:7px 0;padding:10px;border-radius:8px;background:#f9fbfe;color:#244463;cursor:pointer;font-size:13px}
+    .hl-item.active{border-color:#2270c4;background:#eaf3fe;font-weight:800}.hl-item small{display:block;margin-top:4px;color:#617890}
+    .hl-viewtop{padding:13px 15px;display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid #dce5ef}
+    .hl-viewtop a{font-size:12px}#hlFrame{display:block;width:100%;height:calc(100vh - 255px);min-height:520px;border:0;background:white}
+    @media(max-width:850px){.hl-layout{grid-template-columns:1fr}.hl-menu{position:static;max-height:250px}#hlFrame{height:75vh}}
+    </style>
+    <script>(()=>{const items=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0))));const $=id=>document.getElementById(id);
+    const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    let current=0;
+    function render(){const q=$('hlSearch').value.trim().toLowerCase();$('hlItems').innerHTML=items.map((x,i)=>({x,i})).filter(o=>o.x.title.toLowerCase().includes(q)).map(o=>'<button class="hl-item'+(current===o.i?' active':'')+'" data-i="'+o.i+'">'+esc(o.x.title)+'<small>'+(o.x.pending?'Chờ duyệt':'Đã duyệt')+'</small></button>').join('');}
+    function open(i){current=i;const x=items[i];$('hlFrame').src=x.url;$('hlTitle').textContent=x.title;$('hlNewTab').href=x.url;render();}
+    $('hlCount').textContent=items.length+' bài HTML';
+    $('hlItems').addEventListener('click',e=>{const btn=e.target.closest('button[data-i]');if(btn)open(Number(btn.dataset.i));});
+    $('hlSearch').addEventListener('input',render);open(0);
+    })();</script>""".replace('SEED',seed).replace('LESSON_TITLE',html.escape(title))
+    return page('HTML tổng hợp · '+title,body)
 
 
 @app.get('/member/html-saved')
@@ -3811,7 +3907,7 @@ def member_html_saved():
 @app.before_request
 def require_html_membership():
     """HTML is executable learning content: require login and lesson entitlement."""
-    if request.path not in {'/member/html-menu', '/member/html-gallery-items', '/member/html-practice', '/member/html-saved'}:
+    if request.path not in {'/member/html-menu', '/member/html-gallery-items', '/member/html-practice', '/member/html-saved', '/member/html-lesson'}:
         return None
     member = member_current()
     if not member:
