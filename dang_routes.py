@@ -3637,7 +3637,7 @@ def admin_html_saved_approve():
 
 
 def _saved_html_menu():
-    import secrets
+    """Organised, permission-aware gallery of saved HTML practice files."""
     member = member_current()
     selected = str(request.args.get('path') or '').strip()
     rows = []
@@ -3647,29 +3647,136 @@ def _saved_html_menu():
         lesson_path = parent + '/de.tex'
         if selected and selected.rsplit('/', 1)[0] != parent:
             continue
-        if not can_view(member, lesson_path) or not _html_can_open(rel, can_manage_bank()):
+        if not can_view(member, lesson_path) or not _html_can_open(rel, manager):
             continue
         parts = parent.split('/')
         fallback = rel.rsplit('/', 1)[-1].split('--', 1)[-1][:-5]
         if re.fullmatch(r'[0-9a-f]{24}', fallback):
             fallback = 'Bài luyện tập'
         pending = not _html_is_approved(rel)
-        from itsdangerous import URLSafeTimedSerializer
-        from flask import current_app
-        approval_token = URLSafeTimedSerializer(current_app.secret_key, salt='html-gallery-approval-v1').dumps({'file': rel, 'admin': str(session.get('username') or session.get('role') or '')}) if manager and pending else ''
-        rows.append({'csrf': approval_token, 'title': _html_saved_title(rel, fallback) + (' · 🟠 Chờ duyệt' if pending else ' · Đã duyệt'), 'pending': bool(pending), 'approve_file': rel if manager and pending else '', 'subject': parts[1] if len(parts)>1 else '',
-                     'grade': parts[2] if len(parts)>2 else '', 'chapter': parts[3] if len(parts)>3 else '',
-                     'lesson': parts[-1], 'url': '/member/html-saved?' + urllib.parse.urlencode({'file': rel})})
-    seed = base64.b64encode(json.dumps(rows, ensure_ascii=False).encode()).decode()
-    gallery_csrf = session.get('html_gallery_csrf', '') if manager else ''
-    body = r'''<div class="wrap saved-gallery"><header>Lớp Học Thầy Minh · Zalo 0946111107<small>lophocthayminh.onrender.com</small></header>
-<div class="sg-heading"><h2>Kho bài HTML đã lưu</h2><button type="button" id="sgFull">⛶ Toàn màn hình</button></div><p><a class="btn" href="/member">← Ngân hàng</a> <a class="btn" href="/member/html-menu?mode=types">Quản lý HTML theo dạng bài</a></p>
-<div class="sg-filters"><input id="sgSearch" placeholder="Tìm tên bài HTML…" aria-label="Tìm bài HTML"><select id="sgSubject" aria-label="Môn"></select><select id="sgGrade" aria-label="Lớp"></select><select id="sgChapter" aria-label="Chương"></select><select id="sgLesson" aria-label="Bài"></select><button id="sgReset">Xóa bộ lọc</button></div><p id="sgCount" role="status"></p><div id="sgCards"></div>
-<style>.saved-gallery{max-width:1400px!important;padding:18px!important;color:#23354d}.saved-gallery header{background:#132d4c;color:white;padding:16px;border-radius:12px;font-weight:bold}.saved-gallery header small{display:block;font-weight:normal;margin-top:5px}.sg-filters{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}.sg-filters input,.sg-filters select,.sg-filters button{padding:10px;border:1px solid #d8e1eb;border-radius:8px;max-width:100%;background:white}.sg-filters input{flex:1;min-width:180px}.sg-filters select{flex:1;min-width:150px}#sgCards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}.sg-card{border:1px solid #dde5ef;border-radius:12px;padding:18px;background:white;display:flex;flex-direction:column;gap:10px;overflow-wrap:anywhere}.sg-card h3{margin:0;font-size:17px}.sg-card p{margin:0;color:#708095;font-size:13px}.sg-card a{align-self:flex-start;margin-top:auto;background:#255f9e;color:white;padding:9px 15px;border-radius:7px;text-decoration:none}#sgCount{color:#65758a}@media(max-width:600px){.saved-gallery{padding:10px!important}.sg-filters select{min-width:130px}#sgCards{grid-template-columns:1fr}}</style>
-<script>(()=>{const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0)))),$=id=>document.getElementById(id),fs=[['sgSubject','subject'],['sgGrade','grade'],['sgChapter','chapter'],['sgLesson','lesson']],E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fold=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
-function match(c,n=fs.length){return fs.slice(0,n).every(([id,k])=>!$(id).value||$(id).value===c[k])}function options(){fs.forEach(([id,k],i)=>{const old=$(id).value,values=[...new Set(data.filter(c=>match(c,i)).map(c=>c[k]))].sort((a,b)=>a.localeCompare(b,'vi',{numeric:true}));$(id).innerHTML='<option value="">'+({grade:'Tất cả lớp',subject:'Tất cả môn',chapter:'Tất cả chương',lesson:'Tất cả bài'}[k])+'</option>'+values.map(v=>'<option>'+E(v)+'</option>').join('');if(values.includes(old))$(id).value=old})}function draw(){const q=fold($('sgSearch').value),rows=data.filter(c=>match(c)&&fold(c.title+' '+c.lesson).includes(q));$('sgCount').textContent=rows.length+' / '+data.length+' bài HTML đã lưu';$('sgCards').innerHTML=rows.length?rows.map(c=>'<article class="sg-card"><p>HTML · '+E(c.subject+' · '+c.grade)+'</p><h3>'+E(c.title)+'</h3><p>'+E(c.chapter)+'</p><p>'+E(c.lesson)+'</p><a href="'+E(c.url)+'">▶ Mở luyện tập</a>'+(c.approve_file?'<form method="post" action="/admin/html-saved/approve"><input type="hidden" name="csrf" value="'+E(c.csrf)+'"><input type="hidden" name="file" value="'+E(c.approve_file)+'"><button type="submit">✓ Duyệt bài</button></form>':'')+'<\/article>').join(''):'<p>Không có bài HTML phù hợp với bộ lọc.</p>'}fs.forEach(([id])=>$(id).onchange=()=>{options();draw()});$('sgSearch').oninput=draw;$('sgReset').onclick=()=>{fs.forEach(([id])=>$(id).value='');$('sgSearch').value='';options();draw()};options();draw()})();</script></div>'''.replace('SEED', seed).replace('CSRF_TOKEN', html.escape(gallery_csrf, quote=True))
-    body += _html_gallery_responsive()
-    return page('Kho bài HTML đã lưu', body)
+        approval_token = ''
+        if manager and pending:
+            from itsdangerous import URLSafeTimedSerializer
+            from flask import current_app
+            approval_token = URLSafeTimedSerializer(
+                current_app.secret_key, salt='html-gallery-approval-v1'
+            ).dumps({'file': rel, 'admin': str(session.get('username') or session.get('role') or '')})
+        rows.append({
+            'csrf': approval_token,
+            'title': _html_saved_title(rel, fallback),
+            'pending': bool(pending),
+            'approve_file': rel if manager and pending else '',
+            'subject': parts[1] if len(parts) > 1 else '',
+            'grade': parts[2] if len(parts) > 2 else '',
+            'chapter': parts[3] if len(parts) > 3 else '',
+            'lesson': parts[-1],
+            'url': '/member/html-saved?' + urllib.parse.urlencode({'file': rel}),
+        })
+    seed = base64.b64encode(json.dumps(rows, ensure_ascii=False).encode('utf-8')).decode('ascii')
+    body = r"""<div class="wrap saved-gallery sg-redesign">
+      <header class="sg-topbar">
+        <div><h1>Kho luyện tập HTML</h1><p>Chọn môn, lớp, chương, bài để tìm nhanh bài luyện đổi số.</p></div>
+        <div class="sg-nav"><a href="/member">Ngân hàng câu hỏi</a><a href="/member/html-menu?mode=types">Theo dạng bài</a>
+        MANAGER_CREATE</div>
+      </header>
+      <section class="sg-overview" aria-label="Thống kê kho HTML">
+        <div><strong id="sgTotal">0</strong><span>Tổng bài</span></div>
+        <div><strong id="sgApproved">0</strong><span>Đã duyệt</span></div>
+        <div><strong id="sgPending">0</strong><span>Chờ duyệt</span></div>
+      </section>
+      <section class="sg-control" aria-label="Bộ lọc kho HTML">
+        <input id="sgSearch" type="search" autocomplete="off" aria-label="Tìm tên bài" placeholder="Tìm tên bài, chương, dạng luyện tập...">
+        <div class="sg-filter-row">
+          <select id="sgSubject" aria-label="Chọn môn"></select>
+          <select id="sgGrade" aria-label="Chọn lớp"></select>
+          <select id="sgChapter" aria-label="Chọn chương"></select>
+          <select id="sgLesson" aria-label="Chọn bài"></select>
+          <select id="sgStatus" aria-label="Trạng thái"><option value="">Mọi trạng thái</option><option value="approved">Đã duyệt</option><option value="pending">Chờ duyệt</option></select>
+          <select id="sgSort" aria-label="Sắp xếp"><option value="lesson">Theo bài học</option><option value="title">Tên A–Z</option><option value="status">Chờ duyệt trước</option></select>
+          <button type="button" id="sgReset">Xóa lọc</button>
+        </div>
+      </section>
+      <div class="sg-listhead"><h2>Danh sách bài luyện</h2><span id="sgCount" role="status"></span></div>
+      <div id="sgCards" class="sg-card-list"></div>
+      <p id="sgEmpty" hidden>Không có bài HTML phù hợp với bộ lọc.</p>
+    </div>
+    <style>
+      .sg-redesign{max-width:1500px!important;margin:auto;padding:18px 20px!important;color:#1b3551}
+      .sg-redesign *{box-sizing:border-box}.sg-topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;background:#fff;border:1px solid #dde7f1;border-radius:14px;padding:18px 20px}
+      .sg-topbar h1{font-size:22px;color:#133a64;margin:0}.sg-topbar p{margin:4px 0 0;color:#718198;font-size:13px}
+      .sg-nav{display:flex;gap:7px;flex-wrap:wrap}.sg-nav a{display:inline-flex;align-items:center;text-decoration:none;padding:9px 12px;border:1px solid #bed4eb;border-radius:8px;background:#f5f9ff;color:#17518d;font-weight:700;font-size:13px}
+      .sg-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}
+      .sg-overview>div{padding:13px 16px;border:1px solid #dbe6f1;background:#fff;border-radius:11px;display:flex;align-items:center;gap:13px}
+      .sg-overview strong{font-size:25px;color:#155db1}.sg-overview span{font-size:12px;color:#62758d}
+      .sg-control{background:#fff;border:1px solid #dbe6f1;border-radius:12px;padding:13px;margin:12px 0}
+      .sg-control input,.sg-control select,.sg-control button{font:inherit;border:1px solid #cddbeb;background:#fff;border-radius:8px;padding:10px;min-width:0;min-height:41px}
+      .sg-control input{width:100%;margin-bottom:10px}.sg-filter-row{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr)) repeat(2,minmax(130px,1fr)) auto;gap:8px}
+      .sg-filter-row button{cursor:pointer;white-space:nowrap;color:#1459a4;font-weight:700;background:#f2f7ff}
+      .sg-listhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 2px 10px}.sg-listhead h2{font-size:18px;margin:0}.sg-listhead span{font-size:12px;color:#64748b}
+      .sg-card-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:12px}
+      .sg-card{background:white;border:1px solid #dbe5ef;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+      .sg-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:9px}.sg-card h3{font-size:16px;line-height:1.45;margin:0;overflow-wrap:anywhere;color:#153c68}
+      .sg-pill{border-radius:40px;padding:4px 8px;font-size:11px;font-weight:700;white-space:nowrap;background:#e8f7ef;color:#167448}
+      .sg-pill.pending{background:#fff0db;color:#a45b0a}.sg-path{font-size:12px;color:#536b84;line-height:1.5;overflow-wrap:anywhere}
+      .sg-card-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:auto}
+      .sg-card-actions a,.sg-card-actions button{display:inline-flex;justify-content:center;align-items:center;border:1px solid #c5d8ed;border-radius:8px;padding:9px 13px;text-decoration:none;background:#f2f7fd;color:#16568e;font:700 13px/1.3 Arial,sans-serif;cursor:pointer}
+      .sg-card-actions a.primary{background:#176bd3;color:white;border-color:#176bd3}.sg-card-actions form{margin:0}
+      .sg-group{grid-column:1/-1;font-size:14px;color:#265a91;font-weight:800;padding:8px 3px 4px;border-bottom:1px solid #d8e3ef}
+      #sgEmpty{background:white;padding:30px;border-radius:10px;text-align:center;color:#64748b}
+      @media(max-width:1150px){.sg-filter-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
+      @media(max-width:700px){.sg-redesign{padding:10px!important}.sg-topbar{padding:14px}.sg-filter-row{grid-template-columns:repeat(2,minmax(0,1fr))}.sg-overview>div{padding:10px;display:block}.sg-overview strong{display:block;font-size:21px}.sg-topbar h1{font-size:19px}}
+      @media(max-width:420px){.sg-filter-row{grid-template-columns:1fr}.sg-card-list{grid-template-columns:1fr}}
+    </style>
+    <script>(()=>{
+      const data=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob('SEED'),c=>c.charCodeAt(0))));
+      const $=id=>document.getElementById(id);
+      const filters=[['sgSubject','subject'],['sgGrade','grade'],['sgChapter','chapter'],['sgLesson','lesson']];
+      const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const fold=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').toLowerCase();
+      const sortText=(a,b)=>String(a||'').localeCompare(String(b||''),'vi',{numeric:true});
+      function matching(row,end=filters.length){return filters.slice(0,end).every(([id,key])=>!$(id).value||row[key]===$(id).value)}
+      function options(){
+        filters.forEach(([id,key],i)=>{
+          const old=$(id).value;
+          const vals=[...new Set(data.filter(x=>matching(x,i)).map(x=>x[key]).filter(Boolean))].sort(sortText);
+          $(id).replaceChildren(new Option({subject:'Mọi môn',grade:'Mọi lớp',chapter:'Mọi chương',lesson:'Mọi bài'}[key],''));
+          vals.forEach(v=>$(id).add(new Option(v,v)));
+          if(vals.includes(old))$(id).value=old;
+        });
+      }
+      $('sgTotal').textContent=data.length;
+      $('sgApproved').textContent=data.filter(x=>!x.pending).length;
+      $('sgPending').textContent=data.filter(x=>x.pending).length;
+      function draw(){
+        const q=fold($('sgSearch').value),status=$('sgStatus').value,sort=$('sgSort').value;
+        const rows=data.filter(c=>matching(c)&&(!status||(status==='pending' ? c.pending : !c.pending))
+          && fold([c.title,c.subject,c.grade,c.chapter,c.lesson].join(' ')).includes(q));
+        rows.sort((a,b)=>{
+          if(sort==='title')return sortText(a.title,b.title);
+          if(sort==='status')return Number(b.pending)-Number(a.pending)||sortText(a.lesson,b.lesson);
+          return sortText(a.subject,b.subject)||sortText(a.grade,b.grade)||sortText(a.chapter,b.chapter)||sortText(a.lesson,b.lesson)||sortText(a.title,b.title);
+        });
+        $('sgCount').textContent=rows.length+' / '+data.length+' bài';
+        $('sgEmpty').hidden=rows.length>0;
+        let last='',out='';
+        rows.forEach(c=>{
+          const group=c.subject+' · '+c.grade;
+          if(sort==='lesson'&&group!==last){out+='<div class="sg-group">'+esc(group)+'</div>';last=group;}
+          out+='<article class="sg-card"><div class="sg-card-head"><h3>'+esc(c.title)+'</h3><span class="sg-pill'+(c.pending?' pending':'')+'">'+(c.pending?'Chờ duyệt':'Đã duyệt')+'</span></div>'
+             +'<div class="sg-path">'+esc([c.subject,c.grade,c.chapter,c.lesson].filter(Boolean).join(' / '))+'</div>'
+             +'<div class="sg-card-actions"><a class="primary" href="'+esc(c.url)+'">▶ Mở bài</a>'
+             +(c.approve_file?'<form method="post" action="/admin/html-saved/approve"><input type="hidden" name="csrf" value="'+esc(c.csrf)+'"><input type="hidden" name="file" value="'+esc(c.approve_file)+'"><button type="submit">✓ Duyệt bài</button></form>':'')+'</div></article>';
+        });
+        $('sgCards').innerHTML=out;
+      }
+      filters.forEach(([id])=>$(id).addEventListener('change',()=>{options();draw()}));
+      $('sgSearch').addEventListener('input',draw);$('sgStatus').addEventListener('change',draw);$('sgSort').addEventListener('change',draw);
+      $('sgReset').addEventListener('click',()=>{filters.forEach(([id])=>$(id).value='');$('sgSearch').value='';$('sgStatus').value='';$('sgSort').value='lesson';options();draw()});
+      options();draw();
+    })();</script>""".replace('SEED', seed).replace(
+        'MANAGER_CREATE', '<a href="/admin/html-studio">＋ Tạo HTML</a>' if manager else ''
+    )
+    return page('Kho luyện tập HTML', body)
 
 
 @app.get('/member/html-saved')
