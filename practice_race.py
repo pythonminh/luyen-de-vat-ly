@@ -328,6 +328,27 @@ def selected_race_button():
     return '<button type="submit" form="questionForm" formaction="/member/race/from-selected" formmethod="post" name="race_pick_csrf" value="' + html.escape(csrf(), quote=True) + '" class="btn primary" onclick="if(!document.querySelector(\'input[name=qid]:checked\')){alert(\'Tick các câu muốn dùng trước khi tạo phòng.\');return false;}">🏁 Tạo phòng thi đua từ câu đã chọn</button>'
 
 
+RACE_KIND_LABELS = {'TN': 'Trắc nghiệm', 'DS': 'Đúng / Sai', 'TLN': 'Trả lời ngắn', 'TL': 'Tự luận'}
+
+
+def selected_race_kinds(values):
+    """No filter means all types, for backward-compatible room creation."""
+    if isinstance(values, str):
+        values = values.split(',') if values else []
+    selected = set(values or [])
+    if selected - set(RACE_KIND_LABELS):
+        raise ValueError('Loại câu hỏi không hợp lệ.')
+    return selected or set(RACE_KIND_LABELS)
+
+
+def filter_race_kinds(qs, kinds):
+    selected = selected_race_kinds(kinds)
+    rows = [q for q in qs if str(q.get('kind') or '') in selected]
+    if not rows:
+        raise ValueError('Bài này không có câu hỏi thuộc phần đã chọn. Hãy chọn phần khác.')
+    return rows
+
+
 def source_questions(path, selection=''):
     qs = base.parse_lesson_questions(path)
     if not selection and any(q.get('src') for q in qs):
@@ -389,7 +410,7 @@ def race_home():
                 duration = int(request.form.get('minutes', '15')) * 60
                 if not 1 <= count <= 60 or not 60 <= duration <= 10800:
                     raise ValueError('Chọn 1–60 câu và thời gian 1–180 phút.')
-                qs = source_questions(path, selection)
+                qs = filter_race_kinds(source_questions(path, selection), request.form.getlist('kinds'))
                 mode = request.form.get('mode', 'pool')
                 pool, blueprint, capacity = numeric_pool(qs, count, strict=bool(selection)) if mode == 'numeric' else build_pool(qs, count)
                 code = secrets.token_hex(4).upper()
@@ -406,7 +427,7 @@ def race_home():
         selected = request.form.get('path') or request.args.get('path', '')
         lessons = [l for l in base.index_data().get('lessons', []) if l.get('path') and int(l.get('questions', l.get('count', 0)) or 0) > 0]
         options = '<option value="">— Chọn bài học để tạo phòng —</option>' + ''.join('<option value="' + html.escape(str(l['path']), quote=True) + '"' + (' selected' if l['path'] == selected else '') + '>' + html.escape(' · '.join(str(l.get(k) or '') for k in ('Mon','Lop','BaiHoc'))) + ' (' + str(l.get('questions', l.get('count', 0))) + ' câu)</option>' for l in lessons)
-        creation = '<section class="race-create"><h2>📺 ADMIN · Tạo phòng chiếu thi đua + QR</h2><p>Chọn bài rồi bấm tạo phòng. Hệ thống sẽ tự sinh mã phòng và mã QR cho học sinh quét.</p><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Tên phòng <input name="title" value="Thi đua luyện đề" maxlength="100" required></label><label>Bài học <select id="raceLesson" name="path" required>' + options + '</select></label><label>Chế độ <select id="raceMode" name="mode"><option value="numeric" selected>Đổi số riêng từng học sinh · chấm tự động</option><option value="pool">Lấy câu khác nhau từ ngân hàng</option></select></label><label>Số câu mỗi đề <input id="raceCount" name="count" type="number" min="1" max="60" value="1" required></label><label>Thời gian (phút) <input name="minutes" type="number" min="1" max="180" value="15" required></label><p id="racePoolInfo" role="status">Chọn bài để kiểm tra số câu và số học sinh có thể tham gia.</p><button id="raceCreate" class="btn primary" disabled>📺 Tạo phòng + Hiện mã QR</button></form><p>Chế độ đổi số: cùng dạng câu, mỗi học sinh nhận dữ kiện riêng và đáp án được tính lại. Chế độ ngân hàng: lấy các câu có sẵn khác nhau. Câu tự luận hoặc thiếu đáp án vẫn làm được; ADMIN chấm xong mới xếp hạng chính thức.</p></section>' + _SETUP_JS
+        creation = '<section class="race-create"><h2>📺 ADMIN · Tạo phòng chiếu thi đua + QR</h2><p>Chọn bài rồi bấm tạo phòng. Hệ thống sẽ tự sinh mã phòng và mã QR cho học sinh quét.</p><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Tên phòng <input name="title" value="Thi đua luyện đề" maxlength="100" required></label><label>Bài học <select id="raceLesson" name="path" required>' + options + '</select></label><fieldset class="race-kind-select"><legend>Phần câu hỏi muốn chiếu / cho học sinh làm</legend><div class="race-kind-choices"><label><input type="checkbox" name="kinds" value="TN" checked> Trắc nghiệm <small id="kindTN"></small></label><label><input type="checkbox" name="kinds" value="DS" checked> Đúng/Sai <small id="kindDS"></small></label><label><input type="checkbox" name="kinds" value="TLN" checked> Trả lời ngắn <small id="kindTLN"></small></label><label><input type="checkbox" name="kinds" value="TL" checked> Tự luận <small id="kindTL"></small></label></div><p class="kind-note">Chỉ các phần được tích chọn mới đưa vào phòng. Câu tự luận có thể cần ADMIN chấm.</p></fieldset><label>Chế độ <select id="raceMode" name="mode"><option value="numeric" selected>Đổi số riêng từng học sinh · chấm tự động</option><option value="pool">Lấy câu khác nhau từ ngân hàng</option></select></label><label>Số câu mỗi đề <input id="raceCount" name="count" type="number" min="1" max="60" value="1" required></label><label>Thời gian (phút) <input name="minutes" type="number" min="1" max="180" value="15" required></label><p id="racePoolInfo" role="status">Chọn bài để kiểm tra số câu và số học sinh có thể tham gia.</p><button id="raceCreate" class="btn primary" disabled>📺 Tạo phòng + Hiện mã QR</button></form><p>Chế độ đổi số: cùng dạng câu, mỗi học sinh nhận dữ kiện riêng và đáp án được tính lại. Chế độ ngân hàng: lấy các câu có sẵn khác nhau. Câu tự luận hoặc thiếu đáp án vẫn làm được; ADMIN chấm xong mới xếp hạng chính thức.</p></section>' + _SETUP_JS
         if selection:
             pick = session.get('race_pick') or {}
             if pick.get('token') != selection:
@@ -427,7 +448,7 @@ def race_home():
         else:
             recent = c.execute('SELECT r.code,r.title,r.state FROM race_rooms r JOIN race_players p ON p.room=r.code WHERE p.user=? ORDER BY r.created DESC LIMIT 20', (user,)).fetchall()
     links = ''.join('<li><a href="/member/race/' + r['code'] + '">' + html.escape(r['title']) + ' · ' + r['code'] + '</a></li>' for r in recent)
-    body = '<div class="wrap race"><h1>🏁 Thi đua luyện đề</h1><p>Học sinh chỉ cần mã phòng và họ tên, không cần đăng nhập tài khoản.</p>' + error + creation + '<section class="race-join"><h2>👨‍🎓 Học sinh · Vào phòng đã tạo</h2><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Mã phòng <input name="code" maxlength="8" required placeholder="Nhập đúng mã ADMIN cung cấp"></label><button class="btn primary">Vào phòng</button></form></section>' + '<p><a class="btn primary" href="/member/race/history">📚 Lịch sử bài làm học sinh</a></p><h2>Phòng của tôi</h2><ul>' + links + '</ul><a class="btn" href="/member">← Mục lục</a></div><style>.race{max-width:1000px}.race label{display:block;margin:12px 0}.race input,.race select{max-width:100%;padding:9px}.race select{width:100%}.race-create{border:2px solid #2563eb;background:#eff6ff;padding:20px;border-radius:12px;margin:16px 0}.race-join{border:1px solid #cbd5e1;padding:20px;border-radius:12px;margin:16px 0}</style>'
+    body = '<div class="wrap race"><h1>🏁 Thi đua luyện đề</h1><p>Học sinh chỉ cần mã phòng và họ tên, không cần đăng nhập tài khoản.</p>' + error + creation + '<section class="race-join"><h2>👨‍🎓 Học sinh · Vào phòng đã tạo</h2><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Mã phòng <input name="code" maxlength="8" required placeholder="Nhập đúng mã ADMIN cung cấp"></label><button class="btn primary">Vào phòng</button></form></section>' + '<p><a class="btn primary" href="/member/race/history">📚 Lịch sử bài làm học sinh</a></p><h2>Phòng của tôi</h2><ul>' + links + '</ul><a class="btn" href="/member">← Mục lục</a></div><style>.race{max-width:1000px}.race label{display:block;margin:12px 0}.race input,.race select{max-width:100%;padding:9px}.race select{width:100%}.race-create{border:2px solid #2563eb;background:#eff6ff;padding:20px;border-radius:12px;margin:16px 0}.race-join{border:1px solid #cbd5e1;padding:20px;border-radius:12px;margin:16px 0} .race-kind-select{border:1px solid #cbdcf0;border-radius:12px;padding:13px 15px;margin:14px 0;background:white}.race-kind-select legend{font-weight:800;color:#16477d;padding:0 7px}.race-kind-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.race-kind-choices label{margin:0!important;display:flex!important;align-items:center;gap:8px;padding:11px 12px;background:#f5f9ff;border:1px solid #dce7f4;border-radius:10px;font-weight:700}.race-kind-choices input{width:18px;height:18px;accent-color:#245ddd}.race-kind-choices small{font-size:12px;color:#4f6a87;margin-left:auto}.kind-note{font-size:12px;color:#536a84}@media(max-width:550px){.race-kind-choices{grid-template-columns:1fr}.race-kind-choices label{min-height:47px}}</style>'
     if not base.can_manage_bank():
         body = body.replace('<p><a class="btn primary" href="/member/race/history">📚 Lịch sử bài làm học sinh</a></p>', '')
     body += '<link rel="stylesheet" href="/static/practice-race.css?v=ui-polish-20261110">'
@@ -458,8 +479,9 @@ def race_page(code):
 
 _SETUP_JS = '''<script>(function(){
 const lesson=document.getElementById('raceLesson'),count=document.getElementById('raceCount'),info=document.getElementById('racePoolInfo'),create=document.getElementById('raceCreate');let version=0;
-async function preview(){const mine=++version;create.disabled=true;if(!lesson.value){info.textContent='Chọn bài học để tạo phòng.';return}info.textContent='Đang kiểm tra ngân hàng câu hỏi…';try{const r=await fetch('/api/race-preview?'+new URLSearchParams({path:lesson.value,count:count.value,mode:document.getElementById('raceMode').value,selection:(document.getElementById('raceSelection')||{}).value||''}),{cache:'no-store'}),d=await r.json();if(mine!==version)return;if(!r.ok||!d.ok)throw Error(d.error||'Không kiểm tra được bài');info.textContent=d.mode==='numeric'?'Đổi số riêng · '+d.count+' câu/đề · chấm tự động · đủ cho lớp 50 học sinh (tối đa 200).':'Có '+d.available+' câu dùng được ('+d.manual+' câu ADMIN chấm) · '+d.count+' câu/đề · Tối đa '+d.capacity+' học sinh với các đề không trùng câu.';create.disabled=d.capacity<1}catch(e){if(mine===version)info.textContent=e.message}}
-document.getElementById('raceMode').addEventListener('change',preview);lesson.addEventListener('change',preview);count.addEventListener('input',preview);preview();})();</script>'''
+const kindBoxes=[...document.querySelectorAll('input[name="kinds"]')];
+async function preview(){const mine=++version;create.disabled=true;if(!lesson.value){info.textContent='Chọn bài học để tạo phòng.';return}if(!kindBoxes.some(x=>x.checked)){info.textContent='Chọn ít nhất một phần câu hỏi.';return}info.textContent='Đang kiểm tra ngân hàng câu hỏi…';try{const r=await fetch('/api/race-preview?'+new URLSearchParams({path:lesson.value,count:count.value,mode:document.getElementById('raceMode').value,selection:(document.getElementById('raceSelection')||{}).value||'',kinds:kindBoxes.filter(x=>x.checked).map(x=>x.value).join(',')}),{cache:'no-store'}),d=await r.json();if(mine!==version)return;if(!r.ok||!d.ok)throw Error(d.error||'Không kiểm tra được bài');for(const k of ['TN','DS','TLN','TL']){const el=document.getElementById('kind'+k);if(el)el.textContent='('+Number(d.kinds?.[k]||0)+' câu)'}info.textContent=d.mode==='numeric'?'Đổi số riêng · '+d.count+' câu/đề · chấm tự động · đủ cho lớp 50 học sinh (tối đa 200).':'Có '+d.available+' câu dùng được ('+d.manual+' câu ADMIN chấm) · '+d.count+' câu/đề · Tối đa '+d.capacity+' học sinh với các đề không trùng câu.';create.disabled=d.capacity<1}catch(e){if(mine===version)info.textContent=e.message}}
+document.getElementById('raceMode').addEventListener('change',preview);lesson.addEventListener('change',preview);count.addEventListener('input',preview);kindBoxes.forEach(x=>x.addEventListener('change',preview));preview();})();</script>'''
 
 
 @base.app.get('/api/race-preview')
@@ -470,10 +492,13 @@ def race_preview():
         n = int(request.args.get('count', '5'))
         if not 1 <= n <= 60:
             raise ValueError('Số câu phải từ 1 đến 60.')
-        qs = source_questions(request.args.get('path', ''), request.args.get('selection', ''))
+        unfiltered = source_questions(request.args.get('path', ''), request.args.get('selection', ''))
+        all_counts = {k: sum(1 for q in unfiltered if q.get('kind') == k and eligible(q)) for k in RACE_KIND_LABELS}
+        kinds = selected_race_kinds(request.args.getlist('kinds'))
+        qs = filter_race_kinds(unfiltered, kinds)
         mode = request.args.get('mode', 'pool')
         pool, blueprint, capacity = numeric_pool(qs, n, strict=bool(request.args.get('selection'))) if mode == 'numeric' else build_pool(qs, n)
-        return jsonify(ok=True, mode=mode, available=len(pool), count=n, capacity=capacity, manual=0 if mode == 'numeric' else sum(not auto_graded(q) for q in pool))
+        return jsonify(ok=True, mode=mode, available=len(pool), count=n, capacity=capacity, manual=0 if mode == 'numeric' else sum(not auto_graded(q) for q in pool), kinds=all_counts)
     except (ValueError, OSError) as exc:
         return jsonify(ok=False, error=str(exc)), 400
 
