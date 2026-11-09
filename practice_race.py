@@ -430,7 +430,7 @@ def race_home():
     body = '<div class="wrap race"><h1>🏁 Thi đua luyện đề</h1><p>Học sinh chỉ cần mã phòng và họ tên, không cần đăng nhập tài khoản.</p>' + error + creation + '<section class="race-join"><h2>👨‍🎓 Học sinh · Vào phòng đã tạo</h2><form method="post"><input type="hidden" name="csrf" value="' + token + '"><label>Mã phòng <input name="code" maxlength="8" required placeholder="Nhập đúng mã ADMIN cung cấp"></label><button class="btn primary">Vào phòng</button></form></section>' + '<p><a class="btn primary" href="/member/race/history">📚 Lịch sử bài làm học sinh</a></p><h2>Phòng của tôi</h2><ul>' + links + '</ul><a class="btn" href="/member">← Mục lục</a></div><style>.race{max-width:1000px}.race label{display:block;margin:12px 0}.race input,.race select{max-width:100%;padding:9px}.race select{width:100%}.race-create{border:2px solid #2563eb;background:#eff6ff;padding:20px;border-radius:12px;margin:16px 0}.race-join{border:1px solid #cbd5e1;padding:20px;border-radius:12px;margin:16px 0}</style>'
     if not base.can_manage_bank():
         body = body.replace('<p><a class="btn primary" href="/member/race/history">📚 Lịch sử bài làm học sinh</a></p>', '')
-    body += '<link rel="stylesheet" href="/static/practice-race.css?v=mobile-clear-20261110">'
+    body += '<link rel="stylesheet" href="/static/practice-race.css?v=ui-polish-20261110">'
     return base.page('Thi đua luyện đề', body)
 
 
