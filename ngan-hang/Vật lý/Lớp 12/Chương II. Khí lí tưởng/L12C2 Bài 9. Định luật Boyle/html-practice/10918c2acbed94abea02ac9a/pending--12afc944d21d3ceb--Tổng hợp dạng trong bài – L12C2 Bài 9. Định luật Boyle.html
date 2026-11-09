@@ -1,0 +1,485 @@
+<!--hp-title:VOG7lW5nIGjhu6NwIGThuqFuZyB0cm9uZyBiw6BpIOKAkyBMMTJDMiBCw6BpIDkuIMSQ4buLbmggbHXhuq10IEJveWxl-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bọt khí – Định luật Boyle | Lớp Học Thầy Minh</title>
+<style>
+:root{
+  --navy:#102947;
+  --blue:#1674d1;
+  --green:#16834d;
+  --red:#c83232;
+  --bg:#f1f5fa;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  font-family:Arial,sans-serif;
+  color:#1b2b3b;
+  line-height:1.65;
+}
+header{
+  background:var(--navy);
+  color:white;
+  padding:14px 24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+}
+header strong{font-size:20px}
+header small{color:#d6e5f7}
+main{
+  max-width:1250px;
+  margin:22px auto;
+  padding:0 14px;
+  display:grid;
+  grid-template-columns:42% 58%;
+  gap:16px;
+}
+.panel{
+  background:white;
+  border-radius:14px;
+  padding:22px;
+  box-shadow:0 4px 20px #10294714;
+  min-width:0;
+}
+h2{margin:0 0 12px;color:var(--navy);font-size:21px}
+h3{color:var(--navy)}
+svg{width:100%;height:auto;display:block}
+.formula{
+  background:#ecf5ff;
+  border-left:4px solid var(--blue);
+  padding:12px 15px;
+  margin-top:14px;
+  border-radius:8px;
+}
+.question{
+  font-size:19px;
+  line-height:1.8;
+  margin-bottom:22px;
+}
+.option{
+  border:2px solid #dce5ef;
+  padding:13px 15px;
+  margin-bottom:11px;
+  border-radius:10px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.option:hover{background:#eef6ff}
+.option.selected{
+  background:#e7f2ff;
+  border-color:var(--blue);
+}
+.option.correct{
+  background:#e5f7ed;
+  border-color:var(--green);
+}
+.option.wrong{
+  background:#fff0f0;
+  border-color:var(--red);
+}
+.option input{accent-color:var(--blue);width:18px;height:18px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+button{
+  border:0;
+  border-radius:9px;
+  padding:13px 19px;
+  color:white;
+  background:var(--blue);
+  cursor:pointer;
+  font-size:15px;
+  font-weight:700;
+}
+button:hover{filter:brightness(.92)}
+button:disabled{opacity:.55;cursor:not-allowed}
+button.check{background:var(--green)}
+button.solution-btn{background:#596579}
+#feedback{
+  margin-top:18px;
+  font-weight:bold;
+  font-size:17px;
+}
+#solution{
+  display:none;
+  margin-top:20px;
+  background:#f7faff;
+  border:1px solid #dce8f5;
+  border-radius:12px;
+  padding:18px;
+  line-height:1.9;
+}
+.step{margin:10px 0}
+.math{
+  text-align:center;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:20px;
+  padding:7px;
+  overflow-wrap:anywhere;
+}
+.answer{
+  color:var(--green);
+  font-weight:bold;
+  font-size:20px;
+}
+.note{font-size:13px;color:#66788b;margin-top:12px}
+@media(max-width:820px){
+  main{grid-template-columns:1fr}
+  header strong{font-size:17px}
+  .panel{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <strong>Lớp Học Thầy Minh · Zalo 0946111107</strong>
+    <div><small>lophocthayminh.onrender.com</small></div>
+  </div>
+  <div>VẬT LÍ 12 · ĐỊNH LUẬT BOYLE</div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Mô hình bọt khí trong hồ nước</h2>
+
+    <svg viewBox="0 0 460 490" role="img"
+         aria-label="Mô hình bọt khí nổi từ đáy hồ lên mặt nước">
+      <defs>
+        <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#72d5f6"/>
+          <stop offset="100%" stop-color="#1554a2"/>
+        </linearGradient>
+        <radialGradient id="bubble">
+          <stop offset="0%" stop-color="#fff" stop-opacity=".9"/>
+          <stop offset="80%" stop-color="#d9f5ff" stop-opacity=".45"/>
+          <stop offset="100%" stop-color="#fff" stop-opacity=".95"/>
+        </radialGradient>
+      </defs>
+
+      <rect x="40" y="78" width="340" height="340"
+            rx="8" fill="url(#water)"/>
+      <path d="M40 78 Q82 63 125 78 T210 78 T295 78 T380 78"
+            fill="none" stroke="#0b90cf" stroke-width="5"/>
+      <path d="M40 418 Q125 399 210 418 T380 418"
+            fill="none" stroke="#98754e" stroke-width="12"/>
+
+      <text x="45" y="35" font-size="16" fill="#24415b">
+        Mặt thoáng: p₀
+      </text>
+      <text x="45" y="55" font-size="15" fill="#24415b"
+            id="surfaceVolume">V₂ = 1,2V₁</text>
+
+      <circle cx="205" cy="110" r="31"
+              fill="url(#bubble)" stroke="#fff" stroke-width="2"/>
+      <text x="205" y="116" font-size="15"
+            text-anchor="middle" fill="#113f68">V₂</text>
+
+      <circle cx="205" cy="368" r="22"
+              fill="url(#bubble)" stroke="#fff" stroke-width="2"/>
+      <text x="205" y="373" font-size="14"
+            text-anchor="middle" fill="#113f68">V₁</text>
+
+      <path d="M205 328 L205 158"
+            stroke="white" stroke-width="3" stroke-dasharray="7 7"/>
+      <path d="M195 171 L205 150 L215 171"
+            fill="none" stroke="white" stroke-width="3"/>
+
+      <line x1="400" y1="78" x2="400" y2="418"
+            stroke="#243f59" stroke-width="2"/>
+      <path d="M394 88 L400 78 L406 88 M394 408 L400 418 L406 408"
+            stroke="#243f59" fill="none" stroke-width="2"/>
+      <text x="420" y="250" font-size="17"
+            fill="#243f59" id="depthLabel">h = ?</text>
+
+      <text x="60" y="455" font-size="15" fill="#25405a"
+            id="bottomPressure">Áp suất đáy: p = p₀ + dh</text>
+      <text x="60" y="477" font-size="14" fill="#66788b">
+        Hình minh họa, không theo tỉ lệ.
+      </text>
+    </svg>
+
+    <div class="formula">
+      <strong>Công thức cần nhớ</strong>
+      <div class="math">p<sub>1</sub>V<sub>1</sub> =
+      p<sub>2</sub>V<sub>2</sub></div>
+      <div class="math">p<sub>đáy</sub> = p<sub>0</sub> + dh</div>
+      <p>
+        Khi bọt khí nổi lên, áp suất giảm nên thể tích
+        tăng (giả sử nhiệt độ không đổi).
+      </p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Bài tập trắc nghiệm – Đổi số</h2>
+
+    <div class="question" id="question"></div>
+    <div id="options"></div>
+
+    <div class="actions">
+      <button onclick="newQuestion()">Đổi đề bài mới</button>
+      <button class="check" onclick="checkAnswer()">Kiểm tra</button>
+      <button class="solution-btn" onclick="showSolution()">
+        Xem lời giải
+      </button>
+    </div>
+
+    <div id="feedback" aria-live="polite"></div>
+    <div id="solution"></div>
+    <p class="note">
+      Lần đầu mở giữ số liệu gốc. Mỗi lần đổi đề,
+      dữ kiện và đáp án được tính lại bằng JavaScript.
+    </p>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+let current = null;
+let selected = null;
+let checked = false;
+
+const fmt = (n, digits = 4) => {
+  const rounded = Number(n.toFixed(digits));
+  return rounded.toLocaleString("vi-VN", {
+    maximumFractionDigits: digits
+  });
+};
+
+const scientific = n => {
+  if (n === 100000) return "10⁵";
+  if (n === 10000) return "10⁴";
+  return fmt(n);
+};
+
+function shuffle(array) {
+  const a = [...array];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function originalQuestion() {
+  return {
+    k: 1.2,
+    p0: 100000,
+    d: 10000,
+    h: 2,
+    answers: [4, 3, 2, 1],
+    correctIndex: 2
+  };
+}
+
+function generateQuestion() {
+  // Chọn độ sâu theo nửa mét để đáp án dễ đọc.
+  const depths = [
+    1, 1.5, 2, 2.5, 3, 3.5, 4,
+    4.5, 5, 6, 7, 8, 9, 10
+  ];
+  const pressures = [80000, 90000, 100000, 110000, 120000];
+  const densities = [9000, 10000, 11000, 12000];
+
+  const h = depths[Math.floor(Math.random() * depths.length)];
+  const p0 = pressures[Math.floor(Math.random() * pressures.length)];
+  const d = densities[Math.floor(Math.random() * densities.length)];
+
+  // Đảm bảo k = V_mặt / V_đáy luôn khớp dữ kiện.
+  const k = 1 + d * h / p0;
+
+  // Tạo ba đáp án nhiễu, không trùng đáp án đúng.
+  const pool = [
+    h * 0.5,
+    h * 1.5,
+    h * 2,
+    h + 1,
+    h + 2,
+    h + 3,
+    h / 2,
+    h * 0.75,
+    h * 1.25
+  ];
+
+  const unique = [];
+  for (const v of shuffle(pool)) {
+    if (
+      v > 0 &&
+      Math.abs(v - h) > 1e-7 &&
+      !unique.some(x => Math.abs(x - v) < 1e-7)
+    ) {
+      unique.push(v);
+    }
+    if (unique.length === 3) break;
+  }
+
+  const answers = shuffle([h, ...unique]);
+  const correctIndex = answers.findIndex(v => Math.abs(v - h) < 1e-7);
+
+  return { k, p0, d, h, answers, correctIndex };
+}
+
+function renderQuestion() {
+  selected = null;
+  checked = false;
+
+  const q = current;
+
+  document.getElementById("question").innerHTML = `
+    <strong>Câu 1.</strong>
+    Một bọt khí khi nổi lên từ đáy hồ có thể tích
+    gấp <strong>${fmt(q.k)}</strong> lần khi đến mặt nước.
+    Biết trọng lượng riêng của nước là
+    <strong>d = ${scientific(q.d)} N/m³</strong>,
+    áp suất khí quyển là
+    <strong>p₀ = ${scientific(q.p0)} N/m²</strong>.
+    Coi nhiệt độ không đổi trong quá trình bọt khí nổi lên.
+    <strong>Độ sâu của đáy hồ là</strong>
+  `;
+
+  document.getElementById("options").innerHTML =
+    q.answers.map((value, index) => `
+      <label class="option" id="opt${index}">
+        <input type="radio" name="answer" value="${index}"
+               onchange="selectAnswer(${index})">
+        <span><strong>${"ABCD"[index]}.</strong>
+        ${fmt(value)} m</span>
+      </label>
+    `).join("");
+
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("solution").style.display = "none";
+  document.getElementById("solution").innerHTML = "";
+
+  document.getElementById("surfaceVolume").textContent =
+    "V₂ = " + fmt(q.k) + "V₁";
+  document.getElementById("bottomPressure").textContent =
+    "Áp suất đáy: p = p₀ + dh";
+
+  document.getElementById("depthLabel").textContent = "h = ?";
+}
+
+function selectAnswer(index) {
+  if (checked) return;
+
+  selected = index;
+  document.querySelectorAll(".option").forEach((el, i) => {
+    el.classList.toggle("selected", i === index);
+  });
+}
+
+function checkAnswer() {
+  if (selected === null) {
+    document.getElementById("feedback").textContent =
+      "Vui lòng chọn một phương án trước khi kiểm tra.";
+    return;
+  }
+
+  checked = true;
+  document.querySelectorAll('input[name="answer"]').forEach(el => {
+    el.disabled = true;
+  });
+
+  const correct = current.correctIndex;
+  const feedback = document.getElementById("feedback");
+
+  document.getElementById("opt" + correct).classList.add("correct");
+
+  if (selected === correct) {
+    feedback.style.color = "#16834d";
+    feedback.textContent = "✓ Chính xác! Em đã chọn đúng.";
+  } else {
+    document.getElementById("opt" + selected).classList.add("wrong");
+    feedback.style.color = "#c83232";
+    feedback.textContent =
+      "✗ Chưa đúng. Hãy xem lại định luật Boyle và thử đề mới.";
+  }
+}
+
+function showSolution() {
+  const q = current;
+  const box = document.getElementById("solution");
+
+  const delta = q.k - 1;
+  const numerator = delta * q.p0;
+
+  box.innerHTML = `
+    <h3>Lời giải chi tiết</h3>
+
+    <div class="step">
+      <strong>Bước 1. Xác định các trạng thái.</strong>
+      <p>Trạng thái 1 – ở đáy hồ:</p>
+      <div class="math">
+        p₁ = p₀ + dh; &nbsp; V₁
+      </div>
+      <p>Trạng thái 2 – ở mặt nước:</p>
+      <div class="math">
+        p₂ = p₀; &nbsp; V₂ = ${fmt(q.k)}V₁
+      </div>
+    </div>
+
+    <div class="step">
+      <strong>Bước 2. Áp dụng định luật Boyle.</strong>
+      <div class="math">p₁V₁ = p₂V₂</div>
+      <div class="math">
+        (p₀ + dh)V₁ = p₀ · ${fmt(q.k)}V₁
+      </div>
+      <div class="math">
+        p₀ + dh = ${fmt(q.k)}p₀
+      </div>
+      <div class="math">
+        dh = (${fmt(q.k)} − 1)p₀
+      </div>
+    </div>
+
+    <div class="step">
+      <strong>Bước 3. Tính độ sâu.</strong>
+      <div class="math">
+        h = [(${fmt(q.k)} − 1) · ${fmt(q.p0)}] / ${fmt(q.d)}
+      </div>
+      <div class="math">
+        h = ${fmt(numerator)} / ${fmt(q.d)}
+      </div>
+      <div class="math answer">
+        h = ${fmt(q.h)} m
+      </div>
+    </div>
+
+    <p class="answer">
+      Đáp án đúng: ${"ABCD"[q.correctIndex]}.
+      ${fmt(q.h)} m.
+    </p>
+
+    <p>
+      <strong>Nhận xét:</strong>
+      Bọt khí càng lên gần mặt nước thì áp suất
+      bên ngoài càng nhỏ, vì vậy thể tích tăng.
+      Trong quá trình đẳng nhiệt, áp suất và thể tích
+      tỉ lệ nghịch.
+    </p>
+  `;
+
+  box.style.display =
+    box.style.display === "block" ? "none" : "block";
+}
+
+function newQuestion() {
+  current = generateQuestion();
+  renderQuestion();
+}
+
+current = originalQuestion();
+renderQuestion();
+</script>
+</body>
+</html>
