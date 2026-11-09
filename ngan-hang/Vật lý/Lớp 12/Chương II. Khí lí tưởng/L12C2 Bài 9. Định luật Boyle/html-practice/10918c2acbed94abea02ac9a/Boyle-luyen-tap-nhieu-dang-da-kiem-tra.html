@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Luyện tập định luật Boyle — Lớp Học Thầy Minh</title>
+<style>
+:root{--navy:#102947;--blue:#1769b2;--green:#167548;--red:#ae3030;--muted:#50657a}
+*{box-sizing:border-box}body{margin:0;background:#edf3f9;color:#172c40;font:16px/1.55 system-ui,Arial,sans-serif}
+header{background:var(--navy);color:white;padding:13px clamp(14px,3vw,32px)}header strong{font-size:20px}header small{display:block;color:#d6e5f5}
+main{max-width:1440px;margin:auto;padding:16px;display:grid;grid-template-columns:minmax(270px,40%) minmax(0,60%);gap:16px}
+article{min-width:0;background:white;border-radius:14px;padding:20px;box-shadow:0 4px 18px #0d2e4d12}h2{font-size:20px;margin:0 0 12px;color:var(--navy)}h3{font-size:17px;color:var(--navy)}
+svg{width:100%;max-height:390px}#modelLabel{font-weight:700;color:var(--navy)}.formula{background:#eaf3fe;border-left:4px solid var(--blue);border-radius:8px;padding:12px;margin-top:14px}
+fieldset{border:0;margin:0;padding:0}legend{font-weight:700;margin-bottom:8px}.types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.types button{background:#f2f6fc;color:#22445f;border:1px solid #bdccdb;padding:9px;border-radius:8px;text-align:left;font-weight:600}.types button.active{background:#123f70;color:white}
+.progress{color:var(--muted);margin:12px 0}#question{font-size:18px;line-height:1.8;margin:12px 0 18px}
+.option{display:flex;gap:10px;align-items:center;border:2px solid #d9e4ee;border-radius:9px;padding:11px;margin:9px 0;cursor:pointer}.option:has(input:checked){background:#e6f2ff;border-color:#216cae}.option input{width:17px;height:17px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}button{cursor:pointer;border:0;border-radius:8px;padding:11px 15px;background:var(--blue);color:#fff;font-weight:700;font-size:14px}button:focus-visible,.option:focus-within{outline:3px solid #ffbf47;outline-offset:2px}
+button.secondary{background:#54667a}button.check{background:var(--green)}button:disabled{opacity:.5;cursor:not-allowed}
+#feedback{margin-top:12px;min-height:27px;font-weight:700}#solution{display:none;background:#f1f7fc;padding:15px;border-radius:10px;margin-top:14px;border:1px solid #d1e2ee}
+#solution p{margin:8px 0}.math{font-family:Georgia,serif;font-size:19px;overflow-wrap:anywhere}.small{font-size:13px;color:var(--muted)}
+@media(max-width:850px){main{grid-template-columns:1fr}article{padding:15px}}@media(max-width:500px){.types{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><strong>Lớp Học Thầy Minh · Zalo 0946111107</strong><small>lophocthayminh.onrender.com</small></header>
+<main>
+<article>
+<h2>Mô hình và công thức</h2>
+<div id="modelLabel">Bọt khí nổi trong nước</div>
+<svg viewBox="0 0 440 350" role="img" aria-label="Mô hình hai trạng thái khí với thể tích thay đổi">
+<rect x="30" y="45" width="380" height="265" rx="10" fill="#e3f2ff" stroke="#87b7e4" stroke-width="2"/>
+<line x1="30" y1="45" x2="410" y2="45" stroke="#2382cf" stroke-width="5"/>
+<g fill="#a9dcf6" stroke="#1b77b4" stroke-width="2">
+<circle id="bubble2" cx="142" cy="105" r="39"/><circle id="bubble1" cx="142" cy="255" r="29"/>
+</g>
+<path d="M142 210V157m-8 10 8-10 8 10" stroke="#1b77b4" fill="none" stroke-width="3"/>
+<text x="194" y="106" font-size="18" fill="#153e62">V₂ (trạng thái 2)</text>
+<text x="194" y="257" font-size="18" fill="#153e62">V₁ (trạng thái 1)</text>
+<text id="diagramData" x="220" y="332" font-size="15" text-anchor="middle" fill="#173d61">V₂ = 1,2 V₁</text>
+</svg>
+<div class="formula"><strong>Định luật Boyle — nhiệt độ không đổi</strong>
+<div class="math" style="text-align:center">p₁V₁ = p₂V₂ = hằng số</div>
+<div class="math" style="text-align:center">p₁ / p₂ = V₂ / V₁</div>
+<div id="extraFormula">Áp suất đáy hồ: p₁ = p₀ + dh.</div></div>
+<p class="small">Mô hình minh hoạ theo tỉ số thể tích, không biểu diễn kích thước thật của thiết bị.</p>
+</article>
+<article>
+<h2>Vật lí 12 — Bài 9. Định luật Boyle</h2>
+<fieldset><legend>Chọn dạng bài</legend><div class="types" id="types"></div></fieldset>
+<div class="progress" id="progress"></div>
+<div id="question"></div>
+<form id="answerForm"><fieldset><legend>Chọn một đáp án</legend><div id="options"></div></fieldset>
+<div class="actions">
+<button class="check" type="submit">Kiểm tra</button>
+<button class="secondary" type="button" id="solutionBtn">Xem lời giải</button>
+<button type="button" id="newBtn">Đổi đề bài mới</button>
+<button class="secondary" type="button" id="nextBtn">Câu tiếp theo</button>
+</div></form>
+<div id="feedback" aria-live="polite"></div><div id="solution" aria-live="polite"></div>
+<p class="small">Dữ kiện ban đầu được giữ đúng đề gốc. Bài mới tự tính lại bốn phương án, đáp án và lời giải. Đáp án chỉ được tiết lộ khi mở lời giải.</p>
+</article>
+</main>
+<script>
+"use strict";
+const labels=["Bọt khí trong hồ","Tính áp suất","Tính thể tích","Tỉ số biến đổi","Pít-tông đẳng nhiệt","Đồ thị p–V"];
+let kind=0,seq=1,q=null,answer=null,checked=false,seen=new Set();
+const byId=id=>document.getElementById(id);
+const fmt=n=>Number(n.toFixed(6)).toLocaleString("vi-VN",{maximumFractionDigits:6});
+const random=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){let j=random(0,i);[a[i],a[j]]=[a[j],a[i]];}return a};
+function choices(value,initial){
+ const raw=initial||[value,value*2,value/2,value+Math.max(1,value/4),value*1.5,value+2,value*0.75];
+ const vals=[];for(const n of raw){if(n>0&&!vals.some(x=>Math.abs(x-n)<1e-8))vals.push(n);if(vals.length===4)break}
+ if(vals.length!==4||!vals.some(x=>Math.abs(x-value)<1e-8))throw Error("Phương án không hợp lệ");
+ return initial?vals:shuffle(vals);
+}
+function make(k,first=false){
+ let x,y,z,correct,opts,question,steps,kRatio=1;
+ if(k===0){
+  const h=first?2:random(1,10),p0=100000,d=10000;
+  const ratio=1+h/10;kRatio=ratio;correct=h;
+  question="Một bọt khí nổi từ đáy hồ lên mặt nước có thể tích tăng gấp <b>"+fmt(ratio)+"</b> lần. Trọng lượng riêng của nước d = <b>10⁴ N/m³</b>, áp suất khí quyển p₀ = <b>10⁵ N/m²</b>. Nhiệt độ không đổi. Độ sâu của hồ là bao nhiêu?";
+  steps=["Ở đáy: p₁ = p₀ + dh, thể tích V₁.","Ở mặt nước: p₂ = p₀, V₂ = "+fmt(ratio)+"V₁.","Boyle: (p₀ + dh)V₁ = p₀V₂.","Suy ra h = ("+fmt(ratio)+" − 1)·"+fmt(p0)+"/"+fmt(d)+" = <b>"+fmt(h)+" m</b>."];
+  opts=choices(correct,first?[4,3,2,1]:null);
+ }else if(k===1){
+  const p1=first?100:random(4,15)*10,v1=random(2,8),v2=v1*2;
+  correct=p1/2;kRatio=2;
+  question="Một lượng khí đẳng nhiệt ở áp suất p₁ = <b>"+fmt(p1)+" kPa</b> và thể tích V₁ = <b>"+fmt(v1)+" lít</b>. Khí giãn nở đến V₂ = <b>"+fmt(v2)+" lít</b>. Tính áp suất p₂.";
+  steps=["Trạng thái 1: p₁ = "+fmt(p1)+" kPa; V₁ = "+fmt(v1)+" lít.","Trạng thái 2: V₂ = "+fmt(v2)+" lít; p₂ chưa biết.","p₂ = p₁V₁/V₂ = "+fmt(p1)+"·"+fmt(v1)+"/"+fmt(v2)+" = <b>"+fmt(correct)+" kPa</b>."];
+  opts=choices(correct);
+ }else if(k===2){
+  const p1=random(4,12)*10,v1=random(2,8),p2=p1/2;
+  correct=v1*2;kRatio=2;
+  question="Một lượng khí ở áp suất p₁ = <b>"+fmt(p1)+" kPa</b> có thể tích V₁ = <b>"+fmt(v1)+" lít</b>. Nhiệt độ không đổi, giảm áp suất còn p₂ = <b>"+fmt(p2)+" kPa</b>. Tính V₂.";
+  steps=["Trạng thái 1: p₁ = "+fmt(p1)+" kPa; V₁ = "+fmt(v1)+" lít.","Trạng thái 2: p₂ = "+fmt(p2)+" kPa; V₂ chưa biết.","V₂ = p₁V₁/p₂ = "+fmt(p1)+"·"+fmt(v1)+"/"+fmt(p2)+" = <b>"+fmt(correct)+" lít</b>."];
+  opts=choices(correct);
+ }else if(k===3){
+  const a=random(2,5);correct=a;kRatio=a;
+  question="Trong quá trình đẳng nhiệt, thể tích của một khối khí tăng <b>"+a+" lần</b>. Áp suất ban đầu lớn gấp bao nhiêu lần áp suất cuối?";
+  steps=["Định luật Boyle: p₁V₁ = p₂V₂.","V₂ = "+a+"V₁ nên p₁/p₂ = V₂/V₁ = <b>"+a+"</b>."];opts=choices(correct);
+ }else if(k===4){
+  const area= random(2,8)*10,p1=random(3,9)*10,p2=p1*2;correct=area/2;kRatio=0.5;
+  question="Khí trong xi lanh có áp suất <b>"+fmt(p1)+" kPa</b> và thể tích <b>"+fmt(area)+" cm³</b>. Pít-tông nén từ từ, nhiệt độ không đổi, đến áp suất <b>"+fmt(p2)+" kPa</b>. Thể tích cuối bằng bao nhiêu?";
+  steps=["Trạng thái đầu: p₁ = "+fmt(p1)+" kPa, V₁ = "+fmt(area)+" cm³.","Trạng thái cuối: p₂ = "+fmt(p2)+" kPa.","V₂ = p₁V₁/p₂ = "+fmt(p1)+"·"+fmt(area)+"/"+fmt(p2)+" = <b>"+fmt(correct)+" cm³</b>."];
+  opts=choices(correct);
+ }else{
+  const v1=random(2,8),p1=random(3,8)*10,v2=v1*2;correct=p1/2;kRatio=2;
+  question="Trên đường đẳng nhiệt p–V, điểm A có tọa độ <b>(V = "+fmt(v1)+" lít; p = "+fmt(p1)+" kPa)</b>. Điểm B trên cùng đường có V = <b>"+fmt(v2)+" lít</b>. Tính tung độ áp suất tại B.";
+  steps=["Vì hai điểm nằm trên cùng một đường đẳng nhiệt: pAVA = pBVB.","pB = pAVA/VB = "+fmt(p1)+"·"+fmt(v1)+"/"+fmt(v2)+" = <b>"+fmt(correct)+" kPa</b>."];
+  opts=choices(correct);
+ }
+ return {kind:k,question,correct,opts,steps,ratio:kRatio,unit:["m","kPa","lít","lần","cm³","kPa"][k]};
+}
+function render(){
+ answer=null;checked=false;
+ byId("progress").textContent="Câu "+seq+" · "+labels[kind];
+ byId("question").innerHTML=q.question;
+ byId("options").innerHTML=q.opts.map((n,i)=>'<label class="option"><input type="radio" name="a" value="'+i+'"><b>'+("ABCD"[i])+'.</b> '+fmt(n)+' '+(kind===3?"":q.unit)+'</label>').join("");
+ byId("feedback").textContent="";byId("solution").style.display="none";byId("solution").innerHTML="";
+ byId("modelLabel").textContent=labels[kind];byId("diagramData").textContent="V₂ / V₁ = "+fmt(q.ratio);
+ byId("extraFormula").textContent=kind===0?"Áp suất đáy hồ: p₁ = p₀ + dh.":"Quan hệ nghịch biến: khi thể tích tăng, áp suất giảm.";
+ const r=Math.max(14,Math.min(48,29*Math.cbrt(q.ratio)));byId("bubble2").setAttribute("r",r);
+ byId("bubble1").setAttribute("r","29");
+ for(const [i,b] of [...byId("types").children].entries()){b.classList.toggle("active",i===kind);b.setAttribute("aria-pressed",String(i===kind));}
+}
+function setQuestion(k,first=false){
+ kind=k;q=make(k,first);render();
+}
+byId("types").innerHTML=labels.map((s,i)=>'<button type="button" data-kind="'+i+'">'+(i+1)+'. '+s+'</button>').join("");
+byId("types").addEventListener("click",e=>{const b=e.target.closest("button[data-kind]");if(!b)return;seq++;setQuestion(Number(b.dataset.kind));});
+byId("answerForm").addEventListener("submit",e=>{
+ e.preventDefault();const el=document.querySelector('input[name="a"]:checked');
+ if(!el){byId("feedback").textContent="Hãy chọn một đáp án.";return}
+ answer=Number(el.value);checked=true;
+ const ok=Math.abs(q.opts[answer]-q.correct)<1e-8;
+ byId("feedback").style.color=ok?"#167548":"#ae3030";
+ byId("feedback").textContent=ok?"✓ Chính xác!":"✗ Chưa đúng. Em hãy kiểm tra lại công thức, hoặc xem lời giải.";
+});
+byId("solutionBtn").addEventListener("click",()=>{
+ const box=byId("solution");box.style.display="block";
+ box.innerHTML="<h3>Lời giải chi tiết</h3>"+q.steps.map((s,i)=>"<p><b>Bước "+(i+1)+".</b> "+s+"</p>").join("")+
+ "<p><b>Đáp án đúng: "+("ABCD"[q.opts.findIndex(n=>Math.abs(n-q.correct)<1e-8)])+". "+fmt(q.correct)+" "+(kind===3?"":q.unit)+"</b></p>";
+});
+byId("newBtn").addEventListener("click",()=>{seq++;setQuestion(kind);});
+byId("nextBtn").addEventListener("click",()=>{seq++;setQuestion((kind+1)%labels.length);});
+// Self-test: xác nhận 4 phương án phân biệt và đúng duy nhất với 600 lần sinh đề.
+function verifyGenerator(){
+ for(let k=0;k<labels.length;k++)for(let n=0;n<100;n++){
+  const p=make(k,false);
+  if(p.opts.length!==4||new Set(p.opts).size!==4||
+  p.opts.filter(v=>Math.abs(v-p.correct)<1e-8).length!==1||
+  p.steps.length<2||!Number.isFinite(p.correct))throw Error("Dữ kiện sinh không hợp lệ: "+k);
+ }
+ return true;
+}
+try{verifyGenerator();setQuestion(0,true)}
+catch(err){byId("feedback").textContent="Lỗi kiểm tra bài: "+err.message;byId("newBtn").disabled=true;byId("nextBtn").disabled=true;}
+</script>
+</body></html>
