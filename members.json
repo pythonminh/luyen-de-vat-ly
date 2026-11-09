@@ -323,15 +323,6 @@
       "password_enc": "v1:622dFkDh_oDS"
     },
     {
-      "username": "hauklan@999",
-      "name": "Háu Kì Lan",
-      "class": "",
-      "account_type": "FREE",
-      "status": "ON",
-      "password_sha256": "a3a8eb9785a95ea1c04a264fff4de9a596a3513209d30f99c955a17f0038f61e",
-      "password_enc": "v1:522fUDHi_oA="
-    },
-    {
       "username": "Phucly123",
       "name": "Lý Võ Hữu Phúc",
       "class": "",
@@ -919,7 +910,7 @@
       "package_status": "approved",
       "password_sha256": "70346b6791c002845c0de72bbc07494e4f9a4727303b35f9d117e73d07b5a52d",
       "password_enc": "v1:4W-_Rh-9_IPY",
-      "updated_at": "2026-10-23 16:04:07",
+      "updated_at": "2026-11-09 23:12:06",
       "package": {
         "kind": "mon1",
         "grades": [
@@ -938,7 +929,10 @@
       "grade": "11",
       "vip_plan": "1m",
       "vip_started_at": "2026-10-23 16:04:07",
-      "vip_expires_at": "2026-11-23 16:04:07"
+      "vip_expires_at": "2026-11-23 16:04:07",
+      "also_usernames": [
+        "hauklan@999"
+      ]
     },
     {
       "username": "Trọng Nghĩa",
