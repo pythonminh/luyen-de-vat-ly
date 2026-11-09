@@ -136,3 +136,73 @@
   body.race-page:fullscreen #raceClock{font-size:40px}
   body.race-page:fullscreen .race-qr img{width:min(27vw,360px);height:auto}
 }
+
+
+/* Lớp Học Thầy Minh · student-friendly surface (2026-11) */
+body.race-page{
+  --student-blue:#245ddd;
+  --student-blue-dark:#1646b5;
+  --student-text:#17253b;
+  --student-muted:#566a84;
+  --student-border:#d9e4f0;
+  background:#f5f8fd!important;
+  color:var(--student-text);
+}
+body.race-page .wrap.race{max-width:1450px;padding:clamp(10px,2vw,24px)}
+body.race-page .racegrid section,body.race-page .racegrid aside,
+body.race-page .race-create,body.race-page .race-join{
+  border:1px solid var(--student-border)!important;
+  background:#ffffff!important;
+  border-radius:18px!important;
+  box-shadow:0 8px 28px rgba(20,55,100,.055)!important;
+}
+body.race-page .racebar h2{color:#163d73;font-weight:850}
+body.race-page #raceQuestion{color:var(--student-text);font-size:clamp(19px,1.6vw,25px);line-height:1.65}
+body.race-page #raceQuestion label:not(.race-component-fields label){
+  background:#fff!important;
+  color:#1d314f!important;
+  border:1.5px solid #d9e4f0!important;
+  border-radius:14px!important;
+  padding:15px 18px!important;
+  min-height:58px;
+  box-shadow:0 2px 6px rgba(15,40,85,.025);
+  cursor:pointer;
+  transition:background-color .16s,border-color .16s,box-shadow .16s;
+}
+body.race-page #raceQuestion label:not(.race-component-fields label):hover{
+  border-color:#83adef!important;background:#f7faff!important;
+}
+body.race-page #raceQuestion label:has(input:checked){
+  background:#eaf2ff!important;
+  border-color:var(--student-blue)!important;
+  box-shadow:0 0 0 2px rgba(36,93,221,.09)!important;
+}
+body.race-page #raceQuestion input[type=radio],
+body.race-page #raceQuestion input[type=checkbox]{accent-color:var(--student-blue);width:20px;height:20px}
+body.race-page #raceQuestion h3{color:#17406e}
+body.race-page #raceClock{color:#155bb6;font-weight:900}
+body.race-page .race .btn{
+  border-radius:11px!important;
+  font-weight:750!important;
+  min-height:42px;
+}
+body.race-page .race .btn.primary{
+  color:#fff!important;background:var(--student-blue)!important;
+  border-color:var(--student-blue)!important;
+  box-shadow:0 3px 9px rgba(36,93,221,.13);
+}
+body.race-page .race .btn.primary:hover{background:var(--student-blue-dark)!important}
+body.race-page .race-room-status{border-radius:10px}
+body.race-page #raceRanks tr.me{background:#e8f1ff}
+body.race-page .race-qr{
+  border-color:#bcd4f4!important;
+  background:linear-gradient(120deg,#fff,#f2f7ff)!important;
+}
+body.race-page :is(button,input,select,a):focus-visible{
+  outline:3px solid #f3ad42!important;outline-offset:3px;
+}
+@media(max-width:800px){
+  body.race-page #raceQuestion{font-size:18px!important;line-height:1.6!important}
+  body.race-page #raceQuestion label:not(.race-component-fields label){min-height:56px!important;padding:12px 14px!important;font-size:16px!important}
+  body.race-page .racegrid section,body.race-page .racegrid aside{padding:14px!important}
+}
