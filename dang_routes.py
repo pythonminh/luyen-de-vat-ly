@@ -695,16 +695,10 @@ def member_dang():
     game_link = ('<a class="btn green game-lesson-shortcut" href="/member/lesson/game?' +
                  html.escape(urllib.parse.urlencode({'path': path, 'dang': dang or ''}), quote=True) +
                  '" style="background:#126b53;color:#fff;font-weight:800">🎮 Tạo game từ câu hỏi bài này</a>') if admin_view else ''
-    game_attach = ("""<script>(function(){
-      const link=document.querySelector('.game-lesson-shortcut');
-      if(!link)return;
-      const anchor=document.querySelector('.present-host, .present-bar, #presentBar, .live-present-bar, .hostpresent, .cinemahost');
-      if(anchor){const a=link.cloneNode(true);a.className='btn green game-near-present';a.style.cssText='background:#126b53;color:white;font-weight:800;min-height:42px;display:inline-flex;align-items:center;justify-content:center;margin:5px';anchor.appendChild(a);}
-    })();</script>""") if admin_view else ''
     dang_lab=dang or 'Cả bài'
     body=("<div class='wrap'>"+_html_practice_link(path, dang)+exam_entry+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang_lab)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}{qdel_form}"
-          +matrix_html+form_open+"<div id='presentSlot'></div>"+quick_search+tools+
+          +matrix_html+form_open+"<div id='presentSlot'></div>"+game_link+quick_search+tools+
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
           "</div></div></div>"
