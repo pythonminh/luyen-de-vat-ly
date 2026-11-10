@@ -4181,3 +4181,4 @@ def admin_html_studio_visible_links(response):
 
 # Register the optional ADMIN multimodal HTML generator and preview panel.
 import html_studio_generate  # noqa: E402,F401
+import question_capture_bank  # noqa: E402,F401
