@@ -170,8 +170,8 @@ def panel(response):
     if request.path!='/admin/html-studio' or not base.can_manage_bank() or 'text/html' not in response.headers.get('Content-Type',''):return response
     try:
         source=response.get_data(as_text=True)
-        if 'id="hsAiGenerate"' in source and 'id="hsBankBox"' not in source:
-            source=source.replace('<section id="hsAiCreate"',PANEL+'<section id="hsAiCreate"',1)
+        if 'id="hsForm"' in source and 'id="hsBankBox"' not in source:
+            source=source.replace('<main class="hs-card"><h2>3. Mã HTML',PANEL+'<main class="hs-card"><h2>3. Mã HTML',1)
             source=source.replace('</body>',JS+'</body>',1)
             response.set_data(source)
     except Exception:pass
