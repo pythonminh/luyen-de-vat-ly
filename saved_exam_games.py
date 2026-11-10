@@ -125,25 +125,25 @@ GAME_CSS='''<style>
 GAME_JS='''<script>(function(){
 const $=x=>document.getElementById(x),cfg=JSON.parse($('gameData').textContent),mode=cfg.mode;
 const names={millionaire:'🏆 Triệu phú',fish:'🎣 Câu cá',tug:'🪢 Kéo co',draw:'🎲 Bốc thăm',present:'📺 Chiếu tương tác'};
-let questions=[],pos=0,score=0,done=false,turn=0;
+let questions=[],pos=0,score=0,done=false,turn=0,teamScores=[0,0],gameOver=false;
 const raw=cfg.questions.slice();$('gameModeName').textContent=names[mode];
 $('gameCopy').onchange=function(){const u=new URL(location.href);u.searchParams.set('copy',this.value);location.href=u.href;};
 $('gameRestart').onclick=()=>restart();
 $('gameFull').onclick=()=>{const e=$('gameStage');if(document.fullscreenElement)document.exitFullscreen();else if(e.requestFullscreen)e.requestFullscreen().catch(()=>{});};
 function normal(s){return String(s??'').trim().replace(/\\s+/g,'').replace(/[−–]/g,'-').replace(',','.').replace(/^\\+/, '');}
 function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a;}
-function restart(){questions=raw.slice();if(mode==='draw'||mode==='fish')shuffle(questions);pos=0;score=0;turn=0;show();}
+function restart(){questions=raw.slice();if(mode==='draw'||mode==='fish')shuffle(questions);pos=0;score=0;turn=0;teamScores=[0,0];gameOver=false;show();}
 function node(tag,cl,t){const n=document.createElement(tag);if(cl)n.className=cl;if(t!==undefined)n.textContent=t;return n;}
 function label(parent,name,value,type,group){let l=node('label');let inp=document.createElement('input');inp.type=type;inp.name=group;inp.value=value;l.append(inp,node('span','',name));parent.append(l);}
 function renderMath(){if(window.MathJax&&MathJax.typesetPromise)MathJax.typesetPromise([$('gameStage')]).catch(()=>{});}
 function show(){
  done=false;const q=questions[pos],choices=$('gameChoices');choices.replaceChildren();
  $('gameFeedback').textContent='';$('gameNext').disabled=true;$('gameCheck').disabled=false;
- if(!q){$('gameQuestion').textContent='🎉 Hoàn thành!';$('gameScore').textContent='Kết quả: '+score+'/'+questions.length+' câu đúng';$('gameCheck').disabled=true;return;}
+ if(!q){$('gameQuestion').textContent='🎉 Hoàn thành!';$('gameScore').textContent=mode==='tug'?'🪢 Đội A: '+teamScores[0]+' · Đội B: '+teamScores[1]+' · '+(teamScores[0]===teamScores[1]?'Hòa':('Đội '+(teamScores[0]>teamScores[1]?'A':'B')+' thắng')):'Kết quả: '+score+'/'+questions.length+' câu đúng';$('gameCheck').disabled=true;return;}
  $('gameQuestion').textContent=q.text;
  $('gameProgress').textContent='Câu '+(pos+1)+' / '+questions.length;
  $('gameScore').textContent=mode==='millionaire'?'🏆 Bậc '+(score+1)+' / '+questions.length:
- mode==='fish'?'🐟 Cá đã câu: '+score:mode==='tug'?'🪢 Đội '+(turn%2?'B':'A')+' · Điểm kéo dây: '+score:
+ mode==='fish'?'🐟 Cá đã câu: '+score:mode==='tug'?'🪢 Đội A: '+teamScores[0]+' · Đội B: '+teamScores[1]+' · Lượt đội '+(turn%2?'B':'A'):
  mode==='draw'?'🎲 Lá thăm '+(pos+1)+' / '+questions.length:'✅ Đã đúng '+score+' câu';
  if(q.kind==='TN')q.options.forEach((o,i)=>label(choices,'ABCD'[i]+'. '+o.text,i,'radio','ans'));
  if(q.kind==='DS')q.statements.forEach((o,i)=>{const box=node('div','game-ds');box.append(node('div','game-ds-title','('+('abcd'[i])+') '+o.text));label(box,'Đúng','1','radio','s'+i);label(box,'Sai','0','radio','s'+i);choices.append(box)});
@@ -155,7 +155,7 @@ function check(){
  if(q.kind==='TN'){const a=document.querySelector('input[name=ans]:checked');if(!a)return alert('Chọn một đáp án.');ok=!!q.options[+a.value].correct;}
  if(q.kind==='DS'){const values=[0,1,2,3].map(i=>document.querySelector('input[name=s'+i+']:checked'));if(values.some(x=>!x))return alert('Chọn Đúng/Sai cho cả bốn ý.');ok=values.every((x,i)=>(x.value==='1')===!!q.statements[i].correct);}
  if(q.kind==='TLN'){const inp=$('gameShort');if(!inp||!inp.value.trim())return alert('Nhập câu trả lời.');ok=normal(inp.value)===normal(q.answer);}
- if(ok)score++;
+ if(ok){score++;if(mode==='tug')teamScores[turn%2]++;}
  let answer=q.kind==='TN'?'Đáp án: '+('ABCD'[q.options.findIndex(x=>x.correct)]||'?'):
  q.kind==='DS'?'Đáp án: '+q.statements.map(x=>x.correct?'Đ':'S').join(' – '):'Đáp án: '+q.answer;
  let theme=mode==='fish'?(ok?'🐟 Câu được một con cá!':'🌊 Cá đã thoát!'):mode==='tug'?(ok?'💪 Đội kéo được dây!':'⚠️ Lượt này không kéo được dây'):mode==='millionaire'?(ok?'🏆 Lên bậc mới!':'⛔ Chưa qua bậc này'):(ok?'✅ Chính xác!':'❌ Chưa đúng.');
