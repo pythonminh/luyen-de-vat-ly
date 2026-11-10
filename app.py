@@ -655,7 +655,28 @@ body.cinema .qbox{padding-right:12px}
 .topin details.top-tools .top-tools-list>a:hover,.topin details.top-tools .top-tools-list>button:hover{background:#e8f2ff!important;border-color:#97bce6!important;color:#0b5198!important}
 .topin details.top-tools .top-tools-list>a:focus-visible,.topin details.top-tools .top-tools-list>button:focus-visible{outline:3px solid #f5b932!important;outline-offset:1px}
 .topin details.top-tools[open]>summary{background:#ffffff36;border-color:#bedcff}
-@media(max-width:760px){.topin details.top-tools[open]>.top-tools-list{position:fixed!important;top:calc(65px + env(safe-area-inset-top,0px))!important;right:8px!important;left:8px!important;width:auto!important;max-width:none!important;grid-template-columns:1fr!important;max-height:calc(100dvh - 78px)!important}.topin .brand{font-size:14px!important}}
+.mobile-nav-only{display:none!important}
+@media(max-width:760px){
+ .top{position:sticky!important;top:0!important}
+ .topin{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:6px!important;padding:6px 10px!important;min-height:50px!important;box-sizing:border-box!important}
+ .topin .brandbox{flex:1 1 0!important;min-width:0!important;max-width:none!important;text-align:left!important}
+ .topin .brand{font-size:clamp(12px,3.6vw,16px)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+ .topin .brandbai{font-size:12px!important;padding:4px 6px!important;margin-left:4px!important}
+ .topin .sub,.topin .clock,.topin .whobar,.topin .adminjump,
+ .topin .examWarehouseQuickLink,.topin #htmlWarehouseQuickLink{display:none!important}
+ .topin #ldvlNavToggle{margin-left:auto!important;flex:0 0 auto!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:46px!important;min-height:42px!important;padding:7px 10px!important;font-size:0!important}
+ .topin #ldvlNavToggle::after{content:'☰ Menu';font-size:14px;font-weight:800;color:white}
+ .top:not(.nav-open) #ldvlNav{display:none!important}
+ .top.nav-open #ldvlNav{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important;gap:7px!important;width:100%!important;flex:0 0 100%!important;max-height:calc(100dvh - 76px)!important;overflow:auto!important;padding:10px 0 6px!important;box-sizing:border-box!important}
+ .top.nav-open #ldvlNav>a,.top.nav-open #ldvlNav>button,
+ .top.nav-open #ldvlNav>details{display:flex!important;align-items:center!important;justify-content:center!important;min-width:0!important;min-height:45px!important;width:100%!important;box-sizing:border-box!important;margin:0!important;padding:9px 10px!important;font-size:13px!important;text-align:center!important;white-space:normal!important;line-height:1.35!important;text-decoration:none!important}
+ .top.nav-open #ldvlNav>details>summary{width:100%!important;justify-content:center!important;box-sizing:border-box!important}
+ .top.nav-open #ldvlNav .mobile-nav-only{display:flex!important}
+ .topin details.top-tools[open]>.top-tools-list{position:fixed!important;top:calc(62px + env(safe-area-inset-top,0px))!important;right:8px!important;left:8px!important;width:auto!important;max-width:none!important;grid-template-columns:1fr!important;max-height:calc(100dvh - 80px)!important}
+ .topin .regline{display:none!important}
+}
+@media(max-width:370px){.topin .brand{font-size:12px!important}.topin .brandbai{font-size:11px!important}}
+
 
 /* VIP question workspace: progressive disclosure, readable measure */
 .vip-practice-wrap{max-width:none!important;width:100%!important;margin:0!important;padding:8px 12px 16px!important}
@@ -981,7 +1002,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         + ("<a href='/member/exams/saved' class='examWarehouseQuickLink' title='Kho đề thi đã lưu' style='padding:6px 10px;border:1px solid #ffffff70;border-radius:7px;color:white;text-decoration:none;font-size:13px;font-weight:800;white-space:nowrap'>📚 Kho đề</a>" if admin_ui else "")
         + "<a id='htmlWarehouseQuickLink' href='/member/html-menu' title='Mở kho luyện tập HTML' style='display:inline-flex;align-items:center;gap:4px;flex-shrink:0;padding:5px 9px;border:1px solid #ffffff80;border-radius:6px;background:#ffffff20;color:white;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap'>▦ Kho HTML</a>"
         + "<button type='button' class='navtoggle' id='ldvlNavToggle' aria-expanded='false' aria-controls='ldvlNav' title='Thu / mở menu'>☰</button>"
-        + "<div class='nav' id='ldvlNav'>" + "".join(nav)
+        + "<div class='nav' id='ldvlNav'>" + "<a class='mobile-nav-only' href='/member/exams/saved'>📚 Kho đề</a>" + "<a class='mobile-nav-only' href='/member/html-menu'>▦ Kho HTML</a>" + ("<a class='mobile-nav-only' href='/admin/members'>👥 Thành viên</a>" if admin_ui else "") + "".join(nav)
         + "<button type='button' class='fsbtn' id='ldvlInstall' onclick='ldvlInstallApp()' title='Lưu ra màn hình chính'>📲</button>"
         + "<button type='button' class='fsbtn' id='ldvlFs' onclick='ldvlToggleFs()' title='Toàn màn hình'>⛶</button>"
         + "</div></div>"
