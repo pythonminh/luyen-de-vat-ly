@@ -113,9 +113,10 @@ PANEL='''<section id="hsBankBox" style="background:#f6fbff;border:1px solid #a9c
 <label><input name="bankkind" type="checkbox" value="TLN"> Trả lời ngắn (≤4 ký tự)</label></div>
 <p>Có thể chọn nhiều dạng. Câu ngân hàng lưu thành .tex riêng trong đúng thư mục bài học, không ghi đè bài cũ.</p>
 <div class="hs-actions"><button id="bankRun" type="button">✨ Tạo câu hỏi từ ảnh / file</button>
-<button id="bankPreview" type="button" disabled>👁 Xem lại câu hỏi</button>
-<button id="bankSave" type="button" disabled>✅ Duyệt và đưa vào ngân hàng đề</button></div>
-<p id="bankStatus" role="status">Chưa tạo câu hỏi.</p>
+<button id="bankPreview" type="button" disabled>👁 XEM TRƯỚC · Chưa lưu</button>
+<button id="bankEdit" type="button" disabled style="background:#fff6e6;color:#9a5400;border:1px solid #e8b65c">✏️ SỬA · Nội dung / đáp án</button>
+<button id="bankSave" type="button" disabled style="background:#16834a;color:white;border:1px solid #13723f;font-weight:800">✅ DUYỆT · Lưu vào ngân hàng</button></div>
+<p id="bankStatus" role="status">Chưa tạo câu hỏi. Sửa chỉ thay đổi bản nháp; Duyệt mới lưu câu hỏi.</p>
 <div id="bankReview" hidden><textarea id="bankTex" rows="13" spellcheck="false" style="width:100%;font-family:monospace"></textarea><div id="bankCards"></div></div>
 </section>'''
 JS='''<script>(function(){
@@ -124,6 +125,7 @@ if(!$('bankRun'))return;
 let original='',questions=[];
 const kinds=()=>[...document.querySelectorAll('[name=bankkind]:checked')].map(x=>x.value);
 const status=$('bankStatus'),cs=()=>$('hsForm').querySelector('[name=csrf]').value;
+$('bankEdit').onclick=()=>{$('bankReview').hidden=false;$('bankTex').hidden=false;$('bankTex').focus();$('bankSave').disabled=true;status.textContent='✏️ Đang sửa bản nháp, CHƯA lưu. Sau khi sửa bấm XEM TRƯỚC rồi mới DUYỆT.';};
 function review(){
 const value=$('bankTex').value;if(!value.trim())return;
 const card=$('bankCards');card.replaceChildren();
@@ -135,7 +137,7 @@ if(q.kind==='DS')v+='\\n'+q.statements.map((a,j)=>'abcd'[j]+') '+a.text+' — '+
 if(q.kind==='TLN')v+='\\nĐáp án: '+q.answer;
 el.textContent=v+'\\nLời giải: '+q.solution;card.append(el);
 });}else{const el=document.createElement('pre');el.style.whiteSpace='pre-wrap';el.textContent='Bản LaTeX đã chỉnh sửa:\\n'+value;card.append(el);}
-$('bankReview').hidden=false;$('bankSave').disabled=false;status.textContent='Đã xem bản nháp. Kiểm tra đáp án và lời giải trước khi lưu.';
+$('bankReview').hidden=false;$('bankEdit').disabled=false;$('bankTex').hidden=true;$('bankSave').disabled=false;status.textContent='👁 Xem trước (chưa lưu). ✏️ SỬA nếu cần; ✅ DUYỆT để ghi vào ngân hàng.';
 }
 $('bankPreview').onclick=review;
 $('bankTex').addEventListener('input',()=>{$('bankSave').disabled=true;status.textContent='Đã sửa mã. Bấm Xem lại câu hỏi để duyệt.'});
@@ -151,7 +153,7 @@ fd.set('types',ks.join(','));fd.set('api_key',key);fd.set('text',$('hsAiText').v
 files.forEach(f=>fd.append('sources',f,f.name||'anh.jpg'));
 $('bankRun').disabled=true;$('bankSave').disabled=true;status.textContent='Gemini đang đọc nguồn và tạo câu hỏi…';
 try{const r=await fetch('/admin/html-studio/bank-generate',{method:'POST',body:fd});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'Lỗi tạo đề');
-original=d.source;questions=d.questions||[];$('bankTex').value=original;$('bankPreview').disabled=false;
+original=d.source;questions=d.questions||[];$('bankTex').value=original;$('bankPreview').disabled=false;$('bankEdit').disabled=false;
 review();status.textContent='Tạo '+d.count+' câu. Đây là bản nháp, chưa lưu.';
 }catch(e){status.textContent='❌ '+e.message}finally{$('bankRun').disabled=false}
 };
