@@ -253,10 +253,10 @@ PANEL_HTML = r"""
 <h2>3. ✨ AI tạo HTML từ ảnh, hình chụp, file hoặc văn bản</h2>
 <p class="hs-muted">Chọn đúng bài học ở cột trái. Có thể dùng câu mẫu ngân hàng, tải nhiều ảnh/tệp và nhập thêm văn bản cùng lúc.</p>
 <div class="hs-ai-upload">
-<label>🖼 Ảnh / PDF / Word / tài liệu
-<input id="hsAiFiles" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,.pdf,.docx,.txt,.tex,.md,.csv,.html"></label>
-<label>📷 Chụp ảnh trực tiếp
-<input id="hsAiCamera" type="file" accept="image/*" capture="environment"></label>
+<label class="hs-upload-card hs-upload-files"><span class="hs-upload-symbol" aria-hidden="true">📁</span><strong>Chọn ảnh / PDF / Word</strong><span>Tải tài liệu hoặc nhiều ảnh đề bài</span>
+<input id="hsAiFiles" type="file" aria-label="Chọn ảnh, PDF, Word và tài liệu" multiple accept="image/jpeg,image/png,image/webp,image/gif,.pdf,.docx,.txt,.tex,.md,.csv,.html"></label>
+<label class="hs-upload-card hs-upload-camera"><span class="hs-upload-symbol" aria-hidden="true">📷</span><strong>Chụp ảnh đề bài</strong><span>Mở camera điện thoại để chụp ngay</span>
+<input id="hsAiCamera" type="file" aria-label="Chụp ảnh đề bài bằng camera" accept="image/*" capture="environment"></label>
 </div>
 <label>📝 Văn bản hoặc đề bài gõ/dán
 <textarea id="hsAiText" rows="4" placeholder="Dán đề, công thức, yêu cầu; hoặc không nhập nếu đã có ảnh/file/câu mẫu ngân hàng."></textarea></label>
@@ -274,8 +274,15 @@ PANEL_HTML = r"""
 <style>
 .hs-ai-create{margin-bottom:18px;padding:14px;border:1px solid #abc8e7;border-radius:12px;background:#f5faff}
 .hs-ai-create h2{color:#0f457c}.hs-ai-upload{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.hs-ai-upload label{border:1px dashed #7ca4cc;border-radius:8px;background:white;padding:10px;min-width:0;overflow-wrap:anywhere}
-.hs-ai-upload input{font:12px Arial,sans-serif;width:100%;max-width:100%}
+.hs-ai-upload .hs-upload-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;box-sizing:border-box;min-width:0;min-height:156px;padding:20px 16px;border:2px dashed #9ab9db;border-radius:16px;background:white;color:#153a64;cursor:pointer;overflow:hidden;box-shadow:0 3px 12px #1638580c;transition:background .15s,border-color .15s,box-shadow .15s}
+.hs-ai-upload .hs-upload-camera{background:#edf6ff;border-color:#2677c8}
+.hs-ai-upload .hs-upload-symbol{font-size:40px;line-height:1.15}
+.hs-ai-upload .hs-upload-card strong{font-size:18px;line-height:1.35;color:#143e6c}
+.hs-ai-upload .hs-upload-card span:not(.hs-upload-symbol){font-size:13px;line-height:1.4;color:#5a6c81}
+.hs-ai-upload .hs-upload-card:hover{background:#e5f2ff;border-color:#136ab8;box-shadow:0 5px 18px #1638581b}
+.hs-ai-upload .hs-upload-card:focus-within{outline:3px solid #f6b93b;outline-offset:2px}
+.hs-ai-upload .hs-upload-card input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:100px}
+@media(hover:none){.hs-ai-upload .hs-upload-card{min-height:170px}}
 .hs-ai-create .hs-ai-primary{background:#1254a4;color:white;border-color:#1254a4}
 .hs-ai-create #hsAiKey{font-family:ui-monospace,monospace}
 @media(max-width:650px){.hs-ai-upload{grid-template-columns:1fr}}
