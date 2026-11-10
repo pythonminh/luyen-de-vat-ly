@@ -4,8 +4,9 @@ import html
 import json
 import re
 from flask import request, redirect
+import urllib.parse
 import exam_paper as exam
-from app import app, page, can_manage_bank
+from app import app, page, can_manage_bank, index_data, parse_lesson_questions
 
 MODES = {
     'millionaire': ('🏆 Triệu phú', 'TN', 'Trả lời đúng để lên bậc thưởng; chỉ dùng trắc nghiệm'),
@@ -32,14 +33,37 @@ def pack(q):
             'statements':[{'text':str(x.get('text') or ''),'correct':bool(x.get('correct'))} for x in q.get('statements') or []],
             'answer':str(q.get('answer') or '')}
 
+@app.get('/member/lesson/game')
 @app.get('/member/exams/game/<code>')
-def saved_exam_game(code):
+def saved_exam_game(code=None):
     if not can_manage_bank():return redirect('/member/login')
-    if not re.fullmatch(r'[0-9a-f]{24}',code):return page('Không tìm thấy đề','<p>Mã đề không hợp lệ.</p>'),404
+    if code is not None and not re.fullmatch(r'[0-9a-f]{24}',code):
+        return page('Không tìm thấy đề','<p>Mã đề không hợp lệ.</p>'),404
     try:
-        saved,_=exam._saved_load(code)
-        frozen=saved.get('exam') or {}
-        qs=exam.load_exam_qs(frozen)
+        lesson_mode = code is None
+        if lesson_mode:
+            path = str(request.args.get('path') or '')
+            dang = str(request.args.get('dang') or '').strip()
+            kinds = str(request.args.get('kind') or '').strip()
+            lessons = index_data().get('lessons') or []
+            valid = any(str(x.get('path') or x.get('file') or '') == path for x in lessons)
+            if not valid or not path.startswith('ngan-hang/') or not path.endswith('.tex'):
+                raise ValueError('Chọn bài học hợp lệ từ ngân hàng câu hỏi.')
+            qs = parse_lesson_questions(path)
+            if dang:
+                qs = [q for q in qs if str(q.get('dang') or '') == dang]
+            if kinds in ('TN','DS','TLN','TL'):
+                qs = [q for q in qs if q.get('kind') == kinds]
+            saved = {'title': next((str(x.get('BaiHoc') or x.get('De') or 'Bài học') for x in lessons if str(x.get('path') or x.get('file') or '') == path), 'Bài học')}
+            frozen = {'copies':[{'code':'Câu hỏi từ bài','ids':[int(q['idx']) for q in qs]}]}
+            back_url = '/member/dang?' + urllib.parse.urlencode({'path':path,'dang':dang})
+            base_url = '/member/lesson/game?' + urllib.parse.urlencode({'path':path,'dang':dang,'kind':kinds})
+        else:
+            saved,_=exam._saved_load(code)
+            frozen=saved.get('exam') or {}
+            qs=exam.load_exam_qs(frozen)
+            back_url = '/member/exams/saved'
+            base_url = '/member/exams/game/'+code+'?'
         by={int(q.get('idx')):q for q in qs}
         copies=frozen.get('copies') or []
         if not copies:raise ValueError('Đề chưa có mã đề.')
@@ -56,13 +80,13 @@ def saved_exam_game(code):
         for key,(label,kinds,desc) in MODES.items():
             num=sum(q['kind'] in kinds.split(',') for q in available)
             selected=' chosen' if mode==key else ''
-            href='/member/exams/game/'+code+'?copy='+str(ci)+'&mode='+key
+            href=base_url+('' if base_url.endswith('?') else '&')+'copy='+str(ci)+'&mode='+key
             chooser.append('<a class="game-option'+selected+('" aria-disabled="true"' if num==0 else '" href="'+href+'"')+'>'
                            '<b>'+label+'</b><span>'+desc+'</span><strong>'+str(num)+' câu phù hợp</strong></a>')
         copies_html=''.join('<option value="'+str(i)+'"'+(' selected' if i==ci else '')+'>'+html.escape(str(c.get('code') or 'Mã '+str(i+1)))+'</option>' for i,c in enumerate(copies))
         title=html.escape(str(saved.get('title') or 'Đề đã lưu'))
-        hero='<div class="game-top"><div><div class="game-kicker">🎮 TRÒ CHƠI TỰ ĐỘNG TỪ ĐỀ ĐÃ LƯU</div><h1>'+title+'</h1><p>Không cần tạo lại câu hỏi. Chọn hình thức chơi, hệ thống tự lọc các câu có đáp án hợp lệ.</p></div><a href="/member/exams/saved" class="game-return">← Kho đề</a></div>'
-        controls='<div class="game-choose"><label>Mã đề <select id="gameCopy">'+copies_html+'</select></label><span>'+str(len(available))+' / '+str(len(variants))+' câu đủ điều kiện</span></div>'
+        hero='<div class="game-top"><div><div class="game-kicker">🎮 TẠO TRÒ CHƠI TỪ '+('BÀI HỌC' if lesson_mode else 'ĐỀ ĐÃ LƯU')+'</div><h1>'+title+'</h1><p>Dùng câu hỏi hiện có, không cần tạo đề mới. Chỉ các câu có đáp án đầy đủ mới được đưa vào trò chơi.</p></div><a href="'+html.escape(back_url,quote=True)+'" class="game-return">← Quay lại bài</a></div>'
+        controls='<div class="game-choose">'+('' if lesson_mode else '<label>Mã đề <select id="gameCopy">'+copies_html+'</select></label>')+'<span>'+str(len(available))+' / '+str(len(variants))+' câu đủ điều kiện · '+str(len(variants)-len(available))+' câu chưa hỗ trợ</span></div>'
         cards='<div class="game-options">'+''.join(chooser)+'</div>'
         game_section=''
         if mode:
@@ -127,7 +151,7 @@ const $=x=>document.getElementById(x),cfg=JSON.parse($('gameData').textContent),
 const names={millionaire:'🏆 Triệu phú',fish:'🎣 Câu cá',tug:'🪢 Kéo co',draw:'🎲 Bốc thăm',present:'📺 Chiếu tương tác'};
 let questions=[],pos=0,score=0,done=false,turn=0,teamScores=[0,0],gameOver=false;
 const raw=cfg.questions.slice();$('gameModeName').textContent=names[mode];
-$('gameCopy').onchange=function(){const u=new URL(location.href);u.searchParams.set('copy',this.value);location.href=u.href;};
+if($('gameCopy'))$('gameCopy').onchange=function(){const u=new URL(location.href);u.searchParams.set('copy',this.value);location.href=u.href;};
 $('gameRestart').onclick=()=>restart();
 $('gameFull').onclick=()=>{const e=$('gameStage');if(document.fullscreenElement)document.exitFullscreen();else if(e.requestFullscreen)e.requestFullscreen().catch(()=>{});};
 function normal(s){return String(s??'').trim().replace(/\\s+/g,'').replace(/[−–]/g,'-').replace(',','.').replace(/^\\+/, '');}
