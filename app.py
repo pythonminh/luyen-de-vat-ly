@@ -678,6 +678,26 @@ body.cinema .qbox{padding-right:12px}
 @media(max-width:370px){.topin .brand{font-size:12px!important}.topin .brandbai{font-size:11px!important}}
 
 
+/* Question-first responsive navigation: align with JS mobile cutoff at 1024px. */
+@media(max-width:1024px){
+ .top{position:sticky!important;top:0!important}
+ .topin{display:flex!important;flex-wrap:nowrap!important;overflow:visible!important;align-items:center!important;gap:6px!important;padding:4px 8px!important;min-height:44px!important;box-sizing:border-box!important}
+ .topin .brandbox{display:block!important;order:1!important;flex:1 1 0!important;min-width:0!important;max-width:none!important;height:auto!important;min-height:36px!important;padding:4px!important;border:0!important;background:transparent!important;text-align:left!important}
+ .topin .brand{font-size:clamp(12px,3vw,16px)!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+ .topin .brandbai{font-size:11px!important;margin-left:3px!important;padding:3px 5px!important}
+ .topin .sub,.topin .clock,.topin .whobar,.topin .adminjump,.topin .examWarehouseQuickLink,.topin #htmlWarehouseQuickLink,.topin .regline{display:none!important}
+ .topin #ldvlNavToggle{display:inline-flex!important;order:2!important;flex:0 0 auto!important;align-items:center!important;justify-content:center!important;min-width:66px!important;min-height:38px!important;margin-left:auto!important;padding:6px 9px!important;font-size:0!important}
+ .topin #ldvlNavToggle::after{content:'☰ Menu';font-size:13px!important;color:#fff!important;font-weight:800}
+ .topin .nav,.topin .top.nav-open .nav,.topin .top:not(.nav-open) .nav{flex-basis:auto!important}
+ .top:not(.nav-open) #ldvlNav{display:none!important}
+ .top.nav-open #ldvlNav{position:fixed!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;top:calc(46px + env(safe-area-inset-top,0px))!important;left:8px!important;right:8px!important;width:auto!important;max-height:calc(100dvh - 58px)!important;overflow-y:auto!important;overscroll-behavior:contain!important;padding:12px!important;background:#153b6a!important;border:1px solid #6986b1!important;border-radius:13px!important;box-shadow:0 14px 35px #031a3455!important;z-index:2147483650!important;box-sizing:border-box!important}
+ .top.nav-open #ldvlNav>a,.top.nav-open #ldvlNav>button,.top.nav-open #ldvlNav>details{display:flex!important;width:100%!important;min-width:0!important;min-height:44px!important;height:auto!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:9px!important;white-space:normal!important;font-size:13px!important;text-align:center!important;box-sizing:border-box!important}
+ .top.nav-open #ldvlNav .mobile-nav-only{display:flex!important}
+ .topin details.top-tools[open]>.top-tools-list{position:fixed!important;top:calc(48px + env(safe-area-inset-top,0px))!important;left:8px!important;right:8px!important;max-height:calc(100dvh - 62px)!important;overflow-y:auto!important}
+ .wrap{padding-top:6px!important}
+}
+@media(max-width:420px){.topin .brand{font-size:12px!important}.topin .brandbai{font-size:10px!important}}
+
 /* VIP question workspace: progressive disclosure, readable measure */
 .vip-practice-wrap{max-width:none!important;width:100%!important;margin:0!important;padding:8px 12px 16px!important}
 .vip-practice-wrap>.panel{border:1px solid #d8e3f0!important;border-radius:13px!important;overflow:visible!important;box-shadow:0 3px 16px #153c6810;background:#fff}
