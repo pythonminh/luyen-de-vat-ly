@@ -2043,7 +2043,8 @@ def member_saved_exams():
                     "<input type='hidden' name='id' value='" + code + "'>"
                     "<button type='submit' class='btn primary'>📖 Mở / chỉnh sửa</button>"
                     "</form><button type='button' class='btn exam-copy' data-id='" + code +
-                    "' aria-label='Sao chép mã đề đã lưu'>📋 Sao chép mã</button></div>"
+                    "' aria-label='Sao chép mã đề đã lưu'>📋 Sao chép mã</button>"
+                    "<a class='btn' style='background:#0f7357;color:white;text-decoration:none' href='/member/exams/game/" + code + "'>🎮 Tạo trò chơi</a></div>"
                     "</article>"
                 )
             })
@@ -2877,3 +2878,7 @@ def exam_buttons_html(admin=True):
         "<button class='btn' type='submit' name='exam_action' value='shuffle' formaction='/member/exam'>🔀 Trộn đề</button>"
         "<button class='btn' type='submit' name='exam_action' value='print' formaction='/member/exam'>🖨 In đề</button>"
     )
+
+
+# Registered after archive helpers, avoiding circular imports during initialization.
+import saved_exam_games  # noqa: E402,F401
