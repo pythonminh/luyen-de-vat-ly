@@ -4330,6 +4330,7 @@ def begin_kind_practice(path, kind='', dang=''):
         practice_best=max(int(session.get('practice_best') or 0), 0),
         practice_done=[],
         practice_started_at=time.time(),
+        practice_attempt_id=secrets.token_hex(16),
         practice_ai=True,
     )
     return redirect('/member/practice')
@@ -4642,7 +4643,7 @@ def start_practice():
     wanted=sort_ids_for_practice(qs, wanted)
     kinds=set(str((next((q for q in qs if q.get('idx')==i),{}) or {}).get('kind') or '') for i in wanted)
     kinds={k for k in kinds if k}
-    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_muc='',practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_started_at=time.time(),practice_ai=True);return redirect('/member/practice')
+    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_muc='',practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_started_at=time.time(),practice_attempt_id=secrets.token_hex(16),practice_ai=True);return redirect('/member/practice')
 
 @app.get('/member/go-kind')
 def go_kind():
@@ -4694,7 +4695,13 @@ def practice():
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if pos>=len(ids):
         score=right/len(ids)*10 if ids else 0
-        complete_record = f"""<section class='practice-record-done'><h3>🏆 Kỷ lục của tôi (trên thiết bị này)</h3><div id='practiceRecordSummary'>Đang cập nhật...</div></section>
+        server_record = None
+        try:
+            from practice_records import finish_current
+            server_record = finish_current(m,session)
+        except Exception:
+            pass  # Local fallback does not interrupt results.
+        complete_record = f"""<section class='practice-record-done'><h3>🏆 Kỷ lục của tôi</h3><p id='practiceRecordStorage'>Đang kiểm tra nơi lưu...</p><div id='practiceRecordSummary'>Đang cập nhật...</div></section>
 <script>(function(){{
 const key={json.dumps('KEY_PLACEHOLDER')}.replace('KEY_PLACEHOLDER',{json.dumps(record_name)});
 const attempt={{total:{len(ids)},correct:{right},score:{score:.6f},seconds:{elapsed},streak:{best}}};
@@ -4707,6 +4714,10 @@ const record={{bestScore:bestScore,bestStreak:bestStreak,bestSeconds:(faster?att
 try{{if(sessionStorage.getItem(key+'_completed')!==String({json.dumps(str(session.get('practice_started_at') or ''))})){{localStorage.setItem(key,JSON.stringify(record));sessionStorage.setItem(key+'_completed',String({json.dumps(str(session.get('practice_started_at') or ''))}));}}}}catch(e){{}}
 function duration(t){{const x=Math.max(0,Math.floor(t||0));return Math.floor(x/60)+' phút '+String(x%60).padStart(2,'0')+' giây'}}
 const target=document.getElementById('practiceRecordSummary');if(target)target.textContent='Lần này: '+attempt.correct+'/'+attempt.total+' câu · '+attempt.score.toFixed(2)+'/10 · '+duration(attempt.seconds)+' | Điểm cao nhất: '+bestScore.toFixed(2)+'/10 · Chuỗi đúng: '+bestStreak+' · Hoàn thành nhanh nhất: '+duration(record.bestSeconds);
+const remote={json.dumps(server_record,ensure_ascii=False)};
+const storage=document.getElementById('practiceRecordStorage');
+if(remote){if(storage)storage.textContent='☁️ Đã đồng bộ với tài khoản';if(target)target.textContent='Lần này: '+attempt.correct+'/'+attempt.total+' · '+attempt.score.toFixed(2)+'/10 · '+duration(attempt.seconds)+' | Điểm cao nhất: '+Number(remote.best_score).toFixed(2)+'/10 · Chuỗi đúng: '+remote.best_streak+' · Nhanh nhất: '+(remote.fastest_seconds==null?'—':duration(remote.fastest_seconds));}
+else if(storage)storage.textContent='📱 Đang lưu trên trình duyệt, chưa đồng bộ máy chủ';
 }})();</script>"""
 
         gem=''
@@ -5068,11 +5079,16 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
  refresh();const tick=setInterval(refresh,1000);
  const btn=document.getElementById('practiceRecordBtn'),dlg=document.getElementById('practiceRecordDialog');
  const close=document.getElementById('practiceRecordClose');
- btn.onclick=()=>{{let r={{}};try{{r=JSON.parse(localStorage.getItem(key)||'{{}}')||{{}}}}catch(e){{}}
+ btn.onclick=async()=>{{let r={{}};try{{r=JSON.parse(localStorage.getItem(key)||'{{}}')||{{}}}}catch(e){{}}
  const out=document.getElementById('practiceRecordInfo');
- if(!r.attempts)out.textContent='Chưa có lượt hoàn thành được lưu trên thiết bị này.';
- else out.textContent='Số lượt: '+r.attempts+' · Điểm cao nhất: '+Number(r.bestScore||0).toFixed(2)+'/10 · Chuỗi đúng tốt nhất: '+(r.bestStreak||0)+' · Thời gian nhanh nhất: '+fmt(r.bestSeconds||0)+' (kỷ lục của bài học này).';
- dlg.showModal();}};
+ if(!r.attempts)out.textContent='Chưa có lượt hoàn thành trên thiết bị này.';
+ else out.textContent='📱 Trên thiết bị: '+r.attempts+' lượt · Điểm cao nhất '+Number(r.bestScore||0).toFixed(2)+'/10 · Chuỗi đúng '+(r.bestStreak||0)+' · Nhanh nhất '+fmt(r.bestSeconds||0);
+ dlg.showModal();
+ try{{const resp=await fetch('/member/practice/records',{{credentials:'same-origin',cache:'no-store'}});const data=await resp.json();
+ if(data.ok){{const z=data.record;out.textContent='☁️ Đồng bộ tài khoản · '+z.attempts+' lượt · Điểm cao nhất '+Number(z.best_score||0).toFixed(2)+'/10 · Chuỗi đúng '+z.best_streak+' · Nhanh nhất '+(z.fastest_seconds==null?'—':fmt(z.fastest_seconds))+' (cùng số câu và điểm).';}}
+ else out.textContent+=' | ☁️ Chưa kết nối máy chủ.';
+ }}catch(e){{out.textContent+=' | ☁️ Chưa kết nối máy chủ.';}}
+ }};
  close.onclick=()=>dlg.close();
 }})();</script>
 <nav class="practice-phone-bar" aria-label="Điều hướng câu hỏi trên điện thoại">
@@ -5736,6 +5752,7 @@ import admin_slim  # noqa: E402,F401
 import admin_rewrite  # noqa: E402,F401
 import live_present  # noqa: E402,F401
 import practice_race  # noqa: E402,F401
+import practice_records  # noqa: E402,F401
 try:
     import membership as _membership  # noqa: F401
     _membership.attach_routes()
