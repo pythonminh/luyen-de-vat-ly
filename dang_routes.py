@@ -547,9 +547,9 @@ def member_dang():
     dao_n=sum(len(g['extras']) for g in groups if g['type']=='dao')
     cung_n=sum(1 for g in groups if g['type']=='cungde')
     cung_extra=sum(len(g['extras']) for g in groups if g['type']=='cungde')
-    admin_view=can_manage_bank()
+    admin_view=can_manage_bank() and not session.get('admin_student_preview')
     highlight_id=(request.args.get('id') or request.args.get('qid') or '').strip()
-    cards=_study_cards(selected, path, dmap, admin_view or can_do, highlight_id)
+    cards=_study_cards(selected, path, dmap, admin_view or (can_do and not session.get('admin_student_preview')), highlight_id)
     dup_note=''
     if dao_n or cung_n:
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "
@@ -557,7 +557,7 @@ def member_dang():
     next_url='/member/dang?path='+urllib.parse.quote(path,safe='')+'&dang='+urllib.parse.quote(dang,safe='')
     srcs={str(q.get('src') or path).replace('\\','/') for q in selected}
     dup_form=''
-    if can_manage_bank() and (dao_n or cung_extra):
+    if admin_view and (dao_n or cung_extra):
         nfile=len(srcs)
         note_file=f" Trùng có thể nằm ở {nfile} file TEX trong bài — xóa đúng file chứa bản thừa." if nfile>1 else ""
         tick_cung=(
@@ -577,7 +577,7 @@ def member_dang():
     flash=request.args.get('ok') or ''; ferr=request.args.get('err') or ''
     flash_html=(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")+(f"<div class='err'>{html.escape(ferr)}</div>" if ferr else "")
     qdel_form=''
-    if can_manage_bank():
+    if admin_view:
         qdel_form=(
             f"<form id='qdel' method='post' action='/admin/delete-question'>"
             f"<input type='hidden' name='path' value='{_esc(path)}'>"
@@ -586,7 +586,7 @@ def member_dang():
             f"<input type='hidden' name='confirm' value='yes'></form>"
         )
     slim_html=''
-    if can_manage_bank():
+    if admin_view:
         from admin_slim import slim_bar_html
         slim_html=slim_bar_html(path, dang, next_url)
     find_box=("<input id='findq' type='search' placeholder='Tìm ID hoặc nguồn, ví dụ SGK' "
@@ -598,7 +598,7 @@ def member_dang():
                 f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='dang' value='{_esc(dang)}'>")
     exam_btns=""
     matrix_html=""
-    if can_manage_bank():
+    if admin_view:
         from exam_paper import exam_buttons_html, exam_matrix_html
         exam_btns=exam_buttons_html(True)
         matrix_html=exam_matrix_html(path, qs, dang=dang, include_practice=False)
@@ -624,7 +624,7 @@ def member_dang():
           "<button type='submit' form='questionForm' name='practice_mode' value='number_mix' class='btn' style='border-color:#2563eb;color:#1d4ed8;font-weight:800' onclick='if(!document.querySelector(\"input[name=qid]:checked\")){alert(\"Hãy chọn ít nhất 2 câu để tạo bộ Luyện đổi số.\");return false;}if(document.querySelectorAll(\"input[name=qid]:checked\").length<2){alert(\"Hãy chọn từ 2 câu trở lên để tạo bộ luyện nhiều câu.\");return false;}'>🎲 Luyện đổi số từ câu đã chọn</button>"
           "<button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           "<button type='button' class='btn' onclick='onlyDup(false)'>Tất cả</button><button type='button' class='btn' onclick='onlyDup(true)'>Chỉ trùng</button>"
-          + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if can_manage_bank() and (dao_n or cung_n) else "")
+          + (f"<a class='btn' href='/admin/dups?path={_esc(path)}'>🔎 Xem nhóm trùng (cả file)</a>" if admin_view and (dao_n or cung_n) else "")
           + f"<a class='btn' href='{_esc(edit_tex_href(path, 0, dang_view_url(path, dang, kind_filter, muc)))}'>✏️ Sửa file TEX</a>"
           + exam_btns
            + "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
@@ -675,7 +675,7 @@ def member_dang():
         "bootFind();if(window.ldvlTypeset)ldvlTypeset(document.body);</script>"
     )
     rw_js = ""
-    if can_manage_bank():
+    if admin_view:
         from admin_rewrite import REWRITE_CLIENT_JS
         from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
         rw_js = REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
