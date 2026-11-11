@@ -4329,6 +4329,7 @@ def begin_kind_practice(path, kind='', dang=''):
         practice_streak=0,
         practice_best=max(int(session.get('practice_best') or 0), 0),
         practice_done=[],
+        practice_started_at=time.time(),
         practice_ai=True,
     )
     return redirect('/member/practice')
@@ -4641,7 +4642,7 @@ def start_practice():
     wanted=sort_ids_for_practice(qs, wanted)
     kinds=set(str((next((q for q in qs if q.get('idx')==i),{}) or {}).get('kind') or '') for i in wanted)
     kinds={k for k in kinds if k}
-    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_muc='',practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_ai=True);return redirect('/member/practice')
+    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_muc='',practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_started_at=time.time(),practice_ai=True);return redirect('/member/practice')
 
 @app.get('/member/go-kind')
 def go_kind():
@@ -4679,6 +4680,11 @@ def practice():
     p=str(session.get('practice_path') or '');ids=list(session.get('practice_ids') or []);pos=int(session.get('practice_pos') or 0);right=int(session.get('practice_right') or 0);streak=int(session.get('practice_streak') or 0);best=int(session.get('practice_best') or 0);done=list(session.get('practice_done') or [])
     ai=True
     if not p or not ids:return redirect('/member')
+    if not session.get('practice_started_at'):
+        session['practice_started_at']=time.time()
+    elapsed=max(0,int(time.time()-float(session.get('practice_started_at') or time.time())))
+    record_key=hashlib.sha256(((str((m or {}).get('username') or ''))+'|'+p).encode('utf-8')).hexdigest()[:24]
+    record_name='ldvl_practice_record_v1_'+record_key
     if not can_practice(m,p):
         return redirect(dang_view_url(p, str(session.get('practice_dang') or ''), str(session.get('practice_kind') or '')))
     try:
@@ -4688,6 +4694,21 @@ def practice():
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if pos>=len(ids):
         score=right/len(ids)*10 if ids else 0
+        complete_record = f"""<section class='practice-record-done'><h3>🏆 Kỷ lục của tôi (trên thiết bị này)</h3><div id='practiceRecordSummary'>Đang cập nhật...</div></section>
+<script>(function(){{
+const key={json.dumps('KEY_PLACEHOLDER')}.replace('KEY_PLACEHOLDER',{json.dumps(record_name)});
+const attempt={{total:{len(ids)},correct:{right},score:{score:.6f},seconds:{elapsed},streak:{best}}};
+let prev={{}};try{{prev=JSON.parse(localStorage.getItem(key)||'{{}}')||{{}}}}catch(e){{}}
+const bestScore=Math.max(Number(prev.bestScore)||0,attempt.score);
+const bestStreak=Math.max(Number(prev.bestStreak)||0,attempt.streak);
+const bestSeconds=Number(prev.bestSeconds)||0;
+const faster=bestSeconds===0||attempt.seconds<bestSeconds;
+const record={{bestScore:bestScore,bestStreak:bestStreak,bestSeconds:(faster?attempt.seconds:bestSeconds),last:attempt,attempts:(Number(prev.attempts)||0)+1}};
+try{{if(sessionStorage.getItem(key+'_completed')!==String({json.dumps(str(session.get('practice_started_at') or ''))})){{localStorage.setItem(key,JSON.stringify(record));sessionStorage.setItem(key+'_completed',String({json.dumps(str(session.get('practice_started_at') or ''))}));}}}}catch(e){{}}
+function duration(t){{const x=Math.max(0,Math.floor(t||0));return Math.floor(x/60)+' phút '+String(x%60).padStart(2,'0')+' giây'}}
+const target=document.getElementById('practiceRecordSummary');if(target)target.textContent='Lần này: '+attempt.correct+'/'+attempt.total+' câu · '+attempt.score.toFixed(2)+'/10 · '+duration(attempt.seconds)+' | Điểm cao nhất: '+bestScore.toFixed(2)+'/10 · Chuỗi đúng: '+bestStreak+' · Hoàn thành nhanh nhất: '+duration(record.bestSeconds);
+}})();</script>"""
+
         gem=''
         if ai:
             opts=''.join(f"<option value='{i}'>Câu {d.get('question') or i+1} · {'Đúng' if d.get('ok') else 'Sai'}</option>" for i,d in enumerate(done))
@@ -4699,7 +4720,7 @@ def practice():
             f"<div class='wrap'>{lesson_switch_html(p, list(allq.values()), dang=str(session.get('practice_dang') or ''), kind=session.get('practice_kind') or '', guest=False, muc=session.get('practice_muc') or '')}<div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span>"
             f"<span class='tag'>{'🤖 Có phản biện' if ai else 'Không phản biện'}</span></div>"
             f"<div class='body'><div class='result good'>Chuỗi tốt nhất: {best}</div>"
-            + gem
+            + gem + complete_record
             + "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
         )
         extra_js=''
@@ -4977,6 +4998,13 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
  body:has(.vip-practice-wrap) .vip-practice-wrap .quizacts .btn{{flex:1 1 115px!important;min-height:46px!important;font-size:14px!important}}
  body:has(.vip-practice-wrap) .vip-practice-wrap .practice-admin-ai{{display:none!important}}
  /* One mobile toolbar only: zoom at top, navigation at bottom. */
+ .practice-mini-stats{{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:4px 0 7px!important;font:700 12px/1.2 Arial;color:#294e70}}
+ .practice-mini-stats span,.practice-mini-stats button{{background:#edf5ff;border:1px solid #c7ddf5;padding:5px 8px;border-radius:8px;color:#285078;font:700 12px Arial}}
+ .practice-mini-stats button{{cursor:pointer}}
+ .practice-mini-stats .practice-time{{font-variant-numeric:tabular-nums;color:#1158a6}}
+ .practice-record-dialog{{width:min(90vw,420px);max-height:80dvh;border:1px solid #cadcf0;border-radius:14px;padding:18px;box-shadow:0 16px 50px #0c284a4d}}
+ .practice-record-dialog::backdrop{{background:#0b274b99}}
+ .practice-record-dialog button{{min-height:42px;border:1px solid #c3d5e9;border-radius:9px;background:#eff6ff;color:#164c85;padding:7px 14px;font-weight:700}}
  body:has(.vip-practice-wrap) .vip-practice-wrap .quiztop{{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:flex-end!important;min-height:40px!important}}
  body:has(.vip-practice-wrap) .vip-practice-wrap .quiztop>span:first-child{{display:none!important}}
  body:has(.vip-practice-wrap) .vip-practice-wrap .quiztop>.quizstat{{display:none!important}}
@@ -5022,6 +5050,28 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
 }}
 @media(min-width:1025px){{.practice-phone-bar,.practice-figure-dialog{{display:none!important}}}}
 </style>
+<div class="practice-mini-stats" role="group" aria-label="Thời gian và thành tích">
+<span>⏱ <b id="practiceElapsed" class="practice-time">00:00</b></span>
+<button type="button" id="practiceRecordBtn">🏆 Kỷ lục</button>
+</div>
+<dialog class="practice-record-dialog" id="practiceRecordDialog"><h3>🏆 Thành tích của tôi</h3>
+<p id="practiceRecordInfo">Chưa có lần hoàn thành trên thiết bị này.</p>
+<button type="button" id="practiceRecordClose">Đóng</button></dialog>
+<script>(function(){{
+ const began=Date.now()-({elapsed}*1000);
+ const key={json.dumps(record_name)};
+ function fmt(s){{const x=Math.max(0,Math.floor(s));return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}}
+ function refresh(){{const el=document.getElementById('practiceElapsed');if(el)el.textContent=fmt((Date.now()-began)/1000)}}
+ refresh();const tick=setInterval(refresh,1000);
+ const btn=document.getElementById('practiceRecordBtn'),dlg=document.getElementById('practiceRecordDialog');
+ const close=document.getElementById('practiceRecordClose');
+ btn.onclick=()=>{{let r={{}};try{{r=JSON.parse(localStorage.getItem(key)||'{{}}')||{{}}}}catch(e){{}}
+ const out=document.getElementById('practiceRecordInfo');
+ if(!r.attempts)out.textContent='Chưa có lượt hoàn thành được lưu trên thiết bị này.';
+ else out.textContent='Số lượt: '+r.attempts+' · Điểm cao nhất: '+Number(r.bestScore||0).toFixed(2)+'/10 · Chuỗi đúng tốt nhất: '+(r.bestStreak||0)+' · Thời gian nhanh nhất: '+fmt(r.bestSeconds||0)+' (kỷ lục của bài học này).';
+ dlg.showModal();}};
+ close.onclick=()=>dlg.close();dlg.addEventListener('close',()=>clearInterval(tick));
+}})();</script>
 <nav class="practice-phone-bar" aria-label="Điều hướng câu hỏi trên điện thoại">
 <a href="{prev_href}" class="{'phone-disabled' if pos==0 else ''}" aria-label="Câu trước">‹ Trước</a>
 <button type="button" class="phone-index" id="phoneQuestionMenu">☷ Mục lục</button>
@@ -5064,7 +5114,7 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
 </script>
 """
 
-    return page('Làm bài',body+mobile_controls+js+extra)
+    return page('Làm bài',body+mobile_controls+js+extra+"<style>.practice-mini-stats{padding:0 8px}.practice-record-done{margin:14px 0;padding:14px;border:1px solid #bfdbed;border-radius:12px;background:#f3faff}</style>")
 
 _RESHUFFLE_JOBS = {}
 _RESHUFFLE_LOCK = threading.Lock()
