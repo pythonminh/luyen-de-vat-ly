@@ -61,7 +61,10 @@ def _member_index():
     else:
         typ = _norm_type(m.get('account_type'))
         extra = ''
-        if getattr(base, 'has_full_bank_access', lambda *_: False)(m) or typ == 'ADMIN':
+        if base.admin_student_preview():
+            note = '👨‍🎓 Đang thử giao diện học sinh · Làm bài và nhận điểm như học sinh'
+            extra = ' · Có thể chuyển về quản trị bằng nút phía trên'
+        elif getattr(base, 'has_full_bank_access', lambda *_: False)(m) or typ == 'ADMIN':
             note = '🔐 ADMIN · được xem toàn bộ bài, mọi khối, VIP lẫn FREE'
         else:
             import membership as _pkg
@@ -77,7 +80,7 @@ def _member_index():
             else:
                 extra = ' · 👁 Chỉ xem đề, chưa VIP'
         who = f"<div class='notice'>👤 <b>{html.escape(str(m.get('name') or m.get('username')))}</b> · Tài khoản <b>{html.escape(str(m.get('username')))}</b> · {note}{extra}</div>"
-    is_teacher = bool(m and getattr(base, 'has_full_bank_access', lambda *_: False)(m))
+    is_teacher = bool(m and getattr(base, 'has_full_bank_access', lambda *_: False)(m) and not base.admin_student_preview())
     if is_teacher:
         hero = """
         <section class="student-home-hero teacher-hero">
