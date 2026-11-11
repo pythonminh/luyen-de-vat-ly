@@ -999,7 +999,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
     if is_preview:
         who = "<span class='who' style='color:#fff'>👨‍🎓 Chế độ học sinh</span>"
         nav.append("<a href='/member'>📚 Bài học</a>")
-    if admin_ui:
+    elif admin_ui:
         who = (
             "<a class='who' href='/admin/members' title='Quản lý thành viên'>🔐 ADMIN</a>"
         )
