@@ -77,44 +77,131 @@ def _member_index():
             else:
                 extra = ' · 👁 Chỉ xem đề, chưa VIP'
         who = f"<div class='notice'>👤 <b>{html.escape(str(m.get('name') or m.get('username')))}</b> · Tài khoản <b>{html.escape(str(m.get('username')))}</b> · {note}{extra}</div>"
-    create_access = bool(m and (getattr(base, 'can_manage_bank', lambda *_: False)() or str(m.get('account_type') or '').upper() == 'ADMIN'))
-    create_url = '/admin/html-studio' if create_access else '/member/login'
-    create_label = 'Mở xưởng tạo câu hỏi AI' if create_access else 'Đăng nhập ADMIN để tạo câu hỏi'
-    hero = f"""
+    is_teacher = bool(m and getattr(base, 'has_full_bank_access', lambda *_: False)(m))
+    if is_teacher:
+        hero = """
+        <section class="student-home-hero teacher-hero">
+          <span class="student-eyebrow">KHU VỰC GIÁO VIÊN</span>
+          <h1>Quản lý ngân hàng và tạo bài tập</h1>
+          <p>Chọn một bài bên dưới hoặc mở công cụ tạo đề từ ảnh và tài liệu.</p>
+          <div class="student-home-actions">
+            <a class="student-start" href="/admin/html-studio">✨ Tạo câu hỏi từ ảnh / PDF / Word</a>
+            <a href="/member/exams/saved">📚 Đề thi đã lưu</a>
+          </div>
+        </section>"""
+    elif m:
+        hero = """
+        <section class="student-home-hero">
+          <span class="student-eyebrow">LỚP HỌC THẦY MINH · HỌC SINH</span>
+          <h1>Chọn bài để bắt đầu luyện tập</h1>
+          <p>Chọn môn, lớp, chương và bài học. Mỗi bài sẽ có nút Bắt đầu làm bài hoặc trạng thái cần cấp quyền.</p>
+          <div class="student-home-actions">
+            <a class="student-start" href="#studentLessonList">📘 Chọn bài làm ngay</a>
+            <a href="/member/html-menu">🧩 Luyện HTML đổi số</a>
+          </div>
+        </section>"""
+    else:
+        hero = """
+        <section class="student-home-hero">
+          <span class="student-eyebrow">LỚP HỌC THẦY MINH</span>
+          <h1>Đăng nhập để chọn bài luyện tập</h1>
+          <div class="student-home-actions">
+            <a class="student-start" href="/member/login">🔑 Đăng nhập học sinh</a>
+          </div>
+        </section>"""
+
+    def student_card(x):
+        path = str(x.get('path') or x.get('file') or '')
+        title = html.escape(str(x.get('BaiHoc') or x.get('De') or 'Bài học'))
+        n = int(x.get('questions') or x.get('count') or 0)
+        href = html.escape(path, quote=True)
+        from urllib.parse import quote
+        encoded = quote(path, safe='')
+        can_start = bool(m and base.can_practice(m, path) and n > 0)
+        if can_start:
+            action = (f"<a class='student-start' href='/member/go-kind?path={encoded}'>▶ Bắt đầu làm bài</a>"
+                      f"<a class='student-secondary' href='/member/select?path={encoded}'>📋 Xem bài / chọn dạng</a>")
+        elif m:
+            action = (f"<a class='student-secondary' href='/member/select?path={encoded}'>👁 Xem nội dung bài</a>"
+                      "<a class='student-locked' href='/member/goi'>🔒 Cần quyền VIP để làm bài</a>")
+        else:
+            action = f"<a class='student-start' href='/member/login'>Đăng nhập để làm bài</a>"
+        return (f"<article class='student-lesson-card'><div><h3>{title}</h3>"
+                f"<p>{n} câu hỏi · {html.escape(str(x.get('Mon') or ''))} · Lớp {html.escape(_grade(x.get('Lop') or x.get('lop')))}</p></div>"
+                f"<div class='student-lesson-actions'>{action}</div></article>")
+
+    if not is_teacher:
+        student_sections = []
+        for (mon, lop, chuong), arr in sorted(groups.items()):
+            cards = ''.join(student_card(x) for x in sorted(arr, key=lambda y: str(y.get('BaiHoc') or y.get('De') or '')))
+            student_sections.append(
+                "<details class='student-chapter' open><summary>"
+                + html.escape(str(mon)) + " · Lớp " + html.escape(str(lop))
+                + " · " + html.escape(str(chuong))
+                + " <span>(" + str(len(arr)) + " bài)</span></summary>"
+                + cards + "</details>")
+        sections = student_sections
+
+    stylesheet = """
 <style>
-.mc-hero{{background:linear-gradient(120deg,#0b2344,#155487);color:#fff;border-radius:20px;padding:clamp(18px,4vw,34px);margin:14px 0 18px;box-shadow:0 12px 30px #09284224}}
-.mc-hero h1{{font-size:clamp(23px,3vw,34px);margin:8px 0;color:#fff;line-height:1.25}}
-.mc-hero p{{max-width:740px;color:#e7f1fd;font-size:15px;line-height:1.65}}
-.mc-label{{display:inline-block;border:1px solid #ffffff75;background:#ffffff18;border-radius:99px;padding:6px 11px;font-size:12px;font-weight:700}}
-.mc-actions{{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}}
-.mc-actions a{{display:inline-flex;align-items:center;justify-content:center;min-height:44px;box-sizing:border-box;padding:11px 19px;border-radius:12px;text-decoration:none;font-weight:800;background:#fff;color:#103962}}
-.mc-actions a.mc-outline{{border:1px solid #ffffff80;background:#ffffff13;color:#fff}}
-.mc-grid{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}}
-.mc-tile{{min-width:0;background:#fff;border:1px solid #d5e2f1;border-radius:15px;padding:16px}}
-.mc-tile b{{display:block;color:#183856;margin:7px 0;font-size:15px}}.mc-tile small{{font-size:13px;color:#526579;line-height:1.55;display:block}}.mc-tile .ico{{font-size:27px}}
-@media(max-width:760px){{.mc-grid{{grid-template-columns:repeat(2,minmax(0,1fr))}}.mc-actions a{{width:100%}}}}
-@media(max-width:360px){{.mc-grid{{grid-template-columns:1fr}}}}
-</style>
-<section class="mc-hero"><span class="mc-label">LỚP HỌC THẦY MINH · AI QUESTION STUDIO</span>
-<h1>Biến ảnh chụp thành bài tập tương tác</h1>
-<p>Chụp ảnh đề, tải PDF/Word hoặc dán nội dung. Gemini tạo bài tập có đổi số, đáp án và lời giải; xem trước, thử câu hỏi rồi mới lưu chờ duyệt.</p>
-<div class="mc-actions"><a href="{create_url}">✨ {create_label}</a><a class="mc-outline" href="/member/html-menu">📚 Kho bài luyện HTML</a></div>
-<small>Không tự ghi đè bài cũ · Chức năng tạo bài chỉ dành cho ADMIN</small>
-</section>
-<div class="mc-grid" aria-label="Công cụ học tập">
-<div class="mc-tile"><span class="ico">📷</span><b>Chụp ảnh đề</b><small>Chụp trực tiếp bằng camera điện thoại và gửi cho AI đọc.</small></div>
-<div class="mc-tile"><span class="ico">📄</span><b>Đọc PDF / Word</b><small>Trích câu hỏi, công thức và hình ảnh từ tài liệu.</small></div>
-<div class="mc-tile"><span class="ico">✨</span><b>Đổi số thông minh</b><small>Tạo đáp án và lời giải theo dữ liệu bài tập.</small></div>
-<div class="mc-tile"><span class="ico">✅</span><b>Xem thử & duyệt</b><small>Thử nghiệm trước khi lưu bài HTML mới.</small></div>
-</div>
-"""
-    body = f"""
-{hero}
-<div class='wrap><div class='panel'><div class='head'>📚 MỤC LỤC <span class='tag'>{len(items)} bài được phép</span></div><div class='body'>
-{who}
-<form method='get' class='catsearch'><input name='q' placeholder='Tìm ID câu, bài, chương...' value='{html.escape(request.args.get('q',''))}'><select name='mon'><option value=''>Tất cả môn</option>{subjopts}</select><select name='lop'><option value=''>Tất cả lớp</option>{classopts}</select><button class='btn'>Tìm</button></form>
-</div></div>{id_block}{''.join(sections) or ('' if id_block else "<div class='panel' style='margin-top:10px'><div class='body muted'>Chưa có bài trong gói hiện tại. Nếu vừa đăng ký, hãy chờ ADMIN duyệt gói.</div></div>")}</div>
-"""
+.student-home-shell{max-width:1200px;margin:0 auto;padding:12px 14px 40px}
+.student-home-hero{background:linear-gradient(120deg,#102c51,#1166a5);color:white;border-radius:18px;padding:clamp(18px,4vw,30px);margin-bottom:14px}
+.student-home-hero h1{font-size:clamp(23px,4vw,32px);color:#fff;line-height:1.24;margin:9px 0}
+.student-home-hero p{color:#e5f1ff;line-height:1.55;margin:0}
+.student-eyebrow{font-size:12px;font-weight:800;letter-spacing:.04em;color:#c5e8ff}
+.student-home-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}
+.student-home-actions a,.student-lesson-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 15px;border-radius:10px;text-decoration:none;border:1px solid #c1d4e8;background:#fff;color:#14436f;font-weight:800;box-sizing:border-box;text-align:center}
+.student-home-actions .student-start,.student-lesson-actions .student-start{background:#176bd3;color:white;border-color:#176bd3}
+.student-home-hero .student-home-actions a:not(.student-start){background:#ffffff18;border-color:#ffffff80;color:#fff}
+.student-home-shell .notice{border-radius:10px;padding:11px 13px;margin:0 0 12px;line-height:1.6}
+.student-home-shell .catsearch{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,minmax(120px,.35fr)) auto;gap:9px;margin:0}
+.student-home-shell .catsearch input,.student-home-shell .catsearch select{min-width:0;width:100%;box-sizing:border-box;min-height:44px}
+.student-home-shell .catsearch button{min-height:44px}
+.student-list-title{font-size:20px;color:#143958;margin:16px 0 10px}
+.student-chapter{border:1px solid #d2e0ee;border-radius:12px;background:#fff;margin:10px 0;overflow:hidden}
+.student-chapter>summary{cursor:pointer;padding:14px 16px;background:#eff6ff;color:#164677;font-weight:800;line-height:1.45}
+.student-chapter>summary span{font-size:12px;color:#59718b}
+.student-lesson-card{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 12px;padding:13px 14px;border:1px solid #dbe6f3;border-radius:11px;background:#fff}
+.student-lesson-card h3{font-size:16px;line-height:1.4;color:#173756;margin:0 0 6px}
+.student-lesson-card p{font-size:13px;color:#64748b;margin:0}
+.student-lesson-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.student-lesson-actions a{font-size:13px;min-height:42px}
+.student-lesson-actions .student-locked{color:#885e16;background:#fff6df;border-color:#efd5a0}
+@media(max-width:760px){
+ .student-home-shell{padding:7px 9px 24px}
+ .student-home-hero{padding:18px 15px;margin-bottom:9px}
+ .student-home-hero h1{font-size:23px}
+ .student-home-actions a{flex:1 1 100%}
+ .student-home-shell .catsearch{grid-template-columns:1fr 1fr}
+ .student-home-shell .catsearch input{grid-column:1/-1}
+ .student-home-shell .catsearch button{grid-column:1/-1}
+ .student-lesson-card{display:block;margin:8px;padding:12px}
+ .student-lesson-actions{margin-top:12px;justify-content:stretch}
+ .student-lesson-actions a{flex:1 1 100%}
+ .student-chapter>summary{padding:12px}
+}
+</style>"""
+    from urllib.parse import quote
+    form = (
+        "<form method='get' class='catsearch' aria-label='Lọc bài học'>"
+        "<input name='q' aria-label='Tìm bài học' placeholder='🔎 Tìm bài học, chương, dạng...' value='"
+        + html.escape(request.args.get('q',''), quote=True) + "'>"
+        "<select name='mon' aria-label='Chọn môn'><option value=''>Tất cả môn</option>"
+        + subjopts + "</select>"
+        "<select name='lop' aria-label='Chọn lớp'><option value=''>Tất cả lớp</option>"
+        + classopts + "</select><button class='btn primary' type='submit'>Tìm bài</button></form>"
+    )
+    empty = ("<div class='panel'><div class='body'>Không có bài phù hợp hoặc chưa được cấp quyền. "
+             "<a href='/member/goi'>Xem gói học tập</a>.</div></div>")
+    body = (
+        stylesheet
+        + "<main class='student-home-shell'>" + hero
+        + "<section class='student-lessons' id='studentLessonList'>"
+        + "<h2 class='student-list-title'>📚 Bài tập của tôi · " + str(len(items)) + " bài</h2>"
+        + who + form + id_block
+        + (''.join(sections) if sections else ('' if id_block else empty))
+        + "</section></main>"
+    )
     return base.page('Mục lục', body)
 
 
