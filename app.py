@@ -698,6 +698,10 @@ body.cinema .qbox{padding-right:12px}
 }
 @media(max-width:420px){.topin .brand{font-size:12px!important}.topin .brandbai{font-size:10px!important}}
 
+.view-switch-form{display:inline-flex;flex:0 0 auto;margin:0}
+.view-switch-button{min-height:38px;border:1px solid #f0d69a;background:#f8d67a;color:#17314d;border-radius:9px;padding:7px 11px;font:800 13px/1.2 Arial;white-space:nowrap;cursor:pointer}
+@media(max-width:1024px){.topin>.view-switch-form{order:3;flex:0 0 auto}.view-switch-button{font-size:11px;min-height:35px;padding:6px 8px}.topin:has(.view-switch-form){flex-wrap:wrap!important}.topin>.view-switch-form{margin-left:auto}}
+
 /* VIP question workspace: progressive disclosure, readable measure */
 .vip-practice-wrap{max-width:none!important;width:100%!important;margin:0!important;padding:8px 12px 16px!important}
 .vip-practice-wrap>.panel{border:1px solid #d8e3f0!important;border-radius:13px!important;overflow:visible!important;box-shadow:0 3px 16px #153c6810;background:#fff}
@@ -976,9 +980,25 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
     admin_jump = ""
     admin_ui = role == "admin"
     try:
-        admin_ui = admin_ui or can_manage_bank()
+        admin_ui = (admin_ui or can_manage_bank()) and not admin_student_preview()
     except Exception:
         pass
+    is_preview = admin_student_preview()
+    is_teacher_account = has_full_bank_access()
+    if is_teacher_account:
+        if not session.get('view_switch_csrf'):
+            session['view_switch_csrf'] = secrets.token_urlsafe(24)
+        preview_target = 'admin' if is_preview else 'student'
+        switch_name = '↩ Về quản trị' if is_preview else '👨‍🎓 Xem như học sinh'
+        preview_form = ("<form method='post' action='/member/switch-view' class='view-switch-form'>"
+                        "<input type='hidden' name='csrf' value='" + html.escape(session['view_switch_csrf'],quote=True) + "'>"
+                        "<input type='hidden' name='mode' value='" + preview_target + "'>"
+                        "<button type='submit' class='view-switch-button'>" + switch_name + "</button></form>")
+    else:
+        preview_form = ''
+    if is_preview:
+        who = "<span class='who' style='color:#fff'>👨‍🎓 Chế độ học sinh</span>"
+        nav.append("<a href='/member'>📚 Bài học</a>")
     if admin_ui:
         who = (
             "<a class='who' href='/admin/members' title='Quản lý thành viên'>🔐 ADMIN</a>"
@@ -1019,6 +1039,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "<time class='clock' id='ldvlClock' datetime=''>…</time>"
         + (f"<span class='whobar'>{who}</span>" if who else "")
         + admin_jump
+        + preview_form
         + ("<a href='/member/exams/saved' class='examWarehouseQuickLink' title='Kho đề thi đã lưu' style='padding:6px 10px;border:1px solid #ffffff70;border-radius:7px;color:white;text-decoration:none;font-size:13px;font-weight:800;white-space:nowrap'>📚 Kho đề</a>" if admin_ui else "")
         + "<a id='htmlWarehouseQuickLink' href='/member/html-menu' title='Mở kho luyện tập HTML' style='display:inline-flex;align-items:center;gap:4px;flex-shrink:0;padding:5px 9px;border:1px solid #ffffff80;border-radius:6px;background:#ffffff20;color:white;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap'>▦ Kho HTML</a>"
         + "<button type='button' class='navtoggle' id='ldvlNavToggle' aria-expanded='false' aria-controls='ldvlNav' title='Thu / mở menu'>☰</button>"
@@ -1467,6 +1488,27 @@ def has_full_bank_access(m=None):
 def can_manage_bank():
     """ADMIN đăng nhập /admin, hoặc thành viên quyền ADMIN / username ADMIN."""
     return has_full_bank_access()
+
+
+def admin_student_preview():
+    """Display/answer behavior only; does not change the authenticated account or grant rights."""
+    return bool(session.get('admin_student_preview') and has_full_bank_access())
+
+
+@app.post('/member/switch-view')
+def switch_member_view():
+    if not has_full_bank_access():
+        return redirect('/member/login')
+    stored = str(session.get('view_switch_csrf') or '')
+    received = str(request.form.get('csrf') or '')
+    if not stored or not secrets.compare_digest(stored, received):
+        return page('Phiên hết hạn', "<div class='wrap'><p>Phiên chuyển giao diện đã hết hạn. Tải lại trang rồi thử lại.</p></div>"), 400
+    mode = str(request.form.get('mode') or '')
+    if mode not in ('student', 'admin'):
+        return redirect('/member')
+    session['admin_student_preview'] = (mode == 'student')
+    session.modified = True
+    return redirect('/member' if mode == 'student' else '/admin')
 def is_vip(m):
     if account_type_of(m) == 'ADMIN':
         return True
@@ -4679,7 +4721,7 @@ def practice():
         pal_bits.append(f"<a class='pitem {cls} muc-{lv}' href='/practice/jump/{j}' title='{html.escape(str(qq.get('id') or ''), quote=True)}'>{j+1} · {muc_label(lv)}</a>")
     palette=''.join(pal_bits)
     payload=question_payload(q)
-    is_admin=has_full_bank_access(m)
+    is_admin=has_full_bank_access(m) and not admin_student_preview()
     mode_tag='🤖 Có phản biện AI' if ai else 'Không phản biện'
     if is_admin: mode_tag='🔐 ADMIN · xem lời giải không cần làm bài'+((' · '+mode_tag) if ai else '')
     dang=str(session.get('practice_dang') or '')
