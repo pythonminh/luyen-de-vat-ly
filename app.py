@@ -5058,6 +5058,9 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
 <p id="practiceRecordInfo">Chưa có lần hoàn thành trên thiết bị này.</p>
 <button type="button" id="practiceRecordClose">Đóng</button></dialog>
 <script>(function(){{
+ const stats=document.querySelector('.practice-mini-stats');
+ const header=document.querySelector('.vip-practice-wrap .quiztop');
+ if(stats&&header)header.insertAdjacentElement('afterend',stats);
  const began=Date.now()-({elapsed}*1000);
  const key={json.dumps(record_name)};
  function fmt(s){{const x=Math.max(0,Math.floor(s));return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}}
@@ -5070,7 +5073,7 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
  if(!r.attempts)out.textContent='Chưa có lượt hoàn thành được lưu trên thiết bị này.';
  else out.textContent='Số lượt: '+r.attempts+' · Điểm cao nhất: '+Number(r.bestScore||0).toFixed(2)+'/10 · Chuỗi đúng tốt nhất: '+(r.bestStreak||0)+' · Thời gian nhanh nhất: '+fmt(r.bestSeconds||0)+' (kỷ lục của bài học này).';
  dlg.showModal();}};
- close.onclick=()=>dlg.close();dlg.addEventListener('close',()=>clearInterval(tick));
+ close.onclick=()=>dlg.close();
 }})();</script>
 <nav class="practice-phone-bar" aria-label="Điều hướng câu hỏi trên điện thoại">
 <a href="{prev_href}" class="{'phone-disabled' if pos==0 else ''}" aria-label="Câu trước">‹ Trước</a>
@@ -5114,7 +5117,7 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
 </script>
 """
 
-    return page('Làm bài',body+mobile_controls+js+extra+"<style>.practice-mini-stats{padding:0 8px}.practice-record-done{margin:14px 0;padding:14px;border:1px solid #bfdbed;border-radius:12px;background:#f3faff}</style>")
+    return page('Làm bài',body+mobile_controls+js+extra+"<style>.practice-mini-stats{display:flex;align-items:center;gap:8px;padding:5px 8px;font:700 12px Arial}.practice-mini-stats span,.practice-mini-stats button{background:#f0f6ff;border:1px solid #c4d9ee;border-radius:8px;padding:6px 9px;color:#204e80;font:700 12px Arial}.practice-record-dialog{border:1px solid #c2d7ee;border-radius:14px;padding:16px;max-width:92vw}.practice-record-done{margin:14px 0;padding:14px;border:1px solid #bfdbed;border-radius:12px;background:#f3faff}</style>")
 
 _RESHUFFLE_JOBS = {}
 _RESHUFFLE_LOCK = threading.Lock()
