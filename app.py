@@ -4897,7 +4897,92 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
         from admin_rewrite import REWRITE_CLIENT_JS
         from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
         extra=REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
-    return page('Làm bài',body+js+extra)
+    # Phone-focused practice layout: keep the established scoring/session flow unchanged.
+    prev_href = '/practice/jump/' + str(max(0,pos-1))
+    next_href = '/practice/jump/' + str(min(len(ids)-1,pos+1))
+    mobile_controls = f"""
+<style>
+@media(max-width:1024px){{
+ body:has(.vip-practice-wrap) .topin{{min-height:40px!important;height:auto!important;padding:3px 8px!important}}
+ body:has(.vip-practice-wrap) .topin .brandbox{{min-height:33px!important}}
+ body:has(.vip-practice-wrap) .topin .brand{{font-size:13px!important}}
+ body:has(.vip-practice-wrap) .topin .brandbai{{display:none!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap{{padding:3px 5px 92px!important;max-width:100%!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap>.panel{{border:0!important;box-shadow:none!important;background:transparent!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .quiztop{{display:flex!important;flex-wrap:wrap!important;gap:5px!important;min-height:40px!important;padding:5px 8px!important;background:#e7f2ff!important;border-radius:10px!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .quiztop>span:first-child{{flex:1 1 auto!important;font-size:15px!important;font-weight:800!important;max-width:none!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .quiztop .qzoombar{{display:flex!important;gap:4px!important;align-items:center!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .quiztop .qzoombar #qZmFit,
+ body:has(.vip-practice-wrap) .vip-practice-wrap .quiztop .qzoombar #qzoomlab{{display:none!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .vip-inline-nav{{width:100%!important;justify-content:flex-end!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .vip-inline-nav summary{{font-size:11px!important;min-height:29px!important;padding:4px 8px!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .body{{padding:4px 0!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap #q{{font-size:calc(18px * var(--qzoom,1))!important;line-height:1.6!important;padding:13px 11px!important;background:#edf5ff!important;border:1px solid #bed9f8!important;border-radius:13px!important;overflow-x:hidden!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .qstem{{font-size:1em!important;line-height:1.7!important;overflow-wrap:break-word!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .qheadline{{overflow:visible!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .qfig,
+ body:has(.vip-practice-wrap) .vip-practice-wrap .tikzfig,
+ body:has(.vip-practice-wrap) .vip-practice-wrap .tikz-live{{max-width:100%!important;height:auto!important;min-height:0!important;overflow:visible!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap img,
+ body:has(.vip-practice-wrap) .vip-practice-wrap svg{{max-width:100%!important;height:auto!important;object-fit:contain}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .qstem img,
+ body:has(.vip-practice-wrap) .vip-practice-wrap .qfig img,
+ body:has(.vip-practice-wrap) .vip-practice-wrap .tikzfig svg{{cursor:zoom-in}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .opt{{display:flex!important;align-items:flex-start!important;gap:8px!important;background:#fff!important;border:1px solid #bad6f4!important;border-radius:10px!important;min-height:53px!important;padding:12px!important;font-size:1em!important;line-height:1.55!important;margin:9px 0!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .opt input{{flex-shrink:0;margin-top:6px!important;min-width:19px;min-height:19px}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .quizacts{{position:static!important;display:flex!important;gap:7px!important;flex-wrap:wrap!important;background:transparent!important;padding:12px 0!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .quizacts #reshuf{{display:none!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .quizacts .btn{{flex:1 1 115px!important;min-height:46px!important;font-size:14px!important}}
+ body:has(.vip-practice-wrap) .vip-practice-wrap .practice-admin-ai{{display:none!important}}
+ .practice-phone-bar{{position:fixed;z-index:2147482000;bottom:0;left:0;right:0;display:flex!important;align-items:center;gap:8px;justify-content:space-between;padding:9px max(10px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #c9d9ee;box-shadow:0 -4px 18px #17365a1c}}
+ .practice-phone-bar a,.practice-phone-bar button{{font:800 14px/1.25 Arial,sans-serif;display:inline-flex;justify-content:center;align-items:center;min-height:44px;min-width:52px;padding:10px 12px;text-decoration:none;border:1px solid #bed5ef;background:#e9f3ff;color:#154c87;border-radius:10px;box-sizing:border-box}}
+ .practice-phone-bar .phone-index{{background:#176bd3;color:white;flex:0 1 auto}}
+ .practice-phone-bar .phone-count{{font:800 15px Arial;color:#163b67;white-space:nowrap}}
+ .practice-phone-bar .phone-disabled{{opacity:.35;pointer-events:none}}
+ .practice-figure-dialog{{max-width:96vw;width:96vw;max-height:85dvh;border:1px solid #bbcee4;border-radius:12px;padding:10px;background:#fff}}
+ .practice-figure-dialog::backdrop{{background:#061c36cb}}
+ .practice-figure-dialog .pf-buttons{{display:flex;justify-content:space-between;gap:8px;position:sticky;top:0;background:#fff;padding:5px 0;z-index:2}}
+ .practice-figure-dialog button{{padding:10px 14px;border:1px solid #b9d3f0;background:#eaf4ff;color:#164f89;border-radius:8px;font-weight:800}}
+ .practice-figure-dialog .pf-image{{overflow:auto;max-height:72dvh;text-align:center;touch-action:pan-x pan-y}}
+ .practice-figure-dialog .pf-image>img,.practice-figure-dialog .pf-image>svg{{max-width:none!important;width:100%;height:auto;transform-origin:top left}}
+}}
+@media(min-width:1025px){{.practice-phone-bar,.practice-figure-dialog{{display:none!important}}}}
+</style>
+<nav class="practice-phone-bar" aria-label="Điều hướng câu hỏi trên điện thoại">
+<a href="{prev_href}" class="{'phone-disabled' if pos==0 else ''}" aria-label="Câu trước">‹ Trước</a>
+<button type="button" class="phone-index" id="phoneQuestionMenu">☷ Mục lục</button>
+<span class="phone-count">{pos+1}/{len(ids)}</span>
+<a href="{next_href}" class="{'phone-disabled' if pos>=len(ids)-1 else ''}" aria-label="Câu tiếp">Tiếp ›</a>
+</nav>
+<dialog class="practice-figure-dialog" id="practiceFigureDialog" aria-label="Phóng to hình minh họa">
+<div class="pf-buttons"><strong>🔎 Hình minh họa</strong><div><button type="button" id="pfZoomOut">−</button> <button type="button" id="pfZoomIn">+</button> <button type="button" id="pfClose">✕</button></div></div>
+<div class="pf-image" id="pfImage"></div>
+</dialog>
+<script>
+(function(){{
+ const menu=document.getElementById('phoneQuestionMenu');
+ if(menu)menu.addEventListener('click',()=>{{
+   const details=document.querySelector('.vip-practice-wrap .practice-questions');
+   if(details){{details.open=true;details.scrollIntoView({{block:'nearest',behavior:'smooth'}})}}
+ }});
+ const dialog=document.getElementById('practiceFigureDialog'),box=document.getElementById('pfImage');
+ let zoom=1;
+ document.addEventListener('click',e=>{{
+  const target=e.target.closest('.vip-practice-wrap .qstem img,.vip-practice-wrap .qfig img,.vip-practice-wrap .tikzfig svg,.vip-practice-wrap .tikz-live svg');
+  if(!target||!dialog||window.innerWidth>1024)return;
+  e.preventDefault();box.replaceChildren();zoom=1;
+  const fig=target.cloneNode(true);fig.style.width='100%';fig.style.height='auto';box.appendChild(fig);dialog.showModal();
+ }});
+ function setZoom(step){{zoom=Math.max(.7,Math.min(3,zoom+step));const child=box.firstElementChild;if(child)child.style.width=(zoom*100)+'%'}}
+ document.getElementById('pfZoomIn').onclick=()=>setZoom(.25);
+ document.getElementById('pfZoomOut').onclick=()=>setZoom(-.25);
+ document.getElementById('pfClose').onclick=()=>dialog.close();
+ dialog.addEventListener('click',e=>{{if(e.target===dialog)dialog.close()}});
+}})();
+</script>
+"""
+
+    return page('Làm bài',body+mobile_controls+js+extra)
 
 _RESHUFFLE_JOBS = {}
 _RESHUFFLE_LOCK = threading.Lock()
