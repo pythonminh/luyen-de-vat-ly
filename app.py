@@ -4716,7 +4716,7 @@ function duration(t){{const x=Math.max(0,Math.floor(t||0));return Math.floor(x/6
 const target=document.getElementById('practiceRecordSummary');if(target)target.textContent='Lần này: '+attempt.correct+'/'+attempt.total+' câu · '+attempt.score.toFixed(2)+'/10 · '+duration(attempt.seconds)+' | Điểm cao nhất: '+bestScore.toFixed(2)+'/10 · Chuỗi đúng: '+bestStreak+' · Hoàn thành nhanh nhất: '+duration(record.bestSeconds);
 const remote={json.dumps(server_record,ensure_ascii=False)};
 const storage=document.getElementById('practiceRecordStorage');
-if(remote){if(storage)storage.textContent='☁️ Đã đồng bộ với tài khoản';if(target)target.textContent='Lần này: '+attempt.correct+'/'+attempt.total+' · '+attempt.score.toFixed(2)+'/10 · '+duration(attempt.seconds)+' | Điểm cao nhất: '+Number(remote.best_score).toFixed(2)+'/10 · Chuỗi đúng: '+remote.best_streak+' · Nhanh nhất: '+(remote.fastest_seconds==null?'—':duration(remote.fastest_seconds));}
+if(remote){{if(storage)storage.textContent='☁️ Đã đồng bộ với tài khoản';if(target)target.textContent='Lần này: '+attempt.correct+'/'+attempt.total+' · '+attempt.score.toFixed(2)+'/10 · '+duration(attempt.seconds)+' | Điểm cao nhất: '+Number(remote.best_score).toFixed(2)+'/10 · Chuỗi đúng: '+remote.best_streak+' · Nhanh nhất: '+(remote.fastest_seconds==null?'—':duration(remote.fastest_seconds));}}
 else if(storage)storage.textContent='📱 Đang lưu trên trình duyệt, chưa đồng bộ máy chủ';
 }})();</script>"""
 
