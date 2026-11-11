@@ -4728,7 +4728,7 @@ def practice():
     muc_now=muc_label(q.get('level'))
     tabs=lesson_switch_html(p, list(allq.values()), dang=dang, kind=session.get('practice_kind') or '', guest=False, muc=session.get('practice_muc') or '')
     admin_ai_actions = ''
-    if can_manage_bank():
+    if can_manage_bank() and not admin_student_preview():
         ai_back = '/member/dang?path=' + urllib.parse.quote(p, safe='') + '&dang=' + urllib.parse.quote(dang, safe='')
         ai_back += '&kind=' + urllib.parse.quote(str(session.get('practice_kind') or ''), safe='')
         admin_ai_actions = (
