@@ -67,7 +67,7 @@ function closePolygon(){
   if(area*vw*vh<100){window.alert('Các điểm gần như thẳng hàng. Hãy chọn lại vị trí các đỉnh.');return;}
   const sh={type:'polygon',points,color,thickness,lineStyle,edgeStyles:{},constructions:[]};
   shapes.push(sh);selected=shapes.length-1;selectedEdge=-1;selectedVertex=-1;
-  polygonDraft=[];setMode('edit');refreshLineStyles();draw();
+  polygonDraft=[];refreshLineStyles();draw(); // Stay in polygon mode; next tap starts another polygon.
 }
 function joinLineSegments(){
   const segments=shapes.map((s,i)=>({shape:s,index:i})).filter(x=>x.shape.type==='line');
@@ -445,7 +445,7 @@ canvas.addEventListener('pointermove',e=>{
 function end(e){
   if(e.pointerId!==pointer)return;
   if(stroke){strokes.push(stroke);stroke=null;}
-  if(shapeDraft){shapes.push(shapeDraft);selected=shapes.length-1;selectedEdge=-1;selectedVertex=-1;shapeDraft=null;setMode('edit');refreshLineStyles();}
+  if(shapeDraft){shapes.push(shapeDraft);selected=shapes.length-1;selectedEdge=-1;selectedVertex=-1;shapeDraft=null;refreshLineStyles(); /* Keep chosen drawing tool active for next stroke. */}
   drag=null;pointer=null;draw();
 }
 canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
