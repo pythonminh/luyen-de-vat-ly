@@ -5120,7 +5120,7 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
  let zoom=1;
  document.addEventListener('click',e=>{{
   const target=e.target.closest('.vip-practice-wrap .qstem img,.vip-practice-wrap .qfig img,.vip-practice-wrap .tikzfig svg,.vip-practice-wrap .tikz-live svg');
-  if(!target||!dialog||window.innerWidth>1024)return;
+  if(!target||!dialog||window.innerWidth>1024||target.closest('.fig-inline-frame'))return;
   e.preventDefault();box.replaceChildren();zoom=1;
   const fig=target.cloneNode(true);fig.style.width='100%';fig.style.height='auto';box.appendChild(fig);dialog.showModal();
  }});
