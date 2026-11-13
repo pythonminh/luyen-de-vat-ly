@@ -4262,7 +4262,7 @@ def _go_kind_href(path, dang, kind, guest=False, practice=None, muc=''):
             m = None
         practice = can_practice(m, path)
     try:
-        admin_browse = can_manage_bank()
+        admin_browse = can_manage_bank() and not admin_student_preview()
     except Exception:
         admin_browse = False
     if admin_browse or not practice:
