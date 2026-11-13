@@ -2018,6 +2018,7 @@ def present_watch(code=""):
         "<div class='cinema-ai' id='cinemaAi' hidden></div></div>"
         + js
     )
+    body += "<script defer src='/static/figure-zoom.js'></script>"
     extra = PRESENT_TTS_JS + (base.GEMINI_CLIENT_JS if _host_id() else "")
     return base.page("Chiếu chung " + code, body + extra, cinema=True)
 
