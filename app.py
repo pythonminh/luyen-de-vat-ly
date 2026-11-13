@@ -5158,7 +5158,7 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
   max-height:none!important;overflow:visible!important;
  }
 }
-</style><script defer src="/static/figure-zoom.js"></script>"""
+</style><script defer src="/static/figure-zoom.js"></script><script defer src="/static/practice-screen-ink.js"></script>"""
     return page('Làm bài',body+mobile_controls+js+extra+figure_zoom_assets+"<style>.practice-mini-stats{display:flex;align-items:center;gap:8px;padding:5px 8px;font:700 12px Arial}.practice-mini-stats span,.practice-mini-stats button{background:#f0f6ff;border:1px solid #c4d9ee;border-radius:8px;padding:6px 9px;color:#204e80;font:700 12px Arial}.practice-record-dialog{border:1px solid #c2d7ee;border-radius:14px;padding:16px;max-width:92vw}.practice-record-done{margin:14px 0;padding:14px;border:1px solid #bfdbed;border-radius:12px;background:#f3faff}</style>")
 
 _RESHUFFLE_JOBS = {}
