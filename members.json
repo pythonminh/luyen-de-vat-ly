@@ -1189,6 +1189,26 @@
       "vip_plan": "1m",
       "vip_started_at": "2026-10-26 15:38:00",
       "vip_expires_at": "2026-11-26 15:38:00"
+    },
+    {
+      "username": "Lê Minh Khang",
+      "name": "Lê Minh Khang",
+      "phone": "0799290409",
+      "class": "",
+      "account_type": "FREE",
+      "status": "ON",
+      "requested_package": {
+        "kind": "mon1",
+        "grades": [
+          "12"
+        ],
+        "subjects": [
+          "Vật lý"
+        ]
+      },
+      "package_status": "pending",
+      "password_sha256": "5197783ed1ec81ead1d95726b3650a18bdcf7352bcca63be32ba2e51bd6841fe",
+      "password_enc": "v1:uz3DE0Pj9Q=="
     }
   ]
 }
