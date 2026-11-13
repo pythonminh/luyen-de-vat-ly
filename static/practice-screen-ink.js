@@ -20,7 +20,7 @@ document.head.append(style);
 const canvas=document.createElement('canvas');canvas.id='ldvlInkCanvas';document.body.append(canvas);
 const bar=document.createElement('div');bar.id='ldvlInkToolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Bút viết trên màn hình');document.body.append(bar);
 const ctx=canvas.getContext('2d');if(!ctx){canvas.remove();bar.remove();return;}
-let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null,lineStyle='solid',selectedEdge=-1,vectorHead='single';
+let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null,lineStyle='solid',selectedEdge=-1,selectedVertex=-1,vectorHead='single';
 function button(symbol,title,fn){const b=document.createElement('button');b.type='button';b.textContent=symbol;b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',fn);bar.append(b);return b;}
 function separator(){const e=document.createElement('div');e.className='sep';bar.append(e);}
 const select=button('☝','Chọn đáp án / tắt bút',()=>setMode('off'));
@@ -73,6 +73,39 @@ function setLineStyle(value){
   refreshLineStyles();draw();
 }
 refreshLineStyles();
+// Geometric constructions are stored on their parent shape and recomputed while dragging vertices.
+separator();
+button('M','Đánh dấu trung điểm cạnh đã chọn',()=>addConstruction('midpoint'));
+button('M↗','Vẽ đường trung tuyến từ đỉnh đối diện đến trung điểm cạnh',()=>addConstruction('median'));
+button('⟂','Dựng đường vuông góc (đường cao hoặc trung trực)',()=>addConstruction('perpendicular'));
+button('∠½','Dựng đường phân giác trong tam giác',()=>addConstruction('bisector'));
+function addConstruction(kind){
+  const sh=shapes[selected];
+  if(!sh){window.alert('Chọn hình hoặc cạnh bằng công cụ ⬡ trước.');setMode('edit');return;}
+  const edges=edgesFor(sh);
+  if(!edges.length){window.alert('Hình này chưa hỗ trợ dựng đường theo cạnh.');return;}
+  if((kind==='median'||kind==='bisector')&&sh.type!=='triangle'){
+    window.alert('Chọn một tam giác để dựng trung tuyến hoặc phân giác.');return;
+  }
+  let edge=selectedEdge>=0?selectedEdge:0;
+  // When a triangle vertex is selected, select the opposite edge instead.
+  if(sh.type==='triangle'&&selectedVertex>=0&&kind!=='bisector'){
+    const e=edges.findIndex(pair=>!pair.includes(selectedVertex));
+    if(e>=0)edge=e;
+  }
+  const vertex=(kind==='bisector'?(selectedVertex>=0?selectedVertex:0):
+    sh.type==='triangle'?[0,1,2].find(i=>!edges[edge].includes(i)):-1);
+  if(kind==='bisector'&&selectedVertex<0&&selectedEdge>=0){
+    window.alert('Để vẽ phân giác: bấm ⬡ rồi chọn đỉnh tam giác, sau đó bấm ∠½.');return;
+  }
+  const record={kind,edge,vertex,color,thickness,lineStyle};
+  sh.constructions=sh.constructions||[];
+  // Avoid stacking identical constructions when clicking the same button repeatedly.
+  if(!sh.constructions.some(c=>c.kind===kind&&c.edge===edge&&c.vertex===vertex)){
+    sh.constructions.push(record);
+  }
+  setMode('edit');draw();
+}
 const smaller=button('⊖','Thu nhỏ hình đang chọn',()=>scaleShape(.8));
 const bigger=button('⊕','Phóng to hình đang chọn',()=>scaleShape(1.25));
 button('⌦','Xóa hình đang chọn',()=>{if(selected>=0){shapes.splice(selected,1);selected=-1;selectedEdge=-1;refreshLineStyles();draw();}});
@@ -120,6 +153,61 @@ function vectorCaption(s){
   ctx.save();ctx.setLineDash([]);ctx.fillStyle=s.color;ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.font='bold 18px Arial, sans-serif';ctx.fillText(label,cx+dy/d*18,cy-dx/d*18);ctx.restore();
 }
+function constructionDraw(s){
+  if(!s.constructions?.length)return;
+  const p=s.points,edges=edgesFor(s);
+  const pixel=i=>[p[i][0]*vw,p[i][1]*vh];
+  const segment=(a,b)=>{
+    ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+  };
+  for(const c of s.constructions){
+    const pair=edges[c.edge];if(!pair)continue;
+    const A=pixel(pair[0]),B=pixel(pair[1]);
+    const ux=B[0]-A[0],uy=B[1]-A[1],L=Math.hypot(ux,uy);
+    if(L<1e-5)continue;
+    const M=[(A[0]+B[0])/2,(A[1]+B[1])/2];
+    ctx.save();ctx.strokeStyle=c.color;ctx.fillStyle=c.color;
+    ctx.lineWidth=c.thickness;ctx.setLineDash(c.lineStyle==='dashed'?[8,5]:[]);
+    if(c.kind==='midpoint'||c.kind==='median'){
+      ctx.beginPath();ctx.arc(M[0],M[1],4,0,2*Math.PI);ctx.fill();
+      if(c.kind==='median'&&c.vertex>=0)segment(pixel(c.vertex),M);
+      ctx.setLineDash([]);ctx.font='bold 13px Arial';ctx.fillText('M',M[0]+8,M[1]-7);
+    }else if(c.kind==='perpendicular'){
+      const vx=uy/L,vy=-ux/L;
+      if(s.type==='triangle'&&c.vertex>=0){
+        // The altitude from the opposite vertex falls on the full supporting line.
+        const V=pixel(c.vertex);
+        const t=((V[0]-A[0])*ux+(V[1]-A[1])*uy)/(L*L);
+        const H=[A[0]+t*ux,A[1]+t*uy];
+        segment(V,H);
+        // right-angle marker at foot; oriented along side and toward vertex
+        const side=Math.sign((V[0]-H[0])*vx+(V[1]-H[1])*vy)||1;
+        const q=9,ex=ux/L,ey=uy/L;
+        ctx.beginPath();ctx.moveTo(H[0]+ex*q,H[1]+ey*q);
+        ctx.lineTo(H[0]+ex*q+vx*q*side,H[1]+ey*q+vy*q*side);
+        ctx.lineTo(H[0]+vx*q*side,H[1]+vy*q*side);ctx.stroke();
+      }else{
+        const half=65;
+        segment([M[0]-vx*half,M[1]-vy*half],[M[0]+vx*half,M[1]+vy*half]);
+        ctx.setLineDash([]);ctx.beginPath();ctx.arc(M[0],M[1],3,0,2*Math.PI);ctx.fill();
+      }
+    }else if(c.kind==='bisector'&&s.type==='triangle'){
+      const V=pixel(c.vertex);
+      const others=[0,1,2].filter(i=>i!==c.vertex);
+      if(others.length===2){
+        const P=pixel(others[0]),Q=pixel(others[1]);
+        const lp=Math.hypot(P[0]-V[0],P[1]-V[1]);
+        const lq=Math.hypot(Q[0]-V[0],Q[1]-V[1]);
+        if(lp>1e-6&&lq>1e-6){
+          const t=lp/(lp+lq);
+          const D=[P[0]+t*(Q[0]-P[0]),P[1]+t*(Q[1]-P[1])];
+          segment(V,D);
+        }
+      }
+    }
+    ctx.restore();
+  }
+}
 function drawShape(s,highlight=false){
   const p=s.points;ctx.save();ctx.lineWidth=s.thickness;ctx.strokeStyle=s.color;
   ctx.lineJoin='round';ctx.lineCap='round';
@@ -133,6 +221,7 @@ function drawShape(s,highlight=false){
     });
   }
   ctx.setLineDash([]);
+  constructionDraw(s);
   if(s.type==='vector'||s.type==='doublevector'){
     vectorArrow(p[0],p[1],s.thickness);
     if(s.type==='doublevector')vectorArrow(p[1],p[0],s.thickness);
@@ -205,7 +294,7 @@ canvas.addEventListener('pointerdown',e=>{
   const p=pos(e);
   if(mode==='erase'){erase(p);return;}
   if(mode==='edit'){
-    const hit=findShape(p);selected=hit?hit.i:-1;selectedEdge=hit?hit.edge:-1;
+    const hit=findShape(p);selected=hit?hit.i:-1;selectedEdge=hit?hit.edge:-1;selectedVertex=hit?hit.j:-1;
     drag=hit?{kind:hit.j>=0?'vertex':hit.edge>=0?'edge':'move',j:hit.j,last:p}:null;
     refreshLineStyles();draw();return;
   }
@@ -229,11 +318,11 @@ canvas.addEventListener('pointermove',e=>{
 function end(e){
   if(e.pointerId!==pointer)return;
   if(stroke){strokes.push(stroke);stroke=null;}
-  if(shapeDraft){shapes.push(shapeDraft);selected=shapes.length-1;selectedEdge=-1;shapeDraft=null;setMode('edit');refreshLineStyles();}
+  if(shapeDraft){shapes.push(shapeDraft);selected=shapes.length-1;selectedEdge=-1;selectedVertex=-1;shapeDraft=null;setMode('edit');refreshLineStyles();}
   drag=null;pointer=null;draw();
 }
 canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
-window.addEventListener('scroll',()=>{if(strokes.length||shapes.length){strokes=[];shapes=[];selected=-1;stroke=null;draw();}},{passive:true});
+window.addEventListener('scroll',()=>{if(strokes.length||shapes.length){strokes=[];shapes=[];selected=-1;selectedEdge=-1;selectedVertex=-1;stroke=null;draw();}},{passive:true});
 window.addEventListener('resize',resize);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')setMode('off');if(/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||'')||e.target?.isContentEditable)return;if(e.key.toLowerCase()==='p'&&!e.ctrlKey&&!e.altKey)setMode(mode==='pen'?'off':'pen');});
 resize();
