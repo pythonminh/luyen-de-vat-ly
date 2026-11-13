@@ -292,7 +292,7 @@ _KIND_PARTS = (
 )
 
 
-def _study_cards(selected, path, dmap, show_solution, highlight_id):
+def _study_cards(selected, path, dmap, show_solution, highlight_id, preview_only=False):
     """Trong từng dạng: Phần 1 TN, Phần 2 ĐS, Phần 3 TLN, Phần 4 TL."""
     labels = dict(_KIND_PARTS)
     dangs = []
@@ -318,7 +318,7 @@ def _study_cards(selected, path, dmap, show_solution, highlight_id):
         for seq, q in enumerate(bucket, 1):
             bits.append(_question_card(
                 q, seq, n, q.get('src') or path, (dmap or {}).get(q.get('idx')),
-                show_solution=show_solution, highlight_id=highlight_id,
+                show_solution=show_solution, highlight_id=highlight_id, preview_only=preview_only,
             ))
 
     for q in selected or []:
@@ -549,7 +549,7 @@ def member_dang():
     cung_extra=sum(len(g['extras']) for g in groups if g['type']=='cungde')
     admin_view=can_manage_bank() and not session.get('admin_student_preview')
     highlight_id=(request.args.get('id') or request.args.get('qid') or '').strip()
-    cards=_study_cards(selected, path, dmap, admin_view or (can_do and not session.get('admin_student_preview')), highlight_id)
+    cards=_study_cards(selected, path, dmap, admin_view or (can_do and not session.get('admin_student_preview')), highlight_id, preview_only=bool(session.get('admin_student_preview')))
     dup_note=''
     if dao_n or cung_n:
         dup_note=(f"<div class='notice' style='border-color:#efca73;background:#fff8df'>⚠️ Có <b>{dao_n}</b> câu trùng (kể cả đảo đáp án) và <b>{cung_n}</b> nhóm cùng đề khác đáp án. "
@@ -632,7 +632,7 @@ def member_dang():
         form_open=start_form
         form_close="</form>"
     else:
-        guest_note="<div class='notice'>🔑 VIP · xem đáp án và lời giải trên từng thẻ, đồng thời chọn câu rồi bấm Làm bài.</div>"
+        guest_note="<div class='notice'>👨‍🎓 Chế độ học sinh: bấm <b>▶ Bắt đầu làm bài</b> để trả lời và nhận điểm; hoặc chọn các câu muốn luyện bên dưới.</div>"
         tools=(kindbar+
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           + find_box
@@ -640,6 +640,18 @@ def member_dang():
         bottom=start_bottom
         form_open=start_form
         form_close="</form>"
+    # One-tap entry is available only when the account may practice.
+    # Existing route /member/start-selected performs access checks and session setup.
+    student_start = ""
+    if can_do and not admin_view:
+        student_start = (
+            "<section class='student-start-panel' style='display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:13px;margin:10px 0;background:#eef6ff;border:1px solid #9ec9f4;border-radius:12px'>"
+            "<div><strong>📝 Luyện tập ngay</strong><div style='font-size:13px;color:#42617f'>"
+            + str(len(selected)) + " câu · Trắc nghiệm / Đúng-Sai / Trả lời ngắn · Chấm điểm và lời giải sau khi xác nhận</div></div>"
+            "<button class='btn primary' type='submit' form='questionForm' name='ai_review' value='0' "
+            "onclick='setAll(true)' style='font-size:16px;min-height:46px;padding:10px 20px'>▶ Bắt đầu làm bài</button>"
+            "</section>"
+        )
     quick_search = ""
     if admin_view:
         quick_search = "<div class='toolbar lesson-search-quick'>" + find_box + "</div>"
@@ -698,7 +710,7 @@ def member_dang():
     dang_lab=dang or 'Cả bài'
     body=("<div class='wrap'>"+_html_practice_link(path, dang)+exam_entry+tabs+"<div class='panel'><div class='head'>📌 "+_esc(title)+" <span class='tag'>"+_esc(dang_lab)+"</span> <span class='tag'>"+str(total)+" câu</span>"+kind_tags+"</div><div class='body'>"
           f"{guest_note}{notice_extra}{dup_note}{flash_html}{slim_html}{dup_form}{qdel_form}"
-          +matrix_html+form_open+"<div id='presentSlot'></div>"+game_link+quick_search+tools+
+          +matrix_html+form_open+student_start+"<div id='presentSlot'></div>"+game_link+quick_search+tools+
           f"<div class='questions'>{cards}</div>"
           +bottom+form_close+
           "</div></div></div>"
