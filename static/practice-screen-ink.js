@@ -20,7 +20,7 @@ document.head.append(style);
 const canvas=document.createElement('canvas');canvas.id='ldvlInkCanvas';document.body.append(canvas);
 const bar=document.createElement('div');bar.id='ldvlInkToolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Bút viết trên màn hình');document.body.append(bar);
 const ctx=canvas.getContext('2d');if(!ctx){canvas.remove();bar.remove();return;}
-let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null;
+let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null,lineStyle='solid',selectedEdge=-1;
 function button(symbol,title,fn){const b=document.createElement('button');b.type='button';b.textContent=symbol;b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',fn);bar.append(b);return b;}
 function separator(){const e=document.createElement('div');e.className='sep';bar.append(e);}
 const select=button('☝','Chọn đáp án / tắt bút',()=>setMode('off'));
@@ -39,9 +39,27 @@ const models=[['line','╱','Đoạn thẳng'],['triangle','△','Tam giác'],
  ['quad','▱','Tứ giác (kéo từng đỉnh)'],['circle','○','Đường tròn'],
  ['prism','⬡','Lăng trụ tam giác'],['box','▣','Hình hộp'],['pyramid','⌂','Hình chóp']];
 models.forEach(([key,icon,name])=>{shapeButtons[key]=button(icon,name+' — kéo để tạo',()=>setMode(key));});
+separator();
+const solidBtn=button('━','Nét liền: áp dụng cho cạnh đang chọn hoặc hình mới',()=>setLineStyle('solid'));
+const dashedBtn=button('┄','Nét đứt: áp dụng cho cạnh đang chọn hoặc hình mới',()=>setLineStyle('dashed'));
+function refreshLineStyles(){
+  const active=selected>=0&&shapes[selected];
+  const value=active?(selectedEdge>=0?(active.edgeStyles?.[selectedEdge]||active.lineStyle||'solid'):(active.lineStyle||'solid')):lineStyle;
+  solidBtn.setAttribute('aria-pressed',String(value==='solid'));dashedBtn.setAttribute('aria-pressed',String(value==='dashed'));
+}
+function setLineStyle(value){
+  lineStyle=value;
+  if(selected>=0&&shapes[selected]){
+    const sh=shapes[selected];
+    if(selectedEdge>=0){sh.edgeStyles=sh.edgeStyles||{};sh.edgeStyles[selectedEdge]=value;}
+    else{sh.lineStyle=value;sh.edgeStyles={};}
+  }
+  refreshLineStyles();draw();
+}
+refreshLineStyles();
 const smaller=button('⊖','Thu nhỏ hình đang chọn',()=>scaleShape(.8));
 const bigger=button('⊕','Phóng to hình đang chọn',()=>scaleShape(1.25));
-button('⌦','Xóa hình đang chọn',()=>{if(selected>=0){shapes.splice(selected,1);selected=-1;draw();}});
+button('⌦','Xóa hình đang chọn',()=>{if(selected>=0){shapes.splice(selected,1);selected=-1;selectedEdge=-1;refreshLineStyles();draw();}});
 separator();
 const thin=button('•','Nét mảnh',()=>setThickness(3)),bold=button('●','Nét đậm',()=>setThickness(7));
 function setThickness(n){thickness=n;thin.setAttribute('aria-pressed',String(n===3));bold.setAttribute('aria-pressed',String(n===7));}
@@ -58,23 +76,36 @@ function polygon(points,closed){
   points.forEach((p,i)=>i?ctx.lineTo(p[0]*vw,p[1]*vh):ctx.moveTo(p[0]*vw,p[1]*vh));
   if(closed)ctx.closePath();ctx.stroke();
 }
+function edgesFor(s){
+  const t=s.type;
+  if(t==='line')return [[0,1]];
+  if(t==='triangle')return [[0,1],[1,2],[2,0]];
+  if(t==='quad')return [[0,1],[1,2],[2,3],[3,0]];
+  if(t==='prism')return [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[0,3],[1,4],[2,5]];
+  if(t==='box')return [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  if(t==='pyramid')return [[0,1],[1,2],[2,3],[3,0],[0,4],[1,4],[2,4],[3,4]];
+  return [];
+}
 function drawShape(s,highlight=false){
   const p=s.points;ctx.save();ctx.lineWidth=s.thickness;ctx.strokeStyle=s.color;
   ctx.lineJoin='round';ctx.lineCap='round';
   if(s.type==='circle'){
+    ctx.setLineDash((s.lineStyle||'solid')==='dashed'?[9,6]:[]);
     const c=p[0],r=p[1];ctx.beginPath();ctx.arc(c[0]*vw,c[1]*vh,Math.hypot((r[0]-c[0])*vw,(r[1]-c[1])*vh),0,Math.PI*2);ctx.stroke();
-  }else if(s.type==='line')polygon(p,false);
-  else if(s.type==='triangle'||s.type==='quad')polygon(p,true);
-  else if(s.type==='prism'){
-    polygon(p.slice(0,3),true);polygon(p.slice(3,6),true);
-    for(let i=0;i<3;i++)polygon([p[i],p[i+3]],false);
-  }else if(s.type==='box'){
-    polygon(p.slice(0,4),true);polygon(p.slice(4,8),true);
-    for(let i=0;i<4;i++)polygon([p[i],p[i+4]],false);
-  }else if(s.type==='pyramid'){
-    polygon(p.slice(0,4),true);for(let i=0;i<4;i++)polygon([p[i],p[4]],false);
+  }else{
+    edgesFor(s).forEach(([i,j],idx)=>{
+      ctx.setLineDash((s.edgeStyles?.[idx]||s.lineStyle||'solid')==='dashed'?[9,6]:[]);
+      ctx.beginPath();ctx.moveTo(p[i][0]*vw,p[i][1]*vh);ctx.lineTo(p[j][0]*vw,p[j][1]*vh);ctx.stroke();
+    });
   }
+  ctx.setLineDash([]);
   if(highlight){
+    const edges=edgesFor(s);
+    if(selectedEdge>=0&&edges[selectedEdge]&&s===shapes[selected]){
+      const [i,j]=edges[selectedEdge],mid=[(p[i][0]+p[j][0])*vw/2,(p[i][1]+p[j][1])*vh/2];
+      ctx.beginPath();ctx.fillStyle='#fef08a';ctx.strokeStyle='#92400e';ctx.lineWidth=2;
+      ctx.arc(mid[0],mid[1],7,0,Math.PI*2);ctx.fill();ctx.stroke();
+    }
     ctx.lineWidth=1;ctx.strokeStyle='#145bb0';ctx.fillStyle='#fff';
     p.forEach(pt=>{ctx.beginPath();ctx.arc(pt[0]*vw,pt[1]*vh,7,0,Math.PI*2);ctx.fill();ctx.stroke();});
   }
@@ -105,17 +136,25 @@ function geometry(type,a,b){
   }else if(type==='pyramid'){
     p=[[minX,minY+dy*.57],[minX+dx*.65,minY+dy*.57],[maxX,maxY],[minX+dx*.35,maxY],[minX+dx*.52,minY]];
   }else p=[a,b];
-  return {type,points:p,color,thickness};
+  return {type,points:p,color,thickness,lineStyle,edgeStyles:{}};
 }
 const dist=(a,b)=>Math.hypot((a[0]-b[0])*vw,(a[1]-b[1])*vh);
+function edgeDistance(pt,a,b){
+  const px=pt[0]*vw,py=pt[1]*vh,x=a[0]*vw,y=a[1]*vh;
+  const dx=(b[0]-a[0])*vw,dy=(b[1]-a[1])*vh;
+  const t=Math.max(0,Math.min(1,((px-x)*dx+(py-y)*dy)/(dx*dx+dy*dy||1)));
+  return Math.hypot(px-x-t*dx,py-y-t*dy);
+}
 function findShape(pt){
   for(let i=shapes.length-1;i>=0;i--){
-    for(let j=0;j<shapes[i].points.length;j++)if(dist(pt,shapes[i].points[j])<18)return {i,j};
+    for(let j=0;j<shapes[i].points.length;j++)if(dist(pt,shapes[i].points[j])<18)return {i,j,edge:-1};
+    const edges=edgesFor(shapes[i]);
+    for(let j=0;j<edges.length;j++){const [u,v]=edges[j];if(edgeDistance(pt,shapes[i].points[u],shapes[i].points[v])<13)return {i,j:-1,edge:j};}
     const p=shapes[i].points;
     if(p.length>1){
       const minX=Math.min(...p.map(v=>v[0]))-.02,maxX=Math.max(...p.map(v=>v[0]))+.02;
       const minY=Math.min(...p.map(v=>v[1]))-.02,maxY=Math.max(...p.map(v=>v[1]))+.02;
-      if(pt[0]>=minX&&pt[0]<=maxX&&pt[1]>=minY&&pt[1]<=maxY)return {i,j:-1};
+      if(pt[0]>=minX&&pt[0]<=maxX&&pt[1]>=minY&&pt[1]<=maxY)return {i,j:-1,edge:-1};
     }
   }
   return null;
@@ -127,9 +166,9 @@ canvas.addEventListener('pointerdown',e=>{
   const p=pos(e);
   if(mode==='erase'){erase(p);return;}
   if(mode==='edit'){
-    const hit=findShape(p);selected=hit?hit.i:-1;
-    drag=hit?{kind:hit.j>=0?'vertex':'move',j:hit.j,last:p}:null;
-    draw();return;
+    const hit=findShape(p);selected=hit?hit.i:-1;selectedEdge=hit?hit.edge:-1;
+    drag=hit?{kind:hit.j>=0?'vertex':hit.edge>=0?'edge':'move',j:hit.j,last:p}:null;
+    refreshLineStyles();draw();return;
   }
   if(shapeButtons[mode]){shapeDraft=geometry(mode,p,[p[0]+.08,p[1]+.10]);drag={kind:'create',start:p};draw();return;}
   stroke={color,thickness,points:[p]};draw();
@@ -141,6 +180,7 @@ canvas.addEventListener('pointermove',e=>{
   if(mode==='edit'&&drag&&selected>=0){
     const target=shapes[selected];
     if(drag.kind==='vertex')target.points[drag.j]=p;
+    else if(drag.kind==='edge'){/* click selects edge; drag moves whole figure */const dx=p[0]-drag.last[0],dy=p[1]-drag.last[1];target.points=target.points.map(q=>[q[0]+dx,q[1]+dy]);}
     else{const dx=p[0]-drag.last[0],dy=p[1]-drag.last[1];target.points=target.points.map(q=>[q[0]+dx,q[1]+dy]);}
     drag.last=p;draw();return;
   }
@@ -150,7 +190,7 @@ canvas.addEventListener('pointermove',e=>{
 function end(e){
   if(e.pointerId!==pointer)return;
   if(stroke){strokes.push(stroke);stroke=null;}
-  if(shapeDraft){shapes.push(shapeDraft);selected=shapes.length-1;shapeDraft=null;setMode('edit');}
+  if(shapeDraft){shapes.push(shapeDraft);selected=shapes.length-1;selectedEdge=-1;shapeDraft=null;setMode('edit');refreshLineStyles();}
   drag=null;pointer=null;draw();
 }
 canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
