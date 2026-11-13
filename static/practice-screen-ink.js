@@ -20,7 +20,7 @@ document.head.append(style);
 const canvas=document.createElement('canvas');canvas.id='ldvlInkCanvas';document.body.append(canvas);
 const bar=document.createElement('div');bar.id='ldvlInkToolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Bút viết trên màn hình');document.body.append(bar);
 const ctx=canvas.getContext('2d');if(!ctx){canvas.remove();bar.remove();return;}
-let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null,lineStyle='solid',selectedEdge=-1;
+let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null,lineStyle='solid',selectedEdge=-1,vectorHead='single';
 function button(symbol,title,fn){const b=document.createElement('button');b.type='button';b.textContent=symbol;b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',fn);bar.append(b);return b;}
 function separator(){const e=document.createElement('div');e.className='sep';bar.append(e);}
 const select=button('☝','Chọn đáp án / tắt bút',()=>setMode('off'));
@@ -37,8 +37,24 @@ updateColors();separator();
 // Shapes remain editable: every displayed vertex is a draggable control.
 const models=[['line','╱','Đoạn thẳng'],['triangle','△','Tam giác'],
  ['quad','▱','Tứ giác (kéo từng đỉnh)'],['circle','○','Đường tròn'],
+ ['vector','→','Vectơ có mũi tên'],['doublevector','↔','Vectơ hai chiều'],
  ['prism','⬡','Lăng trụ tam giác'],['box','▣','Hình hộp'],['pyramid','⌂','Hình chóp']];
 models.forEach(([key,icon,name])=>{shapeButtons[key]=button(icon,name+' — kéo để tạo',()=>setMode(key));});
+const labelVector=button('A⃗','Đặt tên vectơ hoặc tên hai đầu mút',()=>{
+  const sh=shapes[selected];if(!sh||!['vector','doublevector'].includes(sh.type)){setMode('edit');return;}
+  const value=window.prompt('Nhãn vectơ (ví dụ: a, u, AB; bỏ trống để ẩn):',sh.label||'');
+  if(value===null)return;sh.label=value.trim().slice(0,20);draw();
+});
+const reverseVector=button('⇄','Đảo chiều vectơ đã chọn',()=>{
+  const sh=shapes[selected];if(!sh||!['vector','doublevector'].includes(sh.type))return;
+  sh.points.reverse();draw();
+});
+const copyVector=button('⧉','Sao chép và tịnh tiến vectơ đã chọn',()=>{
+  const sh=shapes[selected];if(!sh||!['vector','doublevector'].includes(sh.type))return;
+  const offset=[45/vw,35/vh];
+  const cloned={...sh,points:sh.points.map(p=>[p[0]+offset[0],p[1]+offset[1]]),edgeStyles:{...(sh.edgeStyles||{})}};
+  shapes.push(cloned);selected=shapes.length-1;selectedEdge=-1;setMode('edit');draw();
+});
 separator();
 const solidBtn=button('━','Nét liền: áp dụng cho cạnh đang chọn hoặc hình mới',()=>setLineStyle('solid'));
 const dashedBtn=button('┄','Nét đứt: áp dụng cho cạnh đang chọn hoặc hình mới',()=>setLineStyle('dashed'));
@@ -78,13 +94,31 @@ function polygon(points,closed){
 }
 function edgesFor(s){
   const t=s.type;
-  if(t==='line')return [[0,1]];
+  if(t==='line'||t==='vector'||t==='doublevector')return [[0,1]];
   if(t==='triangle')return [[0,1],[1,2],[2,0]];
   if(t==='quad')return [[0,1],[1,2],[2,3],[3,0]];
   if(t==='prism')return [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[0,3],[1,4],[2,5]];
   if(t==='box')return [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
   if(t==='pyramid')return [[0,1],[1,2],[2,3],[3,0],[0,4],[1,4],[2,4],[3,4]];
   return [];
+}
+function vectorArrow(a,b,width){
+  const ax=a[0]*vw,ay=a[1]*vh,bx=b[0]*vw,by=b[1]*vh;
+  const dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy);
+  if(len<1)return;
+  const unitX=dx/len,unitY=dy/len;
+  const side=Math.max(7,Math.min(17,width*3.7));
+  const depth=Math.max(13,Math.min(24,width*6));
+  ctx.beginPath();ctx.moveTo(bx-unitX*depth-unitY*side,by-unitY*depth+unitX*side);
+  ctx.lineTo(bx,by);ctx.lineTo(bx-unitX*depth+unitY*side,by-unitY*depth-unitX*side);ctx.stroke();
+}
+function vectorCaption(s){
+  if(!s.label)return;
+  const p=s.points,a=p[0],b=p[1],dx=(b[0]-a[0])*vw,dy=(b[1]-a[1])*vh;
+  const d=Math.max(1,Math.hypot(dx,dy)),cx=(a[0]+b[0])*vw/2,cy=(a[1]+b[1])*vh/2;
+  const label=String(s.label).slice(0,20);
+  ctx.save();ctx.setLineDash([]);ctx.fillStyle=s.color;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font='bold 18px Arial, sans-serif';ctx.fillText(label,cx+dy/d*18,cy-dx/d*18);ctx.restore();
 }
 function drawShape(s,highlight=false){
   const p=s.points;ctx.save();ctx.lineWidth=s.thickness;ctx.strokeStyle=s.color;
@@ -99,6 +133,11 @@ function drawShape(s,highlight=false){
     });
   }
   ctx.setLineDash([]);
+  if(s.type==='vector'||s.type==='doublevector'){
+    vectorArrow(p[0],p[1],s.thickness);
+    if(s.type==='doublevector')vectorArrow(p[1],p[0],s.thickness);
+    vectorCaption(s);
+  }
   if(highlight){
     const edges=edgesFor(s);
     if(selectedEdge>=0&&edges[selectedEdge]&&s===shapes[selected]){
@@ -123,7 +162,7 @@ function geometry(type,a,b){
   const minY=Math.min(a[1],b[1]),maxY=Math.max(a[1],b[1]);
   const dx=maxX-minX,dy=maxY-minY;
   let p;
-  if(type==='line')p=[a,b];
+  if(type==='line'||type==='vector'||type==='doublevector')p=[a,b];
   else if(type==='triangle')p=[[minX,minY+dy],[minX+dx/2,minY],[maxX,maxY]];
   else if(type==='quad')p=[[minX,minY],[maxX,minY],[maxX,maxY],[minX,maxY]];
   else if(type==='circle')p=[[(a[0]+b[0])/2,(a[1]+b[1])/2],[(a[0]+b[0])/2+Math.max(dx*vw,dy*vh)/2/vw,(a[1]+b[1])/2]];
@@ -136,7 +175,7 @@ function geometry(type,a,b){
   }else if(type==='pyramid'){
     p=[[minX,minY+dy*.57],[minX+dx*.65,minY+dy*.57],[maxX,maxY],[minX+dx*.35,maxY],[minX+dx*.52,minY]];
   }else p=[a,b];
-  return {type,points:p,color,thickness,lineStyle,edgeStyles:{}};
+  return {type,points:p,color,thickness,lineStyle,edgeStyles:{},label:''};
 }
 const dist=(a,b)=>Math.hypot((a[0]-b[0])*vw,(a[1]-b[1])*vh);
 function edgeDistance(pt,a,b){
