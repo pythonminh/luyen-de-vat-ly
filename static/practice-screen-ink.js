@@ -14,6 +14,20 @@ style.textContent=[
 '#ldvlInkToolbar .sep{height:1px;background:#cbd5e1;margin:2px 3px}',
 '#ldvlInkTab{position:fixed;right:6px;bottom:90px;z-index:2147481900;border:1px solid #b9cde3;border-radius:9px;background:#176bd3;color:#fff;padding:9px 12px}',
 '#ldvlInkTab[hidden]{display:none}',
+'#ldvlInkToolbar .ink-dock-head{display:none}',
+'@media(max-width:700px){',
+' #ldvlInkToolbar{left:auto;right:0;top:68px;transform:none;width:94px;max-height:min(72dvh,520px);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:5px;padding:5px;box-sizing:border-box;border-radius:12px 0 0 12px;overscroll-behavior:contain}',
+' #ldvlInkToolbar.ink-side-left{left:0;right:auto;border-radius:0 12px 12px 0}',
+' #ldvlInkToolbar button{width:100%;height:35px;min-height:35px;font-size:17px;padding:0}',
+' #ldvlInkToolbar .ink-color{width:25px;height:25px;min-height:25px;justify-self:center}',
+' #ldvlInkToolbar .sep{grid-column:1/-1;width:auto;margin:1px 0}',
+' #ldvlInkToolbar .ink-dock-head{grid-column:1/-1;display:flex;align-items:center;position:sticky;top:-5px;margin:-5px -5px 2px;padding:5px 4px;background:#fff;z-index:2;border-bottom:1px solid #dee9f3;gap:3px;touch-action:none}',
+' #ldvlInkToolbar .ink-dock-head button{width:25px;height:28px;min-height:28px;flex:none;font-size:15px}',
+' #ldvlInkToolbar .ink-dock-head .ink-grip{flex:1;min-width:0;font-size:15px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}',
+' #ldvlInkTab{width:29px;height:44px;box-sizing:border-box;display:grid;place-items:center;padding:0;right:0;top:42%;bottom:auto;border-radius:10px 0 0 10px;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 2px 8px #1235}',
+' #ldvlInkTab.ink-side-left{left:0;right:auto;border-radius:0 10px 10px 0}',
+' #ldvlInkTab[hidden]{display:none}',
+'}',
 '@media print{#ldvlInkToolbar,#ldvlInkCanvas,#ldvlInkTab{display:none!important}}'
 ].join('');
 document.head.append(style);
@@ -183,9 +197,80 @@ function setThickness(n){thickness=n;thin.setAttribute('aria-pressed',String(n==
 setThickness(3);separator();
 button('↶','Hoàn tác nét/hình cuối',()=>{if(selected>=0){shapes.splice(selected,1);selected=-1;}else if(shapes.length)shapes.pop();else strokes.pop();draw()});
 button('▤','Xóa toàn bộ nét và hình',()=>{strokes=[];shapes=[];pointLinePerps=[];perpPending=null;polygonDraft=[];stroke=null;shapeDraft=null;selected=-1;draw()});
-const tab=document.createElement('button');tab.id='ldvlInkTab';tab.textContent='✎';tab.title='Mở công cụ vẽ';tab.hidden=true;tab.onclick=()=>{bar.hidden=false;tab.hidden=true};document.body.append(tab);
-button('✕','Ẩn bảng bút',()=>{bar.hidden=true;tab.hidden=false;setMode('off')});
+const tab=document.createElement('button');tab.id='ldvlInkTab';tab.textContent='✎';tab.title='Mở công cụ vẽ';tab.setAttribute('aria-label','Mở thanh bút vẽ');tab.hidden=true;document.body.append(tab);
+const mobileInk=window.matchMedia('(max-width:700px)');
+let inkLeft=false,inkTop=68,tabTop=0,suppressTabClick=false;
+const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
+function applyInkDock(){
+  bar.classList.toggle('ink-side-left',inkLeft);
+  tab.classList.toggle('ink-side-left',inkLeft);
+  if(mobileInk.matches){
+    inkTop=clamp(inkTop,Math.max(5,window.visualViewport?.offsetTop||0),Math.max(5,window.innerHeight-bar.offsetHeight-5));
+    bar.style.top=inkTop+'px';
+    tabTop=clamp(tabTop||inkTop+8,8,Math.max(8,window.innerHeight-52));
+    tab.style.top=tabTop+'px';
+    tab.style.bottom='auto';
+  }else{
+    bar.style.top='';tab.style.top='';tab.style.bottom='';
+    tab.style.left='';tab.style.right='';
+  }
+}
+function collapseInk(keepDrawing=false){
+  if(!keepDrawing)setMode('off');
+  if(mobileInk.matches)tabTop=clamp((bar.getBoundingClientRect().top||inkTop)+8,8,Math.max(8,window.innerHeight-52));
+  bar.hidden=true;tab.hidden=false;applyInkDock();
+}
+function expandInk(){
+  bar.hidden=false;tab.hidden=true;applyInkDock();
+}
+const dockHead=document.createElement('div');dockHead.className='ink-dock-head';
+const grip=document.createElement('button');grip.type='button';grip.className='ink-grip';grip.textContent='⋮⋮ Kéo';
+grip.title='Giữ và kéo thanh bút lên/xuống, sang mép trái/phải';grip.setAttribute('aria-label',grip.title);
+const edge=document.createElement('button');edge.type='button';edge.textContent='⇆';edge.title='Đưa thanh bút sang mép còn lại';edge.setAttribute('aria-label',edge.title);
+edge.onclick=()=>{inkLeft=!inkLeft;applyInkDock();};
+const shrink=document.createElement('button');shrink.type='button';shrink.textContent='−';shrink.title='Thu nhỏ thanh bút, giữ công cụ vẽ đang dùng';shrink.setAttribute('aria-label',shrink.title);
+shrink.onclick=()=>collapseInk(true);
+dockHead.append(grip,edge,shrink);bar.prepend(dockHead);
+let moveGrip=null;
+grip.addEventListener('pointerdown',e=>{
+  if(!mobileInk.matches)return;
+  e.preventDefault();e.stopPropagation();grip.setPointerCapture(e.pointerId);
+  moveGrip={id:e.pointerId,startY:e.clientY,baseY:bar.getBoundingClientRect().top};
+});
+grip.addEventListener('pointermove',e=>{
+  if(!moveGrip||moveGrip.id!==e.pointerId)return;
+  e.preventDefault();inkTop=moveGrip.baseY+(e.clientY-moveGrip.startY);
+  inkLeft=e.clientX<window.innerWidth/2;applyInkDock();
+});
+function stopGrip(e){if(moveGrip?.id===e.pointerId){moveGrip=null;applyInkDock();}}
+grip.addEventListener('pointerup',stopGrip);grip.addEventListener('pointercancel',stopGrip);
+let moveTab=null;
+tab.addEventListener('pointerdown',e=>{
+  if(!mobileInk.matches)return;
+  moveTab={id:e.pointerId,x:e.clientX,y:e.clientY,top:tab.getBoundingClientRect().top,moved:false};
+  tab.setPointerCapture(e.pointerId);
+});
+tab.addEventListener('pointermove',e=>{
+  if(!moveTab||moveTab.id!==e.pointerId)return;
+  const dy=e.clientY-moveTab.y;
+  if(Math.abs(dy)>7||Math.abs(e.clientX-moveTab.x)>7)moveTab.moved=true;
+  if(!moveTab.moved)return;
+  e.preventDefault();
+  tabTop=moveTab.top+dy;
+  inkLeft=e.clientX<window.innerWidth/2;
+  inkTop=tabTop-8;
+  applyInkDock();
+});
+tab.addEventListener('pointerup',e=>{
+  if(moveTab?.id===e.pointerId){if(moveTab.moved)suppressTabClick=true;moveTab=null;}
+});
+tab.addEventListener('pointercancel',()=>{moveTab=null;});
+tab.onclick=()=>{if(suppressTabClick){suppressTabClick=false;return;}expandInk();};
+button('✕','Tắt bút và thu thanh công cụ',()=>collapseInk(false));
 setMode('off');
+if(mobileInk.matches){collapseInk(false);}else applyInkDock();
+mobileInk.addEventListener?.('change',()=>{if(mobileInk.matches)collapseInk(false);else{expandInk();applyInkDock();}});
+
 function resize(){
   // Keep the canvas pixel grid aligned to its real CSS rectangle. On iPad Safari,
   // innerWidth/innerHeight can differ from the fixed element after pinch zoom.
