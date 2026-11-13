@@ -20,7 +20,7 @@ document.head.append(style);
 const canvas=document.createElement('canvas');canvas.id='ldvlInkCanvas';document.body.append(canvas);
 const bar=document.createElement('div');bar.id='ldvlInkToolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Bút viết trên màn hình');document.body.append(bar);
 const ctx=canvas.getContext('2d');if(!ctx){canvas.remove();bar.remove();return;}
-let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null,lineStyle='solid',selectedEdge=-1,selectedVertex=-1,vectorHead='single';
+let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null,lineStyle='solid',selectedEdge=-1,selectedVertex=-1,vectorHead='single',pointLinePerps=[],perpPending=null;
 function button(symbol,title,fn){const b=document.createElement('button');b.type='button';b.textContent=symbol;b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',fn);bar.append(b);return b;}
 function separator(){const e=document.createElement('div');e.className='sep';bar.append(e);}
 const select=button('☝','Chọn đáp án / tắt bút',()=>setMode('off'));
@@ -28,7 +28,7 @@ const pen=button('✎','Viết hoặc khoanh tròn',()=>setMode('pen'));
 const eraser=button('⌫','Tẩy nét',()=>setMode('erase'));
 const edit=button('⬡','Chọn hình và kéo các đỉnh',()=>setMode('edit'));
 const shapeButtons={};
-function setMode(m){mode=m;canvas.classList.toggle('active',m!=='off');[select,pen,eraser,edit].forEach((b,i)=>b.setAttribute('aria-pressed',String(m===['off','pen','erase','edit'][i])));Object.entries(shapeButtons).forEach(([k,b])=>b.setAttribute('aria-pressed',String(m===k)));draw();}
+function setMode(m){if(m!=='perp-point-line')perpPending=null;mode=m;canvas.classList.toggle('active',m!=='off');[select,pen,eraser,edit].forEach((b,i)=>b.setAttribute('aria-pressed',String(m===['off','pen','erase','edit'][i])));Object.entries(shapeButtons).forEach(([k,b])=>b.setAttribute('aria-pressed',String(m===k)));draw();}
 separator();
 const choices=['#e11d48','#2563eb','#15803d','#111827','#f59e0b'];
 const swatches=choices.map(c=>{const b=button('','Đổi màu '+c,()=>{color=c;updateColors();if(mode==='off')setMode('pen');});b.classList.add('ink-color');b.style.backgroundColor=c;return b;});
@@ -79,6 +79,10 @@ button('M','Đánh dấu trung điểm cạnh đã chọn',()=>addConstruction('
 button('M↗','Vẽ đường trung tuyến từ đỉnh đối diện đến trung điểm cạnh',()=>addConstruction('median'));
 button('⟂','Dựng đường vuông góc (đường cao hoặc trung trực)',()=>addConstruction('perpendicular'));
 button('∠½','Dựng đường phân giác trong tam giác',()=>addConstruction('bisector'));
+const pointLineBtn=button('P⟂d','Qua điểm P vuông góc đường d: bấm P rồi bấm cạnh/đường',()=>{
+  perpPending=null;setMode('perp-point-line');
+  window.alert('Dựng PH ⟂ d: 1) Bấm một điểm P (có thể bấm đỉnh hoặc vị trí trống). 2) Bấm vào đường thẳng/cạnh d. Nhấn Esc để thoát.');
+});
 function addConstruction(kind){
   const sh=shapes[selected];
   if(!sh){window.alert('Chọn hình hoặc cạnh bằng công cụ ⬡ trước.');setMode('edit');return;}
@@ -114,7 +118,7 @@ const thin=button('•','Nét mảnh',()=>setThickness(3)),bold=button('●','N�
 function setThickness(n){thickness=n;thin.setAttribute('aria-pressed',String(n===3));bold.setAttribute('aria-pressed',String(n===7));}
 setThickness(3);separator();
 button('↶','Hoàn tác nét/hình cuối',()=>{if(selected>=0){shapes.splice(selected,1);selected=-1;}else if(shapes.length)shapes.pop();else strokes.pop();draw()});
-button('▤','Xóa toàn bộ nét và hình',()=>{strokes=[];shapes=[];stroke=null;shapeDraft=null;selected=-1;draw()});
+button('▤','Xóa toàn bộ nét và hình',()=>{strokes=[];shapes=[];pointLinePerps=[];perpPending=null;stroke=null;shapeDraft=null;selected=-1;draw()});
 const tab=document.createElement('button');tab.id='ldvlInkTab';tab.textContent='✎';tab.title='Mở công cụ vẽ';tab.hidden=true;tab.onclick=()=>{bar.hidden=false;tab.hidden=true};document.body.append(tab);
 button('✕','Ẩn bảng bút',()=>{bar.hidden=true;tab.hidden=false;setMode('off')});
 setMode('off');
@@ -239,7 +243,42 @@ function drawShape(s,highlight=false){
   }
   ctx.restore();
 }
-function draw(){ctx.clearRect(0,0,vw,vh);strokes.forEach(paint);paint(stroke);shapes.forEach((s,i)=>drawShape(s,selected===i&&mode==='edit'));if(shapeDraft)drawShape(shapeDraft,true);}
+function pointOf(ref){
+  if(ref.shape){if(!shapes.includes(ref.shape))return null;const pt=ref.shape.points[ref.vertex];return pt?[pt[0]*vw,pt[1]*vh]:null;}
+  return ref.position?[ref.position[0]*vw,ref.position[1]*vh]:null;
+}
+function renderPointLinePerps(){
+  for(const c of pointLinePerps){
+    if(!shapes.includes(c.lineShape))continue;
+    const edges=edgesFor(c.lineShape),pair=edges[c.lineEdge];
+    if(!pair)continue;const P=pointOf(c.point);if(!P)continue;
+    const A=c.lineShape.points[pair[0]],B=c.lineShape.points[pair[1]];
+    const ax=A[0]*vw,ay=A[1]*vh,dx=(B[0]-A[0])*vw,dy=(B[1]-A[1])*vh;
+    const length2=dx*dx+dy*dy;if(length2<1e-8)continue;
+    const t=((P[0]-ax)*dx+(P[1]-ay)*dy)/length2;
+    const H=[ax+t*dx,ay+t*dy];const len=Math.sqrt(length2);
+    ctx.save();ctx.strokeStyle=c.color;ctx.fillStyle=c.color;ctx.lineWidth=c.thickness;
+    ctx.setLineDash(c.lineStyle==='dashed'?[8,5]:[]);
+    ctx.beginPath();ctx.moveTo(P[0],P[1]);ctx.lineTo(H[0],H[1]);ctx.stroke();
+    // Right-angle marker; correctly follows the infinite supporting line.
+    ctx.setLineDash([]);const ex=dx/len,ey=dy/len;
+    const nx=-ey,ny=ex;const side=Math.sign((P[0]-H[0])*nx+(P[1]-H[1])*ny)||1;
+    if(Math.hypot(P[0]-H[0],P[1]-H[1])>5){
+      const k=10;
+      ctx.beginPath();ctx.moveTo(H[0]+ex*k,H[1]+ey*k);
+      ctx.lineTo(H[0]+ex*k+nx*k*side,H[1]+ey*k+ny*k*side);
+      ctx.lineTo(H[0]+nx*k*side,H[1]+ny*k*side);ctx.stroke();
+    }
+    ctx.beginPath();ctx.arc(H[0],H[1],3.5,0,2*Math.PI);ctx.fill();
+    ctx.font='bold 13px Arial';ctx.fillText('H',H[0]+7,H[1]-8);
+    if(!c.point.shape){ctx.beginPath();ctx.arc(P[0],P[1],4,0,2*Math.PI);ctx.fill();ctx.fillText('P',P[0]+7,P[1]-8);}
+    ctx.restore();
+  }
+  if(perpPending&&mode==='perp-point-line'){
+    const P=pointOf(perpPending);if(P){ctx.save();ctx.fillStyle='#ea580c';ctx.beginPath();ctx.arc(P[0],P[1],6,0,2*Math.PI);ctx.fill();ctx.font='bold 13px Arial';ctx.fillText('P',P[0]+8,P[1]-8);ctx.restore();}
+  }
+}
+function draw(){ctx.clearRect(0,0,vw,vh);strokes.forEach(paint);paint(stroke);shapes.forEach((s,i)=>drawShape(s,selected===i&&mode==='edit'));renderPointLinePerps();if(shapeDraft)drawShape(shapeDraft,true);}
 function scaleShape(f){
   if(selected<0||!shapes[selected]){setMode('edit');return;}
   const s=shapes[selected];const cx=s.points.reduce((a,p)=>a+p[0],0)/s.points.length;
@@ -293,6 +332,20 @@ canvas.addEventListener('pointerdown',e=>{
   if(mode==='off')return;e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer=e.pointerId;
   const p=pos(e);
   if(mode==='erase'){erase(p);return;}
+  if(mode==='perp-point-line'){
+    const hit=findShape(p);
+    if(!perpPending){
+      // A vertex is attached to its parent; a blank location is a free P.
+      perpPending=hit&&hit.j>=0?
+        {shape:shapes[hit.i],vertex:hit.j}:{position:[p[0],p[1]]};
+      draw();return;
+    }
+    if(!hit||hit.edge<0){window.alert('Hãy bấm trực tiếp lên cạnh hoặc đường thẳng d (không bấm đầu mút).');draw();return;}
+    const edge=edgesFor(shapes[hit.i])[hit.edge];
+    if(!edge){draw();return;}
+    pointLinePerps.push({point:perpPending,lineShape:shapes[hit.i],lineEdge:hit.edge,color,thickness,lineStyle});
+    perpPending=null;setMode('edit');draw();return;
+  }
   if(mode==='edit'){
     const hit=findShape(p);selected=hit?hit.i:-1;selectedEdge=hit?hit.edge:-1;selectedVertex=hit?hit.j:-1;
     drag=hit?{kind:hit.j>=0?'vertex':hit.edge>=0?'edge':'move',j:hit.j,last:p}:null;
@@ -322,7 +375,7 @@ function end(e){
   drag=null;pointer=null;draw();
 }
 canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
-window.addEventListener('scroll',()=>{if(strokes.length||shapes.length){strokes=[];shapes=[];selected=-1;selectedEdge=-1;selectedVertex=-1;stroke=null;draw();}},{passive:true});
+window.addEventListener('scroll',()=>{if(strokes.length||shapes.length||pointLinePerps.length){strokes=[];shapes=[];pointLinePerps=[];perpPending=null;selected=-1;selectedEdge=-1;selectedVertex=-1;stroke=null;draw();}},{passive:true});
 window.addEventListener('resize',resize);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')setMode('off');if(/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||'')||e.target?.isContentEditable)return;if(e.key.toLowerCase()==='p'&&!e.ctrlKey&&!e.altKey)setMode(mode==='pen'?'off':'pen');});
 resize();
