@@ -247,13 +247,13 @@ grip.addEventListener('pointerup',stopGrip);grip.addEventListener('pointercancel
 let moveTab=null;
 tab.addEventListener('pointerdown',e=>{
   if(!mobileInk.matches)return;
-  moveTab={id:e.pointerId,y:e.clientY,top:tab.getBoundingClientRect().top,moved:false};
+  moveTab={id:e.pointerId,x:e.clientX,y:e.clientY,top:tab.getBoundingClientRect().top,moved:false};
   tab.setPointerCapture(e.pointerId);
 });
 tab.addEventListener('pointermove',e=>{
   if(!moveTab||moveTab.id!==e.pointerId)return;
   const dy=e.clientY-moveTab.y;
-  if(Math.abs(dy)>5||Math.abs(e.movementX)>5||e.clientX<(inkLeft?24:window.innerWidth-24))moveTab.moved=true;
+  if(Math.abs(dy)>7||Math.abs(e.clientX-moveTab.x)>7)moveTab.moved=true;
   if(!moveTab.moved)return;
   e.preventDefault();
   tabTop=moveTab.top+dy;
