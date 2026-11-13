@@ -106,7 +106,7 @@ def saved_exam_game(code=None):
 <script id="gameData" type="application/json">'''+data+'''</script>'''
         else:
             game_section='<div class="game-hint">Chọn một trò chơi ở trên để tạo phiên chơi ngay từ mã đề này.</div>'
-        body=GAME_CSS+hero+controls+cards+game_section+(GAME_JS if mode else '')
+        body=GAME_CSS+hero+controls+cards+game_section+(GAME_JS if mode else '')+('<script defer src="/static/presentation-ink.js"></script>' if mode == 'present' else '')
         return page('Trò chơi từ đề: '+title,'<main class="game-wrap">'+body+'</main>')
     except Exception as e:
         return page('Trò chơi từ đề','<div class="wrap"><p class="err">Không tạo được trò chơi: '+html.escape(str(e))+'</p><a href="/member/exams/saved">← Quay lại kho đề</a></div>'),400
