@@ -425,11 +425,9 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
         else:
             xoa=f" <label class='dupx'><input form='dupdel' type='checkbox' name='drop' value='{drop_key}' data-cung='1'> Xóa bản cùng đề này</label>"
     find=_esc(f"{qid} {cau} {text} {q.get('nguon') or ''} {dup.get('label') or ''}".lower())
-    qlab = (
-        f"<span class='qbadge'>Câu {seq}/{total}</span>"
-        if preview_only
-        else f"<label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
-    )
+    # Preview mode must retain selection inputs for practice / teacher projection.
+    # It hides editing actions only, never the question checkboxes.
+    qlab = f"<label class='qcheck'><input type='checkbox' name='qid' value='{n}'><span>Câu {seq}/{total}</span></label>"
     return (f"<article class='qcard{dcls}' data-drop='{drop_key}' data-idx='{fi}' data-find='{find}' data-qid='{_esc(qid.lower())}' data-dup='{1 if dup.get('label') else 0}' data-kind='{kind}'><div class='qhead'>{qlab}"
             f"<span class='qid'>ID: {html.escape(qid)}</span>{dtag}{xoa}<span class='badge'>{html.escape(badge)}</span>"
             f"{tex_badge}{gh}{nguon_html(q)}<span class='level muc-{muc}'>Mức {html.escape(muc_label(muc))}</span>"
@@ -633,7 +631,12 @@ def member_dang():
         form_close="</form>"
     else:
         guest_note="<div class='notice'>👨‍🎓 Chế độ học sinh: bấm <b>▶ Bắt đầu làm bài</b> để trả lời và nhận điểm; hoặc chọn các câu muốn luyện bên dưới.</div>"
-        tools=(kindbar+
+        preview_present = (
+            "<div class='toolbar'><button type='button' class='btn' id='qPresentBtn'>📺 Chiếu câu đã chọn</button>"
+            "<button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả để chiếu</button></div>"
+        ) if session.get('admin_student_preview') and can_manage_bank() else ""
+
+        tools=(preview_present+kindbar+
           "<div class='toolbar'><button type='button' class='btn' onclick='setAll(true)'>☑ Chọn tất cả</button><button type='button' class='btn' onclick='setAll(false)'>☐ Bỏ chọn</button>"
           + find_box
           + "<span id='sum' class='notice mini'>Đã chọn: 0 câu</span></div>")
@@ -691,6 +694,11 @@ def member_dang():
         from admin_rewrite import REWRITE_CLIENT_JS
         from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
         rw_js = REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
+    elif can_do and session.get('admin_student_preview') and can_manage_bank():
+        # The genuine admin may still cast selected questions while testing as a student.
+        # Ordinary student accounts never receive host controls.
+        from live_present import PRESENT_HOST_JS
+        rw_js = PRESENT_HOST_JS
     exam_entry = ""
     if admin_view:
         exam_entry = (
