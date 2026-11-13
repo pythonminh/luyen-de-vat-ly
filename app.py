@@ -4778,7 +4778,7 @@ else if(storage)storage.textContent='📱 Đang lưu trên trình duyệt, chưa
           f"<span class='quizstat'>✓ {right} · 🔥 {streak}</span><div class='vip-inline-nav'><details class='practice-filters'><summary>☰ Dạng / độ khó</summary><div class='vip-filter-panel'>{tabs}</div></details><details class='practice-questions'><summary>☷ Câu {pos+1}/{len(ids)}</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details></div></div><div class='body'>{admin_ai_actions}<div id='praise'></div>"
           f"<div class='practice-split' id='psplit'><div class='practice-q'><div id='q' class='qbox'></div></div><aside class='practice-ai' id='aipane' hidden></aside></div></div></div></div>")
     js=r'''<script>
-const Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;
+let Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;
 window.practicePath=__PATH__;window.practiceIds=__IDS__;window.practicePos=__QPOS__;window.__ldvlQuizPos=__QPOS__;
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||document.getElementById('q'));el=el||document.getElementById('q');if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}MathJax.typesetPromise([el]).catch(function(){});}}
