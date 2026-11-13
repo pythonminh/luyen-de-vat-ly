@@ -3,7 +3,7 @@
 if(!document.querySelector('.vip-practice-wrap')||document.getElementById('ldvlInkToolbar'))return;
 const style=document.createElement('style');
 style.textContent=[
-'#ldvlInkCanvas{position:fixed;inset:0;width:100vw;height:100vh;z-index:2147481800;pointer-events:none;touch-action:none}',
+'#ldvlInkCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147481800;pointer-events:none;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}',
 '#ldvlInkCanvas.active{pointer-events:auto;cursor:crosshair}',
 '#ldvlInkToolbar{position:fixed;right:8px;top:50%;transform:translateY(-50%);z-index:2147481900;display:flex;flex-direction:column;gap:4px;padding:5px;background:#fff;border:1px solid #b9cde3;border-radius:12px;box-shadow:0 5px 20px #0b295333;max-height:90dvh;overflow:auto}',
 '#ldvlInkToolbar[hidden]{display:none}',
@@ -20,7 +20,7 @@ document.head.append(style);
 const canvas=document.createElement('canvas');canvas.id='ldvlInkCanvas';document.body.append(canvas);
 const bar=document.createElement('div');bar.id='ldvlInkToolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Bút viết trên màn hình');document.body.append(bar);
 const ctx=canvas.getContext('2d');if(!ctx){canvas.remove();bar.remove();return;}
-let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null,lineStyle='solid',selectedEdge=-1,selectedVertex=-1,vectorHead='single',pointLinePerps=[],perpPending=null,polygonDraft=[],polygonNotice=null;
+let mode='off',color='#e11d48',thickness=3,strokes=[],stroke=null,pointer=null,vw=1,vh=1,shapes=[],selected=-1,shapeDraft=null,drag=null,lineStyle='solid',selectedEdge=-1,selectedVertex=-1,vectorHead='single',pointLinePerps=[],perpPending=null,polygonDraft=[],polygonNotice=null,lastPenAt=0,activePointerType=null;
 function button(symbol,title,fn){const b=document.createElement('button');b.type='button';b.textContent=symbol;b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',fn);bar.append(b);return b;}
 function separator(){const e=document.createElement('div');e.className='sep';bar.append(e);}
 const select=button('☝','Chọn đáp án / tắt bút',()=>setMode('off'));
@@ -186,7 +186,15 @@ button('▤','Xóa toàn bộ nét và hình',()=>{strokes=[];shapes=[];pointLin
 const tab=document.createElement('button');tab.id='ldvlInkTab';tab.textContent='✎';tab.title='Mở công cụ vẽ';tab.hidden=true;tab.onclick=()=>{bar.hidden=false;tab.hidden=true};document.body.append(tab);
 button('✕','Ẩn bảng bút',()=>{bar.hidden=true;tab.hidden=false;setMode('off')});
 setMode('off');
-function resize(){vw=Math.max(1,innerWidth);vh=Math.max(1,innerHeight);const dpr=Math.min(3,devicePixelRatio||1);canvas.width=Math.round(vw*dpr);canvas.height=Math.round(vh*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
+function resize(){
+  // Keep the canvas pixel grid aligned to its real CSS rectangle. On iPad Safari,
+  // innerWidth/innerHeight can differ from the fixed element after pinch zoom.
+  const bounds=canvas.getBoundingClientRect();
+  vw=Math.max(1,bounds.width);vh=Math.max(1,bounds.height);
+  const dpr=Math.min(3,window.devicePixelRatio||1);
+  canvas.width=Math.round(vw*dpr);canvas.height=Math.round(vh*dpr);
+  ctx.setTransform(canvas.width/vw,0,0,canvas.height/vh,0,0);draw();
+}
 function paint(s){if(!s||!s.points.length)return;ctx.beginPath();ctx.strokeStyle=s.color;ctx.lineWidth=s.thickness;ctx.lineJoin='round';ctx.lineCap='round';s.points.forEach((p,i)=>i?ctx.lineTo(p[0]*vw,p[1]*vh):ctx.moveTo(p[0]*vw,p[1]*vh));if(s.points.length===1){const p=s.points[0];ctx.lineTo(p[0]*vw+.01,p[1]*vh+.01);}ctx.stroke();}
 function polygon(points,closed){
   if(!points.length)return;ctx.beginPath();
@@ -399,10 +407,34 @@ function findShape(pt){
   }
   return null;
 }
-function pos(e){return[e.clientX/vw,e.clientY/vh];}
+function pos(e){
+  // Both drawing and rendering use canvas-local CSS pixels, including browser zoom.
+  const rect=canvas.getBoundingClientRect();
+  return [(e.clientX-rect.left)/Math.max(1,rect.width),
+          (e.clientY-rect.top)/Math.max(1,rect.height)];
+}
+function acceptPointer(e){
+  // Reject fingers touching the glass while Apple Pencil / a stylus is in use.
+  // Touch-only tablets still work normally, and mouse/trackpad is unaffected.
+  const now=performance.now();
+  if(e.pointerType==='pen'){lastPenAt=now;return true;}
+  if(e.pointerType==='touch'&&(activePointerType==='pen'||now-lastPenAt<1300))return false;
+  return true;
+}
+function appendInkSamples(e){
+  if(!stroke)return;
+  // Coalesced pen samples preserve curves and handwriting between pointermove frames.
+  const points=typeof e.getCoalescedEvents==='function'?e.getCoalescedEvents():[e];
+  const samples=points.length?points:[e];
+  for(const sample of samples){
+    const p=pos(sample),last=stroke.points[stroke.points.length-1];
+    if(!last||Math.hypot((p[0]-last[0])*vw,(p[1]-last[1])*vh)>=0.4)stroke.points.push(p);
+  }
+}
 function erase(p){const x=p[0]*vw,y=p[1]*vh;strokes=strokes.filter(s=>!s.points.some(q=>Math.hypot(q[0]*vw-x,q[1]*vh-y)<20));draw();}
 canvas.addEventListener('pointerdown',e=>{
-  if(mode==='off')return;e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer=e.pointerId;
+  if(mode==='off'||pointer!==null||!acceptPointer(e))return;
+  e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer=e.pointerId;activePointerType=e.pointerType;
   const p=pos(e);
   if(mode==='erase'){erase(p);return;}
   if(mode==='polygon'){addPolygonPoint(p);return;}
@@ -430,6 +462,7 @@ canvas.addEventListener('pointerdown',e=>{
 });
 canvas.addEventListener('pointermove',e=>{
   if(e.pointerId!==pointer)return;
+  if(e.pointerType==='pen')lastPenAt=performance.now();
   const p=pos(e);
   if(mode==='erase'){erase(p);return;}
   if(mode==='edit'&&drag&&selected>=0){
@@ -440,17 +473,18 @@ canvas.addEventListener('pointermove',e=>{
     drag.last=p;draw();return;
   }
   if(drag?.kind==='create'){shapeDraft=geometry(mode,drag.start,p);draw();return;}
-  if(stroke){stroke.points.push(p);draw();}
+  if(stroke){appendInkSamples(e);draw();}
 });
 function end(e){
   if(e.pointerId!==pointer)return;
-  if(stroke){strokes.push(stroke);stroke=null;}
+  if(stroke){appendInkSamples(e);strokes.push(stroke);stroke=null;}
   if(shapeDraft){shapes.push(shapeDraft);selected=shapes.length-1;selectedEdge=-1;selectedVertex=-1;shapeDraft=null;refreshLineStyles(); /* Keep chosen drawing tool active for next stroke. */}
-  drag=null;pointer=null;draw();
+  drag=null;pointer=null;activePointerType=null;draw();
 }
 canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
 window.addEventListener('scroll',()=>{if(strokes.length||shapes.length||pointLinePerps.length||polygonDraft.length){strokes=[];shapes=[];pointLinePerps=[];polygonDraft=[];perpPending=null;selected=-1;selectedEdge=-1;selectedVertex=-1;stroke=null;draw();}},{passive:true});
 window.addEventListener('resize',resize);
+if(window.visualViewport){window.visualViewport.addEventListener('resize',resize);window.visualViewport.addEventListener('scroll',resize);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')setMode('off');if(/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||'')||e.target?.isContentEditable)return;if(e.key.toLowerCase()==='p'&&!e.ctrlKey&&!e.altKey)setMode(mode==='pen'?'off':'pen');});
 resize();
 })();
