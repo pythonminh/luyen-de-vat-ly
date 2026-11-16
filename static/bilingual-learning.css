@@ -34,3 +34,16 @@
 }
 @media(prefers-reduced-motion:reduce){#ldvl-lang-panel *{scroll-behavior:auto!important}}
 @media print{#ldvl-lang-toggle,#ldvl-lang-panel{display:none!important}}
+
+/* On-page language swap; original questions and form inputs remain in the DOM. */
+.ll-inline-original:not([hidden]), .ll-inline-target:not([hidden]){display:contents}
+.ll-inline-original[hidden],.ll-inline-target[hidden]{display:none!important}
+.ll-inline-target{white-space:pre-wrap;overflow-wrap:anywhere;line-height:inherit}
+.ll-inline-both>.ll-inline-original:not([hidden]){display:block!important}
+.ll-inline-both>.ll-inline-target:not([hidden]){display:block!important;margin-top:5px;padding:5px 9px;border-left:3px solid #2775bb;background:#eef6ff;border-radius:0 6px 6px 0;color:#163d61}
+label.ll-inline-both>.ll-inline-original:not([hidden]),label.ll-inline-both>.ll-inline-target:not([hidden]){display:inline!important}
+label.ll-inline-both>.ll-inline-target:not([hidden]){margin:0 0 0 5px;padding:2px 5px}
+@media(max-width:620px){
+ .ll-inline-both>.ll-inline-target:not([hidden]){padding:4px 6px;font-size:.96em}
+ .ll-inline-target{white-space:pre-wrap}
+}
