@@ -30,7 +30,12 @@ _PROTECT = re.compile(
 
 def _rate_limited() -> bool:
     # Limit requests even when the caller supplies their own Gemini key.
-    identity = (str(request.remote_addr or "")[:90], str(request.path))
+    # A whole classroom may share a public IP; limit per logged-in account.
+    user = member_current()
+    login = str((user or {}).get("username") or "").strip().lower() if isinstance(user, dict) else ""
+    if not login:
+        login = "admin" if admin_current() else ("ip:" + str(request.remote_addr or "")[:90])
+    identity = (login, str(request.path))
     now = time.monotonic()
     with _RATE_LOCK:
         q = _RATE[identity]
