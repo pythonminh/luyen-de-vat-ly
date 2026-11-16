@@ -236,7 +236,7 @@ def bilingual_translate_batch():
                     continue
                 raw = str(raw or "").strip()
                 if raw.startswith("```"):
-                    raw = re.sub(r"^\`\`\`(?:json)?\\s*|\\s*\`\`\`$", "", raw).strip()
+                    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw).strip()
                 decoded = json.loads(raw)
                 if not isinstance(decoded, list) or len(decoded) != len(items):
                     continue
