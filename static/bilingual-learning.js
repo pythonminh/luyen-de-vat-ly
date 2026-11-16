@@ -227,7 +227,8 @@
     return true;
   }
   function installFrameBridge(){
-    const script='<script src="'+location.origin+'/static/bilingual-learning.js?v=20261116"><\/script>';
+    const script='<script src="'+location.origin+'/static/bilingual-learning.js?v=20261116b"><\/script>'+
+      '<script src="'+location.origin+'/static/bilingual-inline.js?v=20261116b"><\/script>';
     document.querySelectorAll("#hpFrame,#hlFrame").forEach(frame=>{
       function inject(){
         const source=frame.getAttribute("srcdoc")||"";
@@ -289,16 +290,17 @@
     $("ll-output").hidden=true;
     toast(mode==="vi"?
       "Đang ưu tiên tiếng Việt. Chọn Dịch câu hỏi để dịch từ tiếng Anh sang tiếng Việt.":
-      mode==="en"?"Đang học tiếng Anh: câu hỏi được dịch trong khung này.":
-      "Chế độ song ngữ: đối chiếu nguyên văn và bản dịch.");
-    if(mode!=="vi") translateQuestion();
+      mode==="en"?"Đang chuyển câu hỏi sang tiếng Anh ngay trên trang.":
+      "Chế độ song ngữ: bản gốc và tiếng Anh ngay trong bài.");
+    window.dispatchEvent(new CustomEvent("ldvl:languagechange",{detail:{mode}}));
+    if(mode!=="vi" && !window.ldvlInlineSwitch) translateQuestion();
   }
   function openClose(force){
     opened=typeof force==="boolean"?force:!opened;
     $("ldvl-lang-panel").hidden=!opened;
     $("ldvl-lang-toggle").setAttribute("aria-expanded",String(opened));
     if(!opened)stopListening();
-    if(opened&&mode!=="vi"&&!lastSignature)translateQuestion();
+    if(opened&&mode!=="vi"&&!lastSignature&&!window.ldvlInlineSwitch)translateQuestion();
   }
   function watchQuestion(){
     const q=document.querySelector("#q")||document.querySelector("#question");
