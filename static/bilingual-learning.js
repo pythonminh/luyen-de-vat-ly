@@ -1,6 +1,44 @@
 /* Song ngữ Việt–Anh cho trang học. Không thay đổi đề, đáp án hoặc chấm điểm. */
 (() => {
   "use strict";
+  // Saved HTML exercises run in sandboxed iframes. They never receive
+  // credentials or Gemini keys; only the parent may call the translation API.
+  if (window.parent !== window) {
+    let selectedText="";
+    document.addEventListener("selectionchange",()=>{
+      try{const s=window.getSelection();if(s&&!s.isCollapsed)selectedText=String(s).trim().slice(0,5200);}catch(e){}
+    });
+    function frameText(which){
+      try{
+        if(which==="selection")return selectedText;
+        let stem=document.querySelector("#q .qstem, .qstem, #question, .question-text, .question, .problem-text, .quiz-question");
+        if(!stem)stem=document.querySelector("main")||document.body;
+        const copy=stem.cloneNode(true);
+        copy.querySelectorAll("script,style,button,input,textarea,select,[hidden],.solution,#solution,#solbox,.answer-key").forEach(n=>n.remove());
+        let parts=[String(copy.textContent||"").trim()];
+        if(stem.matches(".qstem")){
+          document.querySelectorAll("#q .opt").forEach((o,i)=>{
+            const clone=o.cloneNode(true);
+            clone.querySelectorAll("input,.tflab").forEach(n=>n.remove());
+            parts.push("ABCD".charAt(i)+". "+String(clone.textContent||"").trim());
+          });
+        }
+        return parts.filter(Boolean).join("\n").slice(0,5200);
+      }catch(e){return "";}
+    }
+    window.addEventListener("message",event=>{
+      const data=event.data||{};
+      if(event.source!==window.parent || data.type!=="LDVL_STUDY_REQ")return;
+      // Accept only messages from the hosting site; never share lesson text
+      // with a cross-site parent that embedded a logged-in page.
+      let ownOrigin="";
+      try{ownOrigin=new URL(document.baseURI).origin;}catch(e){}
+      if(!ownOrigin || ownOrigin==="null" || event.origin!==ownOrigin)return;
+      const text=frameText(data.which);
+      window.parent.postMessage({type:"LDVL_STUDY_REPLY",nonce:data.nonce,text},ownOrigin);
+    });
+    return;
+  }
   if (window.__ldvlBilingualMounted) return;
   window.__ldvlBilingualMounted = true;
   const STORAGE = "ldvlBilingualStudyMode_v1";
@@ -13,6 +51,7 @@
   try { const saved=localStorage.getItem(STORAGE); if(T[saved]) mode=saved; } catch(e) {}
   let opened=false, savedSelection="", activeJob=0, lastSignature="", lastResult="", resultLanguage="en", observedQuestion=null;
   let lastOutput=null;
+  let pendingFrame=null;
   const cache = new Map();
   const $ = id => document.getElementById(id);
   const tokenRE = /⟦(?:M|IMG)\d+⟧/g;
@@ -162,14 +201,55 @@
   }
   function translateQuestion(){
     const data=questionData();
+    if(!data.text && requestFromFrame("question")) return;
     lastSignature=data.text;
     runTranslation(data);
   }
   function translateSelection(){
     const txt=readSelection()||savedSelection;
-    if(!txt){toast("Bôi đen câu hoặc đoạn văn bằng chuột/ngón tay, rồi bấm nút này.",true);return;}
+    if(!txt){if(requestFromFrame("selection"))return;toast("Bôi đen câu hoặc đoạn văn bằng chuột/ngón tay, rồi bấm nút này.",true);return;}
     runTranslation({text:txt,marks:{}});
   }
+  function requestFromFrame(which){
+    const frame=Array.from(document.querySelectorAll("#hpFrame,#hlFrame,#savedFrame"))
+      .find(f=>f.getClientRects().length && f.contentWindow);
+    if(!frame)return false;
+    const nonce=Math.random().toString(36).slice(2)+Date.now().toString(36);
+    pendingFrame={nonce,frame,created:Date.now()};
+    frame.contentWindow.postMessage({type:"LDVL_STUDY_REQ",which,nonce},"*");
+    toast("Đang đọc nội dung bài HTML…");
+    setTimeout(()=>{
+      if(pendingFrame&&pendingFrame.nonce===nonce){
+        pendingFrame=null;
+        toast("Chưa đọc được bài HTML. Hãy mở bài riêng hoặc bôi đen phần văn bản trên trang.",true);
+      }
+    },2200);
+    return true;
+  }
+  function installFrameBridge(){
+    const script='<script src="'+location.origin+'/static/bilingual-learning.js?v=20261116"><\/script>';
+    document.querySelectorAll("#hpFrame,#hlFrame").forEach(frame=>{
+      function inject(){
+        const source=frame.getAttribute("srcdoc")||"";
+        if(!source||source.includes("/static/bilingual-learning.js"))return;
+        const html=/<\/body\s*>/i.test(source)?
+          source.replace(/<\/body\s*>/i,script+"</body>"):source+script;
+        frame.setAttribute("srcdoc",html);
+      }
+      new MutationObserver(inject).observe(frame,{attributes:true,attributeFilter:["srcdoc"]});
+      inject();
+    });
+  }
+  window.addEventListener("message",event=>{
+    const data=event.data||{};
+    if(data.type!=="LDVL_STUDY_REPLY"||!pendingFrame)return;
+    if(event.source!==pendingFrame.frame.contentWindow||data.nonce!==pendingFrame.nonce)return;
+    pendingFrame=null;
+    if(!data.text){toast("Không tìm được nội dung chữ trong bài HTML.",true);return;}
+    const src=clean(data.text);
+    lastSignature=src;
+    runTranslation({text:src,marks:{}});
+  });
   function stopListening(){
     try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
   }
@@ -298,6 +378,7 @@
     }
     refreshControls();
     watchQuestion();
+    installFrameBridge();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});
   else mount();
