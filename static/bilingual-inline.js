@@ -305,6 +305,8 @@ function startParent(){
    if(mode==="vi")return;
    const meaningful=records.some(rec=>{
      if(rec.type!=="childList"||!rec.addedNodes?.length)return false;
+     const added=Array.from(rec.addedNodes);
+     if(added.every(n=>n.nodeType===1&&n.matches(".ll-inline-original,.ll-inline-target")))return false;
      const el=rec.target.nodeType===1?rec.target:rec.target.parentElement;
      return el&&!el.closest("#ldvl-lang-panel,.ll-inline-original,.ll-inline-target");
    });
@@ -322,6 +324,7 @@ function startChild(){
    if(localMode==="vi")return;
    if(!records.some(r=>{
      if(!r.addedNodes?.length)return false;
+     if(Array.from(r.addedNodes).every(n=>n.nodeType===1&&n.matches(".ll-inline-original,.ll-inline-target")))return false;
      const el=r.target.nodeType===1?r.target:r.target.parentElement;
      return el&&!el.closest(".ll-inline-original,.ll-inline-target");
    }))return;
