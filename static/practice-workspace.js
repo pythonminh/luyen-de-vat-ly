@@ -128,6 +128,33 @@
       }
     }
     const question = document.getElementById('q');
+    // Mark horizontally scrollable formulas after MathJax loads or redraws.
+    let mathRefreshQueued = false;
+    window.ldvlMathLayoutRefresh = function() {
+      if (!question || !question.isConnected) return;
+      question.querySelectorAll('mjx-container[display="true"]').forEach(function(math) {
+        const tooWide = math.scrollWidth > math.clientWidth + 6;
+        math.classList.toggle('ldvl-wide-math', tooWide);
+        if (tooWide && !math.hasAttribute('tabindex')) {
+          math.tabIndex = 0;
+          math.setAttribute('aria-label', 'Công thức dài, vuốt ngang để xem hết');
+        }
+      });
+    };
+    function queueMathRefresh() {
+      if (mathRefreshQueued) return;
+      mathRefreshQueued = true;
+      window.requestAnimationFrame(function() {
+        mathRefreshQueued = false;
+        if (window.ldvlMathLayoutRefresh) window.ldvlMathLayoutRefresh();
+      });
+    }
+    if (question && typeof MutationObserver !== 'undefined') {
+      const obs = new MutationObserver(queueMathRefresh);
+      obs.observe(question, {childList: true, subtree: true});
+    }
+    window.addEventListener('resize', queueMathRefresh, {passive: true});
+    queueMathRefresh();
     if (question) {
       question.addEventListener('change', () => markPending(getReady()));
       question.addEventListener('input', () => markPending(getReady()));
