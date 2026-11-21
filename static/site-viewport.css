@@ -1,0 +1,53 @@
+/* Lớp Học Thầy Minh — full-width responsive layout / 2026-11-21.
+   No changes to exercise data, authentication or grading. */
+html,body{max-width:100%;width:100%}
+body:not(.cinema) .student-home-shell{
+  max-width:none!important;
+  width:100%!important;
+  margin-inline:0!important;
+  padding-inline:clamp(8px,1.4vw,20px)!important;
+}
+body:not(.cinema)>.wrap{width:100%!important;max-width:none!important}
+body:not(.cinema) :is(.teacher-content,.student-lessons,.vip-practice-wrap){min-width:0}
+.topin>#ldvlFs{
+  display:inline-flex!important;
+  align-items:center!important;justify-content:center!important;
+  flex:0 0 auto!important;min-width:42px;min-height:42px;
+  padding:6px 10px;border-radius:9px;
+  border:1px solid rgba(255,255,255,.56);
+  background:rgba(255,255,255,.14);color:white;
+  font-size:23px;line-height:1;cursor:pointer;touch-action:manipulation;
+}
+.topin>#ldvlFs[aria-pressed="true"]{background:rgba(255,255,255,.3);border-color:#fff}
+.topin>#ldvlFs:focus-visible{outline:3px solid #facc15;outline-offset:2px}
+@media(max-width:1024px){
+  .topin>#ldvlFs{
+    order:3!important;flex:0 0 43px!important;
+    width:43px!important;min-width:43px!important;max-width:43px!important;
+    height:40px!important;min-height:40px!important;
+    margin:0!important;padding:4px!important;
+  }
+  body:not(.cinema)>.wrap{padding-inline:8px!important}
+  .student-home-shell{padding-block:8px 24px!important}
+}
+@media(max-width:370px){
+  .topin #ldvlNavToggle{min-width:42px!important;padding-inline:5px!important}
+  .topin #ldvlNavToggle::after{content:'☰'!important;font-size:19px!important}
+  .topin>#ldvlFs{flex-basis:40px!important;width:40px!important;min-width:40px!important}
+}
+@media(orientation:landscape) and (max-height:600px){
+  .topin>#ldvlFs{height:36px!important;min-height:36px!important}
+  body:not(.cinema)>.wrap{padding-top:4px!important}
+  body:not(.cinema) .student-home-shell{padding-top:4px!important}
+}
+/* Focus fallback for browsers that do not expose the fullscreen API,
+   including iPhone Safari. The browser's own bars remain browser-controlled. */
+body.ldvl-focus-view :is(.wrap,.student-home-shell,.vip-practice-wrap){
+  width:100%!important;max-width:none!important;margin-inline:0!important;
+}
+body.ldvl-focus-view .topin .sub,
+body.ldvl-focus-view .topin .clock,
+body.ldvl-focus-view .topin .regline{display:none!important}
+body.ldvl-focus-view .top{box-shadow:none}
+html:fullscreen,html:-webkit-full-screen{background:var(--bg,#f3f7fc)}
+html:fullscreen body,html:-webkit-full-screen body{min-height:100dvh}
