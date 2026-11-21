@@ -2263,7 +2263,7 @@ function markReading(host, btn){
   if(host) host.classList.add('on');
 }
 function addSpk(host, src){
-  if(isCinema()) return;
+  if(isCinema() || /^\/member\/(?:dang|select)(?:\/|$)/.test(location.pathname)) return;
   if(!host||!src) return;
   if(!host.querySelector(':scope > .spkchunk, :scope > summary > .spkchunk')){
     const b=document.createElement('button');
@@ -2297,7 +2297,7 @@ function addSpk(host, src){
   }
 }
 function mountChunks(root){
-  if(isCinema()){
+  if(isCinema() || /^\/member\/(?:dang|select)(?:\/|$)/.test(location.pathname)){
     (root&&root.querySelectorAll?root:document).querySelectorAll('.spkchunk').forEach(function(n){n.remove()});
     return;
   }
