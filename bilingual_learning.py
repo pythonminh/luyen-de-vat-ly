@@ -54,11 +54,11 @@ def _save_translation(texts, target, values):
                 for k in sorted(_CACHE,key=lambda a:_CACHE[a][0])[:len(_CACHE)-240]:
                     _CACHE.pop(k,None)
 
-_MARKUP = ('<link rel="stylesheet" href="/static/bilingual-learning.css?v=20261121currentquestion4">' +
-           '<script defer src="/static/math-speech.js?v=20261121currentquestion4"></script>' +
-           '<script defer src="/static/bilingual-learning.js?v=20261121currentquestion4"></script>' +
-           '<script defer src="/static/bilingual-inline.js?v=20261121currentquestion4"></script>' +
-           '<script defer src="/static/solution-speech.js?v=20261121currentquestion4"></script>')
+_MARKUP = ('<link rel="stylesheet" href="/static/bilingual-learning.css?v=20261122bilingual5">' +
+           '<script defer src="/static/math-speech.js?v=20261122bilingual5"></script>' +
+           '<script defer src="/static/bilingual-learning.js?v=20261122bilingual5"></script>' +
+           '<script defer src="/static/bilingual-inline.js?v=20261122bilingual5"></script>' +
+           '<script defer src="/static/solution-speech.js?v=20261122bilingual5"></script>')
 _PROTECT = re.compile(
     r'(⟦(?:M|IMG)\d+⟧|\$\$[\s\S]*?\$\$|\$[^$\n]+\$|'
     r'\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|'
