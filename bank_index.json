@@ -5549,47 +5549,47 @@
       "questions": 162,
       "count": 162,
       "dang": {
-        "Chuyển động Brown và bằng chứng về chuyển động phân tử": 30,
-        "Các luận điểm cơ bản của mô hình động học phân tử chất khí": 27,
-        "Các thông số trạng thái của một lượng khí": 27,
-        "Giải thích áp suất khí bằng va chạm phân tử": 26,
-        "Vận dụng mô hình động học phân tử vào thực tế": 27,
-        "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí": 25
+        "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí": 37,
+        "Các luận điểm cơ bản của mô hình động học phân tử chất khí": 10,
+        "Các thông số trạng thái của một lượng khí": 47,
+        "Chuyển động Brown và bằng chứng về chuyển động phân tử": 12,
+        "Giải thích áp suất khí bằng va chạm phân tử": 17,
+        "Vận dụng mô hình động học phân tử vào thực tế": 39
       },
       "dang_kinds": {
-        "Chuyển động Brown và bằng chứng về chuyển động phân tử": {
-          "TN": 11,
-          "DS": 13,
-          "TLN": 6,
+        "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí": {
+          "TN": 25,
+          "DS": 12,
+          "TLN": 0,
           "TL": 0
         },
         "Các luận điểm cơ bản của mô hình động học phân tử chất khí": {
-          "TN": 10,
-          "DS": 11,
-          "TLN": 6,
+          "TN": 0,
+          "DS": 10,
+          "TLN": 0,
           "TL": 0
         },
         "Các thông số trạng thái của một lượng khí": {
-          "TN": 10,
-          "DS": 11,
-          "TLN": 6,
+          "TN": 12,
+          "DS": 5,
+          "TLN": 30,
+          "TL": 0
+        },
+        "Chuyển động Brown và bằng chứng về chuyển động phân tử": {
+          "TN": 6,
+          "DS": 6,
+          "TLN": 0,
           "TL": 0
         },
         "Giải thích áp suất khí bằng va chạm phân tử": {
-          "TN": 9,
+          "TN": 6,
           "DS": 11,
-          "TLN": 6,
+          "TLN": 0,
           "TL": 0
         },
         "Vận dụng mô hình động học phân tử vào thực tế": {
-          "TN": 10,
-          "DS": 11,
-          "TLN": 6,
-          "TL": 0
-        },
-        "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí": {
-          "TN": 10,
-          "DS": 10,
+          "TN": 11,
+          "DS": 23,
           "TLN": 5,
           "TL": 0
         }
