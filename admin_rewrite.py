@@ -2428,6 +2428,49 @@ def _notebook_image_prompt(latex):
     return body.strip(), _NOTEBOOK_MOTION, canva.strip()
 
 
+def _exercise_image_prompt(latex):
+    """Prompt only: do not alter source question or generate a fictional answer."""
+    return (
+        "TẠO MỘT ẢNH ĐỀ BÀI TẬP TOÁN/VẬT LÍ dựa chính xác vào LaTeX bên dưới.\n"
+        "Bố cục kiểu ảnh bài tập SGK/phiếu học tập: nền giấy trắng sạch, chữ Việt "
+        "rõ dấu, 16:9 nằm ngang, ít trang trí; thanh tiêu đề màu xanh navy "
+        "'Lớp Học Thầy Minh'. Phần đề bài chiếm vị trí chính, bốn phương án "
+        "A/B/C/D hoặc bốn mệnh đề Đúng/Sai được chia dòng dễ đọc. "
+        "Nếu câu có hình, dựng hình đúng đại lượng, nhãn, chiều mũi tên, trục "
+        "tọa độ và số liệu; nếu không có hình thì không tự bịa hình vật lí. "
+        "Chỉ hiển thị đề và phương án, TUYỆT ĐỐI KHÔNG tô đáp án đúng, "
+        "không hiện \\True, \\loigiai, kết quả hoặc lời giải; không biến mã LaTeX "
+        "thành chữ thô. Giữ nguyên dữ kiện, đơn vị, câu hỏi, dấu bất đẳng thức "
+        "và thứ tự phương án. Không thêm tình huống hoặc câu hỏi mới. "
+        "Không vẽ sai kiến thức. Nếu đề thiếu hoặc mâu thuẫn, giữ nguyên "
+        "nội dung và không tự đoán phần thiếu. Chữ căn hàng đều, không bị cắt.\n"
+        "NỘI DUNG LaTeX NGUỒN (chỉ trích xuất đề và phương án):\n"
+        + latex
+    )
+
+
+def _exercise_comic_prompt(latex):
+    """Storyboard prompt, preserving original exercise and academic correctness."""
+    return (
+        "TẠO MỘT TRANG TRUYỆN TRANH GIÁO DỤC về đúng bài Toán/Vật lí bên dưới, "
+        "khổ 16:9 nằm ngang, 4 ô truyện rõ ràng, nét hiện đại, màu nhẹ. "
+        "Nhân vật là hai học sinh Việt Nam và một giáo viên, hội thoại tiếng Việt "
+        "ngắn, chính tả chuẩn. Ô 1: giới thiệu tình huống thực tế phù hợp với "
+        "câu hỏi. Ô 2: nhân vật quan sát dữ kiện hoặc minh họa chính xác. "
+        "Ô 3: học sinh trao đổi cách suy nghĩ hoặc công thức thích hợp mà không "
+        "bịa bước tính. Ô 4: đặt lại nguyên văn câu hỏi để người xem tự giải. "
+        "Chèn thanh thương hiệu 'Lớp Học Thầy Minh' nhỏ ở chân trang. "
+        "Giữ nguyên hoàn toàn số liệu, ký hiệu, đơn vị và bản chất câu hỏi; "
+        "không biến phép toán hoặc hiện tượng thành thông tin sai. "
+        "TUYỆT ĐỐI KHÔNG tiết lộ đáp án đúng, lời giải cuối, dấu \\True, "
+        "không tự thêm phương án; nếu là trắc nghiệm vẫn trình bày đủ A B C D "
+        "ở ô cuối. Dựng hình/phác họa khi có cơ sở từ đề, không bịa dụng cụ "
+        "hoặc hiện tượng không có. Chữ phải dễ đọc, không tràn khung.\n"
+        "NỘI DUNG LaTeX NGUỒN (đề và phương án, không lộ đáp án):\n"
+        + latex
+    )
+
+
 @base.app.post("/api/admin/notebook-prompt")
 def api_notebook_prompt():
     if not base.can_manage_bank():
@@ -2446,6 +2489,8 @@ def api_notebook_prompt():
     try:
         latex = _notebook_latex(q, tex, fi)
         still, motion, canva = _notebook_image_prompt(latex)
+        picture = _exercise_image_prompt(latex)
+        comic = _exercise_comic_prompt(latex)
     except ValueError as e:
         return jsonify(ok=False, error=str(e)), 400
     return jsonify(
@@ -2453,6 +2498,8 @@ def api_notebook_prompt():
         prompt=still,
         motion=motion,
         canva=canva,
+        picture=picture,
+        comic=comic,
         latex=latex,
         gemini="https://gemini.google.com/app",
         canva_url="https://gemini.google.com/app",
@@ -4204,9 +4251,14 @@ async function rwLoadNotebook(box){
       +'<button type="button" class="btn green rwnbsave">Lưu thêm vào ngân hàng</button> '
       +(focusCanva?'':'<button type="button" class="btn primary rwnbcopy" data-which="still">Copy lệnh trang vở</button> ')
       +'<button type="button" class="btn primary rwnbcopy" data-which="canva">Copy prompt luyện đổi số</button> '
+      +'<button type="button" class="btn primary rwnbcopy" data-which="picture">Copy prompt ảnh bài tập</button> '
+      +'<button type="button" class="btn primary rwnbcopy" data-which="comic">Copy prompt truyện tranh</button> '
       +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">Mở Gemini</a> '
       +'<span class="muted rwnbnote"></span></div>'
       +'<div class="aiphoto-look rwnb-look"></div>'
+
+      +'<details class="rwnbpicture-fold"'+(box.getAttribute('data-focus')==='picture'?' open':'')+'><summary>Ảnh bài tập — giữ đề, ẩn đáp án</summary><textarea class="rwta rwnbpicture">'+esc(d.picture||'')+'</textarea></details>'
+      +'<details class="rwnbcomic-fold"'+(box.getAttribute('data-focus')==='comic'?' open':'')+'><summary>Truyện tranh 4 ô theo câu hỏi</summary><textarea class="rwta rwnbcomic">'+esc(d.comic||'')+'</textarea></details>'
       +'<details class="rwnbcanva-fold"'+(focusCanva?' open':'')+'><summary>Prompt chương trình HTML — đổi số, kiểm tra đáp án</summary>'
       +'<p class="muted">Dán vào Gemini. Gemini phải trả về một file HTML: nút Đổi đề bài mới, ô nhập đáp án, Kiểm tra, Xem lời giải. Không phải trang Canva.</p>'
       +'<textarea class="rwta rwnbcanva">'+esc(d.canva||'')+'</textarea></details>'
