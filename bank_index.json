@@ -5627,11 +5627,10 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 9. Định luật Boyle",
       "De": "L12C2 Bài 9. Định luật Boyle",
-      "questions": 87,
-      "count": 87,
+      "questions": 70,
+      "count": 70,
       "dang": {
         "Nhận biết quá trình đẳng nhiệt và định luật Boyle": 35,
-        "Khối khí chịu áp suất của cột chất lỏng": 17,
         "Đồ thị đẳng nhiệt trên các hệ tọa độ": 16,
         "Chưa gán dạng bài tập": 1,
         "Ứng dụng định luật Boyle trong bơm, xi lanh và đời sống": 17,
@@ -5643,12 +5642,6 @@
           "DS": 11,
           "TLN": 0,
           "TL": 0
-        },
-        "Khối khí chịu áp suất của cột chất lỏng": {
-          "TN": 6,
-          "DS": 10,
-          "TLN": 0,
-          "TL": 1
         },
         "Đồ thị đẳng nhiệt trên các hệ tọa độ": {
           "TN": 8,
