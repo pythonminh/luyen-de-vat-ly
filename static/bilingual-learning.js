@@ -11,8 +11,26 @@
     function frameText(which){
       try{
         if(which==="selection")return selectedText;
-        let stem=document.querySelector("#q .qstem, .qstem, #question, .question-text, .question, .problem-text, .quiz-question");
-        if(!stem)stem=document.querySelector("main")||document.body;
+        // Ask the inline layer which question the learner is viewing.
+        // Convert math markers back to TeX for cross-frame text messaging.
+        if(typeof window.ldvlInlineQuestionData==="function"){
+          const selected=window.ldvlInlineQuestionData();
+          if(selected?.text){
+            return String(selected.text).replace(/⟦M\\d+⟧/g,token=>{
+              const node=selected.marks?.[token];
+              const latex=node&&window.ldvlMathSpeech?.formulaSource?.(node);
+              return latex?"\\("+latex+"\\)":" [hình minh họa] ";
+            }).slice(0,5200);
+          }
+        }
+        const candidates=Array.from(document.querySelectorAll("#q .qstem,.qstem,#question,.question-text,.question-content,.problem-text,.quiz-question"))
+          .filter(el=>el.getClientRects().length);
+        const selected=candidates.find(el=>el.matches(".active,.current,[aria-current='true']"));
+        const stem=selected||candidates.sort((a,b)=>{
+          const c=innerHeight*.45,ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
+          return Math.abs((ar.top+ar.bottom)/2-c)-Math.abs((br.top+br.bottom)/2-c);
+        })[0];
+        if(!stem)return "";
         const copy=stem.cloneNode(true);
         copy.querySelectorAll("script,style,button,input,textarea,select,[hidden],.solution,#solution,#solbox,.answer-key").forEach(n=>n.remove());
         let parts=[String(copy.textContent||"").trim()];
