@@ -2468,41 +2468,54 @@ def _exercise_image_prompt(latex):
 
 
 def _exercise_comic_prompt(latex):
-    """Original recurring student cast for lesson-specific educational comics."""
+    """Educational comic starring fictionalized teacher Minh, including verified answers."""
     return (
-        "TẠO TRUYỆN TRANH GIÁO DỤC LỚP HỌC THẦY MINH – 4 KHUNG, TỈ LỆ 16:9 NGANG. "
-        "Phong cách truyện tranh thiếu nhi vui tươi: nét viền tròn sạch, màu trong sáng, "
-        "biểu cảm hài hước và tình bạn học trò. Tất cả nhân vật phải là THIẾT KẾ GỐC, "
-        "không sao chép nhân vật hoặc biểu tượng của bất kỳ bộ truyện nổi tiếng nào.\n"
-        "BỘ NHÂN VẬT CỐ ĐỊNH (giữ đúng ngoại hình, đồng phục, kiểu tóc, màu sắc giữa "
-        "mọi khung và mọi tập):\n"
-        "• AN: học sinh nam 16 tuổi, tóc đen ngắn hơi dựng, kính tròn gọng xanh, "
-        "áo sơ mi trắng viền cổ xanh navy, quần xanh đậm, balô cam; tò mò, vui tính, "
-        "thường đặt câu hỏi mở đầu.\n"
-        "• BÌNH: học sinh nam 16 tuổi, tóc đen rẽ ngôi gọn, áo trắng tay ngắn và "
-        "đồng hồ xanh lá, quần xanh đậm; suy luận tốt, bình tĩnh, thích đối chiếu số liệu.\n"
-        "• CHI: học sinh nữ 16 tuổi, tóc đen ngang vai buộc nửa đầu bằng kẹp vàng, "
-        "áo đồng phục trắng, váy xanh đậm, cặp tím; cẩn thận về đơn vị và công thức, "
-        "thường phát hiện lỗi trong cách lập luận.\n"
-        "• DŨNG: học sinh nam 16 tuổi, tóc xoăn nhẹ, dáng cao khỏe, áo trắng viền xanh "
-        "navy và giày đỏ nhạt; năng động, đôi khi nêu ý tưởng hài hước nhưng biết sửa sai.\n"
-        "• THẦY GIÁO: người lớn có ngoại hình hư cấu, áo sơ mi xanh nhạt, quần tối, "
-        "thân thiện và nghiêm túc về kiến thức, đóng vai trò gợi mở chứ không cho đáp án.\n"
-        "Mỗi tập chọn 2–4 học sinh phù hợp, không cần đưa cả nhóm vào mọi khung. "
-        "Không thay đổi thiết kế nhân vật. Các ô có bố cục: "
-        "Ô 1 An hoặc Dũng gặp tình huống liên quan trực tiếp đến đề và đặt câu hỏi; "
-        "ô 2 Bình hoặc Chi ghi nhận chính xác dữ kiện và minh họa; "
-        "ô 3 nhóm trao đổi hướng tiếp cận/công thức gợi ý đúng nhưng chưa giải ra kết quả; "
-        "ô 4 thầy giáo hoặc học sinh nêu nguyên văn câu hỏi để khán giả tự giải. "
-        "Khi cần, đặt công thức và hình vẽ trên bảng lớp, giữ đúng đại lượng, mũi tên, "
-        "trục, nhãn, dấu, đơn vị. Không sáng tác dữ kiện, tình huống mâu thuẫn hoặc "
-        "làm thay đổi bản chất bài toán. Đối thoại tiếng Việt ngắn, đúng dấu, không tràn "
-        "bong bóng thoại, đọc được trên điện thoại; nhịp truyện hài nhẹ. "
-        "Trình bày đủ các lựa chọn A, B, C, D hoặc bốn mệnh đề Đúng/Sai nếu có. "
-        "TUYỆT ĐỐI không tô đáp án, không tiết lộ đáp án đúng, không lộ lời giải cuối. "
-        "Chữ nhỏ chân trang: 'Lớp Học Thầy Minh'. "
-        "Chỉ vẽ một trang truyện hoàn chỉnh, không in prompt, không in mã LaTeX thô.\n"
-        "NỘI DUNG CÂU HỎI NGUỒN (đã ẩn đáp án và lời giải):\n" + latex
+        "TẠO MỘT TRANG TRUYỆN TRANH GIÁO DỤC LỚP HỌC THẦY MINH, KHỔ NGANG 16:9, "
+        "6 KHUNG TRUYỆN (2 HÀNG × 3 CỘT), màu tươi sáng, nét tròn, giàu biểu cảm "
+        "và kịch tính vui nhộn kiểu truyện tranh học đường. Tạo câu chuyện mới "
+        "mỗi bài, hấp dẫn mà bám sát nội dung Toán/Vật lí. "
+        "Nhân vật đều có thiết kế gốc, không sao chép hình nhân vật từ bộ truyện khác.\n"
+        "NHÂN VẬT TRUNG TÂM: THẦY HUỲNH CÔNG MINH – giáo viên Toán/Vật lí của "
+        "'Lớp Học Thầy Minh'. Minh họa bằng hình tượng giáo viên hư cấu cố định "
+        "(áo sơ mi xanh nhạt, tóc đen ngắn gọn gàng, quần sẫm màu, tác phong "
+        "thân thiện, thông minh và hài hước). Không tự nhận hình minh họa là "
+        "chân dung thật của thầy. Thầy xuất hiện ở ít nhất 4/6 khung, chủ động "
+        "tạo thử thách, dẫn dắt, sửa lỗi và chốt đáp án chính xác.\n"
+        "BỐN HỌC SINH CỐ ĐỊNH: AN – nam đeo kính tròn xanh, tóc ngắn hơi dựng, "
+        "balô cam, tò mò; BÌNH – nam tóc rẽ ngôi, đồng hồ xanh lá, lý luận bình tĩnh; "
+        "CHI – nữ tóc ngang vai với kẹp vàng, cặp tím, cẩn thận công thức/đơn vị; "
+        "DŨNG – nam cao, tóc xoăn nhẹ, giày đỏ nhạt, hài hước và hay dự đoán vội. "
+        "Các em mặc đồng phục trắng và xanh navy. Giữ ngoại hình nhất quán trong "
+        "tất cả khung và các tập. Chỉ dùng 2–4 học sinh mỗi tập.\n"
+        "CỐT TRUYỆN 6 KHUNG: "
+        "1. MỞ MÀN: một sự cố nhỏ hoặc thử thách gần gũi khiến học sinh bất ngờ, "
+        "thầy Minh đặt vấn đề và nêu mục tiêu. "
+        "2. THỬ THÁCH: một học sinh đọc đúng dữ kiện bài toán trên bảng, minh họa "
+        "bối cảnh trực quan có liên hệ thực tế. "
+        "3. BẤT NGỜ: Dũng hoặc An đưa ra một dự đoán sai phổ biến nhưng hợp lý, "
+        "tạo đối thoại vui chứ không xuyên tạc kiến thức. "
+        "4. PHẢN BIỆN: Chi hoặc Bình phát hiện điểm sai, thầy Minh đưa gợi ý công thức "
+        "hoặc phương pháp phù hợp. "
+        "5. MỞ NÚT: thầy Minh hướng dẫn giải ngắn gọn theo các bước, thay số/chứng "
+        "minh rõ ràng, đối chiếu kết quả. "
+        "6. KẾT: thầy Minh công bố ĐÁP ÁN ĐÚNG nổi bật, giải thích vì sao đúng "
+        "và chốt một mẹo ghi nhớ; học sinh phản ứng vui nhộn, hẹn bài tiếp theo.\n"
+        "BẢO TOÀN KIẾN THỨC: giữ nguyên toàn bộ số liệu, dấu, đơn vị, câu hỏi, "
+        "công thức, thứ tự A/B/C/D và ý a/b/c/d. Không tự thêm dữ kiện khác "
+        "hoặc tự thay nội dung đề. Các câu Đúng/Sai: thể hiện đủ bốn kết luận "
+        "Đúng/Sai và lý do khi lời giải gốc cho phép. Trắc nghiệm: chỉ tô đúng "
+        "một phương án được đánh dấu \\True trong dữ liệu nguồn. Trả lời ngắn: "
+        "dùng đúng kết quả \\shortans và đơn vị theo lời giải, không biến đổi "
+        "cách làm tròn. Nếu đáp án hoặc lời giải trong nguồn bị thiếu, mâu thuẫn "
+        "hoặc không thể kiểm chứng, KHÔNG BỊA ĐÁP ÁN; ghi 'Cần thầy kiểm tra đáp án' "
+        "ở khung 6 và chỉ thể hiện hướng dẫn chắc chắn. "
+        "Lời giải và đáp án cần xuất hiện TẠI KHUNG 5–6, không tiết lộ sớm.\n"
+        "HÌNH THỨC: hội thoại tiếng Việt rõ dấu, ngắn gọn, dí dỏm; nét vẽ "
+        "sạch, phân biệt rõ người đang nói; công thức được trình bày dễ đọc, "
+        "không in các lệnh LaTeX thô. Góc cuối mỗi trang ghi 'Lớp Học Thầy Minh · "
+        "Huỳnh Công Minh'. Chỉ xuất một trang truyện hoàn chỉnh.\n"
+        "NỘI DUNG NGUỒN (đề, đáp án và lời giải LaTeX – cần đối chiếu, "
+        "không sao chép nguyên lệnh):\n" + latex
     )
 
 
@@ -2526,7 +2539,7 @@ def api_notebook_prompt():
         still, motion, canva = _notebook_image_prompt(latex)
         public_latex = _public_exercise_latex(latex)
         picture = _exercise_image_prompt(public_latex)
-        comic = _exercise_comic_prompt(public_latex)
+        comic = _exercise_comic_prompt(latex)
     except ValueError as e:
         return jsonify(ok=False, error=str(e)), 400
     return jsonify(
@@ -4294,7 +4307,7 @@ async function rwLoadNotebook(box){
       +'<div class="aiphoto-look rwnb-look"></div>'
 
       +'<details class="rwnbpicture-fold"'+(box.getAttribute('data-focus')==='picture'?' open':'')+'><summary>Ảnh bài tập — giữ đề, ẩn đáp án</summary><textarea class="rwta rwnbpicture">'+esc(d.picture||'')+'</textarea></details>'
-      +'<details class="rwnbcomic-fold"'+(box.getAttribute('data-focus')==='comic'?' open':'')+'><summary>Truyện tranh 4 ô theo câu hỏi</summary><textarea class="rwta rwnbcomic">'+esc(d.comic||'')+'</textarea></details>'
+      +'<details class="rwnbcomic-fold"'+(box.getAttribute('data-focus')==='comic'?' open':'')+'><summary>Truyện tranh 6 khung · có lời giải</summary><textarea class="rwta rwnbcomic">'+esc(d.comic||'')+'</textarea></details>'
       +'<details class="rwnbcanva-fold"'+(focusCanva?' open':'')+'><summary>Prompt chương trình HTML — đổi số, kiểm tra đáp án</summary>'
       +'<p class="muted">Dán vào Gemini. Gemini phải trả về một file HTML: nút Đổi đề bài mới, ô nhập đáp án, Kiểm tra, Xem lời giải. Không phải trang Canva.</p>'
       +'<textarea class="rwta rwnbcanva">'+esc(d.canva||'')+'</textarea></details>'
