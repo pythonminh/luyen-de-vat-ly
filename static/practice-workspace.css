@@ -510,3 +510,33 @@ body.practice-compact-ready .vip-practice-wrap #q .ldvl-math-scroll-note{
     font-family:"Noto Serif",Georgia,serif!important;
   }
 }
+
+
+/* Tablet questions with an illustration must not squeeze math into half a column. */
+@media(min-width:700px) and (max-width:1280px){
+  body.practice-compact-ready .vip-practice-wrap #q .qsplit{
+    display:flex!important;flex-direction:column!important;
+    align-items:stretch!important;gap:10px!important;
+  }
+  body.practice-compact-ready .vip-practice-wrap #q .qsplit>.figgrid,
+  body.practice-compact-ready .vip-practice-wrap #q .qsplit>.qside{
+    flex:1 1 auto!important;
+    width:100%!important;min-width:0!important;max-width:100%!important;
+  }
+  body.practice-compact-ready .vip-practice-wrap #q .qsplit>.figgrid{
+    max-height:none!important;height:auto!important;
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  body.practice-compact-ready .vip-practice-wrap #q .qsplit>.figgrid.one{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  body.practice-compact-ready .vip-practice-wrap #q .qsplit .figcell{
+    height:auto!important;min-height:0!important;max-height:none!important;
+  }
+  body.practice-compact-ready .vip-practice-wrap #q .qsplit .tex-img{
+    width:auto!important;height:auto!important;
+    max-height:min(40dvh,360px)!important;
+    max-width:100%!important;object-fit:contain!important;
+  }
+}
