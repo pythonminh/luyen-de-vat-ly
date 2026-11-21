@@ -30,6 +30,13 @@ CSS = r"""
 .top .top-tools-list .ldvl-ui-icon{width:16px;height:16px}
 .top .top-tools-list a,.top .top-tools-list button{display:flex;align-items:center;gap:8px}
 .top .ldvl-icon-ready .ldvl-ui-icon{display:inline-block}
+/* Hide mobile-only shortcuts in the desktop top bar; primary Kho links remain above. */
+@media(min-width:1025px){
+ .top #ldvlNav > a.mobile-nav-only{display:none!important}
+ .top #ldvlNav > a[href="/member/exams/saved"],
+ .top #ldvlNav > a[href="/member/html-menu"]{display:none!important}
+}
+
 @media(max-width:950px){.top .brand{font-size:16px}.top #htmlWarehouseQuickLink{font-size:0!important;gap:0!important;min-width:36px;padding:7px!important}.top #htmlWarehouseQuickLink .ldvl-ui-icon{width:18px;height:18px}}
 @media(max-width:650px){.top .topin{gap:5px!important}.top .brandbai{padding:4px 6px}.top .nav{gap:4px}.top .nav > a,.top .nav > button,.top .nav > details > summary{padding:7px 8px!important}.top .who{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 @media(prefers-reduced-motion:reduce){.top .nav > a,.top .nav > button{transition:none}}
