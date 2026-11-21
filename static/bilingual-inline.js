@@ -160,6 +160,11 @@ async function translateEntries(items,currentMode,revision){
        e.translated=cache.get(k);e.lang=dest;
        renderWords(e.target,e.translated,e.marks);
        showEntry(e,currentMode);
+       if(window.parent===window && e.el.matches(".qstem,#question,.question-text,.question-content")){
+         window.dispatchEvent(new CustomEvent("ldvl:inline-translated",{
+           detail:{source:e.text,english:e.translated,marks:e.marks}
+         }));
+       }
        continue;
      }
      if(group.length && count+e.text.length>MAX_CHAR)break;
