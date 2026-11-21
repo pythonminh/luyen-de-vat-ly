@@ -554,3 +554,37 @@ body.practice-compact-ready .practice-game-hud .ph-game-level{
   min-height:28px;padding:4px 6px;font-size:10.5px;
  }
 }
+
+
+/* Exam game clock: one live wall clock + one authoritative countdown. */
+body.practice-compact-ready .practice-game-hud .game-live-clocks{
+ display:inline-flex;align-items:center;gap:7px;
+ font:850 12px/1.25 Segoe UI,Arial,sans-serif;
+ font-variant-numeric:tabular-nums;
+}
+body.practice-compact-ready .practice-game-hud .game-live-clocks>span{
+ display:inline-flex;align-items:center;gap:4px;
+ border:1px solid #bcd5f2;border-radius:8px;background:#fff;
+ padding:6px 9px;min-height:34px;color:#184d87;white-space:nowrap;
+}
+body.practice-compact-ready .practice-game-hud .game-time-warning .game-remaining{
+ background:#fff0dd!important;color:#a44214!important;border-color:#edb88c!important;
+}
+@media(max-width:799px){
+ body.practice-compact-ready .practice-game-hud{
+  flex-wrap:wrap!important;gap:6px!important;
+ }
+ body.practice-compact-ready .practice-game-hud .game-live-clocks{
+  flex:1 1 auto;justify-content:flex-end;gap:5px;font-size:11px;
+ }
+ body.practice-compact-ready .practice-game-hud .game-live-clocks>span{
+  padding:5px 6px;min-height:35px;
+ }
+ body.practice-compact-ready .practice-game-hud .ph-tools{margin-left:auto}
+}
+@media(max-width:390px){
+ body.practice-compact-ready .practice-game-hud .game-live-clocks{
+  width:100%;order:4;justify-content:space-between;
+ }
+ body.practice-compact-ready .practice-game-hud .ph-meters{order:5}
+}
