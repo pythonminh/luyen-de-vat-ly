@@ -291,7 +291,10 @@
        ||voices.find(v=>v.lang.toLowerCase().startsWith(lang.slice(0,2).toLowerCase()));
     if(preferred)utterance.voice=preferred;
     utterance.onstart=()=>toast("🔊 Đang đọc "+(lang.startsWith("en")?"tiếng Anh":"tiếng Việt")+".");
-    utterance.onerror=()=>toast("Thiết bị chưa có giọng đọc "+(lang.startsWith("en")?"tiếng Anh":"tiếng Việt")+".",true);
+    utterance.onerror=(event)=>{
+      if(event && (event.error==="canceled"||event.error==="interrupted"))return;
+      toast("Không thể phát giọng đọc "+(lang.startsWith("en")?"tiếng Anh":"tiếng Việt")+". Hãy kiểm tra giọng TTS trên thiết bị.",true);
+    };
     utterance.onend=()=>toast("Đã đọc xong. Chọn Nghe lại để luyện phát âm.");
     window.speechSynthesis.speak(utterance);
   }
