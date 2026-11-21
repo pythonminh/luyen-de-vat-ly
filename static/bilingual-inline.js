@@ -8,6 +8,19 @@ const MAX_ITEMS=10,MAX_CHAR=2600;
 const regMarker=/⟦M\d+⟧/g;
 let mode="vi", entries=new WeakMap(), active=[], cache=new Map(), busy=false, epoch=0, timer=0;
 let frameRequest=null, currentFrame=null;
+let statusWatchdog=0;
+function showFinal(message,error=false){
+ clearTimeout(statusWatchdog);statusWatchdog=0;status(message,error);
+}
+function showPending(message){
+ showFinal(message);
+ statusWatchdog=setTimeout(()=>{
+  const el=document.getElementById("ll-status");
+  if(el&&/Đang (kiểm tra|chuyển|dịch)/.test(el.textContent||"")){
+   showFinal("Dịch chưa hoàn thành. Vẫn có thể làm bài và chơi game; hãy thử Dịch câu hỏi hoặc trở về Tiếng Việt.",true);
+  }
+ },16000);
+}
 let requestPausedUntil=0, pauseReason="",lastPageFingerprint="",frameDirty=true;
 const elementIds=new WeakMap();let nextElementId=1;
 function idOf(el){if(!elementIds.has(el))elementIds.set(el,nextElementId++);return elementIds.get(el);}
@@ -173,9 +186,9 @@ async function translateBatch(strings,target){
 async function translateEntries(items,currentMode,revision){
  const dest="en";
  let pending=items.filter(e=>e.el.isConnected);
- if(!pending.length)return;
+ if(!pending.length){if(revision===epoch)showFinal("Không có nội dung cần dịch.");return;}
  const total=pending.length;
- let idx=0;
+ let idx=0,done=0;
  while(idx<total && revision===epoch && mode===currentMode){
    const group=[], names=[];
    let count=0;
@@ -191,6 +204,7 @@ async function translateEntries(items,currentMode,revision){
            detail:{source:e.text,english:e.translated,marks:e.marks}
          }));
        }
+       done++;
        continue;
      }
      if(group.length && count+e.text.length>MAX_CHAR)break;
@@ -198,19 +212,23 @@ async function translateEntries(items,currentMode,revision){
      group.push(e);names.push(e.text);count+=e.text.length;
    }
    if(!group.length)continue;
-   status("Đang chuyển nội dung ngay trên trang sang tiếng Anh…");
+   showPending("Đang dịch "+Math.min(idx,total)+"/"+total+" đoạn bài học…");
    try{
      const translated=await translateBatch(names,dest);
      translated.forEach((v,j)=>cache.set(dest+"\0"+names[j],v));
      if(revision!==epoch||mode!==currentMode)return;
      setTranslations(group,translated,dest,currentMode);
-     status("Đã chuyển trực tiếp "+Math.min(idx,total)+"/"+total+" phần nội dung. Công thức và đáp án gốc được giữ nguyên.");
+     done+=group.length;
+     showFinal("Đã dịch "+done+"/"+total+" đoạn. Công thức và đáp án được giữ nguyên.");
    }catch(err){
      if(revision===epoch){
-       status((err&&err.message)||"Lỗi dịch trang.",true);
+       showFinal((err&&err.message)||"Lỗi dịch trang.",true);
      }
      return;
    }
+ }
+ if(revision===epoch&&mode===currentMode){
+   showFinal(done?"Đã dịch "+done+"/"+total+" đoạn trên trang.":"Không có đoạn phù hợp để dịch.");
  }
 }
 const UI={
@@ -253,7 +271,7 @@ function resetAll(){
  currentFrame=document.querySelector("#hpFrame,#hlFrame,#savedFrame");
  if(currentFrame&&currentFrame.contentWindow)
    currentFrame.contentWindow.postMessage({type:"LDVL_INLINE_RESET"},"*");
- status("Đã trở lại trang tiếng Việt.");
+ showFinal("Đã trở lại trang tiếng Việt.");
 }
 function eligibleFrame(){
  return Array.from(document.querySelectorAll("#hpFrame,#hlFrame,#savedFrame"))
@@ -269,7 +287,7 @@ function captureFrame(revision){
  setTimeout(()=>{
    if(frameRequest&&frameRequest.nonce===nonce){
      frameRequest=null;
-     status("Không lấy được nội dung bài HTML trong khung. Có thể mở bài ở tab riêng.",true);
+     showFinal("Không lấy được nội dung bài HTML trong khung. Có thể mở bài ở tab riêng.",true);
    }
  },2800);
 }
@@ -303,8 +321,8 @@ async function applyFrameData(frame,texts,nonce,revision){
    }
    if(revision!==epoch||mode==="vi")return;
    frame.contentWindow.postMessage({type:"LDVL_INLINE_APPLY",nonce,values,mode},"*");
-   status("Đã chuyển ngôn ngữ nội dung bài HTML ngay trên trang.");
- }catch(e){if(revision===epoch)status((e&&e.message)||"Không dịch được bài HTML.",true);}
+   showFinal("Đã dịch xong bài HTML trong khung.");
+ }catch(e){if(revision===epoch)showFinal((e&&e.message)||"Không dịch được bài HTML.",true);}
 }
 window.addEventListener("message",event=>{
  const data=event.data||{};
@@ -320,16 +338,32 @@ window.addEventListener("message",event=>{
 function schedule(){
  clearTimeout(timer);
  timer=setTimeout(()=>{
-   if(mode==="vi")return;
+  if(mode==="vi")return;
+  try{
    changeUI();
+   const path=location.pathname||"";
+   if(/^\/member(?:\/game)?\/?$/.test(path)||
+      /^\/member\/(?:html-menu|profile|settings|results)(?:\/|$)/.test(path)){
+    lastPageFingerprint=mode+"|menu";frameDirty=false;
+    showFinal("Đã chuyển nhãn giao diện. Hãy mở bài học để dịch nội dung; game vẫn hoạt động.");
+    return;
+   }
    const items=contentEntries();
    const fingerprint=mode+"|"+items.map(e=>idOf(e.el)+":"+e.text).join("␟");
-   if(fingerprint===lastPageFingerprint&&!frameDirty)return;
+   if(fingerprint===lastPageFingerprint&&!frameDirty){
+    if(!items.length)showFinal("Trang hiện không có đoạn bài học cần dịch.");
+    return;
+   }
    lastPageFingerprint=fingerprint;
    const rev=++epoch;
-   if(items.length&&Date.now()>=requestPausedUntil)translateEntries(items,mode,rev);
+   if(Date.now()<requestPausedUntil)showFinal(pauseReason||"Dịch tự động đang tạm dừng.",true);
+   else if(items.length)translateEntries(items,mode,rev).catch(e=>{
+    if(rev===epoch)showFinal("Lỗi dịch nội dung: "+(e?.message||"không xác định"),true);
+   });
    if(frameDirty){frameDirty=false;captureFrame(rev);}
-   if(Date.now()<requestPausedUntil)status(pauseReason,true);
+   if(!items.length&&!eligibleFrame()&&Date.now()>=requestPausedUntil)
+    showFinal("Không có nội dung cần dịch tại đây. Hãy mở một câu hỏi và bấm Dịch câu hỏi.");
+  }catch(e){showFinal("Không chuyển được trang: "+(e?.message||"lỗi hiển thị"),true);}
  },650);
 }
 function changeMode(next){
@@ -337,7 +371,7 @@ function changeMode(next){
  if(mode===next)return;
  mode=next;lastPageFingerprint="";frameDirty=true;
  if(mode==="vi"){clearTimeout(timer);resetAll();return;}
- status("Đang chuyển ngôn ngữ ngay trên trang…");
+ showPending("Đang tìm nội dung để dịch…");
  schedule();
 }
 function startParent(){
@@ -356,7 +390,7 @@ function startParent(){
  });
  obs.observe(document.body,{subtree:true,childList:true});
  document.querySelectorAll("#hpFrame,#hlFrame,#savedFrame").forEach(f=>f.addEventListener("load",()=>{if(mode!=="vi")schedule();}));
- if(mode!=="vi")schedule();
+ if(mode!=="vi"){showPending("Đang kiểm tra nội dung song ngữ…");schedule();}
 }
 function startChild(){
  const hostOrigin=(()=>{try{return new URL(document.baseURI).origin;}catch(e){return "";}})();
