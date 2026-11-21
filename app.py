@@ -4699,6 +4699,9 @@ def practice():
         session['practice_pos']=pos
     ai=True
     if not p or not ids:return redirect('/member')
+    if session.get('practice_game_level'):
+        from exam_game import guard
+        if guard(session): return redirect('/member/game/ended')
     if not session.get('practice_started_at'):
         session['practice_started_at']=time.time()
     elapsed=max(0,int(time.time()-float(session.get('practice_started_at') or time.time())))
@@ -4712,9 +4715,13 @@ def practice():
     if not can_practice(m,p):
         return redirect(dang_view_url(p, str(session.get('practice_dang') or ''), str(session.get('practice_kind') or '')))
     try:
-        allq={q['idx']:q for q in parse_lesson_questions(p)}
-        if not allq:
-            _,tex=read_tex(p); allq={q['idx']:q for q in nest_developments(parse_questions(tex))}
+        if game_level:
+            from exam_game import game_question_map
+            allq=game_question_map(session)
+        else:
+            allq={q['idx']:q for q in parse_lesson_questions(p)}
+            if not allq:
+                _,tex=read_tex(p); allq={q['idx']:q for q in nest_developments(parse_questions(tex))}
     except Exception as e:return page('Lỗi',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     if pos>=len(ids):
         score=right/len(ids)*10 if ids else 0
@@ -4750,11 +4757,13 @@ else if(storage)storage.textContent='📱 Đang lưu trên trình duyệt, chưa
             gem=(gemini_panel_html()
                  + f"<div class='review'><b>🤖 Gemini phản biện 1 câu</b><div class='gkeyrow'><select id='pick'>{opts}</select> <button type='button' class='btn primary' onclick='rv()'>🤖 Phản biện</button></div><div id='out' class='reviewout'></div></div>"
                  + f"<script>const D={json.dumps(review,ensure_ascii=False)};function rv(){{ldvlGeminiReview(D[+document.getElementById('pick').value],document.getElementById('out'))}}</script>")
+        result_tabs='' if game_level else lesson_switch_html(p, list(allq.values()), dang=str(session.get('practice_dang') or ''), kind=session.get('practice_kind') or '', guest=False, muc=session.get('practice_muc') or '')
+        replay_btn=("<form method='post' action='/member/game/retry'><button class='btn primary' type='submit'>↻ Chơi lại · đề mới</button></form>" if game_level else '')
         body=(
-            f"<div class='wrap'>{lesson_switch_html(p, list(allq.values()), dang=str(session.get('practice_dang') or ''), kind=session.get('practice_kind') or '', guest=False, muc=session.get('practice_muc') or '')}<div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span>"
+            f"<div class='wrap'>{result_tabs}<div class='panel'><div class='head'>🎉 Kết quả <span class='tag'>Đúng {right}/{len(ids)}</span> <span class='tag'>{score:.2f}/10</span>"
             f"<span class='tag'>{'🤖 Có phản biện' if ai else 'Không phản biện'}</span></div>"
             f"<div class='body'><div class='result good'>Chuỗi tốt nhất: {best}</div>"
-            + gem + complete_record
+            + gem + complete_record + replay_btn
             + "<p><a class='btn' href='/member'>← Mục lục</a></p></div></div></div>"
         )
         extra_js=''
@@ -5346,6 +5355,10 @@ def answer():
     if not m:return jsonify(ok=False),401
     if not can_practice(m, str(session.get('practice_path') or '') or None):
         return jsonify(ok=False,error='Cần VIP để làm bài'),403
+    if session.get('practice_game_level'):
+        from exam_game import guard
+        why=guard(session)
+        if why:return jsonify(ok=False,ended=True,error=why),409
     d=request.get_json(silent=True) or {}
     ids=list(session.get('practice_ids') or [])
     pos=int(session.get('practice_pos') or 0)
@@ -5375,6 +5388,8 @@ def answer():
     nxt=next((j for j in range(len(ids)) if j+1 not in completed),len(ids))
     finished=(nxt>=len(ids))
     session.update(practice_streak=st,practice_best=best,practice_right=right,practice_pos=nxt,practice_done=done)
+    if finished and session.get('practice_game_level'):
+        session['practice_game_status']='done'
     return jsonify(ok=True,praise=praise,streak=st,right=right,complete=finished,answered=len(completed),total=len(ids))
 
 @app.post('/api/gemini/review')
@@ -5836,6 +5851,7 @@ import live_present  # noqa: E402,F401
 import practice_race  # noqa: E402,F401
 import practice_records  # noqa: E402,F401
 import game_levels  # noqa: E402,F401
+import exam_game  # noqa: E402,F401
 try:
     import membership as _membership  # noqa: F401
     _membership.attach_routes()
