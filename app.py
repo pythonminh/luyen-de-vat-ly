@@ -6061,6 +6061,7 @@ except Exception:
     pass
 
 import admin_duplicates  # noqa: E402,F401
+import navigation_polish  # noqa: E402,F401
 import bilingual_learning  # noqa: E402,F401
 
 if __name__=='__main__':app.run(host='0.0.0.0',port=int(os.getenv('PORT','5000')))
