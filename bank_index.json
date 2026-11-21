@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 191,
+  "total_files": 192,
   "total_questions": 12283,
   "lessons": [
     {
@@ -6447,6 +6447,19 @@
           "TL": 12
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-khoi-khi-chiu-ap-suat-cua-cot-chat-long.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-khoi-khi-chiu-ap-suat-cua-cot-chat-long.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 8. Mô hình động học phân tử chất khí/dang-khoi-khi-chiu-ap-suat-cua-cot-chat-long.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Khối khí chịu áp suất của cột chất lỏng",
+      "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí · Khối khí chịu áp suất của cột chất lỏng",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
