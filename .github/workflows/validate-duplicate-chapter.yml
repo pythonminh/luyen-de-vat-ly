@@ -1,0 +1,27 @@
+name: Validate duplicate chapter view
+on:
+  push:
+    branches:
+      - fix/duplicates-chapter-view-readable-tex
+  pull_request:
+    paths:
+      - admin_duplicates.py
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m py_compile admin_duplicates.py
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('admin_duplicates.py').read_text()
+          assert "TẤT CẢ BÀI TRONG CHƯƠNG" in s
+          assert "if path == '__chapter__':" in s
+          assert "def readable_tex(value):" in s
+          assert "elif path:" in s
+          print("Duplicate dashboard checks passed")
+          PY
