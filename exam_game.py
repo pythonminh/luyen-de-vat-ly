@@ -260,8 +260,18 @@ def begin_attempt(path, extra_paths, tier, member):
     selected_paths=[path]+list(extra_paths)
     cfg=EXAMS[subject]
     rows=question_rows(selected_paths)
-    prior=session.get("practice_game_last") or []
-    prev=[tuple(x) for x in prior if isinstance(x,list) and len(x)==2]
+    # Older builds stored every long Vietnamese path repeatedly in the cookie.
+    # Reuse the compact question map for shuffle-on-retry instead.
+    old_paths=list(session.get("practice_game_paths") or [])
+    old_sources=list(session.get("practice_game_sources") or [])
+    prev=[]
+    for item in old_sources:
+        if isinstance(item,(list,tuple)) and len(item)==2:
+            try:prev.append((old_paths[int(item[0])],int(item[1])))
+            except (IndexError,ValueError,TypeError):pass
+    if not prev:
+        prior=session.get("practice_game_last") or []
+        prev=[tuple(x) for x in prior if isinstance(x,list) and len(x)==2]
     selected=select_rows(rows,tier,cfg,prev)
     by_id={(row[0],row[1]):row for row in rows}
     actual_kind_counts=collections.Counter(by_id[pair][2] for pair in selected)
@@ -288,8 +298,16 @@ def begin_attempt(path, extra_paths, tier, member):
         practice_game_status="active",practice_game_reason="",
         practice_game_paths=paths,practice_game_sources=source_pairs,
         practice_game_selected_paths=selected_paths,
-        practice_game_last=[[p,i] for p,i in selected],
     )
+    session.pop("practice_game_last",None)
+    # Verify the game can actually resolve every selected question before
+    # redirecting the learner to the playing screen.
+    mapped=game_question_map(session)
+    if len(mapped)!=len(ids):
+        for field in ("practice_game_level","practice_game_status","practice_game_sources",
+                      "practice_game_paths","practice_game_selected_paths","practice_ids"):
+            session.pop(field,None)
+        raise ValueError("Một số câu chưa tải được. Vui lòng chọn lại bài hoặc bổ sung bài khác.")
     return len(ids)
 
 
@@ -449,11 +467,14 @@ def _supplement_form(extras, selected):
 
 def game_level_picker():
     member=base.member_current()
-    path=str(request.values.get("path") or "").strip()
+    path=str(request.values.get("path") or (session.get("game_picker_path") if request.method=="POST" else "") or "").strip()
     if not member:
         return redirect(base.login_url("/member/game?path="+urllib.parse.quote(path,safe="")))
-    if not path or not base.can_practice(member,path):
-        return redirect("/member")
+    if not path:
+        return base.page("Chọn game",'<main class="wrap"><div class="err">Chưa chọn bài học. Hãy mở bài trong danh sách và nhấn Chơi game.</div><a class="btn" href="/member">← Chọn bài</a></main>')
+    if not base.can_practice(member,path):
+        return base.page("Không thể mở game",'<main class="wrap"><div class="err">Tài khoản hiện tại không có quyền làm bài này. Hãy kiểm tra gói học hoặc chọn bài đã được cấp quyền.</div><a class="btn" href="/member">← Danh sách bài</a></main>')
+    session["game_picker_path"]=path
     ctx=context_for(path)
     if not ctx:
         return base.page("Chọn game",'<div class="wrap"><div class="err">Bài chưa xác định đúng môn Toán/Vật lí và khối lớp.</div></div>')
@@ -474,7 +495,7 @@ def game_level_picker():
         else:
             try:
                 begin_attempt(path,selected,tier,member)
-                return redirect("/member/practice")
+                return redirect("/member/practice",code=303)
             except (ValueError,TypeError) as exc:
                 error=str(exc)
     if request.args.get("retry_error"):
