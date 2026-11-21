@@ -95,8 +95,13 @@ function owningCard(el){
  const card=el.closest(CARD);
  return card&&onScreen(card)?card:null;
 }
+function inViewport(el){
+ if(!el||!el.getBoundingClientRect)return false;
+ const r=el.getBoundingClientRect();
+ return r.bottom>56&&r.top<(window.innerHeight||800)-36;
+}
 function activeCard(){
- if(touchedQuestion&&touchedQuestion.isConnected&&onScreen(touchedQuestion))return touchedQuestion;
+ if(touchedQuestion&&touchedQuestion.isConnected&&onScreen(touchedQuestion)&&inViewport(touchedQuestion))return touchedQuestion;
  const cards=Array.from(document.querySelectorAll(CARD))
   .filter(el=>onScreen(el) && !el.closest("#ldvl-lang-panel,.ll-inline-original,.ll-inline-target"));
  if(!cards.length)return null;
@@ -156,6 +161,9 @@ function contentEntries(){
   if(!e)continue;
   selected.push(e);seen.add(el);
  }
+ // Only the current question is bilingual; restore the previous question
+ // when navigating or scrolling, and reuse cached translations on return.
+ for(const old of active){if(!selected.some(e=>e.el===old.el))showEntry(old,"vi");}
  active=selected;
  const stem=selected.find(e=>e.el===identity)||selected[0];
  const nextKey=stem?String(idOf(stem.el))+":"+stem.text:"";
@@ -189,11 +197,7 @@ function setTranslations(items,values,lang,desired){
    entry.lang=lang;
    renderWords(entry.target,translated,entry.marks);
    showEntry(entry,desired);
-   if(window.parent===window && entry.el.matches(".qstem,#question,.question-text,.question-content")){
-     window.dispatchEvent(new CustomEvent("ldvl:inline-translated",{
-       detail:{source:entry.text,english:translated,marks:entry.marks}
-     }));
-   }
+   // Publish only after every part of this one question is translated.
  });
 }
 function combinedQuestion(items){
@@ -280,11 +284,7 @@ async function translateEntries(items,currentMode,revision){
        e.translated=cache.get(k);e.lang=dest;
        renderWords(e.target,e.translated,e.marks);
        showEntry(e,currentMode);
-       if(window.parent===window && e.el.matches(".qstem,#question,.question-text,.question-content")){
-         window.dispatchEvent(new CustomEvent("ldvl:inline-translated",{
-           detail:{source:e.text,english:e.translated,marks:e.marks}
-         }));
-       }
+       // Cached parts are assembled and published together below.
        done++;
        continue;
      }
@@ -463,6 +463,12 @@ function startParent(){
  const obs=new MutationObserver(records=>{
    if(mode==="vi")return;
    const meaningful=records.some(rec=>{
+     if(rec.type==="attributes"){
+       // Another question may become active without replacing DOM nodes.
+       return rec.target.matches?.(CARD) &&
+         !rec.target.matches(".ll-inline-original,.ll-inline-target") &&
+         rec.attributeName!=="data-ll-locale";
+     }
      if(rec.type!=="childList"||!rec.addedNodes?.length)return false;
      const added=Array.from(rec.addedNodes);
      if(added.every(n=>n.nodeType===1&&n.matches(".ll-inline-original,.ll-inline-target,.ll-sol-tools,.ll-sol-quick-play,.ll-sol-preview")))return false;
@@ -471,7 +477,14 @@ function startParent(){
    });
    if(meaningful)schedule();
  });
- obs.observe(document.body,{subtree:true,childList:true});
+ obs.observe(document.body,{subtree:true,childList:true,
+   attributes:true,attributeFilter:["class","style","hidden","aria-current","data-active"]});
+ let scrollCheck=0;
+ window.addEventListener("scroll",()=>{
+  if(mode==="vi"||document.getElementById("q"))return;
+  clearTimeout(scrollCheck);
+  scrollCheck=setTimeout(schedule,180);
+ },{passive:true});
  document.querySelectorAll("#hpFrame,#hlFrame,#savedFrame").forEach(f=>f.addEventListener("load",()=>{if(mode!=="vi")schedule();}));
  if(mode!=="vi"){showPending("Đang kiểm tra nội dung song ngữ…");schedule();}
 }
