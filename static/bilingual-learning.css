@@ -292,3 +292,29 @@ label.ll-inline-both>.ll-inline-target:not([hidden]){margin:0 0 0 5px;padding:2p
  #ldvl-lang-panel .ll-listen-toolbar .ll-action{font-size:11px!important;padding:9px 6px!important}
  #ldvl-lang-panel .ll-mode{font-size:10px!important}
 }
+
+
+/* Verify spoken LaTeX without exposing raw commands or changing the exercise. */
+#ldvl-lang-panel .ll-read-preview{
+  display:block;
+  border:1px solid #c9ddf0;
+  background:#f5faff;
+  border-radius:10px;
+  margin:10px 0;
+  overflow:hidden;
+}
+#ldvl-lang-panel .ll-read-preview[hidden]{display:none!important}
+#ldvl-lang-panel .ll-read-preview summary{
+  padding:10px 12px;cursor:pointer;
+  font:750 12px/1.45 system-ui,sans-serif;
+  color:#1a5386;
+  outline-offset:-3px;
+}
+#ldvl-lang-panel .ll-speech-preview{
+  margin:0!important;padding:11px 12px;
+  background:#fff;border-top:1px solid #d9e7f4;
+  font:500 13px/1.75 system-ui,sans-serif!important;
+  color:#264b6b!important;
+  white-space:pre-wrap;overflow-wrap:anywhere;
+  max-height:30vh;overflow-y:auto;
+}
