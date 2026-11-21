@@ -402,11 +402,14 @@ def game_level_picker():
     error=""
     if request.method=="POST":
         tier=str(request.form.get("level") or "")
-        try:
-            begin_attempt(path,selected,tier,member)
-            return redirect("/member/practice")
-        except (ValueError,TypeError) as exc:
-            error=str(exc)
+        if request.form.get("preview")=="1":
+            error="Đã kiểm tra nguồn: chọn cấp độ phù hợp bên dưới. Mỗi cấp độ hiển thị tình trạng đủ hoặc thiếu."
+        else:
+            try:
+                begin_attempt(path,selected,tier,member)
+                return redirect("/member/practice")
+            except (ValueError,TypeError) as exc:
+                error=str(exc)
     if request.args.get("retry_error"):
         error="Nguồn câu hỏi đã thay đổi. Vui lòng chọn lại các bài để đủ cơ cấu."
     lack=shortages(rows,"medium",cfg)
@@ -435,6 +438,7 @@ def game_level_picker():
 .game-exam-details span{border-radius:9px;padding:8px 10px;background:#eaf3ff;color:#1c5389;font-size:12px;font-weight:800}
 .game-exam-check{margin:8px 0 14px;background:#f7faff;border:1px solid #d7e4ef;border-radius:9px;padding:10px 12px}
 .game-exam-check p{margin:4px 0;font-size:12px;color:#526b83}
+.game-preview-action{margin:11px 0 18px}.game-preview-action .btn{min-height:42px}
 @media(max-width:700px){.game-more-list{grid-template-columns:1fr;max-height:320px}}
 </style>
 """
@@ -457,6 +461,7 @@ def game_level_picker():
         '</p><p>Ở cấp Trung bình: '+html.escape("; ".join(lack) if lack else "Đã đủ cơ cấu")+
         '</p></div>'
         +_supplement_form(candidates,selected)+
+        '<div class="game-preview-action"><button class="btn" type="submit" name="preview" value="1">✓ Kiểm tra đủ số câu</button></div>'
         '<h2>Chọn độ khó (kiểm tra đủ tỷ lệ khi bắt đầu)</h2>'
         '<div class="game-grid">'+''.join(tier_card(t,cfg,rows) for t in game_levels.GAME_TIERS)+'</div>'
         '</form>'
