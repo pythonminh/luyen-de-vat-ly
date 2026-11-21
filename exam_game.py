@@ -442,28 +442,49 @@ def tier_card(tier, cfg, rows):
 
 
 def _supplement_form(extras, selected):
+    # Render an initial breakdown on the server so the first screen is never
+    # dependent on browser JavaScript or intersection-observer timing.
+    from game_bank_stats import _stats
     cards=[]
-    for l in extras:
+    for n,l in enumerate(extras):
         p=str(l.get("path") or "")
         name=str(l.get("BaiHoc") or l.get("De") or p.split("/")[-2])
         chapter=str(l.get("Chuong") or "")
         count=int(l.get("questions") or l.get("count") or 0)
         checked=' checked' if p in selected else ''
+        details='<span class="game-bank-stats" role="status">Đang tải phân bố câu…</span>'
+        if n < 12:
+            try:
+                st=_stats(p)
+                kinds=st["kinds"]; levels=st["levels"]
+                def chips(values):
+                    return ''.join('<span class="game-bank-chip'+(' no' if int(v)==0 else '')+'">'+html.escape(label)+' <b>'+str(int(v))+'</b></span>' for label,v in values)
+                details=(
+                    '<span class="game-bank-stats" data-server-stats="1">'
+                    '<span class="game-bank-line"><span class="game-bank-label">Loại:</span>'
+                    +chips([('TN',kinds['TN']),('Đ/S',kinds['DS']),('TLN',kinds['TLN']),('TL',kinds['TL'])])
+                    +'</span><span class="game-bank-line"><span class="game-bank-label">Mức:</span>'
+                    +chips([('NB',levels['N']),('TH',levels['H']),('VD',levels['V']),('VDC',levels['C'])])
+                    +'</span><span class="game-bank-details">Tổng phân loại: '+str(st['total'])+' câu'
+                    +(' · Chưa rõ mức: '+str(st['unknown']) if st['unknown'] else '')
+                    +'</span></span>'
+                )
+            except Exception:
+                details='<span class="game-bank-stats">Đang tải phân bố câu…</span>'
         cards.append(
             '<label class="game-more-item">'
             '<input type="checkbox" name="more" value="'+html.escape(p,quote=True)+'"'+checked+'>'
             '<span><strong>'+html.escape(name)+'</strong><small>'+html.escape(chapter)+
-            ' · '+str(count)+' câu</small></span></label>'
+            ' · '+str(count)+' câu</small>'+details+'</span></label>'
         )
     if not cards:
         return '<p class="game-warning">Không tìm thấy bài bổ sung cùng môn, cùng khối mà tài khoản có quyền học.</p>'
     return (
-        '<details class="game-more" open><summary>📚 Chọn thêm bài cùng môn, cùng khối '
+        '<details class="game-more" open><summary>Chọn thêm bài cùng môn, cùng khối '
         f'({len(cards)} bài có thể chọn)</summary>'
-        '<p>Chọn tối đa '+str(MAX_EXTRA)+' bài. Ưu tiên các bài có đủ câu TN, Đ/S và TLN.</p>'
+        '<p>Chọn tối đa '+str(MAX_EXTRA)+' bài. Xem phân bố loại câu và mức độ để chọn bài phù hợp.</p>'
         '<div class="game-more-list">'+''.join(cards)+'</div></details>'
     )
-
 
 def game_level_picker():
     member=base.member_current()
