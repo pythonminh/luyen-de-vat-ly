@@ -1046,50 +1046,24 @@ def _dest_tex_path(folder, dang):
 
 
 def select_admin_panel(path, qs, dang_names):
-    uncat = sum(1 for q in qs if str(q.get("dang") or "") in {"", "Chưa phân dạng"})
-    boxes = []
-    for name in dang_names:
-        if name in {"", "Chưa phân dạng"}:
-            continue
-        n = sum(1 for q in qs if q.get("dang") == name)
-        boxes.append(
-            "<label class='resortbox'><input type='checkbox' class='resort' value='"
-            + html.escape(name, quote=True)
-            + "'> Sắp xếp lại · "
-            + html.escape(name)
-            + f" <span class='muted'>({n} câu)</span></label>"
-        )
+    uncat = sum(1 for q in qs if _norm_dang(q.get("dang")) == "Chưa phân dạng")
+    count = len(_locked_names(qs))
     return (
         "<div class='review' id='ai-classify' style='margin-bottom:12px'>"
-        "<b>🤖 ADMIN · AI phân dạng và mức độ</b>"
-        f"<p class='muted'>Câu chưa có dạng: <b>{uncat}</b> / {len(qs)}. "
-        "Dạng <span class='tag miss'>Chưa có</span> cần xếp. Dạng <span class='tag had'>Đã có</span> mặc định giữ nguyên — tick ô dưới nếu muốn xếp lại.</p>"
-        "<p class='muted'>Gợi ý mức từng câu (không đổi dạng) là nút <b>🎯 AI gợi ý mức độ</b> trên thanh Mức độ. "
-        "ID tự động theo thư mục, ví dụ <code>L12C1B3-03-DS</code> · mức <code>NB/TH/VD/VDC</code> do AI. "
-        "Tách file: mỗi dạng một <code>dang-....tex</code> cùng thư mục bài; file hiện tại chỉ giữ câu chưa phân dạng.</p>"
-        "<p class='muted'>Dạng gần giống thì <b>Gom dạng gần giống</b>. "
-        "<b>Rà dạng cả chương</b> mặc định <b>giữ dạng đã chọn</b> — không gợi ý chuyển/đổi tên. "
-        "Chỉ gợi ý khi cùng tên dạng nằm ở hai bài, hoặc khi tick «Sắp xếp lại», hoặc bật «Cho phép AI rà cả dạng đã khóa». "
-        "Cột <b>Chuyển tới</b> mặc định theo AI — ADMIN có thể chọn bài khác. File TEX hết câu sẽ bị xóa.</p>"
-        "<label><input type='checkbox' id='onlyNew' checked> Chỉ câu «Chưa phân dạng» + các dạng đã tick «Sắp xếp lại» (bỏ tick = AI xếp lại cả file)</label>"
-        "<label><input type='checkbox' id='auditAll'> Cho phép AI rà / gợi ý chuyển cả dạng đã khóa (mặc định tắt)</label>"
-        + ("<div class='resortlist'>" + "".join(boxes) + "</div>" if boxes else "<p class='muted'>File này chưa có dạng nào — AI sẽ đặt dạng mới.</p>")
-        + "<label for='hintDangs'><b>Gợi ý dạng</b> — mỗi dòng một tên. Có danh sách thì AI <b>chỉ xếp vào đúng các dạng này</b>, không tạo tên mới. Để trống = AI tự đặt dạng.</label>"
-        "<textarea id='hintDangs' rows='4' placeholder='Nhận diện mệnh đề&#10;Nhận diện mệnh đề chứa biến'></textarea>"
-        "<div class='gkeyrow'><button type='button' class='btn primary' id='aiPrev'>🤖 Xem gợi ý AI</button> "
-        "<button type='button' class='btn green' id='aiSave' disabled>💾 Ghi vào TEX + GitHub</button>"
-        "<button type='button' class='btn' id='aiIds'>🔢 Gán ID còn thiếu</button>"
-        "<button type='button' class='btn' id='aiSplit'>📂 Tách mỗi dạng ra file .tex</button>"
-        "<button type='button' class='btn' id='aiHome'>🚚 Gợi ý chuyển sang bài đúng</button>"
-        "<button type='button' class='btn' id='aiMerge'>📎 Gom dạng gần giống</button>"
-        "<button type='button' class='btn' id='aiAudit'>🔍 Rà dạng cả chương</button></div>"
-        "<div id='aiOut' class='reviewout'></div></div>"
-        "<style>.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}"
-        ".resortlist{display:grid;gap:6px;margin:8px 0;padding:8px;border:1px dashed #cab9f0;border-radius:8px;background:#fff}"
-        ".resortbox{display:flex;align-items:flex-start;gap:8px;font-weight:700;line-height:1.4}"
-        "#ai-classify>label{display:block;margin:8px 0;line-height:1.4}"
-        "#hintDangs{width:100%;max-width:720px;box-sizing:border-box;margin:0 0 10px;padding:8px 10px;border:1px solid #cab9f0;border-radius:8px;font:inherit;line-height:1.4}"
-        ".selectgrid tr.uncat td:first-child{background:#fff8df}</style>"
+        "<b>Phân dạng nhanh · Toàn bộ bài · Khóa dạng cũ</b>"
+        f"<p class='muted'>Tổng <b>{len(qs)}</b> câu · Chưa phân dạng <b>{uncat}</b> "
+        f"· Danh mục gốc <b>{count}</b> dạng. "
+        "Hệ thống kiểm tra cả bài, giữ nguyên các câu đã phân dạng, "
+        "chỉ gọi AI cho câu chưa có dạng. Không tạo hoặc đổi tên dạng.</p>"
+        "<div class='gkeyrow'>"
+        "<button type='button' class='btn primary' id='aiPrev'>Xem trước phân dạng</button> "
+        "<button type='button' class='btn green' id='aiSave' disabled>Duyệt · Ghi GitHub một lần</button> "
+        "<button type='button' class='btn' id='aiIds'>Gán ID còn thiếu</button> "
+        "<button type='button' class='btn' id='aiSplit'>Tách file .tex</button> "
+        "<button type='button' class='btn' id='aiHome'>Gợi ý chuyển bài</button> "
+        "<button type='button' class='btn' id='aiMerge' disabled title='Đang khóa tên dạng; không cho gom dạng'>Gom dạng (đã khóa)</button> "
+        "<button type='button' class='btn' id='aiAudit'>Rà chương</button>"
+        "</div><div id='aiOut' class='reviewout' aria-live='polite'></div></div>"
         + _admin_js(path)
     )
 
@@ -1180,48 +1154,43 @@ async function loadMoves(dangs, counts, extra){
   LESSONS=d.lessons||LESSONS||[];
   return d;
 }
+
 async function preview(){
-  const k=keys();
-  if(!k.length){alert('Nạp key Gemini (trang 🤖 Gemini hoặc ô key trên máy này) rồi thử lại.');return;}
-  const btn=document.getElementById('aiPrev'), sav=document.getElementById('aiSave');
-  btn.disabled=true; if(sav)sav.disabled=true; LAST=null;
-  out('⏳ Đang gọi AI phân dạng...');
-  try{
-    const hints=hintDangs();
-    const r=await fetch('/api/admin/ai-classify',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:PATH,api_keys:k,only_new:!!document.getElementById('onlyNew').checked,resort:resorts(),hint_dangs:hints})});
-    const d=await r.json();
-    if(!d.ok){out('<div class="err">'+(d.error||'Lỗi AI')+'</div>');return;}
-    LAST=d.assignments||[];
-    if(!LAST.length){out('<div class="muted">Không có câu nào cần xếp (bỏ tick «Chỉ chưa phân dạng» hoặc tick «Sắp xếp lại»).</div>');return;}
-    let rows=LAST.map(a=>'<tr><td>'+a.idx+'</td><td>'+(a.id||'—')+'</td><td>'+(a.old_dang||'')+'</td><td><b>'+a.dang+'</b></td><td>'+(a.old_muc||'')+' → <b>'+a.muc+'</b></td></tr>').join('');
-    const hintNote=hints.length?' Xếp vào <b>'+hints.length+'</b> dạng đã gợi ý.':'';
-    const table='<div class="success">Gợi ý '+LAST.length+' câu.'+hintNote+' Kiểm tra rồi bấm Ghi vào TEX.</div><div class="selectwrap"><table class="selectgrid"><tr><th>idx</th><th>ID</th><th>Dạng cũ</th><th>Dạng AI</th><th>Mức</th></tr>'+rows+'</table></div>';
-    out(table);
-    if(sav)sav.disabled=false;
-    try{
-      const names=[...new Set(LAST.map(a=>a.dang).filter(x=>x&&x!=='Chưa phân dạng'))];
-      const counts={}; LAST.forEach(a=>{if(a.dang) counts[a.dang]=(counts[a.dang]||0)+1});
-      await loadMoves(names, counts);
-      if(MOVES.length) renderMoves(table);
-    }catch(e){}
-  }catch(e){out('<div class="err">'+e+'</div>');}
-  finally{btn.disabled=false;}
+ const button=document.getElementById('aiPrev'),save=document.getElementById('aiSave');
+ button.disabled=true;save.disabled=true;LAST=null;
+ out('Đang đọc toàn bộ bài, dùng cache và phân loại batch cho câu chưa có dạng...');
+ try{
+  const r=await fetch('/api/admin/ai-classify',{method:'POST',
+   headers:{'Content-Type':'application/json'},credentials:'same-origin',
+   body:JSON.stringify({path:PATH,api_keys:keys()})});
+  const d=await r.json();
+  if(!d.ok)throw Error(d.error||'Lỗi phân loại');
+  LAST=d;
+  const st=d.stats||{};
+  const info='<p><b>Tổng '+(st.total||0)+' câu</b> · Giữ dạng cũ '+(st.locked||0)+' · Cache '+(st.cache||0)+' · AI '+(st.ai||0)+' · Chưa rõ '+(st.review||0)+'</p>';
+  if(!d.assignments.length){out(info+'Không có câu cần đổi dạng.');return;}
+  const rows=d.assignments.map((q,i)=>'<tr><td><input class="aiPick" type="checkbox" data-i="'+i+'" checked></td><td>'+esc(q.id||q.idx)+'</td><td>'+esc(q.old_dang)+'</td><td><b>'+esc(q.dang)+'</b></td><td>'+esc(q.source)+'</td></tr>').join('');
+  out(info+'<div class="selectwrap" style="max-height:480px;overflow:auto"><table class="selectgrid"><tr><th>Duyệt</th><th>ID</th><th>Dạng cũ</th><th>Dạng đề xuất</th><th>Nguồn</th></tr>'+rows+'</table></div>');
+  save.disabled=false;
+ }catch(e){out('<div class="err">'+esc(e.message||e)+'</div>')}
+ finally{button.disabled=false}
 }
 async function save(){
-  if(!LAST||!LAST.length)return;
-  if(!confirm('Ghi dạng/mức mới vào file TEX và commit GitHub?'))return;
-  const k=keys();
-  const sav=document.getElementById('aiSave'); sav.disabled=true;
-  out('⏳ Đang ghi TEX...');
-  try{
-    const r=await fetch('/api/admin/ai-classify-save',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
-      body:JSON.stringify({path:PATH,assignments:LAST})});
-    const d=await r.json();
-    if(!d.ok){out('<div class="err">'+(d.error||'Không ghi được')+'</div>');sav.disabled=false;return;}
-    out('<div class="success">✅ Đã lưu '+ (d.changed||LAST.length) +' câu. Đang tải lại trang...</div>');
-    location.reload();
-  }catch(e){out('<div class="err">'+e+'</div>');sav.disabled=false;}
+ if(!LAST)return;
+ const rows=[...document.querySelectorAll('.aiPick:checked')].map(x=>LAST.assignments[+x.dataset.i]).filter(Boolean);
+ if(!rows.length)return alert('Chưa duyệt câu nào.');
+ if(!confirm('Ghi '+rows.length+' câu bằng một commit GitHub?'))return;
+ const button=document.getElementById('aiSave');button.disabled=true;
+ out('Đang kiểm tra file và ghi GitHub...');
+ try{
+  const r=await fetch('/api/admin/ai-classify-save',{method:'POST',
+   headers:{'Content-Type':'application/json'},credentials:'same-origin',
+   body:JSON.stringify({path:PATH,assignments:rows,fingerprint:LAST.fingerprint})});
+  const d=await r.json();
+  if(!d.ok)throw Error(d.error||'Lỗi lưu');
+  out('<div class="success">Đã ghi '+d.changed+' câu, '+d.commits+' commit.</div>');
+  location.reload();
+ }catch(e){out('<div class="err">'+esc(e.message||e)+'</div>');button.disabled=false}
 }
 document.getElementById('aiPrev').addEventListener('click',preview);
 document.getElementById('aiSave').addEventListener('click',save);
@@ -1251,8 +1220,8 @@ document.getElementById('aiSplit').addEventListener('click',async function(){
 document.getElementById('aiHome').addEventListener('click',async function(){
   out('⏳ Đang đối chiếu dạng với các bài cùng môn/lớp...');
   try{
-    const allowAll=!!document.getElementById('auditAll').checked;
-    const onlyNew=allowAll?false:!!document.getElementById('onlyNew').checked;
+    const allowAll=false;
+    const onlyNew=true;
     const d=await loadMoves([], {}, {only_new:onlyNew,resort:resorts()});
     if(d.message&&!(d.moves||[]).length){out('<div class="muted">'+esc(d.message)+'</div>');return;}
     renderMoves();
@@ -1288,7 +1257,7 @@ document.getElementById('aiMerge').addEventListener('click',async function(){
 });
 document.getElementById('aiAudit').addEventListener('click',async function(){
   const k=keys();
-  const reshuffle=!!document.getElementById('auditAll').checked;
+  const reshuffle=false;
   if(reshuffle&&!k.length){alert('Nạp key Gemini rồi thử lại.');return;}
   out(reshuffle?'⏳ Đang rà tất cả dạng trong chương (AI + đối chiếu tên bài)...':'⏳ Đang rà chương — giữ dạng đã chọn, chỉ báo trùng tên giữa các bài...');
   try{
@@ -1324,156 +1293,173 @@ document.getElementById('aiAudit').addEventListener('click',async function(){
 })();</script>""".replace("__PATH__", p)
 
 
+
+_CLASSIFY_CACHE = {}
+_CLASSIFY_CACHE_LOCK = threading.Lock()
+
+def _locked_names(qs):
+    return list(dict.fromkeys(_norm_dang(q.get("dang")) for q in qs
+                              if _norm_dang(q.get("dang")) != "Chưa phân dạng"))
+
+def _write_locked_dangs(tex, changes):
+    blocks = list(BLOCK_RE.finditer(tex))
+    qs = base.parse_questions(tex)
+    if len(blocks) != len(qs):
+        raise ValueError("Không khớp số khối câu")
+    names = [_norm_dang(q.get("dang")) for q in qs]
+    for i, name in changes.items():
+        names[i] = name
+    out, prev, previous = [], 0, "Chưa phân dạng"
+    for i, m in enumerate(blocks):
+        between = _strip_dang(tex[prev:m.start()])
+        if names[i] != "Chưa phân dạng" and names[i] != previous:
+            between += "\n\\dangbt{" + names[i] + "}\n"
+        out.extend([between, m.group()])
+        prev, previous = m.end(), names[i]
+    out.append(tex[prev:])
+    result = "".join(out)
+    after = list(BLOCK_RE.finditer(result))
+    if len(after) != len(blocks) or any(
+        a.group() != b.group() for a,b in zip(blocks,after)
+    ):
+        raise ValueError("Nội dung câu bị thay đổi")
+    return result
+
 @base.app.post("/api/admin/ai-classify")
 def api_ai_classify():
     if not base.can_manage_bank():
-        return jsonify(ok=False, error="Chỉ ADMIN mới phân dạng bằng AI."), 403
+        return jsonify(ok=False, error="Chỉ ADMIN."), 403
     data = request.get_json(silent=True) or {}
-    path = str(data.get("path") or "").strip()
+    path = str(data.get("path") or "")
     if not path:
-        return jsonify(ok=False, error="Thiếu path."), 400
-    keys = _keys_from_payload(data)
-    if not keys:
-        return jsonify(ok=False, error="Chưa có Gemini API key."), 400
+        return jsonify(ok=False, error="Thiếu đường dẫn."), 400
     try:
-        _, tex = base.read_tex(path)
+        _, tex = base.read_tex(path, need_sha=True)
         qs = base.parse_questions(tex)
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 400
-    only_new = bool(data.get("only_new", True))
-    resort = {_norm_dang(x) for x in (data.get("resort") or []) if str(x).strip()}
-    hints = _parse_hint_dangs(data.get("hint_dangs"))
-    want = set()
+    names = _locked_names(qs)
+    if not names:
+        return jsonify(ok=False, error="Không có tên dạng gốc để khóa."), 400
+    fp = hashlib.sha256(tex.encode("utf-8")).hexdigest()
+    result, todo = [], []
+    stats = dict(total=len(qs), locked=0, cache=0, ai=0, review=0)
     for q in qs:
-        dang = str(q.get("dang") or "Chưa phân dạng")
-        if dang in {"", "Chưa phân dạng"}:
-            want.add(int(q["idx"]))
-        elif dang in resort:
-            want.add(int(q["idx"]))
-        elif not only_new:
-            want.add(int(q["idx"]))
-    items = _items_for_ai(qs, want)
-    if not items:
-        return jsonify(ok=True, assignments=[], message="Không có câu cần xếp.")
-    existing = []
-    seen = set()
-    for q in qs:
-        n = str(q.get("dang") or "")
-        if n and n != "Chưa phân dạng" and n not in seen:
-            seen.add(n)
-            existing.append(n)
-    if hints:
-        hint_folds = {_fold(h) for h in hints}
-        for h in hints:
-            k = _fold(h)
-            if k and k not in {_fold(x) for x in existing}:
-                existing.append(h)
-        locked = [x for x in existing if x not in resort and _fold(x) in hint_folds]
-    else:
-        locked = [x for x in existing if x not in resort]
-    meta = path.replace("ngan-hang/", "").replace("/de.tex", "")
-    prompt = _prompt(meta, existing, locked, items, hints)
-    last_err = "Gemini không trả lời."
-    raw = ""
-    for i, key in enumerate(keys, 1):
-        try:
-            raw = _gemini_generate(key, prompt, 8000, 0.1)
-            if raw:
-                break
-            last_err = f"Key {i}: trống."
-        except urllib.error.HTTPError as e:
-            msg = e.read().decode("utf-8", "replace")
-            if e.code in (429, 503):
-                last_err = (
-                    "Gemini đang quá tải. Hệ thống đã thử lại và đổi model. "
-                    "Đợi khoảng 1 phút rồi bấm lại, hoặc thêm Key 2 / Key 3."
-                )
-            else:
-                last_err = f"Key {i}: Gemini {e.code}: {msg[:240]}"
-        except Exception as e:
-            last_err = f"Key {i}: {e}"
-    if not raw:
-        return jsonify(ok=False, error=last_err), 502
-    try:
-        guessed = _parse_ai_json(raw)
-    except Exception as e:
-        return jsonify(ok=False, error="Không đọc được JSON từ AI: " + str(e)), 502
-    by_id = {int(q["idx"]): q for q in qs}
-    asg = []
-    seen_idx = set()
-    for g in guessed:
-        idx = int(g["idx"])
-        if idx not in want or idx in seen_idx:
+        idx = int(q["idx"])
+        dang = _norm_dang(q.get("dang"))
+        if dang in names:
+            stats["locked"] += 1
             continue
-        q = by_id.get(idx) or {}
-        dang = g["dang"] if g["dang"] != "Chưa phân dạng" else (q.get("dang") or "Chưa phân dạng")
-        if hints:
-            dang = _snap_dang(dang, hints)
-        asg.append(
-            {
-                "idx": idx,
-                "id": q.get("id") or "",
-                "dang": dang,
-                "muc": g["muc"],
-                "old_dang": q.get("dang") or "",
-                "old_muc": MUC_FROM_LETTER.get(str(q.get("level") or "H"), "TH"),
-            }
-        )
-        seen_idx.add(idx)
-    return jsonify(ok=True, assignments=asg, used=len(asg))
-
+        item = _items_for_ai([q], {idx})[0]
+        key = hashlib.sha256(json.dumps(
+            ["locked-v2", item["text"], item["kind"], names],
+            ensure_ascii=False
+        ).encode("utf-8")).hexdigest()
+        with _CLASSIFY_CACHE_LOCK:
+            cached = _CLASSIFY_CACHE.get(key)
+        if cached in names:
+            stats["cache"] += 1
+            result.append(dict(idx=idx, id=item["id"], dang=cached,
+                old_dang=dang, source="cache"))
+        else:
+            todo.append((item,key))
+    if todo:
+        keys = _keys_from_payload(data)
+        if not keys:
+            return jsonify(ok=False, error="Thiếu Gemini API key."), 400
+        for offset in range(0,len(todo),20):
+            batch = todo[offset:offset+20]
+            prompt = (
+                "Chỉ chọn ID dạng trong danh sách. Không tạo tên mới. "
+                "Không sửa đáp án, mức độ. Nếu không chắc chọn null. "
+                "Trả JSON: [{\"idx\":0,\"cat\":0}].\n"
+                + "\n".join(f"{i}: {n}" for i,n in enumerate(names))
+                + "\nCâu:\n"
+                + "\n".join(f"{q['idx']}: {q['kind']} {q['text']}" for q,_ in batch)
+            )
+            raw, error = _gemini_once(keys,prompt,3000)
+            if not raw:
+                return jsonify(ok=False, error=error), 502
+            try:
+                a, b = raw.find("["), raw.rfind("]")
+                guessed = json.loads(raw[a:b+1])
+                allowed = {q["idx"] for q,_ in batch}
+                found = {}
+                for x in guessed:
+                    try:
+                        idx, cat = int(x["idx"]), int(x["cat"])
+                        if idx in allowed and 0 <= cat < len(names):
+                            found[idx] = names[cat]
+                    except (KeyError,ValueError,TypeError):
+                        pass
+            except Exception:
+                return jsonify(ok=False,error="Gemini trả JSON không hợp lệ."), 502
+            for q,key in batch:
+                cat = found.get(q["idx"])
+                if cat is None:
+                    stats["review"] += 1
+                    continue
+                with _CLASSIFY_CACHE_LOCK:
+                    if len(_CLASSIFY_CACHE)>3000:
+                        _CLASSIFY_CACHE.clear()
+                    _CLASSIFY_CACHE[key] = cat
+                stats["ai"] += 1
+                result.append(dict(idx=q["idx"],id=q["id"],dang=cat,
+                    old_dang=q["dang"],source="ai"))
+    return jsonify(ok=True,assignments=sorted(result,key=lambda x:x["idx"]),
+        fingerprint=fp,stats=stats)
 
 @base.app.post("/api/admin/ai-classify-save")
 def api_ai_classify_save():
     if not base.can_manage_bank():
-        return jsonify(ok=False, error="Chỉ ADMIN mới ghi phân dạng."), 403
+        return jsonify(ok=False,error="Chỉ ADMIN."), 403
     data = request.get_json(silent=True) or {}
-    path = str(data.get("path") or "").strip()
+    path = str(data.get("path") or "")
     rows = data.get("assignments") or []
-    if not path or not isinstance(rows, list) or not rows:
-        return jsonify(ok=False, error="Thiếu danh sách gán dạng."), 400
+    if not path or not isinstance(rows,list) or not data.get("fingerprint"):
+        return jsonify(ok=False,error="Thiếu bản xem trước."), 400
     try:
-        sha, tex = base.read_tex(path, need_sha=True)
+        sha, tex = base.read_tex(path,need_sha=True)
         qs = base.parse_questions(tex)
     except Exception as e:
-        return jsonify(ok=False, error=str(e)), 400
-    by_idx = _map_from_questions(qs)
-    changed = 0
+        return jsonify(ok=False,error=str(e)), 400
+    if hashlib.sha256(tex.encode("utf-8")).hexdigest()!=data["fingerprint"]:
+        return jsonify(ok=False,error="File đã đổi; cần xem trước lại."),409
+    valid = set(_locked_names(qs))
+    changes = {}
     for row in rows:
-        if not isinstance(row, dict):
-            continue
         try:
-            i = int(row.get("idx"))
-        except (TypeError, ValueError):
-            continue
-        if i not in by_idx:
-            continue
-        dang = _norm_dang(row.get("dang"))
-        muc = _norm_muc(row.get("muc") or row.get("level"))
-        if dang != by_idx[i]["dang"] or muc != by_idx[i]["muc"]:
-            changed += 1
-        by_idx[i]["dang"] = dang
-        by_idx[i]["muc"] = muc
-    new = apply_taxonomy(tex, by_idx)
-    new, n_id, _ = stamp_missing_ids(new, path, by_idx)
-    if new == tex:
-        return jsonify(ok=True, changed=0, message="Không có thay đổi.")
+            i = int(row["idx"])
+            name = _norm_dang(row["dang"])
+        except (ValueError,KeyError,TypeError):
+            return jsonify(ok=False,error="Dữ liệu không hợp lệ."),400
+        if i in changes or not (0 <= i < len(qs)) or name not in valid:
+            return jsonify(ok=False,error="Chỉ số hoặc dạng không hợp lệ."),400
+        if _norm_dang(qs[i].get("dang"))!="Chưa phân dạng":
+            return jsonify(ok=False,error="Không sửa dạng đã khóa."),400
+        if str(qs[i].get("id") or "")!=str(row.get("id") or ""):
+            return jsonify(ok=False,error="ID không khớp."),409
+        changes[i] = name
+    if not changes:
+        return jsonify(ok=True,changed=0,commits=0)
     try:
+        if not base.github_token():
+            raise ValueError("Thiếu GITHUB_TOKEN")
+        revised = _write_locked_dangs(tex,changes)
+        checked = base.parse_questions(revised)
+        if len(checked)!=len(qs) or any(
+            _norm_dang(checked[i].get("dang"))!=n for i,n in changes.items()
+        ):
+            raise ValueError("Kiểm tra cấu trúc không đạt")
+        base.github_put_text(path,revised,"ADMIN phân dạng khóa, batch",sha)
         _, local = base._safe_repo_file(path)
-        local.parent.mkdir(parents=True, exist_ok=True)
-        local.write_text(new, encoding="utf-8")
-        if base.TOKEN:
-            base.github_put_text(path, new, "ADMIN AI phân dạng " + path, sha or None)
+        local.parent.mkdir(parents=True,exist_ok=True)
+        local.write_text(revised,encoding="utf-8")
+        _refresh_index(path,checked)
+        _clear_caches()
     except Exception as e:
-        return jsonify(ok=False, error=str(e)), 500
-    try:
-        qs2 = base.parse_questions(new)
-        _refresh_index(path, qs2)
-    except Exception:
-        pass
-    _clear_caches()
-    return jsonify(ok=True, changed=changed or len(rows), ids=n_id)
-
+        return jsonify(ok=False,error=str(e)),409
+    return jsonify(ok=True,changed=len(changes),commits=1)
 
 _LEVEL_JOBS = {}
 _LEVEL_LOCK = threading.Lock()
