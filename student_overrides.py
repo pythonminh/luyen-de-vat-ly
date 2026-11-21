@@ -88,8 +88,9 @@ def _member_index():
           <h1>Quản lý ngân hàng và tạo bài tập</h1>
           <p>Chọn một bài bên dưới hoặc mở công cụ tạo đề từ ảnh và tài liệu.</p>
           <div class="student-home-actions">
-            <a class="student-start" href="/admin/html-studio">✨ Tạo câu hỏi từ ảnh / PDF / Word</a>
-            <a href="/member/exams/saved">📚 Đề thi đã lưu</a>
+            <a class="student-start" href="/admin/html-studio" title="Tạo câu hỏi từ ảnh, PDF, Word"><span class="game-icon" aria-hidden="true">✨</span><span>Tạo câu hỏi</span></a>
+            <a href="/member/exams/saved" title="Mở kho đề thi đã lưu"><span class="game-icon" aria-hidden="true">📚</span><span>Kho đề</span></a>
+            <a href="/member/race" title="Thi đua luyện đề"><span class="game-icon" aria-hidden="true">🏁</span><span>Thi đua</span></a>
           </div>
         </section>"""
     elif m:
@@ -99,8 +100,9 @@ def _member_index():
           <h1>Chọn bài để bắt đầu luyện tập</h1>
           <p>Chọn môn, lớp, chương và bài học. Mỗi bài sẽ có nút Bắt đầu làm bài hoặc trạng thái cần cấp quyền.</p>
           <div class="student-home-actions">
-            <a class="student-start" href="#studentLessonList">📘 Chọn bài làm ngay</a>
-            <a href="/member/html-menu">🧩 Luyện HTML đổi số</a>
+            <a class="student-start" href="#studentLessonList" title="Chọn bài để làm"><span class="game-icon" aria-hidden="true">📘</span><span>Luyện bài</span></a>
+            <a href="/member/html-menu" title="Bài tập HTML đổi số"><span class="game-icon" aria-hidden="true">🧩</span><span>Đổi số</span></a>
+            <a href="/member/race" title="Thi đua luyện đề"><span class="game-icon" aria-hidden="true">🏁</span><span>Thi đua</span></a>
           </div>
         </section>"""
     else:
@@ -109,7 +111,7 @@ def _member_index():
           <span class="student-eyebrow">LỚP HỌC THẦY MINH</span>
           <h1>Đăng nhập để chọn bài luyện tập</h1>
           <div class="student-home-actions">
-            <a class="student-start" href="/member/login">🔑 Đăng nhập học sinh</a>
+            <a class="student-start" href="/member/login" title="Đăng nhập học sinh"><span class="game-icon" aria-hidden="true">🔑</span><span>Đăng nhập</span></a>
           </div>
         </section>"""
 
@@ -122,11 +124,11 @@ def _member_index():
         encoded = quote(path, safe='')
         can_start = bool(m and base.can_practice(m, path) and n > 0)
         if can_start:
-            action = (f"<a class='student-start' href='/member/go-kind?path={encoded}'>▶ Bắt đầu làm bài</a>"
-                      f"<a class='student-secondary' href='/member/select?path={encoded}'>📋 Xem bài / chọn dạng</a>")
+            action = (f"<a class='student-start' href='/member/go-kind?path={encoded}'>▶ Làm bài</a>"
+                      f"<a class='student-secondary' href='/member/select?path={encoded}'>▦ Chọn dạng</a>")
         elif m:
-            action = (f"<a class='student-secondary' href='/member/select?path={encoded}'>👁 Xem nội dung bài</a>"
-                      "<a class='student-locked' href='/member/goi'>🔒 Cần quyền VIP để làm bài</a>")
+            action = (f"<a class='student-secondary' href='/member/select?path={encoded}'>👁 Xem bài</a>"
+                      "<a class='student-locked' href='/member/goi'>🔒 VIP · cần mở khóa</a>")
         else:
             action = f"<a class='student-start' href='/member/login'>Đăng nhập để làm bài</a>"
         return (f"<article class='student-lesson-card'><div><h3>{title}</h3>"
