@@ -1,0 +1,29 @@
+name: Validate THPT comic question fidelity
+on:
+  push:
+    branches: [fix/comic-thpt-question-fidelity]
+  pull_request:
+    paths: [admin_rewrite.py]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Compile Python
+        run: python -m py_compile admin_rewrite.py
+      - name: Verify question type rules
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('admin_rewrite.py').read_text(encoding='utf-8')
+          for term in ('def _exercise_comic_prompt(latex, q=None):',
+                       'kind == "TN"', 'kind == "DS"', 'kind == "TLN"',
+                       'q.get("kind")', 'comic = _exercise_comic_prompt(latex, q)',
+                       'học sinh THPT', 'NGUYÊN VĂN CÁC PHƯƠNG ÁN/MỆNH ĐỀ',
+                       'Kết luận a–d:', 'Chưa xác minh đáp án'):
+              assert term in s, term
+          print("THPT comic format checks passed")
+          PY
