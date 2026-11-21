@@ -336,7 +336,9 @@ const UI={
  "Gửi bài":"Submit","Nộp bài":"Submit"
 };
 function changeUI(){
- const elements=document.querySelectorAll("button,.nav a,.top a,summary,.quizacts a,.quizacts button,#q .tf-h,.head .tag");
+ // Keep navigation and game controls unchanged; only translate labels
+ // belonging to the currently opened question.
+ const elements=document.querySelectorAll("#q .tf-h,#question .tf-h,.qcard .tf-h,.question-card .tf-h");
  for(const el of elements){
    if(el.closest("#ldvl-lang-panel"))continue;
    for(const node of Array.from(el.childNodes)){
@@ -433,7 +435,7 @@ function schedule(){
    if(/^\/member(?:\/game)?\/?$/.test(path)||
       /^\/member\/(?:html-menu|profile|settings|results)(?:\/|$)/.test(path)){
     lastPageFingerprint=mode+"|menu";frameDirty=false;
-    showFinal("Đã chuyển nhãn giao diện. Hãy mở bài học để dịch nội dung; game vẫn hoạt động.");
+    showFinal("Chưa mở câu hỏi. Hãy vào bài hoặc game; hệ thống chỉ dịch câu đang xem.");
     return;
    }
    const items=contentEntries();
