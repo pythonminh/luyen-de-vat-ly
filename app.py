@@ -5021,8 +5021,6 @@ draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(paylo
         from live_present import PRESENT_HOST_JS, PRESENT_TTS_JS
         extra=REWRITE_CLIENT_JS + PRESENT_TTS_JS + PRESENT_HOST_JS
     # Phone-focused practice layout: keep the established scoring/session flow unchanged.
-    prev_href = '/practice/jump/' + str(max(0,pos-1))
-    next_href = '/practice/jump/' + str(min(len(ids)-1,pos+1))
     mobile_controls = f"""
 <style>
 @media(max-width:1024px){{
@@ -5057,7 +5055,7 @@ draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(paylo
  body:has(.vip-practice-wrap) .vip-practice-wrap .quizacts #reshuf{{display:none!important}}
  body:has(.vip-practice-wrap) .vip-practice-wrap .quizacts .btn{{flex:1 1 115px!important;min-height:46px!important;font-size:14px!important}}
  body:has(.vip-practice-wrap) .vip-practice-wrap .practice-admin-ai{{display:none!important}}
- /* One mobile toolbar only: zoom at top, navigation at bottom. */
+ /* One compact question index; no duplicate bottom navigation. */
  .practice-mini-stats{{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:4px 0 7px!important;font:700 12px/1.2 Arial;color:#294e70}}
  .practice-mini-stats span,.practice-mini-stats button{{background:#edf5ff;border:1px solid #c7ddf5;padding:5px 8px;border-radius:8px;color:#285078;font:700 12px Arial}}
  .practice-mini-stats button{{cursor:pointer}}
@@ -5085,22 +5083,7 @@ draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(paylo
  body:has(.vip-practice-wrap) .vip-practice-wrap .qheadline{{margin:0!important;padding:0!important}}
  body:has(.vip-practice-wrap) .vip-practice-wrap #q{{padding-top:9px!important}}
  body:has(.vip-practice-wrap) .vip-practice-wrap .quizacts #reshuf{{display:none!important}}
- .practice-phone-bar{{gap:4px!important;padding:7px max(6px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom))!important}}
- .practice-phone-bar a,.practice-phone-bar button{{min-width:0!important;min-height:43px!important;padding:8px 9px!important;font-size:13px!important;white-space:nowrap}}
- .practice-phone-bar .phone-index{{flex:0 1 auto!important}}
- .practice-phone-bar .phone-count{{font-size:13px!important}}
- .practice-index-dialog{{width:min(94vw,480px);max-height:76dvh;padding:14px;border:1px solid #b8cde5;border-radius:14px;box-shadow:0 20px 50px #17365644}}
- .practice-index-dialog::backdrop{{background:#061c36a8}}
- .practice-index-dialog .pi-head{{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;font-weight:800;color:#123a66}}
- .practice-index-dialog button{{border:1px solid #b6cfe8;background:#edf5ff;border-radius:9px;padding:8px 13px;font-weight:800}}
- .practice-index-dialog .palette{{display:block!important;position:static!important;max-height:58dvh;overflow:auto}}
- .practice-index-dialog .pitems{{display:flex!important;flex-wrap:wrap!important;gap:6px}}
 
- .practice-phone-bar{{position:fixed;z-index:2147482000;bottom:0;left:0;right:0;display:flex!important;align-items:center;gap:8px;justify-content:space-between;padding:9px max(10px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #c9d9ee;box-shadow:0 -4px 18px #17365a1c}}
- .practice-phone-bar a,.practice-phone-bar button{{font:800 14px/1.25 Arial,sans-serif;display:inline-flex;justify-content:center;align-items:center;min-height:44px;min-width:52px;padding:10px 12px;text-decoration:none;border:1px solid #bed5ef;background:#e9f3ff;color:#154c87;border-radius:10px;box-sizing:border-box}}
- .practice-phone-bar .phone-index{{background:#176bd3;color:white;flex:0 1 auto}}
- .practice-phone-bar .phone-count{{font:800 15px Arial;color:#163b67;white-space:nowrap}}
- .practice-phone-bar .phone-disabled{{opacity:.35;pointer-events:none}}
  .practice-figure-dialog{{max-width:96vw;width:96vw;max-height:85dvh;border:1px solid #bbcee4;border-radius:12px;padding:10px;background:#fff}}
  .practice-figure-dialog::backdrop{{background:#061c36cb}}
  .practice-figure-dialog .pf-buttons{{display:flex;justify-content:space-between;gap:8px;position:sticky;top:0;background:#fff;padding:5px 0;z-index:2}}
@@ -5108,7 +5091,7 @@ draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(paylo
  .practice-figure-dialog .pf-image{{overflow:auto;max-height:72dvh;text-align:center;touch-action:pan-x pan-y}}
  .practice-figure-dialog .pf-image>img,.practice-figure-dialog .pf-image>svg{{max-width:none!important;width:100%;height:auto;transform-origin:top left}}
 }}
-@media(min-width:1025px){{.practice-phone-bar,.practice-figure-dialog{{display:none!important}}}}
+@media(min-width:1025px){{.practice-figure-dialog{{display:none!important}}}}
 </style>
 <div class="practice-mini-stats" role="group" aria-label="Thời gian và thành tích">
 <span>⏱ <b id="practiceElapsed" class="practice-time">00:00</b></span>
@@ -5140,31 +5123,12 @@ draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(paylo
  }};
  close.onclick=()=>dlg.close();
 }})();</script>
-<nav class="practice-phone-bar" aria-label="Điều hướng câu hỏi trên điện thoại">
-<a href="{prev_href}" class="{'phone-disabled' if pos==0 else ''}" aria-label="Câu trước">‹ Trước</a>
-<button type="button" class="phone-index" id="phoneQuestionMenu">☷ Mục lục</button>
-<span class="phone-count">{pos+1}/{len(ids)}</span>
-<a href="{next_href}" class="{'phone-disabled' if pos>=len(ids)-1 else ''}" aria-label="Câu tiếp">Tiếp ›</a>
-</nav>
-<dialog class="practice-index-dialog" id="practiceIndexDialog" aria-label="Mục lục câu hỏi">
-<div class="pi-head"><span>☷ Chọn câu hỏi</span><button type="button" id="practiceIndexClose">✕ Đóng</button></div>
-<div id="practiceIndexChoices"></div></dialog>
 <dialog class="practice-figure-dialog" id="practiceFigureDialog" aria-label="Phóng to hình minh họa">
 <div class="pf-buttons"><strong>🔎 Hình minh họa</strong><div><button type="button" id="pfZoomOut">−</button> <button type="button" id="pfZoomIn">+</button> <button type="button" id="pfClose">✕</button></div></div>
 <div class="pf-image" id="pfImage"></div>
 </dialog>
 <script>
 (function(){{
- const menu=document.getElementById('phoneQuestionMenu');
- const indexDialog=document.getElementById('practiceIndexDialog');
- if(menu)menu.addEventListener('click',()=>{{
-   const source=document.querySelector('.vip-practice-wrap .practice-questions .palette');
-   const dest=document.getElementById('practiceIndexChoices');
-   if(source&&dest&&indexDialog){{dest.replaceChildren(source.cloneNode(true));indexDialog.showModal();}}
- }});
- const closeIndex=document.getElementById('practiceIndexClose');
- if(closeIndex)closeIndex.onclick=()=>indexDialog.close();
- if(indexDialog)indexDialog.addEventListener('click',e=>{{if(e.target===indexDialog)indexDialog.close()}});
  const dialog=document.getElementById('practiceFigureDialog'),box=document.getElementById('pfImage');
  let zoom=1;
  document.addEventListener('click',e=>{{
