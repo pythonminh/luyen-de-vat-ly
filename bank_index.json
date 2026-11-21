@@ -5174,33 +5174,44 @@
       "questions": 170,
       "count": 170,
       "dang": {
-        "Chưa phân dạng": 1,
-        "Bài toán tổng hợp về quá trình đẳng áp": 28,
-        "Khối lượng riêng của chất khí trong quá trình đẳng áp": 27,
+        "Bài toán tổng hợp về quá trình đẳng áp": 10,
+        "Tính thể tích và nhiệt độ trong quá trình đẳng áp": 56,
+        "Nhận biết quá trình đẳng áp và định luật Charles": 26,
+        "Đồ thị đẳng áp trên các hệ tọa độ": 32,
+        "Khối lượng riêng của chất khí trong quá trình đẳng áp": 26,
         "Cột khí bị giam bởi giọt chất lỏng trong ống tiết diện đều": 6,
-        "Nhận biết quá trình đẳng áp và định luật Charles": 27,
-        "Tính thể tích và nhiệt độ trong quá trình đẳng áp": 27,
-        "Đồ thị đẳng áp trên các hệ tọa độ": 27,
-        "Ứng dụng định luật Charles trong thực tế": 27
+        "Ứng dụng định luật Charles trong thực tế": 14
       },
       "dang_kinds": {
-        "Chưa phân dạng": {
-          "TN": 0,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
-        },
         "Bài toán tổng hợp về quá trình đẳng áp": {
-          "TN": 10,
+          "TN": 0,
           "DS": 9,
-          "TLN": 6,
-          "TL": 3
+          "TLN": 0,
+          "TL": 1
+        },
+        "Tính thể tích và nhiệt độ trong quá trình đẳng áp": {
+          "TN": 12,
+          "DS": 7,
+          "TLN": 30,
+          "TL": 7
+        },
+        "Nhận biết quá trình đẳng áp và định luật Charles": {
+          "TN": 18,
+          "DS": 7,
+          "TLN": 0,
+          "TL": 1
+        },
+        "Đồ thị đẳng áp trên các hệ tọa độ": {
+          "TN": 18,
+          "DS": 13,
+          "TLN": 0,
+          "TL": 1
         },
         "Khối lượng riêng của chất khí trong quá trình đẳng áp": {
-          "TN": 10,
-          "DS": 8,
+          "TN": 6,
+          "DS": 7,
           "TLN": 6,
-          "TL": 3
+          "TL": 7
         },
         "Cột khí bị giam bởi giọt chất lỏng trong ống tiết diện đều": {
           "TN": 4,
@@ -5208,29 +5219,11 @@
           "TLN": 2,
           "TL": 0
         },
-        "Nhận biết quá trình đẳng áp và định luật Charles": {
-          "TN": 10,
-          "DS": 8,
-          "TLN": 6,
-          "TL": 3
-        },
-        "Tính thể tích và nhiệt độ trong quá trình đẳng áp": {
-          "TN": 10,
-          "DS": 8,
-          "TLN": 6,
-          "TL": 3
-        },
-        "Đồ thị đẳng áp trên các hệ tọa độ": {
-          "TN": 10,
-          "DS": 8,
-          "TLN": 6,
-          "TL": 3
-        },
         "Ứng dụng định luật Charles trong thực tế": {
-          "TN": 10,
-          "DS": 8,
-          "TLN": 6,
-          "TL": 3
+          "TN": 6,
+          "DS": 7,
+          "TLN": 0,
+          "TL": 1
         }
       }
     },
