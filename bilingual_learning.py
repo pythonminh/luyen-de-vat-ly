@@ -22,6 +22,38 @@ from app import app, admin_current, member_current
 
 _RATE_LOCK = threading.Lock()
 _RATE = defaultdict(deque)
+# Successful translations are shared in memory across identical lesson
+# requests, so switching English <-> Song ngu does not spend Gemini quota.
+_CACHE_LOCK = threading.Lock()
+_CACHE = {}
+_CACHE_TTL = 1800
+
+def _cached_translation(texts, target):
+    key = (str(target), tuple(str(x).strip() for x in texts))
+    now = time.monotonic()
+    with _CACHE_LOCK:
+        entry = _CACHE.get(key)
+        if not entry:
+            return None
+        if now - entry[0] > _CACHE_TTL:
+            _CACHE.pop(key, None)
+            return None
+        return list(entry[1])
+
+def _save_translation(texts, target, values):
+    key = (str(target), tuple(str(x).strip() for x in texts))
+    with _CACHE_LOCK:
+        _CACHE[key] = (time.monotonic(), tuple(values))
+        if len(_CACHE) > 320:
+            # Bounded cache, expired first and then oldest.
+            now = time.monotonic()
+            for k,v in list(_CACHE.items()):
+                if now-v[0] > _CACHE_TTL:
+                    _CACHE.pop(k,None)
+            if len(_CACHE)>320:
+                for k in sorted(_CACHE,key=lambda a:_CACHE[a][0])[:len(_CACHE)-240]:
+                    _CACHE.pop(k,None)
+
 _MARKUP = ('<link rel="stylesheet" href="/static/bilingual-learning.css?v=20261121currentquestion4">' +
            '<script defer src="/static/math-speech.js?v=20261121currentquestion4"></script>' +
            '<script defer src="/static/bilingual-learning.js?v=20261121currentquestion4"></script>' +
@@ -96,8 +128,6 @@ def bilingual_translate():
     origin = request.headers.get("Origin", "")
     if origin and urllib.parse.urlsplit(origin).netloc != request.host:
         return jsonify(ok=False, error="Nguồn yêu cầu không hợp lệ."), 403
-    if _rate_limited():
-        return jsonify(ok=False, error="Bạn đã dịch quá nhiều lần. Vui lòng thử lại sau."), 429
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify(ok=False, error="Dữ liệu không hợp lệ."), 400
@@ -105,6 +135,11 @@ def bilingual_translate():
     target = str(data.get("target") or "").strip().lower()
     if target not in ("en", "vi") or not src or len(src) > 5500:
         return jsonify(ok=False, error="Chọn ngôn ngữ và nội dung tối đa 5.500 ký tự."), 400
+    cached=_cached_translation([src],target)
+    if cached is not None:
+        return jsonify(ok=True,translated=cached[0],target=target)
+    if _rate_limited():
+        return jsonify(ok=False,error="Đang vượt giới hạn dịch. Hãy thử lại sau 60 giây."),429
     keys = []
     server_key = str(os.environ.get("GEMINI_API_KEY") or "").strip()
     if server_key:
@@ -142,6 +177,7 @@ def bilingual_translate():
         return jsonify(ok=False, error="Bộ dịch chưa sẵn sàng."), 503
 
     result = None
+    failures=set()
     for key in keys[:3]:
         for model in ("gemini-2.5-flash", "gemini-flash-latest"):
             try:
@@ -154,15 +190,23 @@ def bilingual_translate():
                 result = _restore(text, kept)
                 if result:
                     break
-            except Exception:
+            except urllib.error.HTTPError as exc:
+                failures.add(exc.code)
+                continue
+            except Exception as exc:
+                failures.add(type(exc).__name__)
                 continue
         if result:
             break
     if not result:
-        return jsonify(
-            ok=False,
-            error="Chưa dịch được hoặc bản dịch có nguy cơ làm sai công thức/số liệu. Hãy thử đoạn ngắn hơn."
-        ), 502
+        if 429 in failures:
+            return jsonify(ok=False,error="Gemini đang hết hạn mức dịch hoặc yêu cầu quá nhanh. Vui lòng kiểm tra quota/API key."),429
+        if 401 in failures or 403 in failures:
+            return jsonify(ok=False,error="Gemini từ chối API key. Hãy kiểm tra cấu hình key."),503
+        if 404 in failures:
+            return jsonify(ok=False,error="Model Gemini không khả dụng. Hãy kiểm tra model và API key."),503
+        return jsonify(ok=False,error="Chưa dịch được hoặc bản dịch có nguy cơ làm sai công thức/số liệu. Hãy thử đoạn ngắn hơn."),502
+    _save_translation([src],target,[result])
     reply = jsonify(ok=True, translated=result, target=target)
     reply.headers["Cache-Control"] = "no-store"
     return reply
@@ -179,8 +223,6 @@ def bilingual_translate_batch():
     origin = request.headers.get("Origin", "")
     if origin and urllib.parse.urlsplit(origin).netloc != request.host:
         return jsonify(ok=False, error="Nguồn yêu cầu không hợp lệ."), 403
-    if _rate_limited():
-        return jsonify(ok=False, error="Bạn đã yêu cầu dịch quá nhiều lần. Hãy thử lại sau."), 429
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         return jsonify(ok=False, error="Nội dung không hợp lệ."), 400
@@ -191,6 +233,11 @@ def bilingual_translate_batch():
             or any(not isinstance(x, str) or not x.strip() or len(x) > 3200 for x in items)
             or sum(map(len, items)) > 6400):
         return jsonify(ok=False, error="Tối đa 24 đoạn và 6.400 ký tự mỗi lượt dịch."), 400
+    cached=_cached_translation(items,target)
+    if cached is not None:
+        return jsonify(ok=True,translations=cached,target=target)
+    if _rate_limited():
+        return jsonify(ok=False,error="Đang vượt giới hạn dịch. Hãy thử lại sau 60 giây."),429
 
     keys = []
     server_key = str(os.environ.get("GEMINI_API_KEY") or "").strip()
@@ -278,6 +325,7 @@ def bilingual_translate_batch():
         if any(code in failures for code in (500, 502, 503, 504)):
             return jsonify(ok=False, error="Máy chủ Gemini đang gặp sự cố. Bài học và game vẫn hoạt động bình thường."), 503
         return jsonify(ok=False, error="Bản dịch không đảm bảo công thức hoặc cấu trúc. Hãy thử dịch câu hỏi riêng hoặc đoạn ngắn hơn."), 502
+    _save_translation(items,target,output)
     response = jsonify(ok=True, translations=output, target=target)
     response.headers["Cache-Control"] = "no-store"
     return response
