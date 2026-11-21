@@ -4702,7 +4702,12 @@ def practice():
     if not session.get('practice_started_at'):
         session['practice_started_at']=time.time()
     elapsed=max(0,int(time.time()-float(session.get('practice_started_at') or time.time())))
-    record_key=hashlib.sha256(((str((m or {}).get('username') or ''))+'|'+p).encode('utf-8')).hexdigest()[:24]
+    game_level=str(session.get('practice_game_level') or '')
+    if game_level not in {'easy','medium','hard'}:
+        game_level=''
+    game_name={'easy':'Dễ','medium':'Trung bình','hard':'Khó'}.get(game_level,'')
+    record_variant=('|game='+game_level+'|n='+str(len(ids))) if game_level else ''
+    record_key=hashlib.sha256(((str((m or {}).get('username') or ''))+'|'+p+record_variant).encode('utf-8')).hexdigest()[:24]
     record_name='ldvl_practice_record_v1_'+record_key
     if not can_practice(m,p):
         return redirect(dang_view_url(p, str(session.get('practice_dang') or ''), str(session.get('practice_kind') or '')))
@@ -4792,7 +4797,7 @@ else if(storage)storage.textContent='📱 Đang lưu trên trình duyệt, chưa
             "<a href='" + html.escape(ai_back + '&admin_action=rewrite', quote=True) + "'>✍️ AI viết lại câu trong dạng</a>"
             "</nav>"
         )
-    body=(f"<div class='wrap vip-practice-wrap'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']} · Mức {html.escape(muc_now)}</span></span>"
+    body=(f"<div class='wrap vip-practice-wrap' data-game-level='{game_level}'><div class='panel'><div class='head quiztop'><span>📝 Câu {pos+1}/{len(ids)} · <span class='qid'>{html.escape(str(q.get('id') or '—'))}</span><span class='quizdang'> · {html.escape(q['dang'])} · {q['kind']} · Mức {html.escape(muc_now)}</span></span>"
           f"<span class='qzoombar'><button type='button' class='btn' id='qZmOut' title='Thu nhỏ chữ'>A−</button>"
           f"<button type='button' class='btn' id='qZmFit' title='Chữ to tối đa, vẫn vừa màn hình'>Vừa màn</button>"
           f"<b id='qzoomlab'>100%</b>"
