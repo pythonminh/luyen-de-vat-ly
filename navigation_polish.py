@@ -79,7 +79,7 @@ CSS = r"""
 }
 @media (max-width:1024px){
  .top .topin{height:auto!important;min-height:50px;gap:5px!important}
- .top #ldvlNav:not(.nav-open){display:none!important}
+ .top:not(.nav-open) #ldvlNav{display:none!important}
  .top #ldvlNavToggle{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:auto!important}
  .top.nav-open #ldvlNav{
    display:grid!important;position:absolute!important;top:100%!important;
