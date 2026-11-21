@@ -263,9 +263,7 @@
   window.addEventListener("ldvl:inline-translated",event=>{
     const detail=event.detail||{};
     if(!detail.english||!detail.source)return;
-    lastSource=String(detail.source);
-    lastEnglish=String(detail.english);
-    showQuickGrammar();
+    setOutput(String(detail.source),String(detail.english),detail.marks||{},"en");
   });
   function stopListening(){
     try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
