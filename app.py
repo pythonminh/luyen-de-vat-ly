@@ -3648,7 +3648,8 @@ def _dup_strict(s):
     \\sqrt, which can make *different* formulas look identical.
     """
     value = html.unescape(str(s or '')).casefold()
-    value = re.sub(r'<[^>]+>', ' ', value)
+    # Preserve all image/SVG/TikZ markup in strict fingerprints. Different
+    # diagrams must not look identical just because the text matches.
     value = re.sub(r'\s+', ' ', value).strip()
     return value
 
