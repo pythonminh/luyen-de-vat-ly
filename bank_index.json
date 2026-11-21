@@ -5239,63 +5239,63 @@
       "questions": 243,
       "count": 243,
       "dang": {
-        "Bài toán thực tế dùng phương trình trạng thái": 27,
-        "Biến đổi trạng thái của một lượng khí xác định": 1,
-        "Nhận biết phương trình trạng thái của khí lí tưởng": 27,
-        "Tính các thông số trạng thái p, V, T": 27,
-        "Xác định số mol, khối lượng và khối lượng riêng của khí": 27,
-        "Xác định sự biến thiên khối lượng riêng của chất khí": 80,
-        "Áp dụng phương trình Clapeyron pV = nRT": 27,
-        "Đồ thị và các quá trình biến đổi trạng thái liên tiếp": 27
+        "Bài toán thực tế dùng phương trình trạng thái": 10,
+        "Áp dụng phương trình Clapeyron pV = nRT": 33,
+        "Biến đổi trạng thái của một lượng khí xác định": 30,
+        "Nhận biết phương trình trạng thái của khí lí tưởng": 39,
+        "Xác định số mol, khối lượng và khối lượng riêng của khí": 41,
+        "Xác định sự biến thiên khối lượng riêng của chất khí": 71,
+        "Tính các thông số trạng thái p, V, T": 9,
+        "Đồ thị và các quá trình biến đổi trạng thái liên tiếp": 10
       },
       "dang_kinds": {
         "Bài toán thực tế dùng phương trình trạng thái": {
-          "TN": 10,
-          "DS": 8,
-          "TLN": 6,
-          "TL": 3
+          "TN": 1,
+          "DS": 7,
+          "TLN": 0,
+          "TL": 2
+        },
+        "Áp dụng phương trình Clapeyron pV = nRT": {
+          "TN": 6,
+          "DS": 13,
+          "TLN": 12,
+          "TL": 2
         },
         "Biến đổi trạng thái của một lượng khí xác định": {
-          "TN": 1,
+          "TN": 6,
           "DS": 0,
-          "TLN": 0,
-          "TL": 0
+          "TLN": 18,
+          "TL": 6
         },
         "Nhận biết phương trình trạng thái của khí lí tưởng": {
-          "TN": 10,
-          "DS": 8,
-          "TLN": 6,
-          "TL": 3
-        },
-        "Tính các thông số trạng thái p, V, T": {
-          "TN": 10,
-          "DS": 8,
-          "TLN": 6,
-          "TL": 3
+          "TN": 30,
+          "DS": 7,
+          "TLN": 0,
+          "TL": 2
         },
         "Xác định số mol, khối lượng và khối lượng riêng của khí": {
-          "TN": 10,
-          "DS": 8,
+          "TN": 12,
+          "DS": 21,
           "TLN": 6,
-          "TL": 3
+          "TL": 2
         },
         "Xác định sự biến thiên khối lượng riêng của chất khí": {
-          "TN": 25,
-          "DS": 30,
+          "TN": 31,
+          "DS": 15,
           "TLN": 25,
           "TL": 0
         },
-        "Áp dụng phương trình Clapeyron pV = nRT": {
-          "TN": 10,
-          "DS": 8,
-          "TLN": 6,
-          "TL": 3
+        "Tính các thông số trạng thái p, V, T": {
+          "TN": 0,
+          "DS": 7,
+          "TLN": 0,
+          "TL": 2
         },
         "Đồ thị và các quá trình biến đổi trạng thái liên tiếp": {
-          "TN": 10,
+          "TN": 0,
           "DS": 8,
-          "TLN": 6,
-          "TL": 3
+          "TLN": 0,
+          "TL": 2
         }
       }
     },
