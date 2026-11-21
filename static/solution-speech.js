@@ -120,7 +120,12 @@
     currentPanel=root;
     const myId=speechId;
     const selector=root.querySelector(".ll-sol-language");
-    const selection=selector?.value||chosen;
+    let selection=selector?.value||chosen;
+    if(selection==="auto"){
+      let savedMode="vi";
+      try{savedMode=localStorage.getItem("ldvlBilingualStudyMode_v1")||"vi";}catch(e){}
+      if(savedMode==="en")selection="en";
+    }
     const read=getSpeech(root,selection);
     if (!read.spoken) {
       setNote(root,"Không tìm thấy nội dung lời giải để đọc.",true);return;
