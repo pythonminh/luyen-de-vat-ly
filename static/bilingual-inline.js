@@ -132,7 +132,8 @@ function currentQuestionNodes(){
  const legacy=document.getElementById("question");
  if(legacy&&onScreen(legacy)){
   const parent=legacy.closest(CARD)||legacy.parentElement;
-  const others=parent?Array.from(parent.querySelectorAll(ANSWER_PARTS)):Array.from(document.querySelectorAll("#options .option,#options label"));
+  let others=parent?Array.from(parent.querySelectorAll(ANSWER_PARTS)):[];
+  if(!others.length)others=Array.from(document.querySelectorAll("#options .option,#options label"));
   const nodes=[legacy,...others];
   const solution=parent?.querySelector("#solution,.solution,.explanation");
   if(solution&&onScreen(solution))nodes.push(solution);
