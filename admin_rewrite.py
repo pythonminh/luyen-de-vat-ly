@@ -4651,13 +4651,16 @@ document.addEventListener('click',function(e){
       const out=bar.querySelector('.rwout');
       if(out)out.insertAdjacentElement('afterend',box);else bar.appendChild(box);
     }
+    const sameQuestion=box.getAttribute('data-src')===p.src && box.getAttribute('data-fi')===String(p.fi);
+    if(box._nb && sameQuestion){
+      rwChoosePrompt(box,focus);
+      box.scrollIntoView({block:'nearest'});
+      return;
+    }
+    box._nb=null;
     box.setAttribute('data-src',p.src);
     box.setAttribute('data-fi',String(p.fi));
     box.setAttribute('data-focus',focus);
-    if(box._nb){
-      const fold=box.querySelector(focus==='picture'?'.rwnbpicture-fold':'.rwnbcomic-fold');
-      if(fold){fold.open=true;fold.scrollIntoView({block:'nearest'});return;}
-    }
     rwLoadNotebook(box);
     return;
   }
