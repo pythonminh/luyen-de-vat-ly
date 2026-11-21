@@ -123,7 +123,7 @@ function setTranslations(items,values,lang,desired){
    showEntry(entry,desired);
    if(window.parent===window && entry.el.matches(".qstem,#question,.question-text,.question-content")){
      window.dispatchEvent(new CustomEvent("ldvl:inline-translated",{
-       detail:{source:entry.text,english:translated}
+       detail:{source:entry.text,english:translated,marks:entry.marks}
      }));
    }
  });
