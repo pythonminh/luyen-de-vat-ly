@@ -67,6 +67,7 @@
   function setOutput(source,translated,marks,target) {
     const parent=$("ll-output"), original=$("ll-original"), out=$("ll-translated");
     if(!parent||!original||!out) return;
+    if(lastSource && lastSource!==source) activeGrammarRequest++;
     parent.hidden=false;
     const showBoth=mode==="both";
     original.hidden=!showBoth;
