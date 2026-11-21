@@ -189,6 +189,7 @@
     // Enable 'Read original' immediately, even if Gemini translation is pending.
     lastSource=text;lastMarks=marks;lastResult="";lastEnglish="";
     const originalButton=$("ll-speak-original"),translationButton=$("ll-speak");
+    if($("ll-copy"))$("ll-copy").disabled=true;
     if(originalButton)originalButton.disabled=false;
     if(translationButton)translationButton.disabled=true;
     const target=chosenLanguage(text);
@@ -541,6 +542,9 @@
     lastResult="";lastSource="";lastEnglish="";lastMarks={};
     const sourceSpeak=$("ll-speak-original");
     if(sourceSpeak)sourceSpeak.disabled=false;
+    // Old translated speech must not remain clickable after changing modes.
+    if($("ll-speak"))$("ll-speak").disabled=true;
+    if($("ll-copy"))$("ll-copy").disabled=true;
     if($("ll-speech-preview"))$("ll-speech-preview").textContent="";
     if($("ll-read-preview"))$("ll-read-preview").hidden=true;
     if($("ll-grammar-patterns"))renderGrammar({patterns:[],vocabulary:[],practice_tip:""});
