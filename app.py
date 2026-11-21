@@ -5647,26 +5647,62 @@ def admin_dups():
             drops_by.setdefault(src, []).append(fi)
         if not drops_by:
             return _dup_after(p, nxt, 'err', 'Chưa chọn câu trùng để xóa.')
+        selected_keys={(src,fi) for src,idxs in drops_by.items() for fi in set(idxs)}
+        for g in groups:
+            protected=set()
+            for q in g.get('members') or []:
+                src=str(q.get('src') or p).replace(chr(92),'/')
+                fi=int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
+                protected.add((src,fi))
+            if protected and protected.issubset(selected_keys):
+                return _dup_after(p,nxt,'err','Mỗi nhóm phải giữ ít nhất một câu. Hãy bỏ tick một bản cần giữ.')
+        if len(selected_keys)>=len(qs):
+            return _dup_after(p,nxt,'err','Không thể xóa hết câu trong bài.')
+        if not github_token():
+            return _dup_after(p,nxt,'err','Thiếu GitHub token: đã dừng, không xóa tạm trên Render.')
         total=0
+        plans=[]
         try:
+            # Preflight every original TEX before writing anything. GitHub
+            # returns content and blob SHA from one consistent revision.
+            question_by={(str(q.get('src') or p).replace(chr(92),'/'),
+                          int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)):q
+                         for q in qs}
             for src, idxs in drops_by.items():
                 idxs=sorted(set(idxs))
-                fsha, tex = read_tex(src, need_sha=True)
-                new=tex_without_questions(tex, idxs)
+                info=gh_api('contents/'+urllib.parse.quote(src,safe='/')+'?ref='+urllib.parse.quote(BRANCH))
+                fsha=str(info.get('sha') or '')
+                if not fsha or not info.get('content'):
+                    raise ValueError('Không đọc được phiên bản GitHub hiện tại: '+src)
+                tex=base64.b64decode(str(info['content']).replace('\n','')).decode('utf-8')
+                existing=parse_questions(tex)
+                for fi in idxs:
+                    earlier=question_by.get((src,fi))
+                    if not earlier or fi<0 or fi>=len(existing):
+                        raise ValueError('Vị trí câu đã thay đổi, cần quét lại: '+src)
+                    if question_dup_keys(earlier)[1]!=question_dup_keys(existing[fi])[1]:
+                        raise ValueError('Câu trong GitHub vừa thay đổi; hãy tải lại màn hình soát trùng trước khi xóa: '+src)
+                new=tex_without_questions(tex,idxs)
+                if len(parse_questions(new))!=len(existing)-len(idxs):
+                    raise ValueError('Số câu sau xóa không khớp, thao tác đã dừng: '+src)
+                plans.append((src,fsha,new,len(idxs)))
+            for src,fsha,new,count in plans:
+                github_put_text(src,new,'ADMIN lọc trùng: xóa '+str(count)+' câu sau khi đối chiếu trong '+src,fsha)
+                total+=count
                 local=_safe_repo_file(src)[1]
-                local.parent.mkdir(parents=True, exist_ok=True)
-                local.write_text(new, encoding='utf-8')
-                if TOKEN:
-                    github_put_text(src, new, 'ADMIN xóa '+str(len(idxs))+' câu trùng trong '+src, fsha or None)
-                total += len(idxs)
+                try:
+                    local.parent.mkdir(parents=True, exist_ok=True)
+                    local.write_text(new,encoding='utf-8')
+                except OSError:
+                    pass
             try:
                 from dang_routes import _STATS_CACHE, _QID_CACHE
-                _STATS_CACHE.clear(); _QID_CACHE.clear()
+                _STATS_CACHE.clear();_QID_CACHE.clear()
             except Exception:
                 pass
-            return _dup_after(p, nxt, 'ok', 'Đã xóa '+str(total)+' câu trùng, giữ bản đầu mỗi nhóm.')
+            return _dup_after(p,nxt,'ok','Đã xóa '+str(total)+' bản trùng. Đã giữ câu đại diện và lưu các phiên bản trước trong lịch sử GitHub.')
         except Exception as e:
-            return page('Lỗi xóa trùng',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
+            return _dup_after(p,nxt,'err','Đã xóa '+str(total)+' câu trước khi gặp lỗi. '+str(e))
     flash=request.args.get('ok') or ''; err=request.args.get('err') or ''
     blocks=[]; marked=set()
     safe_n=len({(str(q.get('src') or p), int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0))
