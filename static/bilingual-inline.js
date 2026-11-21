@@ -194,6 +194,27 @@ function setTranslations(items,values,lang,desired){
    }
  });
 }
+function publishCurrentTranslation(items){
+ if(window.parent!==window || !items.length || items.some(e=>!e.translated))return;
+ const marks={},sourceParts=[],englishParts=[];
+ let next=0;
+ for(const entry of items){
+  const ids={};
+  const rename=text=>String(text||"").replace(regMarker,m=>{
+   if(!ids[m]){
+    const newKey="⟦M"+(next++)+"⟧";
+    ids[m]=newKey;
+    if(entry.marks[m])marks[newKey]=entry.marks[m];
+   }
+   return ids[m];
+  });
+  sourceParts.push(rename(entry.text));
+  englishParts.push(rename(entry.translated));
+ }
+ window.dispatchEvent(new CustomEvent("ldvl:inline-translated",{
+  detail:{source:sourceParts.join("\n"),english:englishParts.join("\n"),marks,complete:true}
+ }));
+}
 function keySource(){try{
  if(typeof window.ldvlGetGeminiKeys==="function")return window.ldvlGetGeminiKeys().filter(k=>typeof k==="string"&&k.length>=20).slice(0,3);
  }catch(e){}
@@ -277,7 +298,8 @@ async function translateEntries(items,currentMode,revision){
    }
  }
  if(revision===epoch&&mode===currentMode){
-   showFinal(done?"Đã dịch "+done+"/"+total+" đoạn trên trang.":"Không có đoạn phù hợp để dịch.");
+   publishCurrentTranslation(pending);
+   showFinal(done?"Đã dịch "+done+"/"+total+" phần của câu đang xem.":"Không có đoạn phù hợp để dịch.");
  }
 }
 const UI={
