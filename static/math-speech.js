@@ -48,7 +48,8 @@ const units={
   "mol":"mol","°c":"độ C","oc":"độ C","m/s":"mét trên giây",
   "m/s^2":"mét trên giây bình phương","m/s^{2}":"mét trên giây bình phương",
   "m^2":"mét vuông","m^{2}":"mét vuông","m^3":"mét khối","m^{3}":"mét khối",
-  "n/m^2":"niutơn trên mét vuông","n/m^{2}":"niutơn trên mét vuông"
+  "n/m^2":"niutơn trên mét vuông","n/m^{2}":"niutơn trên mét vuông",
+  "kg/m^3":"ki lô gam trên mét khối","kg/m^{3}":"ki lô gam trên mét khối"
  },
  en:{
   "pa":"pascals","kpa":"kilopascals","mpa":"megapascals",
@@ -60,7 +61,8 @@ const units={
   "mol":"moles","°c":"degrees Celsius","oc":"degrees Celsius","m/s":"meters per second",
   "m/s^2":"meters per second squared","m/s^{2}":"meters per second squared",
   "m^2":"square meters","m^{2}":"square meters","m^3":"cubic meters","m^{3}":"cubic meters",
-  "n/m^2":"newtons per square meter","n/m^{2}":"newtons per square meter"
+  "n/m^2":"newtons per square meter","n/m^{2}":"newtons per square meter",
+  "kg/m^3":"kilograms per cubic meter","kg/m^{3}":"kilograms per cubic meter"
  }
 };
 const commandNames={
@@ -119,6 +121,8 @@ function mathToSpeech(input,locale) {
    .replace(/^\$|\$$/g,"")
    .replace(/^\\\(|\\\)$/g,"")
    .replace(/^\\\[|\\\]$/g,"")
+   .replace(/(\d)\{\s*,\s*\}(\d)/g,"$1,$2")
+   .replace(/([a-zA-Z])_(\{[^}]*\}|\d)(?=[a-zA-Z])/g,"$1_$2\\cdot ")
    .replace(/\\begin\{(?:aligned|align\*?|equation\*?|gather\*?|array)\}/g," ")
    .replace(/\\end\{(?:aligned|align\*?|equation\*?|gather\*?|array)\}/g," ");
  let i=0;
@@ -199,6 +203,7 @@ function mathToSpeech(input,locale) {
      if(ch==="^"){
        if(val==="2")return W.squared;
        if(val==="3")return W.cubed;
+       if(val===W.degree||val==="degree")return W.degree;
        return W.power+" "+val;
      }
      return W.sub+" "+val;
@@ -212,13 +217,17 @@ function mathToSpeech(input,locale) {
    if(/[0-9]/.test(ch)){
      let token=ch;
      while(i<s.length && /[0-9.,]/.test(s[i])) token+=s[i++];
-     return token.replace(/[.,]$/,"");
+     token=token.replace(/[.,]$/,"");
+     return token.replace(/(\d),(?=\d)/g,"$1"+(isEnglish(locale)?" point ":" phẩy "));
    }
    if(/[a-zA-Z]/.test(ch)){
      let token=ch;
      while(i<s.length&&/[a-zA-Z]/.test(s[i]))token+=s[i++];
      if(token==="const")return W.isconstant;
      if(token==="pV")return "p "+W.times+" V";
+     if(token==="mv")return "m "+W.times+" v";
+     if(token==="ma")return "m "+W.times+" a";
+     if(token==="qE")return "q "+W.times+" E";
      if(token==="PV")return "P "+W.times+" V";
      return token;
    }
