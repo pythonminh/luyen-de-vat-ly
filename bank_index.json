@@ -5546,12 +5546,11 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 8. Mô hình động học phân tử chất khí",
       "De": "L12C2 Bài 8. Mô hình động học phân tử chất khí",
-      "questions": 162,
-      "count": 162,
+      "questions": 115,
+      "count": 115,
       "dang": {
         "Đặc điểm cấu tạo và chuyển động phân tử ở thể khí": 37,
         "Các luận điểm cơ bản của mô hình động học phân tử chất khí": 10,
-        "Các thông số trạng thái của một lượng khí": 47,
         "Chuyển động Brown và bằng chứng về chuyển động phân tử": 12,
         "Giải thích áp suất khí bằng va chạm phân tử": 17,
         "Vận dụng mô hình động học phân tử vào thực tế": 39
@@ -5567,12 +5566,6 @@
           "TN": 0,
           "DS": 10,
           "TLN": 0,
-          "TL": 0
-        },
-        "Các thông số trạng thái của một lượng khí": {
-          "TN": 12,
-          "DS": 5,
-          "TLN": 30,
           "TL": 0
         },
         "Chuyển động Brown và bằng chứng về chuyển động phân tử": {
