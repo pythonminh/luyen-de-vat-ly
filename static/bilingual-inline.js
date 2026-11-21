@@ -37,7 +37,8 @@ function protectNodes(nodes){
  function walk(node){
    if(node.nodeType===3)return node.nodeValue||"";
    if(node.nodeType!==1)return "";
-   if(node.matches("input,button,select,textarea,script,style,[hidden],.ll-inline-original,.ll-inline-target,.ll-sol-tools,.ll-sol-quick-play,.ll-sol-preview"))return "";
+   if(node.matches("input,button,select,textarea,script,style,[hidden],.ll-inline-original,.ll-inline-target,.ll-sol-tools,.ll-sol-quick-play,.ll-sol-preview,.solution,#solution,#solbox,.explanation,.answer-key"))return "";
+   if(node.isConnected&&!onScreen(node))return "";
    if(node.matches("mjx-container,.MathJax,.katex,math,svg,img,canvas,iframe,video,.tikzfig,.tikz-row,.immini,.tex-table")){
      const marker="⟦M"+counter+++"⟧";
      marks[marker]=node.cloneNode(true);
@@ -118,7 +119,8 @@ function currentQuestionNodes(){
  if(live&&onScreen(live)&&live.querySelector(".qstem")){
   // This container holds exactly one practice/game question.
   const stem=live.querySelector(".qstem");
-  const nodes=[stem,...live.querySelectorAll(".opts .opt,.tfgrid .tf-text,#solbox,.solution")];
+  const choices=Array.from(live.querySelectorAll(".opt,.tf-text")).filter(el=>!el.closest("#solbox,.solution,.phat"));
+  const nodes=[stem,...choices,...live.querySelectorAll("#solbox,.solution")];
   // Never translate hidden answers or unrelated practice navigation.
   return {nodes:nodes.filter(el=>el===stem||onScreen(el)),identity:stem};
  }
@@ -194,8 +196,7 @@ function setTranslations(items,values,lang,desired){
    }
  });
 }
-function publishCurrentTranslation(items){
- if(window.parent!==window || !items.length || items.some(e=>!e.translated))return;
+function combinedQuestion(items){
  const marks={},sourceParts=[],englishParts=[];
  let next=0;
  for(const entry of items){
@@ -209,12 +210,22 @@ function publishCurrentTranslation(items){
    return ids[m];
   });
   sourceParts.push(rename(entry.text));
-  englishParts.push(rename(entry.translated));
+  englishParts.push(rename(entry.translated||""));
  }
+ return {source:sourceParts.join("\n"),english:englishParts.join("\n"),marks};
+}
+function publishCurrentTranslation(items){
+ if(window.parent!==window || !items.length || items.some(e=>!e.translated))return;
+ const data=combinedQuestion(items);
  window.dispatchEvent(new CustomEvent("ldvl:inline-translated",{
-  detail:{source:sourceParts.join("\n"),english:englishParts.join("\n"),marks,complete:true}
+  detail:{...data,complete:true}
  }));
 }
+window.ldvlInlineQuestionData=()=>{
+ const items=contentEntries();
+ const result=combinedQuestion(items);
+ return {text:result.source,marks:result.marks};
+};
 function keySource(){try{
  if(typeof window.ldvlGetGeminiKeys==="function")return window.ldvlGetGeminiKeys().filter(k=>typeof k==="string"&&k.length>=20).slice(0,3);
  }catch(e){}
