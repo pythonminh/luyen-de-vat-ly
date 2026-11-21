@@ -4332,6 +4332,9 @@ def begin_kind_practice(path, kind='', dang=''):
         practice_started_at=time.time(),
         practice_attempt_id=secrets.token_hex(16),
         practice_ai=True,
+        practice_game_level='',
+        practice_game_count=0,
+        practice_game_mix={},
     )
     return redirect('/member/practice')
 
@@ -4643,7 +4646,7 @@ def start_practice():
     wanted=sort_ids_for_practice(qs, wanted)
     kinds=set(str((next((q for q in qs if q.get('idx')==i),{}) or {}).get('kind') or '') for i in wanted)
     kinds={k for k in kinds if k}
-    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_muc='',practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_started_at=time.time(),practice_attempt_id=secrets.token_hex(16),practice_ai=True);return redirect('/member/practice')
+    session.update(practice_path=p,practice_dang='',practice_kind=(next(iter(kinds)) if len(kinds)==1 else ''),practice_muc='',practice_ids=wanted,practice_pos=0,practice_right=0,practice_streak=0,practice_best=0,practice_done=[],practice_started_at=time.time(),practice_attempt_id=secrets.token_hex(16),practice_ai=True,practice_game_level='',practice_game_count=0,practice_game_mix={});return redirect('/member/practice')
 
 @app.get('/member/go-kind')
 def go_kind():
@@ -5827,6 +5830,7 @@ import admin_rewrite  # noqa: E402,F401
 import live_present  # noqa: E402,F401
 import practice_race  # noqa: E402,F401
 import practice_records  # noqa: E402,F401
+import game_levels  # noqa: E402,F401
 try:
     import membership as _membership  # noqa: F401
     _membership.attach_routes()
