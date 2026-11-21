@@ -4,10 +4,11 @@
 if(window.__ldvlInlineLearningV2)return;
 window.__ldvlInlineLearningV2=true;
 const KEY="ldvlBilingualStudyMode_v1";
-const MAX_ITEMS=10,MAX_CHAR=2600;
+const MAX_ITEMS=12,MAX_CHAR=4800;
 const regMarker=/⟦M\d+⟧/g;
 let mode="vi", entries=new WeakMap(), active=[], cache=new Map(), busy=false, epoch=0, timer=0;
 let frameRequest=null, currentFrame=null;
+let touchedQuestion=null,lastQuestionKey="",frameQuestionKey="";
 let statusWatchdog=0;
 function showFinal(message,error=false){
  clearTimeout(statusWatchdog);statusWatchdog=0;status(message,error);
@@ -85,35 +86,83 @@ function prepare(el){
  entries.set(el,prev);
  return prev;
 }
-function selectors(){
- if(document.querySelector("#q .qstem")){
-   return "#q .qstem,#q .opt,#q .tf-text,#q .qdang,#q .nguon,#q .solution,#q #solbox,#q .hintline,.quiztop .quizdang";
+const CARD=".qcard,.question-card,.exam-question,.quiz-question,.quiz-item,.question-item,.question-block,[data-question-id],[data-question],.question";
+const STEMS=".qstem,.question-text,.question-content,.problem-text,.quiz-question-text,[data-question-text],#question";
+const ANSWER_PARTS=".opt,.option,.tf-text,label.answer,label.option,#options label,#options .option";
+function owningCard(el){
+ if(!el||!el.closest)return null;
+ const card=el.closest(CARD);
+ return card&&onScreen(card)?card:null;
+}
+function activeCard(){
+ if(touchedQuestion&&touchedQuestion.isConnected&&onScreen(touchedQuestion))return touchedQuestion;
+ const cards=Array.from(document.querySelectorAll(CARD))
+  .filter(el=>onScreen(el) && !el.closest("#ldvl-lang-panel,.ll-inline-original,.ll-inline-target"));
+ if(!cards.length)return null;
+ const selected=cards.find(el=>el.matches('[aria-current="true"],.current,.active,[data-active="true"]'));
+ if(selected)return selected;
+ // The visible question nearest the middle of the viewport is the one
+ // the learner is currently reading; never translate a whole exam at once.
+ const center=window.innerHeight*.45;
+ return cards.sort((a,b)=>{
+  const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();
+  const da=Math.abs(Math.max(0,Math.min(center,ra.bottom)-Math.max(center,ra.top)))+
+            Math.abs((ra.top+ra.bottom)/2-center)*.08;
+  const db=Math.abs(Math.max(0,Math.min(center,rb.bottom)-Math.max(center,rb.top)))+
+            Math.abs((rb.top+rb.bottom)/2-center)*.08;
+  return da-db;
+ })[0];
+}
+function currentQuestionNodes(){
+ const live=document.getElementById("q");
+ if(live&&onScreen(live)&&live.querySelector(".qstem")){
+  // This container holds exactly one practice/game question.
+  const stem=live.querySelector(".qstem");
+  const nodes=[stem,...live.querySelectorAll(".opts .opt,.tfgrid .tf-text,#solbox,.solution")];
+  // Never translate hidden answers or unrelated practice navigation.
+  return {nodes:nodes.filter(el=>el===stem||onScreen(el)),identity:stem};
  }
- if(document.querySelector("#question")){
-   return "#question,#options .option,#options label,#solution,.formula";
+ const legacy=document.getElementById("question");
+ if(legacy&&onScreen(legacy)){
+  const parent=legacy.closest(CARD)||legacy.parentElement;
+  const others=parent?Array.from(parent.querySelectorAll(ANSWER_PARTS)):Array.from(document.querySelectorAll("#options .option,#options label"));
+  const nodes=[legacy,...others];
+  const solution=parent?.querySelector("#solution,.solution,.explanation");
+  if(solution&&onScreen(solution))nodes.push(solution);
+  return {nodes:nodes.filter(onScreen),identity:legacy};
  }
- return "main h1,main h2,main h3,main p,main li,main summary,main .head,.wrap h1,.wrap h2,.wrap h3,.wrap .panel>.head,.wrap .body>p,.wrap .body>li,.wrap .qstem,.wrap .tf-text,.wrap .opt,.question-text,.question-content,.question,.qstem";
+ const root=activeCard();
+ if(!root)return {nodes:[],identity:null};
+ let stems=Array.from(root.querySelectorAll(STEMS)).filter(el=>onScreen(el));
+ if(!stems.length)stems=[root];
+ let choices=Array.from(root.querySelectorAll(ANSWER_PARTS)).filter(onScreen);
+ if(!choices.length && root.matches(".qstem,.question-text,.question-content"))choices=[];
+ const solution=Array.from(root.querySelectorAll(".solution,.explanation,[data-solution]"))
+  .filter(onScreen);
+ return {nodes:[...stems,...choices,...solution],identity:stems[0]||root};
 }
 function contentEntries(){
- const nodes=Array.from(document.querySelectorAll(selectors()));
- const selected=[], seen=new Set();
+ const {nodes,identity}=currentQuestionNodes();
+ const selected=[],seen=new Set();
  for(const el of nodes){
-   if(seen.has(el)||el.closest("#ldvl-lang-panel"))continue;
-   if(el.closest("nav,.top,.sidebar,.ll-inline-original,.ll-inline-target"))continue;
-   if(el.matches("article")&&el.querySelector("h1,h2,h3,p"))continue;
-   let ancestor=el.parentElement;
-   let nested=false;
-   while(ancestor){
-     if(seen.has(ancestor)){nested=true;break;}
-     ancestor=ancestor.parentElement;
-   }
-   if(nested)continue;
-   const e=prepare(el);
-   if(!e)continue;
-   selected.push(e);seen.add(el);
-   if(selected.length>=70)break;
+  if(!el||seen.has(el)||!onScreen(el))continue;
+  if(el.closest("nav,.top,.sidebar,#ldvl-lang-panel,.ll-inline-original,.ll-inline-target"))continue;
+  let parent=el.parentElement,nested=false;
+  while(parent){if(seen.has(parent)){nested=true;break;}parent=parent.parentElement;}
+  if(nested)continue;
+  const e=prepare(el);
+  if(!e)continue;
+  selected.push(e);seen.add(el);
  }
  active=selected;
+ const stem=selected.find(e=>e.el===identity)||selected[0];
+ const nextKey=stem?String(idOf(stem.el))+":"+stem.text:"";
+ if(nextKey!==lastQuestionKey){
+  lastQuestionKey=nextKey;
+  if(window.parent===window)window.dispatchEvent(new CustomEvent("ldvl:current-question-changed",{
+    detail:{text:stem?.text||"",marks:stem?.marks||{}}
+  }));
+ }
  return selected;
 }
 function showEntry(e,currentMode){
@@ -265,7 +314,7 @@ function changeUI(){
  }
 }
 function resetAll(){
- epoch++;lastPageFingerprint="";frameDirty=true;
+ epoch++;lastPageFingerprint="";lastQuestionKey="";touchedQuestion=null;frameQuestionKey="";frameDirty=true;
  for(const e of active)showEntry(e,"vi");
  changeUI();
  currentFrame=document.querySelector("#hpFrame,#hlFrame,#savedFrame");
@@ -376,6 +425,7 @@ function changeMode(next){
 }
 function startParent(){
  window.ldvlInlineSwitch=true;
+ document.addEventListener("pointerdown",e=>{const q=owningCard(e.target);if(q&&q!==touchedQuestion){touchedQuestion=q;if(mode!=="vi")schedule();}},{passive:true});
  window.addEventListener("ldvl:languagechange",e=>changeMode(e.detail?.mode||"vi"));
  const obs=new MutationObserver(records=>{
    if(mode==="vi")return;
@@ -393,6 +443,7 @@ function startParent(){
  if(mode!=="vi"){showPending("Đang kiểm tra nội dung song ngữ…");schedule();}
 }
 function startChild(){
+ document.addEventListener("pointerdown",e=>{const q=owningCard(e.target);if(q&&q!==touchedQuestion){touchedQuestion=q;frameQuestionKey="";if(localMode!=="vi")window.parent.postMessage({type:"LDVL_INLINE_DIRTY"},hostOrigin);}},{passive:true});
  const hostOrigin=(()=>{try{return new URL(document.baseURI).origin;}catch(e){return "";}})();
  let localMode="vi", lastCapture=[];
  let defer=0;
