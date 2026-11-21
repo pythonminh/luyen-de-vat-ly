@@ -47,6 +47,7 @@ function renderWords(dest,words,marks){
 }
 function prepare(el){
  if(!onScreen(el))return null;
+ if(window.ldvlMathSpeech?.prepareElement)window.ldvlMathSpeech.prepareElement(el);
  let prev=entries.get(el);
  if(prev)return prev;
  if(el.closest(".ll-inline-original,.ll-inline-target,#ldvl-lang-panel,.ll-no-translate"))return null;
