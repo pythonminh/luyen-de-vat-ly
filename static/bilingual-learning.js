@@ -650,9 +650,9 @@
             '<button type="button" class="ll-mode" id="ll-mode-en">🇬🇧 English</button>'+
             '<button type="button" class="ll-mode" id="ll-mode-both">📚 Song ngữ</button>'+
           '</div>'+
-          '<p class="ll-info">Dịch câu hỏi hoặc đoạn được bôi đen. Không thay đổi đề gốc, công thức, lựa chọn hay kết quả chấm.</p>'+
+          '<p class="ll-info">Chỉ dịch câu đang hiển thị, gồm đề và các phương án. Chuyển câu sẽ tự dịch câu mới; lời giải chỉ dịch khi được mở. Không thay đổi đáp án hoặc cách chấm.</p>'+
           '<div class="ll-actions">'+
-            '<button type="button" class="ll-action primary" id="ll-translate">🌐 Dịch câu hỏi</button>'+
+            '<button type="button" class="ll-action primary" id="ll-translate">🌐 Dịch câu hiện tại</button>'+
             '<button type="button" class="ll-action" id="ll-selection">✏️ Dịch đoạn bôi đen</button>'+
           '</div>'+
           '<div class="ll-status" id="ll-status" role="status" aria-live="polite">Chọn ngôn ngữ để bắt đầu.</div>'+
