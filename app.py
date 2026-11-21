@@ -5009,7 +5009,7 @@ else if(q.kind==='DS'){ok=true;let a=[];for(let i=0;i<q.statements.length;i++){l
 else{let z=document.getElementById('ans');if(!z||!z.value.trim())return alert('Hãy nhập câu trả lời.');student=z.value.trim();ok=q.kind==='TLN'&&norm(student)===norm(q.answer);}
 let note=verdictHtml(q,student,ok);let sol=q.solution||'Chưa có lời giải trong file TEX.';document.getElementById('r').innerHTML='<div class="result '+(ok?'good':'bad')+'">'+note+'</div>'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div>':'')+'<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+sol+'</div></div>';typeset(document.getElementById('q'));checked=true;lockInputs();document.getElementById('next').style.display='inline-block';window.LAST_REVIEW=Object.assign({},q,{student:student,ok:ok});
 let sb=document.getElementById('solbtn');if(sb)sb.style.display='inline-block';
-if(!window.__slotPosted){window.__slotPosted=true;fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.ok){if(window.practiceMarkAnswered)window.practiceMarkAnswered(ok);if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>';const nb=document.getElementById('next');if(nb)nb.textContent=d.complete?'🏁 Xem kết quả':'→ Câu tiếp'}else{if(d.ended){location.replace('/member/game/ended');return;}const p=document.getElementById('praise');if(p)p.textContent=(d&&d.error)||'Chưa lưu được kết quả. Tải lại trang để kiểm tra.'}})}}
+if(!window.__slotPosted){window.__slotPosted=true;fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.ok){if(window.practiceMarkAnswered)window.practiceMarkAnswered(d.answered_ok===undefined?ok:!!d.answered_ok);if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>';const nb=document.getElementById('next');if(nb)nb.textContent=d.complete?'🏁 Xem kết quả':'→ Câu tiếp'}else{if(d.ended){location.replace('/member/game/ended');return;}const p=document.getElementById('praise');if(p)p.textContent=(d&&d.error)||'Chưa lưu được kết quả. Tải lại trang để kiểm tra.'}})}}
 function reviewNow(){ldvlGeminiReview(window.LAST_REVIEW,document.getElementById('aiout'))}
 function norm(s){return String(s??'').replace(/\$+/g,'').replace(/\s+/g,'').replace(/,/g,'.').toLowerCase()}
 function restoreCompletedAnswer(){
@@ -5381,6 +5381,25 @@ def answer():
     if pos+1 in completed:
         return jsonify(ok=False,error='Câu này đã được ghi nhận. Chọn Làm lại để làm lại câu.'),409
     ok=bool(d.get('ok'))
+    if session.get('practice_game_level'):
+        # Grade the game on the server; never trust the student's submitted ok flag.
+        from exam_game import game_question_map
+        actual=game_question_map(session).get(ids[pos])
+        if not actual:
+            return jsonify(ok=False,error='Không tìm thấy câu hỏi trong bộ đề game.'),409
+        student=str(d.get('student') or '').strip()
+        kind=str(actual.get('kind') or '')
+        if kind=='TN':
+            correct_options=[chr(65+i) for i,opt in enumerate(actual.get('options') or []) if opt.get('correct')]
+            ok=(student in correct_options and len(correct_options)==1)
+        elif kind=='DS':
+            statements=actual.get('statements') or []
+            expected=''.join('Đ' if st.get('correct') else 'S' for st in statements)
+            ok=(len(expected)>0 and student==expected)
+        elif kind=='TLN':
+            ok=answer_equal(student,actual.get('answer') or '')
+        else:
+            return jsonify(ok=False,error='Loại câu không thuộc cấu trúc game.'),409
     st=int(session.get('practice_streak') or 0)
     st=st+1 if ok else 0
     best=max(int(session.get('practice_best') or 0),st)
@@ -5398,7 +5417,7 @@ def answer():
     session.update(practice_streak=st,practice_best=best,practice_right=right,practice_pos=nxt,practice_done=done)
     if finished and session.get('practice_game_level'):
         session['practice_game_status']='done'
-    return jsonify(ok=True,praise=praise,streak=st,right=right,complete=finished,answered=len(completed),total=len(ids))
+    return jsonify(ok=True,praise=praise,streak=st,right=right,answered_ok=ok,complete=finished,answered=len(completed),total=len(ids))
 
 @app.post('/api/gemini/review')
 def gemini_review():
