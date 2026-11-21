@@ -4400,7 +4400,7 @@ function rwSceneRender(box,reset){
   const kind=box.getAttribute('data-focus')||'still';
   const supported=(kind==='picture'||kind==='comic');
   const root=box.querySelector('.rwnbsettings');
-  if(root)root.hidden=!supported;
+  if(root)root.style.display=supported?'flex':'none';
   if(!supported)return;
   const d=box._nb;
   if(!d._basePrompts)d._basePrompts={picture:d.picture||'',comic:d.comic||''};
