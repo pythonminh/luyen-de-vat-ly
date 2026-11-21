@@ -5363,12 +5363,36 @@ def answer():
     if not m:return jsonify(ok=False),401
     if not can_practice(m, str(session.get('practice_path') or '') or None):
         return jsonify(ok=False,error='Cần VIP để làm bài'),403
-    d=request.get_json(silent=True) or {};ok=bool(d.get('ok'));st=int(session.get('practice_streak') or 0);st=st+1 if ok else 0;best=max(int(session.get('practice_best') or 0),st);right=int(session.get('practice_right') or 0)+(1 if ok else 0);pos=int(session.get('practice_pos') or 0);done=list(session.get('practice_done') or []);praise=''
+    d=request.get_json(silent=True) or {}
+    ids=list(session.get('practice_ids') or [])
+    pos=int(session.get('practice_pos') or 0)
+    if not ids or not 0<=pos<len(ids):
+        return jsonify(ok=False,error='Không tìm thấy câu hỏi đang làm.'),409
+    done=list(session.get('practice_done') or [])
+    completed={}
+    for item in done:
+        try: number=int(item.get('question') or 0)
+        except (ValueError,TypeError,AttributeError): continue
+        if 1<=number<=len(ids): completed[number]=item
+    if pos+1 in completed:
+        return jsonify(ok=False,error='Câu này đã được ghi nhận. Chọn Làm lại để làm lại câu.'),409
+    ok=bool(d.get('ok'))
+    st=int(session.get('practice_streak') or 0)
+    st=st+1 if ok else 0
+    best=max(int(session.get('practice_best') or 0),st)
+    praise=''
+    right=sum(1 for item in completed.values() if item.get('ok'))+(1 if ok else 0)
     if ok:
         if st==3:praise='🎉 Đúng 3 câu liên tiếp! Rất tốt!'
         elif st==5:praise='👏 Đúng 5 câu liên tiếp! Tuyệt vời!'
         elif st==10:praise='🏆 Đúng 10 câu liên tiếp! Xuất sắc!'
-    done.append({'question':pos+1,'ok':ok,'student':str(d.get('student') or ''),'kind':str(d.get('kind') or ''),'dang':str(d.get('dang') or '')});session.update(practice_streak=st,practice_best=best,practice_right=right,practice_pos=pos+1,practice_done=done);return jsonify(ok=True,praise=praise,streak=st,right=right)
+    entry={'question':pos+1,'ok':ok,'student':str(d.get('student') or ''),'kind':str(d.get('kind') or ''),'dang':str(d.get('dang') or '')}
+    done.append(entry)
+    completed[pos+1]=entry
+    nxt=next((j for j in range(len(ids)) if j+1 not in completed),len(ids))
+    finished=(nxt>=len(ids))
+    session.update(practice_streak=st,practice_best=best,practice_right=right,practice_pos=nxt,practice_done=done)
+    return jsonify(ok=True,praise=praise,streak=st,right=right,complete=finished,answered=len(completed),total=len(ids))
 
 @app.post('/api/gemini/review')
 def gemini_review():
