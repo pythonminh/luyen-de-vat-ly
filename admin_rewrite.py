@@ -4174,6 +4174,12 @@ document.addEventListener('click',function(e){
   const out=outBox(srcButton);
   loadRewrite(p.src,p.fi,out,'custom',{target_level:level,requirements:requirements});
 });
+document.addEventListener('change',function(e){
+  const control=e.target.closest&&e.target.closest('.rwnbsettings select');
+  if(!control)return;
+  const box=control.closest('.rwnbbox');
+  if(box)rwSceneRender(box,true);
+});
 document.addEventListener('toggle',function(e){
   const details=e.target;
   if(details&&details.classList&&details.classList.contains('rwnbpreview')&&details.open){
@@ -4349,6 +4355,61 @@ function ensurePhotoInput(){
   });
   return inp;
 }
+function rwSceneContext(box){
+  const root=box.querySelector('.rwnbsettings');
+  if(!root)return '';
+  let scene=root.querySelector('.rwnbscene').value||'auto';
+  const creativity=root.querySelector('.rwnbcreative').value||'normal';
+  const fidelity=root.querySelector('.rwnbfidelity').value||'strict';
+  const source=String(box._nb&&box._nb.latex||'').toLowerCase();
+  if(scene==='auto'){
+    if(/thí nghiệm|nhiệt kế|vôn kế|ampe kế|ống nghiệm|bình chia độ|đo áp suất|pít.tông|piston|xi lanh/.test(source))scene='lab';
+    else if(/xưởng|máy móc|gia công|động cơ điện|đo kỹ thuật/.test(source))scene='workshop';
+    else if(/sân trường|bóng đá|chạy bộ|hội thao/.test(source))scene='yard';
+    else if(/xe (?:ô tô|máy|buýt)|đường phố|giao thông|đời sống|thực tế/.test(source))scene='real';
+    else scene='class';
+  }
+  const scenes={
+    class:'Lớp học THPT Việt Nam: bảng Toán/Vật lí, bàn ghế và học sinh 15–18 tuổi.',
+    lab:'Phòng thí nghiệm Vật lí THPT: chỉ có dụng cụ thực sự phù hợp câu hỏi, thao tác an toàn, đo đạc đúng.',
+    real:'Bối cảnh đời sống thực tế phù hợp đề, không tự tạo số liệu hoặc sự kiện làm sai vật lí.',
+    yard:'Sân trường THPT, hoạt động học đường thực tế, đồng phục cấp 3.',
+    home:'Bàn học tại nhà của học sinh THPT; không biến thành lớp học tiểu học.',
+    workshop:'Xưởng thực hành kỹ thuật hoặc phòng học nghề với máy móc, thiết bị thực sự phù hợp đề.',
+    outdoors:'Ngoài trời, chọn quang cảnh thực tế liên quan đến chủ đề, không bịa hiện tượng.'
+  };
+  const styles={
+    standard:'Mức sáng tạo chuẩn: đơn giản, sát đề, không thêm tình tiết không cần thiết.',
+    normal:'Mức sáng tạo sinh động vừa: hội thoại tự nhiên, hình ảnh sinh động nhưng không đổi dữ kiện.',
+    exciting:'Mức sáng tạo hấp dẫn: có tình huống bất ngờ và tranh luận học thuật, không bịa dữ kiện mới.'
+  };
+  const texts={
+    strict:'Giữ nguyên văn bản RẤT CHẶT: phải đối chiếu từng chữ, số liệu, ký hiệu, đơn vị, trật tự phương án.',
+    balanced:'Văn bản CÂN BẰNG: được đổi lời thoại dẫn truyện, nhưng đề, phương án và đáp án phải đúng nguyên văn.',
+    flexible:'Văn bản LINH HOẠT chỉ với lời thoại ngoài đề; TUYỆT ĐỐI không sửa đề, phương án, số liệu hay đáp án.'
+  };
+  return '\n\nCẤU HÌNH BỐI CẢNH DO GIÁO VIÊN CHỌN:\n'
+    +'- '+scenes[scene]+'\n'
+    +'- '+styles[creativity]+'\n'
+    +'- '+texts[fidelity]+'\n'
+    +'Ưu tiên bố cục đọc tốt trên điện thoại; nếu khung tranh không đủ chỗ, đặt nguyên văn đề ở vùng phụ dễ đọc. '
+    +'Với trắc nghiệm giữ A–D, Đúng/Sai giữ a–d, trả lời ngắn không thêm phương án.';
+}
+function rwSceneRender(box,reset){
+  if(!box||!box._nb)return;
+  const kind=box.getAttribute('data-focus')||'still';
+  const supported=(kind==='picture'||kind==='comic');
+  const root=box.querySelector('.rwnbsettings');
+  if(root)root.style.display=supported?'flex':'none';
+  if(!supported)return;
+  const d=box._nb;
+  if(!d._basePrompts)d._basePrompts={picture:d.picture||'',comic:d.comic||''};
+  if(reset||!d._contextPrompts)d._contextPrompts={};
+  const ta=box.querySelector('.rwnbprompttext');
+  const value=d._basePrompts[kind]+rwSceneContext(box);
+  d._contextPrompts[kind]=value;
+  if(ta){ta.value=value;ta.setAttribute('data-ready','1');}
+}
 function rwChoosePrompt(box,kind){
   if(!box||!box._nb)return;
   const d=box._nb;
@@ -4357,10 +4418,11 @@ function rwChoosePrompt(box,kind){
   const old=box.getAttribute('data-focus')||'still';
   const edit=box.querySelector('.rwnbprompttext');
   // Keep edits made to a prompt when switching tabs.
-  if(edit&&edit.getAttribute('data-ready')==='1'&&Object.prototype.hasOwnProperty.call(values,old))d[old==='still'?'prompt':old]=edit.value;
+  if(edit&&edit.getAttribute('data-ready')==='1'&&Object.prototype.hasOwnProperty.call(values,old) && old!=='picture' && old!=='comic')d[old==='still'?'prompt':old]=edit.value;
   box.setAttribute('data-focus',kind);
   const ta=box.querySelector('.rwnbprompttext');
   if(ta){ta.value=(kind==='still'?d.prompt:d[kind])||'';ta.setAttribute('data-ready','1');}
+  rwSceneRender(box,false);
   box.querySelectorAll('.rwnbtab').forEach(function(btn){btn.classList.toggle('primary',btn.getAttribute('data-kind')===kind);});
   const caption=box.querySelector('.rwnbcaption');
   if(caption)caption.textContent='Đang chọn: '+(labels[kind]||kind)+' · Bấm Copy prompt, hoặc mở “Xem / sửa mã prompt”.';
@@ -4405,6 +4467,10 @@ async function rwLoadNotebook(box){
       +'<a class="btn mini" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">Mở Gemini</a>'
       +'<button type="button" class="btn mini rwnbsave">Lưu thêm vào ngân hàng</button>'
       +'<span class="muted rwnbnote" aria-live="polite"></span></div>'
+      +'<div class="rwnbsettings" style="display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:10px;padding:9px;border-radius:8px;background:#edf3fb">'
+      +'<label style="font-size:12px;font-weight:700">Bối cảnh <select class="rwnbscene" aria-label="Bối cảnh prompt"><option value="auto">Tự động chọn</option><option value="class">Lớp học THPT</option><option value="lab">Phòng thí nghiệm</option><option value="real">Thực tế đời sống</option><option value="yard">Sân trường</option><option value="home">Ở nhà / tự học</option><option value="workshop">Xưởng / kỹ thuật</option><option value="outdoors">Ngoài trời</option></select></label>'
+      +'<label style="font-size:12px;font-weight:700">Sáng tạo <select class="rwnbcreative" aria-label="Mức sáng tạo"><option value="standard">Chuẩn</option><option value="normal" selected>Sinh động vừa</option><option value="exciting">Hấp dẫn</option></select></label>'
+      +'<label style="font-size:12px;font-weight:700">Văn bản <select class="rwnbfidelity" aria-label="Mức giữ nguyên văn bản"><option value="strict" selected>Rất chặt</option><option value="balanced">Cân bằng</option><option value="flexible">Linh hoạt lời thoại</option></select></label></div>'
       +'<p class="muted rwnbcaption" style="margin:8px 0 4px">Đã tạo mã lệnh. Chọn loại rồi bấm Copy prompt để sử dụng.</p>'
       +'<details class="rwnbpromptfold" style="margin-top:7px"><summary style="cursor:pointer;font-weight:700">✏️ Xem / sửa mã prompt</summary>'
       +'<textarea class="rwta rwnbprompttext" spellcheck="false" style="width:100%;min-height:165px;max-height:260px;box-sizing:border-box;margin-top:7px"></textarea></details>'
