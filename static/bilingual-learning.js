@@ -180,6 +180,17 @@
     const text=data.text, marks=data.marks||{};
     if(!text){toast("Hãy mở một câu hỏi hoặc bôi đen đoạn muốn dịch.",true);return;}
     if(text.length>5300){toast("Đoạn quá dài. Hãy bôi đen phần ngắn hơn (tối đa 5.300 ký tự).",true);return;}
+    if(lastSource!==text){
+      stopListening();
+      activeGrammarRequest++;
+      const grammarButton=$("ll-grammar");
+      if(grammarButton){grammarButton.disabled=false;grammarButton.textContent="🧠 Phân tích ngữ pháp";}
+    }
+    // Enable 'Read original' immediately, even if Gemini translation is pending.
+    lastSource=text;lastMarks=marks;lastResult="";lastEnglish="";
+    const originalButton=$("ll-speak-original"),translationButton=$("ll-speak");
+    if(originalButton)originalButton.disabled=false;
+    if(translationButton)translationButton.disabled=true;
     const target=chosenLanguage(text);
     const key=target+"\0"+text;
     activeJob++;
