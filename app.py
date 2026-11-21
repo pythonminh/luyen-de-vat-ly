@@ -5668,50 +5668,144 @@ def admin_dups():
         except Exception as e:
             return page('Lỗi xóa trùng',f"<div class='wrap'><div class='panel'><div class='body err'>{html.escape(str(e))}</div></div></div>")
     flash=request.args.get('ok') or ''; err=request.args.get('err') or ''
-    blocks=[]
-    extra_n=sum(len(g['extras']) for g in groups)
+    blocks=[]; marked=set()
+    safe_n=len({(str(q.get('src') or p), int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0))
+                for g in groups if g.get('type')=='dao' for q in g['members'] if q.get('idx') in set(g.get('extras') or [])})
+    extra_n=len(extra_keys)
+    review_n=max(0,extra_n-safe_n)
     for gi,g in enumerate(groups,1):
+        category='dao' if g.get('type')=='dao' else 'cungde'
         rows=[]
         for q in g['members']:
             keep=q['idx']==g['keep']
+            src=str(q.get('src') or p).replace(chr(92),'/')
+            try: fi=int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
+            except (TypeError,ValueError): fi=int(q.get('idx') or 0)
+            key=src+'||'+str(fi)
             if keep:
-                chk="<span class='tag'>GIỮ</span>"
+                chk="<span class='tag' style='background:#dcfce7;color:#166534'>✔ GIỮ bản tốt</span>"
+            elif key in marked:
+                chk="<small>Đã liệt kê trong nhóm trước</small>"
             else:
-                auto=' checked' if g['type']=='dao' else ''
-                src=str(q.get('src') or p).replace('\\','/')
-                try: fi=int(q.get('file_idx') if q.get('file_idx') is not None else q.get('idx') or 0)
-                except (TypeError, ValueError): fi=int(q.get('idx') or 0)
-                chk=f"<label><input type='checkbox' name='drop' value='{html.escape(src+'||'+str(fi), quote=True)}'{auto}> Xóa bản này</label>"
-            fn=html.escape(str(q.get('src') or p).replace('\\','/').rsplit('/',1)[-1])
+                marked.add(key)
+                selected=' checked' if category=='dao' else ''
+                chk=("<label><input type='checkbox' name='drop' data-cat='"+category+
+                     "' value='"+html.escape(key,quote=True)+"'"+selected+"> Xóa bản này</label>")
+            fn=html.escape(src.rsplit('/',1)[-1])
+            desc=html.escape(str(q.get('text') or '')[:260])
+            sid=html.escape(str(q.get('id') or '—'))
+            kind=html.escape(str(q.get('kind') or ''))
+            level=html.escape(str(q.get('level') or ''))
+            explen=len(str(q.get('solution') or '').strip())
+            answer=html.escape(str(q.get('answer') or '')[:60])
             rows.append(
-                "<tr><td>"+chk+"</td><td>"+str(q.get('stt'))+"</td><td><code>"+html.escape(str(q.get('id') or '—'))+"</code></td>"
-                "<td>"+html.escape(str(q.get('kind')))+"</td><td>"+fn+" · dòng "+str(q.get('line') or '')+"</td>"
-                "<td>"+html.escape((q.get('text') or '')[:180])+"</td></tr>"
+                "<tr><td>"+chk+"</td><td>"+str(q.get('stt') or '')+"</td><td><code>"+sid+"</code></td>"
+                "<td>"+kind+"</td><td>"+fn+" · dòng "+str(q.get('line') or '')+"</td>"
+                "<td>"+desc+"<div class='muted' style='font-size:12px;margin-top:5px'>"
+                "Mức "+level+" · Lời giải "+str(explen)+" ký tự"
+                +(" · Đáp án: "+answer if answer else "")+"</div></td></tr>"
             )
         blocks.append(
-            "<div class='review'><b>Nhóm "+str(gi)+" · "+html.escape(g['title'])+" · "+str(len(g['members']))+" câu</b>"
-            "<table class='selectgrid' style='margin-top:8px'><tr><th></th><th>STT</th><th>ID</th><th>Loại</th><th>Vị trí</th><th>Mở đầu câu</th></tr>"
-            +''.join(rows)+"</table></div>"
+            "<details class='dup-group review' data-type='"+category+"'"+(" open" if gi<=3 else "")+">"
+            "<summary style='cursor:pointer;font-weight:800'>Nhóm "+str(gi)+" · "+
+            html.escape(g['title'])+" · "+str(len(g['members']))+" câu</summary>"
+            "<div style='overflow-x:auto'><table class='selectgrid' style='margin-top:8px'>"
+            "<tr><th>Chọn</th><th>STT</th><th>ID</th><th>Loại</th><th>Vị trí</th><th>Nội dung để đối chiếu</th></tr>"
+            +''.join(rows)+"</table></div></details>"
         )
-    if extra_n:
-        form_open="<form method='post' action='/admin/dups' onsubmit=\"return confirm('Xóa các câu đã tick? Bản GIỮ không bị xóa.')\">"
-        form_close=(
-            "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
-            +(f"<input type='hidden' name='next' value='{html.escape(nxt,quote=True)}'>" if nxt else "")
-            +"<p><label><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các bản đã tick (giữ câu đầu mỗi nhóm).</label></p>"
-            +"<button class='btn red' type='submit'>🗑 Xóa trùng đã chọn</button></form>"
-        )
-    else:
-        form_open="<div>"
-        form_close="</div>"
+    form_open=("<form id='dupBatch' method='post' action='/admin/dups' "
+               "onsubmit='return window.bulkDupConfirm()'>") if extra_n else "<div>"
+    form_close=(
+        "<input type='hidden' name='path' value='"+html.escape(p,quote=True)+"'>"
+        +(f"<input type='hidden' name='next' value='{html.escape(nxt,quote=True)}'>" if nxt else "")
+        +"<p><label class='dup-confirm'><input type='checkbox' name='confirm' value='yes' required> "
+        "Tôi đã đối chiếu và xác nhận xóa những câu được chọn; luôn giữ ít nhất một bản tốt.</label></p>"
+        "<button class='btn red' type='submit'>🗑 Xóa hàng loạt (<span id='dupCountButton'>"+str(safe_n)+
+        "</span>) câu đã chọn</button></form>"
+        ) if extra_n else "</div>"
+    toolbar=(
+        "<div class='dup-batch-tools'>"
+        "<label>Tìm ID, nội dung <input id='dupFind' type='search' placeholder='Tìm câu hoặc nhóm'></label>"
+        "<label>Hiện nhóm <select id='dupFilter'>"
+        "<option value='all'>Tất cả</option><option value='dao'>Trùng đúng đề + đáp án</option>"
+        "<option value='cungde'>Cùng đề / khác đáp án</option></select></label>"
+        "<button type='button' class='btn primary' id='dupSelectSafe'>☑ Chọn trùng chắc chắn</button>"
+        "<button type='button' class='btn' id='dupSelectNone'>☐ Bỏ chọn hết</button>"
+        "<button type='button' class='btn' id='dupOpenAll'>Mở tất cả nhóm</button>"
+        "<span class='muted'>Đang tick <b id='dupCount'>"+str(safe_n)+"</b> / "+str(extra_n)+" câu</span>"
+        "</div>"
+        ) if extra_n else ""
+    enhancement=r"""
+<style>
+.dup-batch-tools{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:12px;margin:10px 0 14px;background:#eff6ff;border:1px solid #bfd8f8;border-radius:12px}
+.dup-batch-tools label{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:750}
+.dup-batch-tools input,.dup-batch-tools select{border:1px solid #abc2dd;border-radius:8px;padding:8px;min-height:38px;min-width:145px;background:white}
+.dup-group{border:1px solid #d7e4f1;border-radius:12px;margin:10px 0;padding:9px;background:white}
+.dup-group summary{padding:7px;color:#173f71}
+.dup-group[data-type="cungde"]{border-left:4px solid #f59e0b}
+.dup-group[data-type="dao"]{border-left:4px solid #22c55e}
+.dup-group[hidden]{display:none!important}
+.dup-group td{vertical-align:top}
+.dup-confirm{display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-weight:650}
+@media(max-width:640px){.dup-batch-tools{align-items:stretch}.dup-batch-tools label{width:100%}.dup-batch-tools input{flex:1;min-width:0}}
+</style>
+<script>
+(function(){
+ const form=document.getElementById('dupBatch');
+ if(!form)return;
+ const checks=Array.from(form.querySelectorAll('input[name="drop"]'));
+ const groups=Array.from(form.querySelectorAll('.dup-group'));
+ const find=document.getElementById('dupFind'),filter=document.getElementById('dupFilter');
+ const selected=document.getElementById('dupCount'),submitCount=document.getElementById('dupCountButton');
+ function update(){
+   const n=checks.filter(c=>c.checked).length;
+   selected.textContent=String(n);submitCount.textContent=String(n);
+ }
+ function visible(){
+   const q=(find.value||'').trim().toLocaleLowerCase();
+   for(const g of groups){
+     const cat=filter.value,matchCat=(cat==='all'||g.dataset.type===cat);
+     const matchText=(!q||(g.textContent||'').toLocaleLowerCase().includes(q));
+     g.hidden=!(matchCat&&matchText);
+     if(q&&!g.hidden)g.open=true;
+   }
+ }
+ document.getElementById('dupSelectSafe').addEventListener('click',()=>{
+   checks.forEach(x=>x.checked=x.dataset.cat==='dao');update();
+ });
+ document.getElementById('dupSelectNone').addEventListener('click',()=>{
+   checks.forEach(x=>x.checked=false);update();
+ });
+ document.getElementById('dupOpenAll').addEventListener('click',()=>{
+   groups.filter(g=>!g.hidden).forEach(g=>g.open=true);
+ });
+ find.addEventListener('input',visible);filter.addEventListener('change',visible);
+ checks.forEach(x=>x.addEventListener('change',update));
+ window.bulkDupConfirm=function(){
+   const picked=checks.filter(x=>x.checked);
+   if(!picked.length){alert('Hãy chọn ít nhất một câu cần xóa.');return false;}
+   const risk=picked.filter(x=>x.dataset.cat!=='dao').length;
+   const msg='Sẽ xóa '+picked.length+' câu khỏi các file TEX. '+
+     (risk?risk+' câu cùng đề/khác đáp án đã được chọn thủ công. ':'')+
+     'Mọi phiên bản cũ vẫn có trong lịch sử GitHub. Xác nhận xóa?';
+   return confirm(msg);
+ };
+ update();visible();
+})();
+</script>
+"""
     body=(
-        "<div class='wrap'><div class='panel'><div class='head'>🔎 Câu trùng · cả bài</div><div class='body'>"
+        "<div class='wrap'><div class='panel'><div class='head'>🧹 Lọc & xóa câu trùng hàng loạt · trong bài</div><div class='body'>"
         +(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")
         +(f"<div class='err'>{html.escape(err)}</div>" if err else "")
-        +"<div class='notice'>Trùng <b>đảo đáp án</b>: ô xóa mặc định đã tick. Cùng đề nhưng <b>đáp án khác</b>: ô xóa mặc định trống — xem kỹ rồi mới tick. Bản <b>GIỮ</b> là câu đầu mỗi nhóm, không xóa được từ đây.</div>"
-        +("<p class='muted'>Không thấy nhóm trùng.</p>" if extra_n==0 else "")
-        +form_open+''.join(blocks or ["<p class='success'>Không có câu trùng.</p>"])+form_close
-        +"<p><a class='btn' href='/admin'>← ngan-hang</a> <a class='btn' href='/admin/edit?path="+urllib.parse.quote(p,safe='')+"'>✏️ Sửa TEX</a></p>"
+        +"<div class='notice'><b>"+str(len(qs))+" câu</b> · <b>"+str(len(groups))+" nhóm trùng</b> · "
+        "<b>"+str(safe_n)+" bản trùng đề + đáp án</b> · <b>"+str(review_n)+" bản cần kiểm tra thủ công</b>."
+        "<p style='margin:8px 0 0'>🟢 Trùng hoàn toàn: chỉ các bản cùng công thức, dữ kiện, lựa chọn và đáp án mới được tick sẵn. "
+        "🟠 Cùng đề nhưng khác đáp án: không tick sẵn. Câu giống dạng nhưng <b>đổi số</b> phải giữ để luyện tập. "
+        "Bản được GIỮ ưu tiên lời giải đầy đủ. Mỗi lần xóa có lịch sử phiên bản GitHub để khôi phục.</p></div>"
+        +form_open+toolbar+''.join(blocks or ["<p class='success'>Không phát hiện nhóm trùng chắc chắn.</p>"])+form_close
+        +enhancement
+        +"<p><a class='btn' href='/admin'>← Ngân hàng</a> <a class='btn' href='/admin/edit?path="+urllib.parse.quote(p,safe='')+"'>✏️ Sửa TEX</a></p>"
         "</div></div></div>"
     )
     return page('Xóa trùng',body)
