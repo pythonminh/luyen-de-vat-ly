@@ -21,9 +21,10 @@ from app import app, admin_current, member_current
 
 _RATE_LOCK = threading.Lock()
 _RATE = defaultdict(deque)
-_MARKUP = ('<link rel="stylesheet" href="/static/bilingual-learning.css?v=20261121coach7">' +
-           '<script defer src="/static/bilingual-learning.js?v=20261121coach7"></script>' +
-           '<script defer src="/static/bilingual-inline.js?v=20261121coach7"></script>')
+_MARKUP = ('<link rel="stylesheet" href="/static/bilingual-learning.css?v=20261121math1">' +
+           '<script defer src="/static/math-speech.js?v=20261121math1"></script>' +
+           '<script defer src="/static/bilingual-learning.js?v=20261121math1"></script>' +
+           '<script defer src="/static/bilingual-inline.js?v=20261121math1"></script>')
 _PROTECT = re.compile(
     r'(⟦(?:M|IMG)\d+⟧|\$\$[\s\S]*?\$\$|\$[^$\n]+\$|'
     r'\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|'
