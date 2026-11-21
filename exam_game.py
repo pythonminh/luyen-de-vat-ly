@@ -163,29 +163,85 @@ def shortages(rows, tier, cfg):
     return missing
 
 
-def select_rows(rows,tier,cfg,previous=None):
-    kind_targets=cfg["kinds"]
-    level_targets=globals()["level_targets"](tier,sum(kind_targets.values()))
-    amount, allocation=_flow(rows,kind_targets,level_targets)
-    if amount!=sum(kind_targets.values()):
-        raise ValueError("Ngân hàng chưa đủ cơ cấu đề: "+"; ".join(shortages(rows,tier,cfg)))
-    rng=random.SystemRandom()
-    prev_set=set(tuple(x) for x in previous or ())
-    groups=collections.defaultdict(list)
-    for row in rows:
-        groups[row[2],row[3]].append(row)
-    chosen=[]
-    for (kind,level),count in allocation.items():
-        if count<=0: continue
-        pool=groups[kind,level]
-        fresh=[r for r in pool if (r[0],r[1]) not in prev_set]
-        old=[r for r in pool if (r[0],r[1]) in prev_set]
-        rng.shuffle(fresh);rng.shuffle(old)
-        chosen.extend((fresh+old)[:count])
+def select_rows(rows, tier, cfg, previous=None):
+    """Prefer the official mix, but start with every usable question if it is short.
+
+    1. Satisfy format + difficulty quotas together as far as possible.
+    2. Fill missing levels within each requested format.
+    3. Fill any remaining slots using other available formats.
+    There are no repeated questions or invented items.
+    """
+    if tier not in game_levels.GAME_TIERS:
+        raise ValueError("Cấp độ game không hợp lệ.")
+    target_kinds = cfg["kinds"]
+    target_total = sum(target_kinds.values())
+    target_levels = level_targets(tier, target_total)
+    # Unique identities are (lesson path, original question idx).
+    unique_rows = list({(r[0], r[1]): r for r in rows}.values())
+    if not unique_rows:
+        raise ValueError("Bài này chưa có câu TN, Đúng/Sai hoặc trả lời ngắn. Hãy chọn thêm bài khác để bắt đầu.")
+    _, allocation = _flow(unique_rows, target_kinds, target_levels)
+    rng = random.SystemRandom()
+    prev_set = {tuple(x) for x in (previous or ()) if isinstance(x, (tuple, list)) and len(x) == 2}
+    groups = collections.defaultdict(list)
+    for row in unique_rows:
+        groups[row[2], row[3]].append(row)
+    chosen = []
+    selected = set()
+    level_counts = collections.Counter()
+    kind_counts = collections.Counter()
+
+    def add(row):
+        key = (row[0], row[1])
+        if key in selected:
+            return False
+        selected.add(key)
+        chosen.append(row)
+        kind_counts[row[2]] += 1
+        level_counts[row[3]] += 1
+        return True
+
+    # Respect the exact requested mix when the bank can support it.
+    for (kind, level), amount in allocation.items():
+        if amount <= 0:
+            continue
+        pool = list(groups[kind, level])
+        rng.shuffle(pool)
+        pool.sort(key=lambda r: (r[0], r[1]) in prev_set)
+        for row in pool[:amount]:
+            add(row)
+
+    # Where e.g. VDC is scarce, replace it with available levels of the same kind.
+    for kind, desired in target_kinds.items():
+        while kind_counts[kind] < desired and len(chosen) < target_total:
+            pool = [r for r in unique_rows if r[2] == kind and (r[0], r[1]) not in selected]
+            if not pool:
+                break
+            rng.shuffle(pool)
+            pool.sort(key=lambda r: (
+                level_counts[r[3]] >= target_levels.get(r[3], 0),
+                -max(0, target_levels.get(r[3], 0) - level_counts[r[3]]),
+                (r[0], r[1]) in prev_set,
+            ))
+            add(pool[0])
+
+    # Where a whole question format is scarce, use other kinds rather than block play.
+    while len(chosen) < target_total:
+        pool = [r for r in unique_rows if (r[0], r[1]) not in selected]
+        if not pool:
+            break
+        rng.shuffle(pool)
+        pool.sort(key=lambda r: (
+            level_counts[r[3]] >= target_levels.get(r[3], 0),
+            -max(0, target_levels.get(r[3], 0) - level_counts[r[3]]),
+            (r[0], r[1]) in prev_set,
+        ))
+        add(pool[0])
+
     rng.shuffle(chosen)
-    ordered=[(row[0],row[1]) for row in chosen]
-    if previous and ordered==[tuple(x) for x in previous] and len(ordered)>1:
-        ordered=ordered[1:]+ordered[:1]
+    ordered = [(row[0], row[1]) for row in chosen]
+    if previous and ordered == [tuple(x) for x in previous] and len(ordered) > 1:
+        ordered = ordered[1:] + ordered[:1]
     return ordered
 
 
@@ -207,6 +263,9 @@ def begin_attempt(path, extra_paths, tier, member):
     prior=session.get("practice_game_last") or []
     prev=[tuple(x) for x in prior if isinstance(x,list) and len(x)==2]
     selected=select_rows(rows,tier,cfg,prev)
+    by_id={(row[0],row[1]):row for row in rows}
+    actual_kind_counts=collections.Counter(by_id[pair][2] for pair in selected)
+    actual_level_counts=collections.Counter(by_id[pair][3] for pair in selected)
     # Keep cookies small: store unique path table and 28/22 small index pairs.
     paths=list(dict.fromkeys(p for p,_ in selected))
     path_index={p:i for i,p in enumerate(paths)}
@@ -220,8 +279,9 @@ def begin_attempt(path, extra_paths, tier, member):
         practice_ai=True,
         practice_started_at=started,practice_attempt_id=secrets.token_hex(16),
         practice_game_level=tier,practice_game_count=len(ids),
-        practice_game_mix=level_targets(tier,len(ids)),
-        practice_game_kinds=cfg["kinds"],
+        practice_game_mix={level:int(actual_level_counts[level]) for level in LEVELS},
+        practice_game_kinds={kind:int(actual_kind_counts[kind]) for kind in KINDS},
+        practice_game_targets=cfg["kinds"],
         practice_game_subject=subject,
         practice_game_minutes=cfg["minutes"],
         practice_game_deadline=started+cfg["minutes"]*60,
@@ -347,9 +407,13 @@ def tier_card(tier, cfg, rows):
     levels=level_targets(tier,sum(cfg["kinds"].values()))
     mix=" · ".join(f'{NAMES[k]} {v}' for k,v in levels.items() if v)
     missing=shortages(rows,tier,cfg)
-    status='Đủ cơ cấu đề' if not missing else 'Cần bổ sung thêm câu'
+    count=min(len({(r[0],r[1]) for r in rows}),sum(cfg["kinds"].values()))
+    status=('✓ Đủ cơ cấu' if not missing else
+            ('▶ Vẫn chơi ngay với '+str(count)+' câu hiện có' if count else
+             'Chưa có câu TN/ĐS/TLN — chọn thêm bài'))
     return (
-       f'<button type="submit" class="game-tier game-tier-{tier}" name="level" value="{tier}">'
+       f'<button type="submit" class="game-tier game-tier-{tier}" name="level" value="{tier}"'
+       f' {"disabled" if not count else ""}>'
        f'<span class="game-tier-icon" aria-hidden="true">{icon}</span>'
        f'<span class="game-tier-main"><strong>{name}</strong>'
        f'<small>{game_levels.GAME_TIERS[tier]["subtitle"]}</small>'
@@ -414,7 +478,7 @@ def game_level_picker():
             except (ValueError,TypeError) as exc:
                 error=str(exc)
     if request.args.get("retry_error"):
-        error="Nguồn câu hỏi đã thay đổi. Vui lòng chọn lại các bài để đủ cơ cấu."
+        error="Nguồn câu hỏi đã thay đổi. Hãy chọn lại bài có ít nhất một câu TN/ĐS/TLN."
     lack=shortages(rows,"medium",cfg)
     counts=collections.Counter(r[2] for r in rows)
     title=str(lesson.get("BaiHoc") or lesson.get("De") or path)
@@ -458,18 +522,20 @@ def game_level_picker():
         +notice+
         '<form method="post" action="/member/game">'
         '<input type="hidden" name="path" value="'+html.escape(path,quote=True)+'">'
-        '<h2>Chọn bộ bài để tạo đủ đề</h2>'
+        '<h2>Chọn bài luyện tập (có thể bắt đầu ngay)</h2>'
         '<div class="game-exam-check"><p>Bộ bài đang chọn có: '+
         " · ".join(f"{FORM_NAMES[k]} {counts[k]}/{v}" for k,v in cfg["kinds"].items())+
         '</p><p>Ở cấp Trung bình: '+html.escape("; ".join(lack) if lack else "Đã đủ cơ cấu")+
         '</p></div>'
         +_supplement_form(candidates,selected)+
         '<div class="game-preview-action"><button class="btn" type="submit" name="preview" value="1">✓ Kiểm tra đủ số câu</button></div>'
-        '<h2>Chọn độ khó (kiểm tra đủ tỷ lệ khi bắt đầu)</h2>'
+        '<h2>Chọn độ khó và chơi ngay</h2>'
         '<div class="game-grid">'+''.join(tier_card(t,cfg,rows) for t in game_levels.GAME_TIERS)+'</div>'
         '</form>'
-        '<p class="game-footer">Mỗi lượt chỉ tạo đề khi đủ TN/ĐS/TLN và tỷ lệ NB/TH/VD/VDC.'
-        ' Rời màn hình hoặc chia đôi màn hình sẽ kết thúc lượt; làm lại sẽ bốc và xáo câu mới nếu ngân hàng có câu thay thế.</p>'
+        '<p class="game-footer">Nếu đủ câu, đề giữ đúng cơ cấu TN/ĐS/TLN và tỷ lệ NB/TH/VD/VDC.'
+        ' Nếu thiếu, vẫn bắt đầu bằng các câu sẵn có (không lặp câu); số câu và cơ cấu thực tế được hiển thị.'
+        ' Có thể chọn thêm bài cùng môn, cùng khối nếu muốn đề dài hơn.'
+        ' Rời màn hình hoặc chia đôi màn hình có thể kết thúc lượt; làm lại sẽ bốc và xáo câu mới.</p>'
         '</section></main>'
     )
     return base.page("Chọn cấp độ game",body)
