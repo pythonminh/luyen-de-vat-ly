@@ -2,6 +2,7 @@
    Browser detection is best-effort; server independently rejects expired answers. */
 (function () {
   'use strict';
+  function mountGameMonitor() {
   const cfg=window.__ldvlGameConfig;
   const box=document.querySelector('.vip-practice-wrap[data-game-level]');
   if (!cfg || !box || !cfg.attempt) return;
@@ -119,4 +120,12 @@
   tick();
   const id=setInterval(()=>{if(ended){clearInterval(id);return;}tick();},1000);
   try{if(sessionStorage.getItem(key)){ended=true;location.replace('/member/game/ended');}}catch(e){}
+  }
+  // The compact question HUD is built on DOMContentLoaded by practice-workspace.js.
+  // Both files load with defer; starting here earlier would silently skip all clocks.
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',mountGameMonitor,{once:true});
+  } else {
+    mountGameMonitor();
+  }
 })();
