@@ -4802,7 +4802,18 @@ window.practicePath=__PATH__;window.practiceIds=__IDS__;window.practicePos=__QPO
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||document.getElementById('q'));el=el||document.getElementById('q');if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}MathJax.typesetPromise([el]).catch(function(){});}}
 const QZKEY='ldvlQZoom';
-let qZoom=(function(){try{var v=parseFloat(localStorage.getItem(QZKEY)||'1');return (v>=0.8&&v<=1.7)?v:1}catch(e){return 1}})();
+let qZoom=(function(){
+ try{
+   // Older builds auto-shrank long questions on tablets. Reset that shrink once.
+   if(window.innerWidth>=700 && window.innerWidth<=1280 && localStorage.getItem('ldvlTabletMathReset202611')!=='1'){
+     const previous=parseFloat(localStorage.getItem(QZKEY)||'1');
+     if(previous<1)localStorage.setItem(QZKEY,'1');
+     localStorage.setItem('ldvlTabletMathReset202611','1');
+   }
+   var v=parseFloat(localStorage.getItem(QZKEY)||'1');
+   return (v>=0.8&&v<=1.7)?v:1;
+ }catch(e){return 1}
+})();
 function ldvlApplyQZoom(skipTypeset){
   const box=document.getElementById('q');
   if(box) box.style.setProperty('--qzoom', String(qZoom));
