@@ -1061,7 +1061,7 @@ def select_admin_panel(path, qs, dang_names):
         "<button type='button' class='btn' id='aiIds'>Gán ID còn thiếu</button> "
         "<button type='button' class='btn' id='aiSplit'>Tách file .tex</button> "
         "<button type='button' class='btn' id='aiHome'>Gợi ý chuyển bài</button> "
-        "<button type='button' class='btn' id='aiMerge'>Gom dạng</button> "
+        "<button type='button' class='btn' id='aiMerge' disabled title='Đang khóa tên dạng; không cho gom dạng'>Gom dạng (đã khóa)</button> "
         "<button type='button' class='btn' id='aiAudit'>Rà chương</button>"
         "</div><div id='aiOut' class='reviewout' aria-live='polite'></div></div>"
         + _admin_js(path)
