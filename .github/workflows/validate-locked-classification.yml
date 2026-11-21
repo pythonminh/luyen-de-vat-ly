@@ -1,0 +1,30 @@
+name: Validate locked AI classification
+on:
+  push:
+    branches:
+      - fix/locked-batch-classification
+  pull_request:
+    paths:
+      - admin_classify.py
+jobs:
+  python-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Python module
+        run: python -m py_compile admin_classify.py
+      - name: Validate locked classification design
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          code=Path('admin_classify.py').read_text()
+          assert code.count('@base.app.post("/api/admin/ai-classify")') == 1
+          assert code.count('@base.app.post("/api/admin/ai-classify-save")') == 1
+          assert 'range(0,len(todo),20)' in code
+          assert 'fingerprint' in code
+          assert 'base.github_put_text(path,revised' in code
+          print('Locked classification checks passed')
+          PY
