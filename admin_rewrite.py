@@ -4301,10 +4301,10 @@ function rwChoosePrompt(box,kind){
   const old=box.getAttribute('data-focus')||'still';
   const edit=box.querySelector('.rwnbprompttext');
   // Keep edits made to a prompt when switching tabs.
-  if(edit&&Object.prototype.hasOwnProperty.call(values,old))d[old==='still'?'prompt':old]=edit.value;
+  if(edit&&edit.getAttribute('data-ready')==='1'&&Object.prototype.hasOwnProperty.call(values,old))d[old==='still'?'prompt':old]=edit.value;
   box.setAttribute('data-focus',kind);
   const ta=box.querySelector('.rwnbprompttext');
-  if(ta)ta.value=(kind==='still'?d.prompt:d[kind])||'';
+  if(ta){ta.value=(kind==='still'?d.prompt:d[kind])||'';ta.setAttribute('data-ready','1');}
   box.querySelectorAll('.rwnbtab').forEach(function(btn){btn.classList.toggle('primary',btn.getAttribute('data-kind')===kind);});
   const caption=box.querySelector('.rwnbcaption');
   if(caption)caption.textContent='Đang chọn: '+(labels[kind]||kind)+' · Bấm Copy prompt, hoặc mở “Xem / sửa mã prompt”.';
@@ -4620,8 +4620,8 @@ document.addEventListener('click',function(e){
     }
     if(old){
       old.setAttribute('data-focus','canva');
-      const fold=old.querySelector('.rwnbcanva-fold');
-      if(fold){fold.open=true; fold.scrollIntoView({block:'nearest'});}
+      if(old._nb)rwChoosePrompt(old,'canva');
+      old.scrollIntoView({block:'nearest'});
       return;
     }
     const p=dropOf(canvaBtn);
