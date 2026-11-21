@@ -3079,6 +3079,9 @@ def member_start_selected():
 def practice_jump(pos):
     ids=list(session.get('practice_ids') or [])
     if session.get('role') not in {'member', 'admin'} or not ids:return redirect(login_url('/member/practice'))
+    if session.get('practice_game_level'):
+        from exam_game import guard
+        if guard(session):return redirect('/member/game/ended')
     done=list(session.get('practice_done') or [])
     seen=set()
     for item in done:
@@ -3098,6 +3101,11 @@ def practice_jump(pos):
 def practice_redo(pos):
     m=member_current()
     if not m:return redirect(login_url('/member/practice'))
+    # Individual question replay would invalidate a timed game result.
+    if session.get('practice_game_level'):
+        from exam_game import guard
+        if guard(session):return redirect('/member/game/ended')
+        return redirect('/member/practice')
     ids=list(session.get('practice_ids') or [])
     if pos<0 or pos>=len(ids):return redirect('/member/practice')
     qnum=pos+1;done=list(session.get('practice_done') or [])
