@@ -2428,6 +2428,24 @@ def _notebook_image_prompt(latex):
     return body.strip(), _NOTEBOOK_MOTION, canva.strip()
 
 
+def _public_exercise_latex(latex):
+    """Remove answer keys and loigiai using brace-aware scanning."""
+    text = str(latex or "")
+    pat = re.compile(r"\\loigiai\s*\{", re.I)
+    while True:
+        match = pat.search(text)
+        if not match:
+            break
+        _, end = base.get_braced(text, match.end() - 1)
+        if end is None or end <= match.end():
+            raise ValueError("Không thể tách lời giải khỏi LaTeX an toàn.")
+        text = text[:match.start()] + text[end:]
+    text = re.sub(r"\\begin\s*\{\s*loigiai\s*\}[\s\S]*?\\end\s*\{\s*loigiai\s*\}", "", text, flags=re.I)
+    text = re.sub(r"\\True\b", "", text)
+    text = re.sub(r"\\shortans\s*(?:\[[^\]]*\])?\s*\{[^{}]*\}", "", text)
+    return text
+
+
 def _exercise_image_prompt(latex):
     """Prompt only: do not alter source question or generate a fictional answer."""
     return (
@@ -2489,8 +2507,9 @@ def api_notebook_prompt():
     try:
         latex = _notebook_latex(q, tex, fi)
         still, motion, canva = _notebook_image_prompt(latex)
-        picture = _exercise_image_prompt(latex)
-        comic = _exercise_comic_prompt(latex)
+        public_latex = _public_exercise_latex(latex)
+        picture = _exercise_image_prompt(public_latex)
+        comic = _exercise_comic_prompt(public_latex)
     except ValueError as e:
         return jsonify(ok=False, error=str(e)), 400
     return jsonify(
@@ -4623,8 +4642,8 @@ document.addEventListener('click',function(e){
     e.preventDefault();
     const box=nbCopy.closest('.rwnbbox');
     const which=nbCopy.getAttribute('data-which')||'still';
-    const sel=which==='motion'?'.rwnbmotion':(which==='canva'?'.rwnbcanva':'.rwnbstill');
-    const back=which==='motion'?'Copy lệnh động':(which==='canva'?'Copy prompt luyện đổi số':'Copy lệnh trang vở');
+    const sel=which==='comic'?'.rwnbcomic':(which==='picture'?'.rwnbpicture':(which==='motion'?'.rwnbmotion':(which==='canva'?'.rwnbcanva':'.rwnbstill')));
+    const back=which==='comic'?'Copy prompt truyện tranh':(which==='picture'?'Copy prompt ảnh bài tập':(which==='motion'?'Copy lệnh động':(which==='canva'?'Copy prompt luyện đổi số':'Copy lệnh trang vở')));
     const ta=box&&box.querySelector(sel);
     copyText(ta?ta.value:'').then(function(){nbCopy.textContent='✅ Đã copy'; setTimeout(function(){nbCopy.textContent=back;},1400);},function(){prompt('Copy lệnh', ta?ta.value:'');});
     return;
