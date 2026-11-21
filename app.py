@@ -3641,18 +3641,40 @@ def _dup_norm(s):
     s=re.sub(r'\s+',' ',s).strip()
     return s
 
+def _dup_strict(s):
+    """Normalize layout but KEEP LaTeX commands, numeric data and symbols.
+
+    The older display-only normalizer discards commands like \\frac and
+    \\sqrt, which can make *different* formulas look identical.
+    """
+    value = html.unescape(str(s or '')).casefold()
+    value = re.sub(r'<[^>]+>', ' ', value)
+    value = re.sub(r'\\s+', ' ', value).strip()
+    return value
+
+
 def question_dup_keys(q):
-    stem=_dup_norm(q.get('text') or '')
-    kind=str(q.get('kind') or 'TL')
-    if kind=='TN':
-        opts=tuple(sorted(_dup_norm(o.get('text') if isinstance(o,dict) else o) for o in (q.get('options') or []) if _dup_norm(o.get('text') if isinstance(o,dict) else o)))
+    # Safe to propose bulk deletion only if full stem, options and their
+    # correctness all agree. Permuting A/B/C/D must not alter a match.
+    stem = _dup_strict(q.get('text') or '')
+    kind = str(q.get('kind') or 'TL')
+    if kind == 'TN':
+        opts = tuple(sorted(
+            (_dup_strict(o.get('text')), bool(o.get('correct')))
+            if isinstance(o,dict) else (_dup_strict(o),False)
+            for o in (q.get('options') or [])
+        ))
         return stem, (kind, stem, opts)
-    if kind=='DS':
-        stmts=tuple(sorted(_dup_norm(o.get('text') if isinstance(o,dict) else o) for o in (q.get('statements') or []) if _dup_norm(o.get('text') if isinstance(o,dict) else o)))
+    if kind == 'DS':
+        stmts = tuple(sorted(
+            (_dup_strict(o.get('text')), bool(o.get('correct')))
+            if isinstance(o,dict) else (_dup_strict(o),False)
+            for o in (q.get('statements') or [])
+        ))
         return stem, (kind, stem, stmts)
-    if kind=='TLN':
-        return stem, (kind, stem, _dup_norm(q.get('answer') or ''))
-    return stem, (kind, stem, _dup_norm(q.get('solution') or '')[:240])
+    if kind == 'TLN':
+        return stem, (kind, stem, _dup_strict(q.get('answer') or ''))
+    return stem, (kind, stem, _dup_strict(q.get('solution') or ''))
 
 def find_duplicate_groups(questions):
     from collections import defaultdict
