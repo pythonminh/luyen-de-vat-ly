@@ -97,11 +97,15 @@ JS = r"""
   const p = el.querySelector('input[name="more"]')?.value;
   const label = el.querySelector('span');
   if(!p || !label)return null;
-  const box=document.createElement('span');
-  box.className='game-bank-stats';
-  box.setAttribute('role','status');
-  box.textContent='Xem phân bố câu khi cuộn đến bài…';
-  label.appendChild(box);
+  let box=label.querySelector('.game-bank-stats');
+  if(box && box.dataset.serverStats==='1')return null;
+  if(!box){
+   box=document.createElement('span');
+   box.className='game-bank-stats';
+   box.setAttribute('role','status');
+   box.textContent='Đang tải phân bố câu…';
+   label.appendChild(box);
+  }
   return {p,el,box,queued:false,loaded:false};
  }).filter(Boolean);
  if(!items.length)return;
