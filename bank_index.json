@@ -6473,9 +6473,19 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 10. Định luật Charles · Đồ thị đẳng nhiệt trên các hệ tọa độ",
       "De": "L12C2 Bài 10. Định luật Charles · Đồ thị đẳng nhiệt trên các hệ tọa độ",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 16,
+      "count": 16,
+      "dang": {
+        "Đồ thị đẳng nhiệt trên các hệ tọa độ": 16
+      },
+      "dang_kinds": {
+        "Đồ thị đẳng nhiệt trên các hệ tọa độ": {
+          "TN": 8,
+          "DS": 8,
+          "TLN": 0,
+          "TL": 0
+        }
+      }
     }
   ]
 }
