@@ -51,6 +51,7 @@
   try { const saved=localStorage.getItem(STORAGE); if(T[saved]) mode=saved; } catch(e) {}
   let opened=false, savedSelection="", activeJob=0, lastSignature="", lastResult="", resultLanguage="en", observedQuestion=null;
   let lastOutput=null;
+  let speechRunId=0;
   let lastSource="",lastEnglish="",lastMarks={},activeGrammarRequest=0;
   const grammarCache=new Map();
   let pendingFrame=null;
@@ -100,6 +101,7 @@
     if(last<txt.length) container.appendChild(document.createTextNode(txt.slice(last)));
   }
   function plainNode(el,marks,indexObj) {
+    if(window.ldvlMathSpeech?.prepareElement)window.ldvlMathSpeech.prepareElement(el);
     const cloned=el.cloneNode(true);
     cloned.querySelectorAll(".ll-inline-original").forEach(n=>n.removeAttribute("hidden"));
     cloned.querySelectorAll("input, textarea, button, select, script, style, .ll-no-translate, .ll-inline-target, [hidden]").forEach(n=>n.remove());
@@ -120,6 +122,7 @@
       const opts=quiz.querySelectorAll(".opt");
       if(opts.length){
         opts.forEach((opt,i)=>{
+          if(window.ldvlMathSpeech?.prepareElement)window.ldvlMathSpeech.prepareElement(opt);
           const clone=opt.cloneNode(true);
           const badge=clone.querySelector(".tflab");
           if(badge) badge.remove();
@@ -271,32 +274,75 @@
     setOutput(String(detail.source),String(detail.english),detail.marks||{},"en");
   });
   function stopListening(){
+    speechRunId++;
     try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
   }
   function listen(which="translation"){
     const isOriginal=which==="original";
-    const text=isOriginal?lastSource:lastResult;
-    if(!text){toast("Hãy chọn một câu hoặc dịch trước khi đọc.",true);return;}
+    let source=isOriginal?lastSource:lastResult;
+    let marks=lastMarks||{};
+    if(!source && isOriginal){
+      // Reading the original question must work even before translation.
+      const current=questionData();
+      if(current.text){
+        lastSource=current.text;lastMarks=current.marks;
+        source=current.text;marks=current.marks;
+        const sourceBtn=$("ll-speak-original");if(sourceBtn)sourceBtn.disabled=false;
+      }
+    }
+    if(!source){toast("Hãy mở câu hỏi hoặc dịch đoạn văn trước khi đọc.",true);return;}
     if(!("speechSynthesis" in window)){toast("Trình duyệt chưa hỗ trợ đọc bằng giọng nói.",true);return;}
     stopListening();
-    const lang=isOriginal?(resultLanguage==="en"?"vi-VN":"en-US"):(resultLanguage==="en"?"en-US":"vi-VN");
-    const raw=text.replace(tokenRE," ").replace(/\\(?:frac|sqrt|mathrm|text)\b/g," ").replace(/\s+/g," ").trim();
-    const utterance=new SpeechSynthesisUtterance(raw.slice(0,2200));
-    utterance.lang=lang;
-    utterance.rate=Number($("ll-rate")?.value||0.9);
-    utterance.pitch=1;
+    const readId=speechRunId;
+    const vietnamese=/[ăâđêôơưĂÂĐÊÔƠƯàáảãạèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]/i;
+    const lang=isOriginal
+      ?(vietnamese.test(source)?"vi-VN":"en-US")
+      :(resultLanguage==="en"?"en-US":"vi-VN");
+    const converter=window.ldvlMathSpeech;
+    const spoken=converter?.textToSpeech
+      ?converter.textToSpeech(source,lang,marks)
+      :source.replace(/\$\$?([^$\n]+)\$\$?/g," $1 ");
+    const preview=$("ll-speech-preview");
+    if(preview){
+      preview.textContent=spoken||"Không có nội dung đọc.";
+      const wrap=$("ll-read-preview");
+      if(wrap)wrap.hidden=!spoken;
+    }
+    if(!spoken){toast("Chưa đọc được nội dung. Hãy chọn một câu có chữ hoặc công thức.",true);return;}
+    const segments=converter?.chunks?converter.chunks(spoken.slice(0,6500),180):[spoken.slice(0,2200)];
+    if(!segments.length)return;
     const voices=window.speechSynthesis.getVoices()||[];
-    const preferred=voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase() && v.localService)
-       ||voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase())
-       ||voices.find(v=>v.lang.toLowerCase().startsWith(lang.slice(0,2).toLowerCase()));
-    if(preferred)utterance.voice=preferred;
-    utterance.onstart=()=>toast("🔊 Đang đọc "+(lang.startsWith("en")?"tiếng Anh":"tiếng Việt")+".");
-    utterance.onerror=(event)=>{
-      if(event && (event.error==="canceled"||event.error==="interrupted"))return;
-      toast("Không thể phát giọng đọc "+(lang.startsWith("en")?"tiếng Anh":"tiếng Việt")+". Hãy kiểm tra giọng TTS trên thiết bị.",true);
+    const preferred=voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase()&&v.localService)
+      ||voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase())
+      ||voices.find(v=>v.lang.toLowerCase().startsWith(lang.slice(0,2).toLowerCase()));
+    let index=0;
+    const readNext=()=>{
+      if(readId!==speechRunId)return;
+      if(index>=segments.length){
+        toast("Đã đọc cả nội dung và công thức. Có thể bấm nghe lại để luyện tập.");
+        return;
+      }
+      const utterance=new SpeechSynthesisUtterance(segments[index]);
+      utterance.lang=lang;utterance.rate=Number($("ll-rate")?.value||0.9);
+      utterance.pitch=1;
+      if(preferred)utterance.voice=preferred;
+      utterance.onstart=()=>{
+        if(readId===speechRunId)
+          toast("🔊 Đang đọc "+(lang.startsWith("en")?"tiếng Anh":"tiếng Việt")+
+            " · đoạn "+(index+1)+"/"+segments.length+" (có công thức).");
+      };
+      utterance.onend=()=>{
+        if(readId!==speechRunId)return;
+        index++;
+        readNext();
+      };
+      utterance.onerror=(event)=>{
+        if(readId!==speechRunId || ["canceled","interrupted"].includes(event?.error))return;
+        toast("Không đọc được trên thiết bị. Kiểm tra cài đặt giọng đọc hoặc xem phần “Cách đọc công thức”.",true);
+      };
+      window.speechSynthesis.speak(utterance);
     };
-    utterance.onend=()=>toast("Đã đọc xong. Chọn Nghe lại để luyện phát âm.");
-    window.speechSynthesis.speak(utterance);
+    readNext();
   }
   function grammarCard(item) {
     const wrap=document.createElement("article");
@@ -468,7 +514,9 @@
     stopListening();
     lastResult="";lastSource="";lastEnglish="";lastMarks={};
     const sourceSpeak=$("ll-speak-original");
-    if(sourceSpeak)sourceSpeak.disabled=true;
+    if(sourceSpeak)sourceSpeak.disabled=false;
+    if($("ll-speech-preview"))$("ll-speech-preview").textContent="";
+    if($("ll-read-preview"))$("ll-read-preview").hidden=true;
     if($("ll-grammar-patterns"))renderGrammar({patterns:[],vocabulary:[],practice_tip:""});
     $("ll-output").hidden=true;
     toast(mode==="vi"?
@@ -544,11 +592,15 @@
               '<div class="ll-translation" id="ll-translated"></div></div>'+
           '</div>'+
           '<div class="ll-listen-toolbar" role="group" aria-label="Điều khiển đọc song ngữ">'+
-            '<button type="button" class="ll-action" id="ll-speak-original" disabled>🔊 Đọc gốc</button>'+
+            '<button type="button" class="ll-action" id="ll-speak-original">🔊 Đọc gốc</button>'+
             '<button type="button" class="ll-action primary" id="ll-speak" disabled>▶ Đọc bản dịch</button>'+
             '<label class="ll-speed">Tốc độ <select id="ll-rate"><option value="0.75">0,75×</option><option value="0.9" selected>0,9×</option><option value="1">1×</option><option value="1.15">1,15×</option></select></label>'+
             '<button type="button" class="ll-action ll-stop" id="ll-stop">■ Dừng</button>'+
           '</div>'+
+          '<details class="ll-read-preview" id="ll-read-preview" hidden>'+
+            '<summary>∑ Xem cách đọc công thức</summary>'+
+            '<p class="ll-speech-preview" id="ll-speech-preview"></p>'+
+          '</details>'+
           '<div class="ll-actions ll-next-actions">'+
             '<button type="button" class="ll-action" id="ll-copy" disabled>📋 Sao chép</button>'+
             '<button type="button" class="ll-action ll-grammar-button" id="ll-grammar">🧠 Phân tích ngữ pháp</button>'+
