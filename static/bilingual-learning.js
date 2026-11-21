@@ -383,10 +383,11 @@
     let src=lastSource,english=lastEnglish;
     if(!src){
       const selection=readSelection()||savedSelection;
-      src=selection||questionData().text;
+      const picked=questionData();
+      src=selection||picked.text;
       if(!src){toast("Chọn một câu hỏi hoặc đoạn văn để phân tích.",true);return;}
       english=src;
-      lastSource=src;lastEnglish=english;
+      lastSource=src;lastEnglish=english;lastMarks=selection?{}:(picked.marks||{});
     }
     const cacheKey=src+"\0"+english;
     if(grammarCache.has(cacheKey)){renderGrammar(grammarCache.get(cacheKey));return;}
@@ -395,6 +396,22 @@
     button.textContent="⏳ Đang phân tích…";
     toast("Đang phân tích cấu trúc tiếng Anh của câu đang học…");
     try{
+      // Vietnamese-only mode also supports one-tap grammar help: translate
+      // the question to English first, then analyze its actual English wording.
+      const vietnamese=/[ăâđêôơưĂÂĐÊÔƠƯàáảãạèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]/i;
+      if(vietnamese.test(english)){
+        button.textContent="⏳ Đang dịch sang tiếng Anh…";
+        const translation=await fetch("/api/learning/translate",{
+          method:"POST",credentials:"same-origin",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({text:src.slice(0,4500),target:"en",api_keys:keys()})
+        });
+        const translated=await translation.json();
+        if(!translation.ok||!translated.ok)throw Error(translated.error||"Chưa dịch được câu tiếng Việt.");
+        english=String(translated.translated||"");
+        setOutput(src,english,lastMarks||{},"en");
+        button.textContent="⏳ Đang tìm cấu trúc ngữ pháp…";
+      }
       const response=await fetch("/api/learning/grammar",{
         method:"POST",credentials:"same-origin",
         headers:{"Content-Type":"application/json"},
