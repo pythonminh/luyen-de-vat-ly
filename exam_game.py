@@ -303,6 +303,9 @@ def exam_violation():
 def exam_ended():
     m=base.member_current()
     if not m:return redirect(base.login_url("/member"))
+    if session.get("practice_game_status")=="active":
+        # The client may navigate before its background beacon is delivered.
+        end_current("pagehide")
     reason=html.escape(str(session.get("practice_game_reason") or "Lượt đã dừng."))
     path=str(session.get("practice_path") or "")
     if session.get("practice_game_status")!="ended":
