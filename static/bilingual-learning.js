@@ -96,6 +96,7 @@
   }
   function plainNode(el,marks,indexObj) {
     const cloned=el.cloneNode(true);
+    cloned.querySelectorAll(".ll-inline-original").forEach(n=>n.removeAttribute("hidden"));
     cloned.querySelectorAll("input, textarea, button, select, script, style, .ll-no-translate, .ll-inline-target, [hidden]").forEach(n=>n.remove());
     const imgs=Array.from(cloned.querySelectorAll("mjx-container, .MathJax, .katex, .tikzfig, img, svg, canvas"));
     for(const n of imgs){
@@ -257,6 +258,14 @@
     const src=clean(data.text);
     lastSignature=src;
     runTranslation({text:src,marks:{}});
+  });
+  // Use English wording from the inline question translator for grammar hints.
+  window.addEventListener("ldvl:inline-translated",event=>{
+    const detail=event.detail||{};
+    if(!detail.english||!detail.source)return;
+    lastSource=String(detail.source);
+    lastEnglish=String(detail.english);
+    showQuickGrammar();
   });
   function stopListening(){
     try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
