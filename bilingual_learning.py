@@ -21,9 +21,9 @@ from app import app, admin_current, member_current
 
 _RATE_LOCK = threading.Lock()
 _RATE = defaultdict(deque)
-_MARKUP = ('<link rel="stylesheet" href="/static/bilingual-learning.css?v=20261116b">' +
-           '<script defer src="/static/bilingual-learning.js?v=20261116b"></script>' +
-           '<script defer src="/static/bilingual-inline.js?v=20261116b"></script>')
+_MARKUP = ('<link rel="stylesheet" href="/static/bilingual-learning.css?v=20261121coach2">' +
+           '<script defer src="/static/bilingual-learning.js?v=20261121coach2"></script>' +
+           '<script defer src="/static/bilingual-inline.js?v=20261121coach2"></script>')
 _PROTECT = re.compile(
     r'(⟦(?:M|IMG)\d+⟧|\$\$[\s\S]*?\$\$|\$[^$\n]+\$|'
     r'\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|'
@@ -291,3 +291,7 @@ def add_bilingual_learning_assets(response):
         # A failed optional study aid must never break learning or grading.
         pass
     return response
+
+
+# Register optional contextual grammar analysis for the bilingual learning panel.
+import bilingual_grammar  # noqa: E402,F401
