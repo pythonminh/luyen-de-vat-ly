@@ -20,8 +20,10 @@
   const hasVietnamese = text => /[ăâđêôơưĂÂĐÊÔƠƯàáảãạèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]/i.test(text);
   function stop() {
     speechId++;
+    const wasSpeaking=speaking;
     speaking = false;
-    try { window.speechSynthesis?.cancel(); } catch(e) {}
+    // An idle solution reader must not cancel the translation reader's TTS.
+    if(wasSpeaking)try { window.speechSynthesis?.cancel(); } catch(e) {}
     updateButtons();
   }
   function updateButtons() {
@@ -115,8 +117,8 @@
     if (!("speechSynthesis" in window)) {
       setNote(root,"Trình duyệt chưa hỗ trợ đọc lời giải.",true); return;
     }
-    window.dispatchEvent(new Event("ldvl:solution-speech-start"));
     stop();
+    window.dispatchEvent(new Event("ldvl:solution-speech-start"));
     currentPanel=root;
     const myId=speechId;
     const selector=root.querySelector(".ll-sol-language");
@@ -274,7 +276,9 @@
       if(useful)scheduleRefresh();
     });
     observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["style","hidden","class"]});
-    window.addEventListener("ldvl:study-speech-start",stop);
+    window.addEventListener("ldvl:study-speech-start",()=>{
+      if(speaking)stop();
+    });
     window.addEventListener("pagehide",stop);
     document.addEventListener("visibilitychange",()=>{
       if(document.hidden && speaking)stop();
