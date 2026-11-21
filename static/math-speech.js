@@ -178,7 +178,8 @@ function mathToSpeech(input,locale) {
          }
          const original=s.slice(from,i);
          if(s[i]==="}")i++;
-         const unit=op==="unit"?speakUnit(original,locale):"";
+         // Both \\mathrm{Pa} and \\text{Pa} are common in physics textbooks.
+         const unit=speakUnit(original,locale);
          return unit||mathToSpeech(original,locale);
        }
        return "";
