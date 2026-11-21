@@ -228,7 +228,7 @@
     }
   }
   function translateQuestion(){
-    const data=questionData();
+    const data=window.ldvlInlineQuestionData?.()||questionData();
     if(!data.text && requestFromFrame("question")) return;
     lastSignature=data.text;
     runTranslation(data);
@@ -280,6 +280,27 @@
     const src=clean(data.text);
     lastSignature=src;
     runTranslation({text:src,marks:{}});
+  });
+  // A new visible question invalidates the previous translation, speech and
+  // grammar. The inline reader will translate ONLY the newly visible question.
+  window.addEventListener("ldvl:current-question-changed",event=>{
+    const current=event.detail||{};
+    activeJob++;
+    activeGrammarRequest++;
+    stopListening();
+    lastSignature=String(current.text||"");
+    lastSource=String(current.text||"");
+    lastMarks=current.marks||{};
+    lastEnglish="";lastResult="";lastOutput=null;
+    const output=$("ll-output");if(output)output.hidden=true;
+    const translatedSpeak=$("ll-speak");if(translatedSpeak)translatedSpeak.disabled=true;
+    const copy=$("ll-copy");if(copy)copy.disabled=true;
+    const sourceSpeak=$("ll-speak-original");if(sourceSpeak)sourceSpeak.disabled=!lastSource;
+    const preview=$("ll-speech-preview");if(preview)preview.textContent="";
+    const previewBox=$("ll-read-preview");if(previewBox)previewBox.hidden=true;
+    const btn=$("ll-grammar");
+    if(btn){btn.disabled=false;btn.textContent="🧠 Phân tích ngữ pháp";}
+    if(opened&&mode!=="vi")toast(lastSource?"Đang dịch câu hỏi hiện tại…":"Chọn một câu hỏi để dịch.");
   });
   // Use English wording from the inline question translator for grammar hints.
   window.addEventListener("ldvl:inline-translated",event=>{
@@ -574,6 +595,9 @@
     observedQuestion=q;
     let delayed=null;
     const observer=new MutationObserver(()=>{
+      // Inline translator owns automatic per-question translations. Do not
+      // duplicate its API request from the side panel on every DOM mutation.
+      if(window.ldvlInlineSwitch)return;
       clearTimeout(delayed);
       delayed=setTimeout(()=>{
         if(!opened||mode==="vi")return;
