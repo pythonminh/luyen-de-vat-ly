@@ -6425,9 +6425,19 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 10. Định luật Charles · Bài toán tổng hợp về quá trình đẳng nhiệt",
       "De": "L12C2 Bài 10. Định luật Charles · Bài toán tổng hợp về quá trình đẳng nhiệt",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 15,
+      "count": 15,
+      "dang": {
+        "Bài toán tổng hợp về quá trình đẳng nhiệt": 15
+      },
+      "dang_kinds": {
+        "Bài toán tổng hợp về quá trình đẳng nhiệt": {
+          "TN": 0,
+          "DS": 14,
+          "TLN": 0,
+          "TL": 1
+        }
+      }
     }
   ]
 }
