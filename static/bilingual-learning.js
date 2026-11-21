@@ -51,6 +51,8 @@
   try { const saved=localStorage.getItem(STORAGE); if(T[saved]) mode=saved; } catch(e) {}
   let opened=false, savedSelection="", activeJob=0, lastSignature="", lastResult="", resultLanguage="en", observedQuestion=null;
   let lastOutput=null;
+  let lastSource="",lastEnglish="",lastMarks={},activeGrammarRequest=0;
+  const grammarCache=new Map();
   let pendingFrame=null;
   const cache = new Map();
   const $ = id => document.getElementById(id);
@@ -68,12 +70,17 @@
     parent.hidden=false;
     const showBoth=mode==="both";
     original.hidden=!showBoth;
+    const sourceCard=parent.querySelector(".ll-source-card");
+    if(sourceCard)sourceCard.hidden=!showBoth;
     if(showBoth) fill(original,source,marks);
     fill(out,translated,marks);
     $("ll-target-label").textContent=target==="en"?"ENGLISH TRANSLATION":"BẢN DỊCH TIẾNG VIỆT";
     $("ll-speak").disabled=!clean(translated);
     $("ll-copy").disabled=!clean(translated);
     lastResult=translated;resultLanguage=target;
+    lastSource=source;lastEnglish=target==="en"?translated:source;lastMarks=marks;
+    const sourceListen=$("ll-speak-original");if(sourceListen)sourceListen.disabled=!clean(source);
+    showQuickGrammar();
   }
   function fill(container,txt,marks) {
     container.replaceChildren();
@@ -89,7 +96,7 @@
   }
   function plainNode(el,marks,indexObj) {
     const cloned=el.cloneNode(true);
-    cloned.querySelectorAll("input, textarea, button, select, script, style, .ll-no-translate").forEach(n=>n.remove());
+    cloned.querySelectorAll("input, textarea, button, select, script, style, .ll-no-translate, .ll-inline-target, [hidden]").forEach(n=>n.remove());
     const imgs=Array.from(cloned.querySelectorAll("mjx-container, .MathJax, .katex, .tikzfig, img, svg, canvas"));
     for(const n of imgs){
       if(!cloned.contains(n)) continue;
@@ -254,16 +261,156 @@
   function stopListening(){
     try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
   }
-  function listen(){
-    if(!lastResult){toast("Hãy dịch đoạn văn trước.",true);return;}
-    if(!("speechSynthesis" in window)){toast("Trình duyệt chưa hỗ trợ đọc tiếng Anh/Việt.",true);return;}
+  function listen(which="translation"){
+    const isOriginal=which==="original";
+    const text=isOriginal?lastSource:lastResult;
+    if(!text){toast("Hãy chọn một câu hoặc dịch trước khi đọc.",true);return;}
+    if(!("speechSynthesis" in window)){toast("Trình duyệt chưa hỗ trợ đọc bằng giọng nói.",true);return;}
     stopListening();
-    const phrase=lastResult.replace(tokenRE, " công thức ").slice(0,2800);
-    const utterance=new SpeechSynthesisUtterance(phrase);
-    utterance.lang=resultLanguage==="en"?"en-US":"vi-VN";
-    utterance.rate=0.9;
+    const lang=isOriginal?(resultLanguage==="en"?"vi-VN":"en-US"):(resultLanguage==="en"?"en-US":"vi-VN");
+    const raw=text.replace(tokenRE," ").replace(/\\(?:frac|sqrt|mathrm|text)\b/g," ").replace(/\s+/g," ").trim();
+    const utterance=new SpeechSynthesisUtterance(raw.slice(0,2200));
+    utterance.lang=lang;
+    utterance.rate=Number($("ll-rate")?.value||0.9);
+    utterance.pitch=1;
+    const voices=window.speechSynthesis.getVoices()||[];
+    const preferred=voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase() && v.localService)
+       ||voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase())
+       ||voices.find(v=>v.lang.toLowerCase().startsWith(lang.slice(0,2).toLowerCase()));
+    if(preferred)utterance.voice=preferred;
+    utterance.onstart=()=>toast("🔊 Đang đọc "+(lang.startsWith("en")?"tiếng Anh":"tiếng Việt")+".");
+    utterance.onerror=()=>toast("Thiết bị chưa có giọng đọc "+(lang.startsWith("en")?"tiếng Anh":"tiếng Việt")+".",true);
+    utterance.onend=()=>toast("Đã đọc xong. Chọn Nghe lại để luyện phát âm.");
     window.speechSynthesis.speak(utterance);
   }
+  function grammarCard(item) {
+    const wrap=document.createElement("article");
+    wrap.className="ll-grammar-card";
+    const head=document.createElement("strong");
+    head.textContent=item.name||"Cấu trúc câu";
+    wrap.appendChild(head);
+    if(item.fragment){
+      const code=document.createElement("span");
+      code.className="ll-grammar-fragment";
+      code.textContent=item.fragment;
+      wrap.appendChild(code);
+    }
+    const desc=document.createElement("p");
+    desc.textContent=item.explanation||"";
+    wrap.appendChild(desc);
+    if(item.example){
+      const example=document.createElement("small");
+      example.textContent="Ví dụ: "+item.example;
+      wrap.appendChild(example);
+    }
+    return wrap;
+  }
+  const glossary={
+    "pressure":"áp suất","volume":"thể tích","temperature":"nhiệt độ",
+    "mass":"khối lượng","density":"khối lượng riêng",
+    "velocity":"vận tốc","speed":"tốc độ","acceleration":"gia tốc",
+    "force":"lực","energy":"năng lượng","power":"công suất",
+    "increase":"tăng","decrease":"giảm","constant":"không đổi",
+    "equation":"phương trình","function":"hàm số","triangle":"tam giác",
+    "angle":"góc","calculate":"tính toán","determine":"xác định",
+    "find":"tìm","given":"cho biết","proportional":"tỉ lệ",
+    "respectively":"tương ứng","approximately":"xấp xỉ"
+  };
+  function quickPatterns(text) {
+    const samples=[];
+    const rules=[
+      {re:/\bhow many\b/i,name:"How many + danh từ đếm được",cue:"Hỏi số lượng vật hoặc số lần.",example:"How many cycles are completed?"},
+      {re:/\bhow much\b/i,name:"How much + danh từ không đếm được",cue:"Hỏi lượng, giá trị hoặc mức độ.",example:"How much energy is transferred?"},
+      {re:/\bif\b[\s\S]{0,140}?(?:,|then\b)/i,name:"Mệnh đề điều kiện If",cue:"If + điều kiện; mệnh đề chính diễn tả kết quả. Xác định giả thiết trước khi đọc phần yêu cầu.",example:"If the volume increases, the pressure changes."},
+      {re:/\b(?:is|are|was|were)\s+(?:\w+ly\s+)?(?:given|measured|heated|applied|released|transferred|calculated|increased|decreased|used|placed)\b/i,name:"Câu bị động (Passive voice)",cue:"Be + quá khứ phân từ (V3) tập trung vào đối tượng chịu tác động.",example:"The temperature is measured in kelvin."},
+      {re:/\b(?:greater than|less than|larger than|smaller than|higher than|lower than|more than|fewer than)\b/i,name:"So sánh hơn",cue:"Tính từ so sánh + than để đối chiếu hai đại lượng.",example:"The second value is higher than the first."},
+      {re:/\bwhen\b/i,name:"Mệnh đề When",cue:"When giới thiệu thời điểm hoặc điều kiện xảy ra hiện tượng.",example:"When the gas cools, its pressure decreases."},
+      {re:/\b(?:calculate|determine|find|compare|identify|solve|choose)\b/i,name:"Động từ yêu cầu",cue:"Động từ ở đầu câu chỉ thao tác học sinh cần thực hiện: tính, xác định, tìm hoặc so sánh.",example:"Determine the value of the unknown."},
+      {re:/\b(?:is|are)\s+(?:directly|inversely)?\s*proportional\s+to\b/i,name:"Be proportional to",cue:"Cấu trúc mô tả quan hệ tỉ lệ giữa hai đại lượng.",example:"One quantity is proportional to another."},
+      {re:/\b(?:in order to|so that)\b/i,name:"Cấu trúc chỉ mục đích",cue:"In order to + động từ hoặc so that + mệnh đề diễn tả mục đích.",example:"Measure carefully in order to compare the results."}
+    ];
+    for(const rule of rules){
+      if(rule.re.test(text))samples.push({name:rule.name,fragment:"",explanation:rule.cue,example:rule.example});
+      if(samples.length>=3)break;
+    }
+    if(!samples.length && /\b(?:is|are|has|have|does|do|was|were)\b/i.test(text)){
+      samples.push({name:"Chủ ngữ và động từ",fragment:"",explanation:"Tìm động từ chính (is/are/has/have/does...) để xác định chủ ngữ và ý nghĩa câu.",example:"The object has a constant mass."});
+    }
+    return samples;
+  }
+  function renderGrammar(payload){
+    const holder=$("ll-grammar-patterns"),vocab=$("ll-grammar-vocab"),tip=$("ll-grammar-tip"),empty=$("ll-grammar-empty");
+    if(!holder||!vocab||!tip||!empty)return;
+    holder.replaceChildren();vocab.replaceChildren();
+    for(const p of (payload.patterns||[]).slice(0,4))holder.appendChild(grammarCard(p));
+    if(payload.vocabulary?.length){
+      const heading=document.createElement("strong");
+      heading.className="ll-vocab-heading";
+      heading.textContent="Từ vựng Toán – Vật lí";
+      vocab.appendChild(heading);
+      for(const word of payload.vocabulary.slice(0,6)){
+        const row=document.createElement("div");
+        row.className="ll-word";
+        const en=document.createElement("b");en.textContent=word.en||"";
+        const vi=document.createElement("span");vi.textContent=word.vi||"";
+        row.append(en,vi);vocab.appendChild(row);
+      }
+    }
+    tip.hidden=!payload.practice_tip;
+    if(!tip.hidden)tip.textContent="💡 "+payload.practice_tip;
+    empty.hidden=Boolean(holder.children.length||vocab.children.length||!tip.hidden);
+    if(!empty.hidden)empty.textContent="Đoạn này chưa có đủ cấu trúc tiếng Anh để gợi ý. Hãy dịch một câu có nội dung chữ.";
+  }
+  function showQuickGrammar(){
+    const text=(lastEnglish||"").replace(tokenRE," ").replace(/\\\w+/g," ").trim();
+    const words=[];
+    for(const [word,translation] of Object.entries(glossary)){
+      if(new RegExp("\\b"+word+"\\b","i").test(text))words.push({en:word,vi:translation});
+      if(words.length>=5)break;
+    }
+    renderGrammar({patterns:quickPatterns(text),vocabulary:words,practice_tip:"Tìm chủ ngữ, động từ chính và từ chỉ yêu cầu trước khi giải bài."});
+  }
+  async function fetchGrammar(){
+    const button=$("ll-grammar");
+    if(!button)return;
+    let src=lastSource,english=lastEnglish;
+    if(!src){
+      const selection=readSelection()||savedSelection;
+      src=selection||questionData().text;
+      if(!src){toast("Chọn một câu hỏi hoặc đoạn văn để phân tích.",true);return;}
+      english=src;
+      lastSource=src;lastEnglish=english;
+    }
+    const cacheKey=src+"\0"+english;
+    if(grammarCache.has(cacheKey)){renderGrammar(grammarCache.get(cacheKey));return;}
+    const job=++activeGrammarRequest;
+    button.disabled=true;
+    button.textContent="⏳ Đang phân tích…";
+    toast("Đang phân tích cấu trúc tiếng Anh của câu đang học…");
+    try{
+      const response=await fetch("/api/learning/grammar",{
+        method:"POST",credentials:"same-origin",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({source:src.slice(0,4500),english:english.slice(0,4500),api_keys:keys()})
+      });
+      const data=await response.json();
+      if(!response.ok||!data.ok)throw Error(data.error||"Chưa phân tích được ngữ pháp.");
+      if(job!==activeGrammarRequest)return;
+      grammarCache.set(cacheKey,data);
+      renderGrammar(data);
+      toast("Đã có cấu trúc, ví dụ và từ vựng gắn với câu đang học.");
+    }catch(err){
+      if(job!==activeGrammarRequest)return;
+      showQuickGrammar();
+      toast((err&&err.message||"Chưa gọi được Gemini.")+" Gợi ý nhanh vẫn hiển thị.",true);
+    }finally{
+      if(job===activeGrammarRequest){
+        button.disabled=false;
+        button.textContent="🧠 Phân tích ngữ pháp";
+      }
+    }
+  }
+
   function copyResult(){
     if(!lastResult)return;
     if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -287,6 +434,10 @@
     activeJob++;
     lastSignature="";
     stopListening();
+    lastResult="";lastSource="";lastEnglish="";lastMarks={};
+    const sourceSpeak=$("ll-speak-original");
+    if(sourceSpeak)sourceSpeak.disabled=true;
+    if($("ll-grammar-patterns"))renderGrammar({patterns:[],vocabulary:[],practice_tip:""});
     $("ll-output").hidden=true;
     toast(mode==="vi"?
       "Đang ưu tiên tiếng Việt. Chọn Dịch câu hỏi để dịch từ tiếng Anh sang tiếng Việt.":
@@ -301,6 +452,10 @@
     $("ldvl-lang-toggle").setAttribute("aria-expanded",String(opened));
     if(!opened)stopListening();
     if(opened&&mode!=="vi"&&!lastSignature&&!window.ldvlInlineSwitch)translateQuestion();
+    if(opened&&!lastSource&&!lastEnglish){
+      const q=questionData();
+      if(q.text){lastSource=q.text;lastEnglish=q.text;showQuickGrammar();}
+    }
   }
   function watchQuestion(){
     const q=document.querySelector("#q")||document.querySelector("#question");
@@ -350,15 +505,29 @@
           '</div>'+
           '<div class="ll-status" id="ll-status" role="status" aria-live="polite">Chọn ngôn ngữ để bắt đầu.</div>'+
           '<div class="ll-output" id="ll-output" hidden>'+
-            '<div class="ll-original" id="ll-original" hidden></div>'+
-            '<div class="ll-label" id="ll-target-label">ENGLISH TRANSLATION</div>'+
-            '<div class="ll-translation" id="ll-translated"></div>'+
+            '<div class="ll-translation-card ll-source-card"><div class="ll-card-label">🇻🇳 / 🇬🇧 <span>Văn bản gốc</span></div>'+
+              '<div class="ll-original" id="ll-original" hidden></div></div>'+
+            '<div class="ll-translation-card ll-target-card">'+
+              '<div class="ll-label" id="ll-target-label">ENGLISH TRANSLATION</div>'+
+              '<div class="ll-translation" id="ll-translated"></div></div>'+
           '</div>'+
-          '<div class="ll-actions">'+
-            '<button type="button" class="ll-action" id="ll-speak" disabled>🔊 Nghe phát âm</button>'+
+          '<div class="ll-listen-toolbar" role="group" aria-label="Điều khiển đọc song ngữ">'+
+            '<button type="button" class="ll-action" id="ll-speak-original" disabled>🔊 Đọc gốc</button>'+
+            '<button type="button" class="ll-action primary" id="ll-speak" disabled>▶ Đọc bản dịch</button>'+
+            '<label class="ll-speed">Tốc độ <select id="ll-rate"><option value="0.75">0,75×</option><option value="0.9" selected>0,9×</option><option value="1">1×</option><option value="1.15">1,15×</option></select></label>'+
+            '<button type="button" class="ll-action ll-stop" id="ll-stop">■ Dừng</button>'+
+          '</div>'+
+          '<div class="ll-actions ll-next-actions">'+
             '<button type="button" class="ll-action" id="ll-copy" disabled>📋 Sao chép</button>'+
-            '<button type="button" class="ll-action" id="ll-stop">◼ Dừng đọc</button>'+
+            '<button type="button" class="ll-action ll-grammar-button" id="ll-grammar">🧠 Phân tích ngữ pháp</button>'+
           '</div>'+
+          '<section class="ll-grammar" id="ll-grammar-box" aria-label="Gợi ý ngữ pháp tiếng Anh">'+
+            '<div class="ll-grammar-head"><strong>✦ Gợi ý ngữ pháp</strong><span>English coach</span></div>'+
+            '<p class="ll-grammar-empty" id="ll-grammar-empty">Chọn Dịch câu hỏi để thấy cấu trúc tiếng Anh. Bấm “Phân tích ngữ pháp” để nhận giải thích theo đúng câu đang học.</p>'+
+            '<div id="ll-grammar-patterns" class="ll-grammar-patterns"></div>'+
+            '<div id="ll-grammar-vocab" class="ll-grammar-vocab"></div>'+
+            '<div id="ll-grammar-tip" class="ll-grammar-tip" hidden></div>'+
+          '</section>'+
           '<p class="ll-info">Bản dịch bằng Gemini chỉ để hỗ trợ học tập; luôn kiểm tra nội dung và thuật ngữ từ đề gốc.</p>'+
         '</div>';
       document.body.appendChild(panel);
@@ -367,8 +536,10 @@
       for(const key of Object.keys(T))$("ll-mode-"+key).addEventListener("click",()=>setMode(key));
       $("ll-translate").addEventListener("click",translateQuestion);
       $("ll-selection").addEventListener("click",translateSelection);
-      $("ll-speak").addEventListener("click",listen);
-      $("ll-stop").addEventListener("click",stopListening);
+      $("ll-speak").addEventListener("click",()=>listen("translation"));
+      $("ll-speak-original").addEventListener("click",()=>listen("original"));
+      $("ll-grammar").addEventListener("click",fetchGrammar);
+      $("ll-stop").addEventListener("click",()=>{stopListening();toast("Đã dừng đọc.");});
       $("ll-copy").addEventListener("click",copyResult);
       document.addEventListener("selectionchange",updateSavedSelection,{passive:true});
       document.addEventListener("pointerdown",e=>{
