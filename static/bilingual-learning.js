@@ -240,8 +240,8 @@
     return true;
   }
   function installFrameBridge(){
-    const script='<script src="'+location.origin+'/static/bilingual-learning.js?v=20261121coach3"><\/script>'+
-      '<script src="'+location.origin+'/static/bilingual-inline.js?v=20261121coach3"><\/script>';
+    const script='<script src="'+location.origin+'/static/bilingual-learning.js?v=20261121coach6"><\/script>'+
+      '<script src="'+location.origin+'/static/bilingual-inline.js?v=20261121coach6"><\/script>';
     document.querySelectorAll("#hpFrame,#hlFrame").forEach(frame=>{
       function inject(){
         const source=frame.getAttribute("srcdoc")||"";
