@@ -38,7 +38,7 @@
     const nav = aside.querySelector('.practice-index-grid');
     const keys = [];
     anchors.forEach(function (original, index) {
-      const link = original.cloneNode(true);
+      const link = original;
       link.classList.add('pidx-link');
       link.textContent = String(index + 1);
       link.setAttribute('aria-label', 'Câu ' + (index + 1));
@@ -46,9 +46,13 @@
       link.title = 'Câu ' + (index + 1);
       if (link.classList.contains('pcur')) link.setAttribute('aria-current', 'step');
       nav.appendChild(link);
-      keys.push({src: original, view: link});
+      keys.push({src: link, view: link});
     });
 
+    // Use the server-rendered links as the only question-navigation controls.
+    // Remove the old expandable copy after moving its links into this index.
+    const oldQuestionMenu = root.querySelector('.practice-questions');
+    if (oldQuestionMenu) oldQuestionMenu.remove();
     root.insertBefore(zone, body);
     zone.appendChild(aside);
     zone.appendChild(body);
@@ -150,8 +154,7 @@
       collapse.setAttribute('aria-label', collapse.title);
     });
 
-    // Legacy mobile popup is redundant once the index is always visible.
-    // Retain its DOM and click listeners as a fallback, but suppress its toolbar in compact mode.
+    // Only this question index remains; no duplicate mobile modal or bottom navigation.
     document.body.classList.add('practice-compact-ready');
     refresh();
 
