@@ -254,9 +254,10 @@
     return true;
   }
   function installFrameBridge(){
-    const script='<script src="'+location.origin+'/static/math-speech.js?v=20261121math2"><\/script>'+
-      '<script src="'+location.origin+'/static/bilingual-learning.js?v=20261121math2"><\/script>'+
-      '<script src="'+location.origin+'/static/bilingual-inline.js?v=20261121math2"><\/script>';
+    const script='<script src="'+location.origin+'/static/math-speech.js?v=20261121solution1"><\/script>'+
+      '<script src="'+location.origin+'/static/bilingual-learning.js?v=20261121solution1"><\/script>'+
+      '<script src="'+location.origin+'/static/bilingual-inline.js?v=20261121solution1"><\/script>'+
+      '<script src="'+location.origin+'/static/solution-speech.js?v=20261121solution1"><\/script>';
     document.querySelectorAll("#hpFrame,#hlFrame").forEach(frame=>{
       function inject(){
         const source=frame.getAttribute("srcdoc")||"";
@@ -289,6 +290,7 @@
     speechRunId++;
     try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
   }
+  window.addEventListener("ldvl:solution-speech-start",stopListening);
   function listen(which="translation"){
     const isOriginal=which==="original";
     let source=isOriginal?lastSource:lastResult;
@@ -304,6 +306,7 @@
     }
     if(!source){toast("Hãy mở câu hỏi hoặc dịch đoạn văn trước khi đọc.",true);return;}
     if(!("speechSynthesis" in window)){toast("Trình duyệt chưa hỗ trợ đọc bằng giọng nói.",true);return;}
+    window.dispatchEvent(new Event("ldvl:study-speech-start"));
     stopListening();
     const readId=speechRunId;
     const vietnamese=/[ăâđêôơưĂÂĐÊÔƠƯàáảãạèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]/i;
