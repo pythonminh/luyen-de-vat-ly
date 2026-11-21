@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 195,
+  "total_files": 196,
   "total_questions": 12283,
   "lessons": [
     {
@@ -6511,6 +6511,19 @@
           "TL": 0
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử/dang-giai-thich-ap-suat-khi-bang-va-cham-phan-tu.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử/dang-giai-thich-ap-suat-khi-bang-va-cham-phan-tu.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử/dang-giai-thich-ap-suat-khi-bang-va-cham-phan-tu.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử · Giải thích áp suất khí bằng va chạm phân tử",
+      "De": "L12C2 Bài 12. Áp suất khí theo mô hình động học phân tử · Giải thích áp suất khí bằng va chạm phân tử",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
