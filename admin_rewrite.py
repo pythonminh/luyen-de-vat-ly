@@ -2428,6 +2428,7 @@ def _notebook_image_prompt(latex):
     return body.strip(), _NOTEBOOK_MOTION, canva.strip()
 
 
+# Image mode hides the key; comic mode may display the verified source answer.
 def _public_exercise_latex(latex):
     """Remove answer keys and loigiai using brace-aware scanning."""
     text = str(latex or "")
