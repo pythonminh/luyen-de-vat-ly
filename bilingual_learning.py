@@ -12,6 +12,7 @@ import os
 import re
 import threading
 import time
+import urllib.error
 import urllib.parse
 from collections import defaultdict, deque
 
@@ -66,6 +67,8 @@ def _protect(text: str):
 
 def _restore(translated: str, kept: list[str]) -> str | None:
     value = str(translated or "").strip()
+    # Normalize whitespace around model-returned tokens; never reconstruct missing formulas.
+    value = re.sub(r"〖\s*T\s*(\d{3})\s*〗", lambda m: "〖T" + m.group(1) + "〗", value, flags=re.I)
     for i, item in enumerate(kept):
         marker = f"〖T{i:03d}〗"
         if value.count(marker) != 1:
@@ -140,7 +143,7 @@ def bilingual_translate():
 
     result = None
     for key in keys[:3]:
-        for model in ("gemini-2.5-flash", "gemini-2.0-flash"):
+        for model in ("gemini-2.5-flash", "gemini-flash-latest"):
             try:
                 text, finish = _gemini_call(
                     key, prompt, max_tokens=2400, temperature=0.0,
@@ -227,8 +230,9 @@ def bilingual_translate_batch():
         return jsonify(ok=False, error="Dịch thuật chưa sẵn sàng."), 503
 
     output = None
+    failures = set()
     for key in keys[:3]:
-        for model in ("gemini-2.5-flash", "gemini-2.0-flash"):
+        for model in ("gemini-2.5-flash", "gemini-flash-latest"):
             try:
                 raw, reason = _gemini_call(
                     key, prompt, max_tokens=3600, temperature=0.0,
@@ -256,12 +260,24 @@ def bilingual_translate_batch():
                 if valid:
                     output = translated
                     break
-            except Exception:
+            except urllib.error.HTTPError as exc:
+                failures.add(exc.code)
+                continue
+            except Exception as exc:
+                failures.add(type(exc).__name__)
                 continue
         if output is not None:
             break
     if output is None:
-        return jsonify(ok=False, error="Bản dịch chưa đảm bảo công thức hoặc cấu trúc. Hãy thử lại."), 502
+        if 429 in failures:
+            return jsonify(ok=False, error="Gemini đang giới hạn lượt gọi. Hãy thử lại khi hạn mức được cấp lại."), 429
+        if 401 in failures or 403 in failures:
+            return jsonify(ok=False, error="Gemini từ chối API key. Hãy kiểm tra key trong tài khoản hoặc trên Render."), 503
+        if 404 in failures:
+            return jsonify(ok=False, error="Model Gemini không khả dụng. Cần kiểm tra cấu hình model hoặc key."), 503
+        if any(code in failures for code in (500, 502, 503, 504)):
+            return jsonify(ok=False, error="Máy chủ Gemini đang gặp sự cố. Bài học và game vẫn hoạt động bình thường."), 503
+        return jsonify(ok=False, error="Bản dịch không đảm bảo công thức hoặc cấu trúc. Hãy thử dịch câu hỏi riêng hoặc đoạn ngắn hơn."), 502
     response = jsonify(ok=True, translations=output, target=target)
     response.headers["Cache-Control"] = "no-store"
     return response
