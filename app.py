@@ -5281,6 +5281,8 @@ def _reshuffle_work(job, src, fi, keys, code, token, pub_path, pub_pos, requirem
 @app.route('/api/practice/reshuffle', methods=['GET', 'POST'])
 def practice_reshuffle():
     """Đổi số câu đang làm hoặc đang chiếu. Trả về ngay, tính đáp án ở nền để Render không cắt kết nối."""
+    if session.get('practice_game_level') and session.get('practice_game_status')=='active':
+        return jsonify(ok=False,error='Game thi không cho đổi đề khi đang làm.'),403
     m = member_current()
     if not m:
         return jsonify(ok=False, error='Hãy đăng nhập.'), 401
