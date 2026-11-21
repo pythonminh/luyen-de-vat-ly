@@ -3075,7 +3075,19 @@ def member_start_selected():
 def practice_jump(pos):
     ids=list(session.get('practice_ids') or [])
     if session.get('role') not in {'member', 'admin'} or not ids:return redirect(login_url('/member/practice'))
-    pos=max(0,min(pos,len(ids)-1));session['practice_pos']=pos
+    done=list(session.get('practice_done') or [])
+    seen=set()
+    for item in done:
+        try:
+            number=int(item.get('question') or 0)
+        except (ValueError,TypeError,AttributeError):
+            continue
+        if 1<=number<=len(ids): seen.add(number)
+    # An index equal to total count means open results, only when finished.
+    pos=max(0,min(pos,len(ids)))
+    if pos==len(ids) and len(seen)<len(ids):
+        pos=next(j for j in range(len(ids)) if j+1 not in seen)
+    session['practice_pos']=pos
     return redirect('/member/practice')
 
 @app.get('/practice/redo/<int:pos>')
