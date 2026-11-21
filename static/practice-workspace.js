@@ -77,7 +77,11 @@
       hud.querySelector('.ph-tools').appendChild(zoom);
     }
     const filter = head.querySelector('details.practice-filters');
-    if (filter) aside.querySelector('.pidx-options').appendChild(filter);
+    // Teachers retain advanced lesson controls; students see only the question navigator.
+    if (filter) {
+      if (document.body.classList.contains('admin-ui')) aside.querySelector('.pidx-options').appendChild(filter);
+      else filter.remove();
+    }
 
     function refresh() {
       const done = keys.filter(x => x.view.classList.contains('pdone') || x.view.classList.contains('pwrong')).length;
