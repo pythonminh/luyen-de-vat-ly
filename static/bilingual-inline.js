@@ -171,13 +171,16 @@ function contentEntries(){
  // when navigating or scrolling, and reuse cached translations on return.
  for(const old of active){if(!selected.some(e=>e.el===old.el))showEntry(old,"vi");}
  active=selected;
- const stem=selected.find(e=>e.el===identity)||selected[0];
- const nextKey=stem?String(idOf(stem.el))+":"+stem.text:"";
+ const questionParts=selected.filter(e=>!e.el.matches("#solbox,.solution,.explanation,[data-solution]"));
+ const nextKey=questionParts.map(e=>idOf(e.el)+":"+e.text).join("␟");
  if(nextKey!==lastQuestionKey){
   lastQuestionKey=nextKey;
-  if(window.parent===window)window.dispatchEvent(new CustomEvent("ldvl:current-question-changed",{
-    detail:{text:stem?.text||"",marks:stem?.marks||{}}
-  }));
+  if(window.parent===window){
+   const current=combinedQuestion(questionParts);
+   window.dispatchEvent(new CustomEvent("ldvl:current-question-changed",{
+    detail:{text:current.source,marks:current.marks}
+   }));
+  }
  }
  return selected;
 }
