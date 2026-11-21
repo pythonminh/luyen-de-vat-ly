@@ -186,3 +186,8 @@ body:not(.cinema) .student-home-shell .notice{
   .student-home-actions>a,.student-lesson-actions>a{transition:transform .12s,box-shadow .12s}
   .student-home-actions>a:active,.student-lesson-actions>a:active{transform:scale(.975)}
 }
+
+/* Menu icon reflects its open/closed state, including keyboard activation. */
+@media(max-width:1024px){
+  .top.nav-open #ldvlNavToggle::after{content:'✕'!important;font-size:18px!important}
+}
