@@ -67,6 +67,11 @@ function prepare(el){
  if(!onScreen(el))return null;
  if(window.ldvlMathSpeech?.prepareElement)window.ldvlMathSpeech.prepareElement(el);
  let prev=entries.get(el);
+ if(prev && (!el.contains(prev.original)||!el.contains(prev.target))){
+   // Some HTML exercises reuse the same stem element for the next question
+   // and replace its children. Cached text must not survive this redraw.
+   entries.delete(el);prev=null;
+ }
  if(prev)return prev;
  if(el.closest(".ll-inline-original,.ll-inline-target,#ldvl-lang-panel,.ll-no-translate"))return null;
  const protectedPart=el.matches("label.opt,label.option,.opt,.option");
@@ -466,9 +471,12 @@ function startParent(){
    const meaningful=records.some(rec=>{
      if(rec.type==="attributes"){
        // Another question may become active without replacing DOM nodes.
-       return rec.target.matches?.(CARD) &&
-         !rec.target.matches(".ll-inline-original,.ll-inline-target") &&
-         rec.attributeName!=="data-ll-locale";
+       return (rec.target.matches?.(CARD) &&
+          !rec.target.matches(".ll-inline-original,.ll-inline-target") &&
+          rec.attributeName!=="data-ll-locale") ||
+         // The answer explanation becomes eligible only after View Solution.
+         (rec.target.matches?.("#solbox,.solution,.explanation,[data-solution]") &&
+          (rec.attributeName==="style"||rec.attributeName==="hidden"));
      }
      if(rec.type!=="childList"||!rec.addedNodes?.length)return false;
      const added=Array.from(rec.addedNodes);
