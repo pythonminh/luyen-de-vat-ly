@@ -51,7 +51,7 @@
   try { const saved=localStorage.getItem(STORAGE); if(T[saved]) mode=saved; } catch(e) {}
   let opened=false, savedSelection="", activeJob=0, lastSignature="", lastResult="", resultLanguage="en", observedQuestion=null;
   let lastOutput=null;
-  let speechRunId=0;
+  let speechRunId=0, isStudySpeaking=false;
   let lastSource="",lastEnglish="",lastMarks={},activeGrammarRequest=0;
   const grammarCache=new Map();
   let pendingFrame=null;
@@ -288,9 +288,17 @@
   });
   function stopListening(){
     speechRunId++;
-    try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
+    const wasSpeaking=isStudySpeaking;
+    isStudySpeaking=false;
+    // Two independent readers share one Android TTS engine. Only the reader
+    // which owns current speech may cancel; idle readers must never cancel.
+    if(wasSpeaking){
+      try{window.speechSynthesis?.cancel();}catch(e){}
+    }
   }
-  window.addEventListener("ldvl:solution-speech-start",stopListening);
+  window.addEventListener("ldvl:solution-speech-start",()=>{
+    if(isStudySpeaking)stopListening();
+  });
   function listen(which="translation"){
     const isOriginal=which==="original";
     let source=isOriginal?lastSource:lastResult;
@@ -306,8 +314,8 @@
     }
     if(!source){toast("Hãy mở câu hỏi hoặc dịch đoạn văn trước khi đọc.",true);return;}
     if(!("speechSynthesis" in window)){toast("Trình duyệt chưa hỗ trợ đọc bằng giọng nói.",true);return;}
-    window.dispatchEvent(new Event("ldvl:study-speech-start"));
     stopListening();
+    window.dispatchEvent(new Event("ldvl:study-speech-start"));
     const readId=speechRunId;
     const vietnamese=/[ăâđêôơưĂÂĐÊÔƠƯàáảãạèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]/i;
     const lang=isOriginal
@@ -334,6 +342,7 @@
     const readNext=()=>{
       if(readId!==speechRunId)return;
       if(index>=segments.length){
+        isStudySpeaking=false;
         toast("Đã đọc cả nội dung và công thức. Có thể bấm nghe lại để luyện tập.");
         return;
       }
@@ -353,10 +362,12 @@
       };
       utterance.onerror=(event)=>{
         if(readId!==speechRunId || ["canceled","interrupted"].includes(event?.error))return;
+        isStudySpeaking=false;
         toast("Không đọc được trên thiết bị. Kiểm tra cài đặt giọng đọc hoặc xem phần “Cách đọc công thức”.",true);
       };
       window.speechSynthesis.speak(utterance);
     };
+    isStudySpeaking=true;
     readNext();
   }
   function grammarCard(item) {
