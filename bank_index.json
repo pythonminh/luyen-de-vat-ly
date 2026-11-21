@@ -5627,10 +5627,9 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 9. Định luật Boyle",
       "De": "L12C2 Bài 9. Định luật Boyle",
-      "questions": 160,
-      "count": 160,
+      "questions": 145,
+      "count": 145,
       "dang": {
-        "Bài toán tổng hợp về quá trình đẳng nhiệt": 15,
         "Tính áp suất, thể tích trong quá trình đẳng nhiệt": 58,
         "Nhận biết quá trình đẳng nhiệt và định luật Boyle": 35,
         "Khối khí chịu áp suất của cột chất lỏng": 17,
@@ -5640,12 +5639,6 @@
         "Từ trường của dòng điện thẳng, dòng điện tròn và ống dây": 1
       },
       "dang_kinds": {
-        "Bài toán tổng hợp về quá trình đẳng nhiệt": {
-          "TN": 0,
-          "DS": 14,
-          "TLN": 0,
-          "TL": 1
-        },
         "Tính áp suất, thể tích trong quá trình đẳng nhiệt": {
           "TN": 11,
           "DS": 0,
