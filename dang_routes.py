@@ -2845,6 +2845,10 @@ def start_selected_questions():
         practice_best=0,
         practice_done=[],
         practice_ai=True,
+        practice_started_at=time.time(),
+        practice_game_level='',
+        practice_game_count=0,
+        practice_game_mix={},
     )
     if request.form.get('practice_mode')=='number_mix':
         session['number_mix_path']=path
