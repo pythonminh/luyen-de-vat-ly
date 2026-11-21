@@ -391,10 +391,10 @@ def slim_bar_html(path, dang, next_url):
     n = json.dumps(next_url, ensure_ascii=False)
     return (
         "<div class='slimbar' id='slimBar'><b>Cô gọn dạng</b>"
-        "<label>Giống ≥ <input id='simPct' type='number' min='50' max='98' value='75'> %</label>"
-        "<label><input id='simAi' type='checkbox' checked> Dùng AI rà nhóm</label>"
+        "<label>Giống ≥ <input id='simPct' type='number' min='50' max='98' value='90'> %</label>"
+        "<label><input id='simAi' type='checkbox'> Dùng AI rà nhóm</label>"
         "<button type='button' class='btn' id='simGo'>🤖 Lọc câu gần nội dung</button>"
-        "<span class='muted'>So cách hỏi hoặc phương án. Tick câu thừa rồi xóa — bản GIỮ không tick.</span></div>"
+        "<span class='muted'>Soát gợi ý, không tick xóa sẵn. Các câu chỉ khác số liệu cần giữ; kiểm tra đáp án và lời giải trước khi chọn.</span></div>"
         "<div id='slimOut'></div>"
         + f"<script>(function(){{const PATH={p},DANG={d},NEXT={n};"
         r"""
@@ -408,7 +408,7 @@ function markDrops(keys){
 }
 document.getElementById('simGo').addEventListener('click',async function(){
   const out=document.getElementById('slimOut');
-  const pct=Math.max(50,Math.min(98,Number(document.getElementById('simPct').value)||75));
+  const pct=Math.max(50,Math.min(98,Number(document.getElementById('simPct').value)||90));
   const useAi=!!document.getElementById('simAi').checked;
   const keys=(window.ldvlFilledKeys&&ldvlFilledKeys())||[];
   if(useAi&&!keys.length){alert('Nạp key Gemini (trang 🤖 Gemini) hoặc bỏ tick «Dùng AI rà nhóm» để lọc theo chữ.');return;}
@@ -433,7 +433,7 @@ document.getElementById('simGo').addEventListener('click',async function(){
           html+='<div class="slimrow keep"><span class="tag">GIỮ</span> <span class="qid">'+esc(it.id)+'</span> '+esc(it.snip)+'</div>';
         }else{
           drops.push(it.drop);
-          html+='<div class="slimrow drop"><label><input type="checkbox" name="drop" value="'+esc(it.drop)+'" checked> Xóa</label> <span class="qid">'+esc(it.id)+'</span> '+esc(it.snip)+'</div>';
+          html+='<div class="slimrow drop"><label><input type="checkbox" name="drop" value="'+esc(it.drop)+'" > Chọn xóa</label> <span class="qid">'+esc(it.id)+'</span> '+esc(it.snip)+'</div>';
         }
       });
       html+='</div>';
