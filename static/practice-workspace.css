@@ -334,3 +334,179 @@ body.practice-compact-ready .is-index-collapsed .practice-index-grid .pidx-link{
   body.practice-compact-ready .practice-index-progress>span,
   body.practice-compact-ready .ph-progress>span{transition:none!important}
 }
+
+
+/* Samsung Tab / Android tablet: readable mathematics, no hard cropping.
+   Keep the student question map, but give long formulae their natural size. */
+body.practice-compact-ready .vip-practice-wrap #q{
+  overflow-x:visible!important;
+  overflow-y:visible!important;
+  max-height:none!important;
+  height:auto!important;
+  font-family:"Noto Serif","Liberation Serif",Georgia,serif!important;
+  font-size:calc(19px * var(--qzoom,1))!important;
+  line-height:1.7!important;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+body.practice-compact-ready .vip-practice-wrap #q :is(.qheadline,.qstem,.qtext,.qbody,.qtf,.tfgrid,.tf,.tf-text,.opt,.solution){
+  min-width:0!important;max-width:100%!important;
+  word-break:normal!important;overflow-wrap:break-word!important;
+}
+body.practice-compact-ready .vip-practice-wrap #q :is(.qstem,.qtext,.tf-text,.solution){
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  padding-block:4px!important;
+  scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+}
+body.practice-compact-ready .vip-practice-wrap #q .opt{
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  padding-block:.7em!important;
+  -webkit-overflow-scrolling:touch;
+}
+body.practice-compact-ready .vip-practice-wrap #q mjx-container[jax="CHTML"]:not([display="true"]),
+body.practice-compact-ready .vip-practice-wrap #q mjx-container[jax="SVG"]:not([display="true"]){
+  display:inline-block!important;
+  vertical-align:middle!important;
+  white-space:nowrap!important;
+  max-width:none!important;
+  overflow:visible!important;
+  line-height:1.4!important;
+  padding-block:.13em!important;
+  font-size:1em!important;
+}
+body.practice-compact-ready .vip-practice-wrap #q mjx-container[display="true"]{
+  display:block!important;
+  box-sizing:border-box!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  white-space:nowrap!important;
+  padding:10px 7px 13px!important;
+  margin:8px 0 10px!important;
+  line-height:1.5!important;
+  text-align:left!important;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  border-radius:7px;
+}
+body.practice-compact-ready .vip-practice-wrap #q mjx-container[display="true"].ldvl-wide-math{
+  background:#f5f8fd;
+  border:1px solid #e0e8f2;
+}
+body.practice-compact-ready .vip-practice-wrap #q mjx-container[jax="CHTML"] mjx-math,
+body.practice-compact-ready .vip-practice-wrap #q mjx-container[jax="SVG"] mjx-math{
+  white-space:nowrap!important;
+  overflow:visible!important;
+}
+body.practice-compact-ready .vip-practice-wrap #q :is(.tikzfig,.tikz-live,.tikz-row,.qfig,.immini,.figgrid,.figcell){
+  height:auto!important;
+  max-height:none!important;
+  min-height:0!important;
+  max-width:100%!important;
+  overflow:visible!important;
+  box-sizing:border-box!important;
+}
+body.practice-compact-ready .vip-practice-wrap #q :is(.tikzfig,.tikz-live,.qfig,.immini) :is(img,svg){
+  display:block;
+  height:auto!important;
+  max-width:100%!important;
+  max-height:65dvh!important;
+  object-fit:contain!important;
+}
+body.practice-compact-ready .vip-practice-wrap #q .qbody.ds.hassplit{
+  min-width:0!important;
+}
+body.practice-compact-ready .vip-practice-wrap #q .tfgrid,
+body.practice-compact-ready .vip-practice-wrap #q .tfgrid .tf{
+  min-width:0!important;
+}
+body.practice-compact-ready .vip-practice-wrap #q .tex-table{
+  width:max-content;
+  max-width:none!important;
+}
+body.practice-compact-ready .vip-practice-wrap #q .ldvl-math-scroll-note{
+  display:flex;align-items:center;gap:5px;
+  margin:4px 0 7px!important;
+  color:#4b6890;font:600 11px/1.35 Segoe UI,Arial,sans-serif;
+}
+@media(min-width:700px) and (max-width:1280px){
+  body.practice-compact-ready .vip-practice-wrap{
+    padding:5px 8px 18px!important;
+    width:100%!important;
+  }
+  body.practice-compact-ready .practice-three-zone,
+  body.practice-compact-ready .practice-three-zone.is-index-collapsed{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:6px!important;
+  }
+  body.practice-compact-ready .practice-index-panel{
+    position:relative!important;top:auto!important;
+    max-height:none!important;overflow:visible!important;
+    padding:6px 9px!important;
+    border-radius:10px!important;
+  }
+  body.practice-compact-ready .practice-index-heading{margin-bottom:5px!important}
+  body.practice-compact-ready .practice-index-collapse{display:none!important}
+  body.practice-compact-ready .practice-index-expand{
+    display:inline-flex!important;min-height:31px!important;
+    align-items:center;justify-content:center;white-space:nowrap;
+  }
+  body.practice-compact-ready .practice-index-grid{
+    display:flex!important;flex-wrap:nowrap!important;
+    gap:5px!important;
+    overflow-x:auto!important;overflow-y:hidden!important;
+    padding:2px 0 5px!important;
+    scrollbar-width:thin;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  body.practice-compact-ready .practice-index-grid .pidx-link{
+    flex:0 0 43px!important;
+    min-width:43px!important;width:43px!important;
+    min-height:43px!important;height:43px!important;
+  }
+  body.practice-compact-ready .practice-index-panel[data-expanded="true"] .practice-index-grid{
+    display:grid!important;grid-template-columns:repeat(auto-fill,minmax(43px,1fr))!important;
+    flex-wrap:wrap!important;
+    max-height:min(32dvh,260px)!important;
+    overflow-y:auto!important;overflow-x:hidden!important;
+  }
+  body.practice-compact-ready .practice-index-panel[data-expanded="true"] .practice-index-grid .pidx-link{
+    width:100%!important;min-width:0!important;
+  }
+  body.practice-compact-ready .practice-index-progress{
+    height:4px!important;margin:0 0 5px!important;
+  }
+  body.practice-compact-ready .practice-index-summary,
+  body.practice-compact-ready .practice-index-legend,
+  body.practice-compact-ready .pidx-options{
+    display:none!important;
+  }
+  body.practice-compact-ready .practice-index-panel[data-expanded="true"] .pidx-options{
+    display:block!important;
+  }
+  body.practice-compact-ready .practice-three-zone #q{
+    width:100%!important;
+    padding:15px 17px!important;
+    font-size:calc(20px * var(--qzoom,1))!important;
+    background:#fff!important;
+  }
+  body.practice-compact-ready .practice-three-zone #q .qbody.ds.hassplit{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:12px!important;
+  }
+  body.practice-compact-ready .practice-three-zone #q .tf-colhead,
+  body.practice-compact-ready .practice-three-zone #q .tfgrid .tf{
+    grid-template-columns:2em minmax(0,1fr) 48px 48px!important;
+  }
+}
+@media(max-width:699px){
+  body.practice-compact-ready .practice-three-zone #q{
+    overflow-x:visible!important;
+    font-family:"Noto Serif",Georgia,serif!important;
+  }
+}
