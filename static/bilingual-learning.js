@@ -67,7 +67,11 @@
   function setOutput(source,translated,marks,target) {
     const parent=$("ll-output"), original=$("ll-original"), out=$("ll-translated");
     if(!parent||!original||!out) return;
-    if(lastSource && lastSource!==source) activeGrammarRequest++;
+    if(lastSource && lastSource!==source){
+      activeGrammarRequest++;
+      const grammarButton=$("ll-grammar");
+      if(grammarButton){grammarButton.disabled=false;grammarButton.textContent="🧠 Phân tích ngữ pháp";}
+    }
     parent.hidden=false;
     const showBoth=mode==="both";
     original.hidden=!showBoth;
