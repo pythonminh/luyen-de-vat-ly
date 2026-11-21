@@ -358,6 +358,7 @@ function changeUI(){
  }
 }
 function resetAll(){
+ if(timer){clearTimeout(timer);timer=0;}
  epoch++;lastPageFingerprint="";lastQuestionKey="";touchedQuestion=null;frameQuestionKey="";frameDirty=true;
  for(const e of active)showEntry(e,"vi");
  changeUI();
@@ -429,8 +430,12 @@ window.addEventListener("message",event=>{
  }
 });
 function schedule(){
- clearTimeout(timer);
+ // Do not keep resetting the translation timer on every DOM mutation.
+ // Quiz clocks, progress badges and MathJax change the DOM continuously;
+ // a trailing-edge debounce can therefore prevent translation forever.
+ if(mode==="vi"||timer)return;
  timer=setTimeout(()=>{
+  timer=0;
   if(mode==="vi")return;
   try{
    changeUI();
@@ -457,13 +462,14 @@ function schedule(){
    if(!items.length&&!eligibleFrame()&&Date.now()>=requestPausedUntil)
     showFinal("Không có nội dung cần dịch tại đây. Hãy mở một câu hỏi và bấm Dịch câu hỏi.");
   }catch(e){showFinal("Không chuyển được trang: "+(e?.message||"lỗi hiển thị"),true);}
- },650);
+ },120);
 }
 function changeMode(next){
  if(!["vi","en","both"].includes(next))return;
- if(mode===next)return;
+ if(mode===next){ if(mode!=="vi")schedule(); return; }
  mode=next;lastPageFingerprint="";frameDirty=true;
- if(mode==="vi"){clearTimeout(timer);resetAll();return;}
+ if(timer){clearTimeout(timer);timer=0;}
+ if(mode==="vi"){resetAll();return;}
  showPending("Đang tìm nội dung để dịch…");
  schedule();
 }
