@@ -3676,6 +3676,20 @@ def question_dup_keys(q):
         return stem, (kind, stem, _dup_strict(q.get('answer') or ''))
     return stem, (kind, stem, _dup_strict(q.get('solution') or ''))
 
+def _dup_best_keep(arr):
+    """Keep the richest fully answered version rather than blindly the first."""
+    def score(q):
+        solution = str(q.get('solution') or '').strip()
+        opts = q.get('options') or []
+        statements = q.get('statements') or []
+        has_key = bool(str(q.get('answer') or '').strip() or
+                       any(bool(x.get('correct')) for x in opts+statements if isinstance(x,dict)))
+        return (bool(solution), min(len(solution), 6000),
+                has_key, bool(q.get('id')),
+                -int(q.get('idx') or 0))
+    return max(arr, key=score)
+
+
 def find_duplicate_groups(questions):
     from collections import defaultdict
     by_body, by_stem = defaultdict(list), defaultdict(list)
@@ -3688,14 +3702,16 @@ def find_duplicate_groups(questions):
     for arr in by_body.values():
         if len(arr)<2: continue
         arr=sorted(arr, key=lambda x: int(x.get('idx') or 0))
-        groups.append({'type':'dao','title':'Trùng câu hỏi + đáp án (kể cả đảo A–D / đảo thứ tự mệnh đề Đúng-Sai)','keep':arr[0]['idx'],'extras':[x['idx'] for x in arr[1:]],'members':arr})
+        keep=_dup_best_keep(arr)
+        groups.append({'type':'dao','title':'Trùng đề + đáp án + công thức (kể cả đảo thứ tự lựa chọn)','keep':keep['idx'],'extras':[x['idx'] for x in arr if x['idx']!=keep['idx']],'members':arr})
         covered.update(x['idx'] for x in arr)
     for arr in by_stem.values():
         if len(arr)<2: continue
         bodies={x.get('_dup_body') for x in arr}
         if len(bodies)<2: continue
         arr=sorted(arr, key=lambda x: int(x.get('idx') or 0))
-        groups.append({'type':'cungde','title':'Cùng câu hỏi nhưng đáp án / mệnh đề khác nhau — cần xem lại','keep':arr[0]['idx'],'extras':[x['idx'] for x in arr[1:]],'members':arr})
+        keep=_dup_best_keep(arr)
+        groups.append({'type':'cungde','title':'Cùng đề nhưng đáp án hoặc dữ kiện khác — chỉ chọn thủ công','keep':keep['idx'],'extras':[x['idx'] for x in arr if x['idx']!=keep['idx']],'members':arr})
     return groups
 
 def tex_without_questions(tex, drop_idxs):
