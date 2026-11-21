@@ -3649,7 +3649,7 @@ def _dup_strict(s):
     """
     value = html.unescape(str(s or '')).casefold()
     value = re.sub(r'<[^>]+>', ' ', value)
-    value = re.sub(r'\\s+', ' ', value).strip()
+    value = re.sub(r'\s+', ' ', value).strip()
     return value
 
 
