@@ -708,6 +708,7 @@ def member_dang():
             "<div class='lesson-exam-entry-actions'>"
             "<button type='button' class='btn primary' onclick=\"var el=document.querySelector('.lesson-matrix-fold');if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});}else{alert('Không tìm thấy ma trận đề trong bài này.');}\">📝 Mở ma trận tạo đề</button>"
             "<a class='btn' href='/member/exams/saved'>📚 Kho đề đã lưu</a>"
+            "<a class='btn primary' href='/admin/answer-audit?"+urllib.parse.urlencode({'path': path})+"'>🧠 AI bổ sung đáp án &amp; lời giải hàng loạt</a>"
             "<a class='btn green' style='background:#126b53;color:white' href='/member/lesson/game?" + urllib.parse.urlencode({'path': path, 'dang': dang or ''}) + "'>🎮 Tạo trò chơi từ bài này</a>"
             "</div></div>"
         )
@@ -4231,3 +4232,6 @@ def admin_html_studio_visible_links(response):
 # Register the optional ADMIN multimodal HTML generator and preview panel.
 import html_studio_generate  # noqa: E402,F401
 import question_capture_bank  # noqa: E402,F401
+
+# Register the review-first bulk answer/solution audit routes.
+import admin_answer_bulk  # noqa: E402,F401
