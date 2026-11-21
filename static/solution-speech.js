@@ -1,6 +1,8 @@
 /* Speak revealed explanations and LaTeX, never expose a hidden answer before submission. */
 (() => {
   "use strict";
+  // Trang ngân hàng câu hỏi chỉ hiển thị đề, đáp án và lời giải, không chèn bộ đọc.
+  if (/^\/member\/(?:dang|select)(?:\/|$)/.test(location.pathname)) return;
   if (window.__ldvlSolutionSpeech) return;
   window.__ldvlSolutionSpeech = true;
 
