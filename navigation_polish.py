@@ -40,6 +40,58 @@ CSS = r"""
 
 @media(max-width:950px){.top .brand{font-size:16px}.top #htmlWarehouseQuickLink{font-size:0!important;gap:0!important;min-width:36px;padding:7px!important}.top #htmlWarehouseQuickLink .ldvl-ui-icon{width:18px;height:18px}}
 @media(max-width:650px){.top .topin{gap:5px!important}.top .brandbai{padding:4px 6px}.top .nav{gap:4px}.top .nav > a,.top .nav > button,.top .nav > details > summary{padding:7px 8px!important}.top .who{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+
+/* Tight, single-row primary navigation. The window title-bar is controlled by the browser/PWA. */
+.top{max-width:100%;width:100%;box-sizing:border-box}
+.top .topin{
+ display:flex!important;align-items:center!important;flex-wrap:nowrap!important;
+ gap:6px!important;max-width:100%!important;min-width:0!important;
+ box-sizing:border-box;overflow:visible!important;
+}
+.top .topin > *{min-width:0}
+.top .brandbox{flex:0 1 auto!important;overflow:hidden!important}
+.top .brand{white-space:nowrap!important;text-overflow:ellipsis;overflow:hidden}
+.top #ldvlNav{min-width:0!important}
+.top .nav{min-width:0}
+.top .topin > #ldvlFs{flex:0 0 38px!important;width:38px!important;min-width:38px!important;height:38px!important;min-height:38px!important;margin-left:auto!important}
+.top #ldvlNavToggle{flex:0 0 38px!important}
+.top .top-tools-list{z-index:90}
+@media (max-width:1400px){
+ .top .topin{padding-inline:8px!important}
+ .top .nav{gap:4px!important}
+ .top .nav > a,.top .nav > button,.top .nav > details > summary,
+ .top #htmlWarehouseQuickLink,.top .examWarehouseQuickLink,.top .view-switch-button{
+    padding:6px 7px!important;min-height:36px!important;font-size:12px!important
+ }
+ .top .brand{font-size:14px!important}
+ .top .whobar{max-width:150px}
+ .top .sub,.top .regline{display:none!important}
+}
+@media (max-width:1150px){
+ .top .topin{position:relative}
+ /* Keep only one library shortcut in the main row; the rest remain in the menu. */
+ .top .examWarehouseQuickLink,.top .view-switch-button{display:none!important}
+ .top .brandbox{max-width:190px}
+ .top #ldvlNav{flex:1 1 auto}
+ .top .nav{max-width:100%;overflow-x:auto;scrollbar-width:none}
+ .top .nav::-webkit-scrollbar{display:none}
+ .top .top-tools{flex:0 0 auto}
+}
+@media (max-width:1024px){
+ .top .topin{height:auto!important;min-height:50px;gap:5px!important}
+ .top #ldvlNav:not(.nav-open){display:none!important}
+ .top #ldvlNavToggle{display:inline-flex!important;align-items:center!important;justify-content:center!important;margin-left:auto!important}
+ .top.nav-open #ldvlNav{
+   display:grid!important;position:absolute!important;top:100%!important;
+   left:6px!important;right:6px!important;width:auto!important;max-width:none!important;
+   background:#173e75!important;border:1px solid #6184b8!important;
+   border-radius:10px!important;box-shadow:0 12px 24px #09274b33!important;
+   max-height:min(68dvh,500px)!important;overflow-y:auto!important;
+   padding:8px!important;z-index:120!important
+ }
+ .top .topin > #ldvlFs{order:99!important;margin-left:0!important}
+}
+
 @media(prefers-reduced-motion:reduce){.top .nav > a,.top .nav > button{transition:none}}
 </style>
 """
