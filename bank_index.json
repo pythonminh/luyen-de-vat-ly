@@ -2,7 +2,7 @@
   "schema": 1,
   "source": "GitHub",
   "generated_by": "scripts/build_bank_index.py",
-  "total_files": 192,
+  "total_files": 193,
   "total_questions": 12283,
   "lessons": [
     {
@@ -6463,6 +6463,19 @@
           "TL": 1
         }
       }
+    },
+    {
+      "id": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-do-thi-dang-nhiet-tren-cac-he-toa-do.tex",
+      "file": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-do-thi-dang-nhiet-tren-cac-he-toa-do.tex",
+      "path": "ngan-hang/Vật lý/Lớp 12/Chương II. Khí lí tưởng/L12C2 Bài 10. Định luật Charles/dang-do-thi-dang-nhiet-tren-cac-he-toa-do.tex",
+      "Mon": "Vật lý",
+      "Lop": "12",
+      "Chuong": "Chương II. Khí lí tưởng",
+      "BaiHoc": "L12C2 Bài 10. Định luật Charles · Đồ thị đẳng nhiệt trên các hệ tọa độ",
+      "De": "L12C2 Bài 10. Định luật Charles · Đồ thị đẳng nhiệt trên các hệ tọa độ",
+      "questions": 0,
+      "count": 0,
+      "dang": {}
     }
   ]
 }
