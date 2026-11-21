@@ -333,6 +333,11 @@ def _mark_answer(inner, kind, answer):
     if kind=="TLN":
         if not answer or len(answer)>4:
             raise ValueError("Đáp án trả lời ngắn không hợp lệ")
+        if not re.search(r"\\shortans\s*(?:\[[^\]]*\])?\s*\{",inner,re.I):
+            pos=re.search(r"\\loigiai\s*\{|\\end\s*\{\s*(?:ex|bt)\s*\}",inner,re.I)
+            if not pos:
+                raise ValueError("Không tìm thấy vị trí chèn trả lời ngắn")
+            return inner[:pos.start()]+"\\shortans{"+answer+"}\n"+inner[pos.start():]
         return _replace_shortans(inner,answer)
     if kind!="TN":
         return inner
@@ -411,7 +416,13 @@ def answer_bulk_save():
                     solution=str(x.get("solution") or "").strip()
                     if not solution or re.search(r"\\begin\s*\{\s*(?:ex|bt)\s*\}",solution):
                         raise ValueError("Lời giải AI không hợp lệ")
-                    inner=_replace_loigiai(inner,solution)
+                    if re.search(r"\\loigiai\s*\{|\\begin\s*\{\s*loigiai\s*\}",inner,re.I):
+                        inner=_replace_loigiai(inner,solution)
+                    else:
+                        endmark=re.search(r"\\end\s*\{\s*(?:ex|bt)\s*\}\s*$",inner,re.I)
+                        if not endmark:
+                            raise ValueError("Không tìm thấy điểm chèn lời giải")
+                        inner=inner[:endmark.start()]+"\\loigiai{\n"+solution+"\n}\n"+inner[endmark.start():]
                 if not _inner_solution(inner) or (original["missing_answer"] and not _answer_state(inner,original["kind"])):
                     raise ValueError("Câu chưa đủ đáp án/lời giải sau khi sửa")
                 edits[idx]=inner
