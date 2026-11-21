@@ -1,0 +1,33 @@
+name: Validate exercise image and comic prompts
+on:
+  push:
+    branches:
+      - feature/exercise-image-comic-prompts
+  pull_request:
+    paths:
+      - admin_rewrite.py
+      - dang_routes.py
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile modules
+        run: python -m py_compile admin_rewrite.py dang_routes.py
+      - name: Verify prompt wiring
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          app=Path('admin_rewrite.py').read_text()
+          bank=Path('dang_routes.py').read_text()
+          for key in ['_public_exercise_latex','_exercise_image_prompt','_exercise_comic_prompt',
+                      'picture=picture','comic=comic','rwnbcompact','rwnbtab','rwnbcopyfocus',
+                      ".rwpictureprompt", ".rwcomicprompt"]:
+              assert key in app, key
+          for key in ['rwpictureprompt','rwcomicprompt']:
+              assert key in bank, key
+          print('Prompt wiring passed')
+          PY
