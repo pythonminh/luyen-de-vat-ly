@@ -5630,34 +5630,45 @@
       "questions": 160,
       "count": 160,
       "dang": {
-        "Bài toán tổng hợp về quá trình đẳng nhiệt": 29,
-        "Khối khí chịu áp suất của cột chất lỏng": 27,
-        "Nhận biết quá trình đẳng nhiệt và định luật Boyle": 27,
+        "Bài toán tổng hợp về quá trình đẳng nhiệt": 15,
+        "Tính áp suất, thể tích trong quá trình đẳng nhiệt": 58,
+        "Nhận biết quá trình đẳng nhiệt và định luật Boyle": 35,
+        "Khối khí chịu áp suất của cột chất lỏng": 17,
+        "Đồ thị đẳng nhiệt trên các hệ tọa độ": 16,
         "Chưa gán dạng bài tập": 1,
-        "Tính áp suất, thể tích trong quá trình đẳng nhiệt": 27,
-        "Tính áp suất và thể tích trong quá trình đẳng nhiệt": 1,
-        "Đồ thị đẳng nhiệt trên các hệ tọa độ": 27,
-        "Ứng dụng định luật Boyle trong bơm, xi lanh và đời sống": 20,
+        "Ứng dụng định luật Boyle trong bơm, xi lanh và đời sống": 17,
         "Từ trường của dòng điện thẳng, dòng điện tròn và ống dây": 1
       },
       "dang_kinds": {
         "Bài toán tổng hợp về quá trình đẳng nhiệt": {
-          "TN": 11,
-          "DS": 8,
-          "TLN": 6,
-          "TL": 4
+          "TN": 0,
+          "DS": 14,
+          "TLN": 0,
+          "TL": 1
         },
-        "Khối khí chịu áp suất của cột chất lỏng": {
-          "TN": 10,
-          "DS": 7,
-          "TLN": 6,
-          "TL": 4
+        "Tính áp suất, thể tích trong quá trình đẳng nhiệt": {
+          "TN": 11,
+          "DS": 0,
+          "TLN": 35,
+          "TL": 12
         },
         "Nhận biết quá trình đẳng nhiệt và định luật Boyle": {
-          "TN": 10,
+          "TN": 24,
+          "DS": 11,
+          "TLN": 0,
+          "TL": 0
+        },
+        "Khối khí chịu áp suất của cột chất lỏng": {
+          "TN": 6,
           "DS": 10,
-          "TLN": 6,
+          "TLN": 0,
           "TL": 1
+        },
+        "Đồ thị đẳng nhiệt trên các hệ tọa độ": {
+          "TN": 8,
+          "DS": 8,
+          "TLN": 0,
+          "TL": 0
         },
         "Chưa gán dạng bài tập": {
           "TN": 1,
@@ -5665,29 +5676,11 @@
           "TLN": 0,
           "TL": 0
         },
-        "Tính áp suất, thể tích trong quá trình đẳng nhiệt": {
-          "TN": 10,
-          "DS": 10,
-          "TLN": 6,
-          "TL": 1
-        },
-        "Tính áp suất và thể tích trong quá trình đẳng nhiệt": {
-          "TN": 0,
-          "DS": 1,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đồ thị đẳng nhiệt trên các hệ tọa độ": {
-          "TN": 10,
-          "DS": 10,
-          "TLN": 6,
-          "TL": 1
-        },
         "Ứng dụng định luật Boyle trong bơm, xi lanh và đời sống": {
-          "TN": 4,
-          "DS": 6,
-          "TLN": 6,
-          "TL": 4
+          "TN": 6,
+          "DS": 9,
+          "TLN": 1,
+          "TL": 1
         },
         "Từ trường của dòng điện thẳng, dòng điện tròn và ống dây": {
           "TN": 1,
