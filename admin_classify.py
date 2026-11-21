@@ -1046,50 +1046,24 @@ def _dest_tex_path(folder, dang):
 
 
 def select_admin_panel(path, qs, dang_names):
-    uncat = sum(1 for q in qs if str(q.get("dang") or "") in {"", "Chưa phân dạng"})
-    boxes = []
-    for name in dang_names:
-        if name in {"", "Chưa phân dạng"}:
-            continue
-        n = sum(1 for q in qs if q.get("dang") == name)
-        boxes.append(
-            "<label class='resortbox'><input type='checkbox' class='resort' value='"
-            + html.escape(name, quote=True)
-            + "'> Sắp xếp lại · "
-            + html.escape(name)
-            + f" <span class='muted'>({n} câu)</span></label>"
-        )
+    uncat = sum(1 for q in qs if _norm_dang(q.get("dang")) == "Chưa phân dạng")
+    count = len(_locked_names(qs))
     return (
         "<div class='review' id='ai-classify' style='margin-bottom:12px'>"
-        "<b>🤖 ADMIN · AI phân dạng và mức độ</b>"
-        f"<p class='muted'>Câu chưa có dạng: <b>{uncat}</b> / {len(qs)}. "
-        "Dạng <span class='tag miss'>Chưa có</span> cần xếp. Dạng <span class='tag had'>Đã có</span> mặc định giữ nguyên — tick ô dưới nếu muốn xếp lại.</p>"
-        "<p class='muted'>Gợi ý mức từng câu (không đổi dạng) là nút <b>🎯 AI gợi ý mức độ</b> trên thanh Mức độ. "
-        "ID tự động theo thư mục, ví dụ <code>L12C1B3-03-DS</code> · mức <code>NB/TH/VD/VDC</code> do AI. "
-        "Tách file: mỗi dạng một <code>dang-....tex</code> cùng thư mục bài; file hiện tại chỉ giữ câu chưa phân dạng.</p>"
-        "<p class='muted'>Dạng gần giống thì <b>Gom dạng gần giống</b>. "
-        "<b>Rà dạng cả chương</b> mặc định <b>giữ dạng đã chọn</b> — không gợi ý chuyển/đổi tên. "
-        "Chỉ gợi ý khi cùng tên dạng nằm ở hai bài, hoặc khi tick «Sắp xếp lại», hoặc bật «Cho phép AI rà cả dạng đã khóa». "
-        "Cột <b>Chuyển tới</b> mặc định theo AI — ADMIN có thể chọn bài khác. File TEX hết câu sẽ bị xóa.</p>"
-        "<label><input type='checkbox' id='onlyNew' checked> Chỉ câu «Chưa phân dạng» + các dạng đã tick «Sắp xếp lại» (bỏ tick = AI xếp lại cả file)</label>"
-        "<label><input type='checkbox' id='auditAll'> Cho phép AI rà / gợi ý chuyển cả dạng đã khóa (mặc định tắt)</label>"
-        + ("<div class='resortlist'>" + "".join(boxes) + "</div>" if boxes else "<p class='muted'>File này chưa có dạng nào — AI sẽ đặt dạng mới.</p>")
-        + "<label for='hintDangs'><b>Gợi ý dạng</b> — mỗi dòng một tên. Có danh sách thì AI <b>chỉ xếp vào đúng các dạng này</b>, không tạo tên mới. Để trống = AI tự đặt dạng.</label>"
-        "<textarea id='hintDangs' rows='4' placeholder='Nhận diện mệnh đề&#10;Nhận diện mệnh đề chứa biến'></textarea>"
-        "<div class='gkeyrow'><button type='button' class='btn primary' id='aiPrev'>🤖 Xem gợi ý AI</button> "
-        "<button type='button' class='btn green' id='aiSave' disabled>💾 Ghi vào TEX + GitHub</button>"
-        "<button type='button' class='btn' id='aiIds'>🔢 Gán ID còn thiếu</button>"
-        "<button type='button' class='btn' id='aiSplit'>📂 Tách mỗi dạng ra file .tex</button>"
-        "<button type='button' class='btn' id='aiHome'>🚚 Gợi ý chuyển sang bài đúng</button>"
-        "<button type='button' class='btn' id='aiMerge'>📎 Gom dạng gần giống</button>"
-        "<button type='button' class='btn' id='aiAudit'>🔍 Rà dạng cả chương</button></div>"
-        "<div id='aiOut' class='reviewout'></div></div>"
-        "<style>.tag.had{background:#eefbf2;border-color:#83d39e;color:#14743a}.tag.miss{background:#fff8df;border-color:#efca73;color:#855a00}"
-        ".resortlist{display:grid;gap:6px;margin:8px 0;padding:8px;border:1px dashed #cab9f0;border-radius:8px;background:#fff}"
-        ".resortbox{display:flex;align-items:flex-start;gap:8px;font-weight:700;line-height:1.4}"
-        "#ai-classify>label{display:block;margin:8px 0;line-height:1.4}"
-        "#hintDangs{width:100%;max-width:720px;box-sizing:border-box;margin:0 0 10px;padding:8px 10px;border:1px solid #cab9f0;border-radius:8px;font:inherit;line-height:1.4}"
-        ".selectgrid tr.uncat td:first-child{background:#fff8df}</style>"
+        "<b>Phân dạng nhanh · Toàn bộ bài · Khóa dạng cũ</b>"
+        f"<p class='muted'>Tổng <b>{len(qs)}</b> câu · Chưa phân dạng <b>{uncat}</b> "
+        f"· Danh mục gốc <b>{count}</b> dạng. "
+        "Hệ thống kiểm tra cả bài, giữ nguyên các câu đã phân dạng, "
+        "chỉ gọi AI cho câu chưa có dạng. Không tạo hoặc đổi tên dạng.</p>"
+        "<div class='gkeyrow'>"
+        "<button type='button' class='btn primary' id='aiPrev'>Xem trước phân dạng</button> "
+        "<button type='button' class='btn green' id='aiSave' disabled>Duyệt · Ghi GitHub một lần</button> "
+        "<button type='button' class='btn' id='aiIds'>Gán ID còn thiếu</button> "
+        "<button type='button' class='btn' id='aiSplit'>Tách file .tex</button> "
+        "<button type='button' class='btn' id='aiHome'>Gợi ý chuyển bài</button> "
+        "<button type='button' class='btn' id='aiMerge'>Gom dạng</button> "
+        "<button type='button' class='btn' id='aiAudit'>Rà chương</button>"
+        "</div><div id='aiOut' class='reviewout' aria-live='polite'></div></div>"
         + _admin_js(path)
     )
 
