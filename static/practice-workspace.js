@@ -69,6 +69,15 @@
       '<div class="ph-tools"></div>' +
       '<div class="ph-progress" aria-hidden="true"><span></span></div>';
     root.insertBefore(hud, zone);
+    const selectedGame = root.closest('.vip-practice-wrap')?.dataset.gameLevel || '';
+    const gameNames = {easy: '🌱 Dễ', medium: '⚡ Trung bình', hard: '🔥 Khó'};
+    if (gameNames[selectedGame]) {
+      const badge = document.createElement('span');
+      badge.className = 'ph-game-level';
+      badge.textContent = gameNames[selectedGame];
+      badge.title = 'Cấp độ chơi: ' + badge.textContent;
+      hud.querySelector('.ph-current').insertAdjacentElement('afterend', badge);
+    }
     const stats = root.querySelector(':scope > .practice-mini-stats');
     if (stats) hud.querySelector('.ph-meters').appendChild(stats);
     const zoom = head.querySelector('.qzoombar');
