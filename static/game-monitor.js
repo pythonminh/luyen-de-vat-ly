@@ -70,7 +70,9 @@
     // Soft keyboard changes height, but is not a split-screen violation.
     const typing=document.activeElement &&
       document.activeElement.matches('input,textarea,[contenteditable="true"]');
-    return width<sw*.68 || (!typing && height<sh*.58);
+    // Use screen-width comparison only when the orientation is stable:
+    // height often shrinks for browsers' address bars and soft keyboard.
+    return !typing && width<sw*.56 && height>=sh*.50;
   }
   function internalLink(target){
     if(!(target instanceof Element))return false;
@@ -99,24 +101,27 @@
       location.replace('/member/game/ended');
     }
   });
-  let blurred=null;
-  window.addEventListener('blur',function(){
-    if(localNavigating || ended)return;
-    blurred=setTimeout(function(){
-      if(!localNavigating && document.visibilityState==='visible' &&
-         !document.hasFocus())send('blur');
-    },550);
-  });
+  // Android/Samsung can emit blur simply when the keyboard, language
+  // selector, text-to-speech or browser toolbar gains focus. Hidden/pagehide
+  // still detect genuine departures; a focus-only change is not proof.
   window.addEventListener('focus',function(){
-    if(blurred){clearTimeout(blurred);blurred=null;}
     if(ended)location.replace('/member/game/ended');
   });
   let resizeTimer=null;
+  let lastSplitAt=0;
+  function checkSplit(){
+    if(ended||localNavigating||document.visibilityState!=='visible')return;
+    if(!split()){lastSplitAt=0;return;}
+    if(!lastSplitAt){lastSplitAt=Date.now();return;}
+    if(Date.now()-lastSplitAt>=2400)send('split');
+  }
   window.addEventListener('resize',function(){
     clearTimeout(resizeTimer);
-    resizeTimer=setTimeout(()=>{if(split())send('split');},450);
+    resizeTimer=setTimeout(checkSplit,600);
   },{passive:true});
-  if(split()){send('split');return;}
+  // Never fail a new exam at page load: Samsung reports transient viewport
+  // dimensions before the browser's layout viewport has settled.
+  setInterval(checkSplit,1200);
   tick();
   const id=setInterval(()=>{if(ended){clearInterval(id);return;}tick();},1000);
   try{if(sessionStorage.getItem(key)){ended=true;location.replace('/member/game/ended');}}catch(e){}
