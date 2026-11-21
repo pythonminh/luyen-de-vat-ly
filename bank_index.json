@@ -5627,11 +5627,10 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 9. Định luật Boyle",
       "De": "L12C2 Bài 9. Định luật Boyle",
-      "questions": 70,
-      "count": 70,
+      "questions": 54,
+      "count": 54,
       "dang": {
         "Nhận biết quá trình đẳng nhiệt và định luật Boyle": 35,
-        "Đồ thị đẳng nhiệt trên các hệ tọa độ": 16,
         "Chưa gán dạng bài tập": 1,
         "Ứng dụng định luật Boyle trong bơm, xi lanh và đời sống": 17,
         "Từ trường của dòng điện thẳng, dòng điện tròn và ống dây": 1
@@ -5640,12 +5639,6 @@
         "Nhận biết quá trình đẳng nhiệt và định luật Boyle": {
           "TN": 24,
           "DS": 11,
-          "TLN": 0,
-          "TL": 0
-        },
-        "Đồ thị đẳng nhiệt trên các hệ tọa độ": {
-          "TN": 8,
-          "DS": 8,
           "TLN": 0,
           "TL": 0
         },
