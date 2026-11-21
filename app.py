@@ -4803,13 +4803,13 @@ function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').re
 function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||document.getElementById('q'));el=el||document.getElementById('q');if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}MathJax.typesetPromise([el]).catch(function(){});}}
 const QZKEY='ldvlQZoom';
 let qZoom=(function(){try{var v=parseFloat(localStorage.getItem(QZKEY)||'1');return (v>=0.8&&v<=1.7)?v:1}catch(e){return 1}})();
-function ldvlApplyQZoom(){
+function ldvlApplyQZoom(skipTypeset){
   const box=document.getElementById('q');
   if(box) box.style.setProperty('--qzoom', String(qZoom));
   const lab=document.getElementById('qzoomlab');
   if(lab) lab.textContent=Math.round(qZoom*100)+'%';
   try{localStorage.setItem(QZKEY,String(qZoom))}catch(e){}
-  typeset(document.getElementById('q'));
+  if(!skipTypeset)typeset(document.getElementById('q'));
 }
 function ldvlQZoom(dir){
   qZoom=Math.round((qZoom+dir*0.1)*10)/10;
@@ -4871,7 +4871,7 @@ else if(q.kind==='DS'){h+='<div class="qbody ds"><div class="qfig" hidden></div>
 else if(q.kind==='TLN')h+='<input id="ans" class="answerbox" style="width:100%;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập đáp án rồi bấm Xác nhận (hoặc Enter)">';
 else h+='<textarea id="ans" class="answerbox" style="width:100%;height:190px;padding:10px;border:1px solid #cbd8e6;border-radius:7px" placeholder="Nhập bài làm"></textarea>';
 h+=(q.develop_html||'');
-h+='<div class="quizacts"><button type="button" class="btn" id="reshuf" onclick="reshuffleQ()">🎲 Đổi đề bài mới</button><button class="btn primary" id="chkbtn" onclick="check()" disabled>✅ Xác nhận</button>'+(IS_ADMIN?'<button type="button" class="btn" id="hintbtn" onclick="toggleHint()">💡 Gợi ý đáp án</button>':'')+'<button id="solbtn" class="btn" style="display:'+(IS_ADMIN?'inline-block':'none')+'" onclick="openSolution()">📖 '+(IS_ADMIN?'Lời giải':'Xem lời giải')+'</button>'+(IS_ADMIN?'<button type="button" class="btn aiPhotoBtn">📷 Chụp ảnh → prompt</button>':'')+'<button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="hint" class="hintline">'+(IS_ADMIN?'ADMIN: gợi ý/lời giải chỉ trên máy này — bấm 📖 Đáp án trên màn chiếu mới cho lớp xem.':'Chọn đáp án rồi bấm <b>Xác nhận</b> — lời giải chỉ mở sau khi xác nhận.')+'</div><div id="r">'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>':'')+'</div>';document.getElementById('q').innerHTML=h;ldvlPlaceFigs();ldvlBindQZoom();ldvlApplyQZoom();bind();if(IS_ADMIN)ldvlMountPracticeRewrite();typeset(document.getElementById('q'));setTimeout(ldvlQFit,400)}
+h+='<div class="quizacts"><button type="button" class="btn" id="reshuf" onclick="reshuffleQ()">🎲 Đổi đề bài mới</button><button class="btn primary" id="chkbtn" onclick="check()" disabled>✅ Xác nhận</button>'+(IS_ADMIN?'<button type="button" class="btn" id="hintbtn" onclick="toggleHint()">💡 Gợi ý đáp án</button>':'')+'<button id="solbtn" class="btn" style="display:'+(IS_ADMIN?'inline-block':'none')+'" onclick="openSolution()">📖 '+(IS_ADMIN?'Lời giải':'Xem lời giải')+'</button>'+(IS_ADMIN?'<button type="button" class="btn aiPhotoBtn">📷 Chụp ảnh → prompt</button>':'')+'<button id="next" class="btn" style="display:none" onclick="location.href=\'/member/practice\'">→ Câu tiếp</button></div><div id="hint" class="hintline">'+(IS_ADMIN?'ADMIN: gợi ý/lời giải chỉ trên máy này — bấm 📖 Đáp án trên màn chiếu mới cho lớp xem.':'Chọn đáp án rồi bấm <b>Xác nhận</b> — lời giải chỉ mở sau khi xác nhận.')+'</div><div id="r">'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>':'')+'</div>';document.getElementById('q').innerHTML=h;ldvlPlaceFigs();ldvlBindQZoom();ldvlApplyQZoom(true);bind();if(IS_ADMIN)ldvlMountPracticeRewrite();typeset(document.getElementById('q'));setTimeout(function(){if(window.ldvlMathLayoutRefresh)window.ldvlMathLayoutRefresh()},650)}
 function bind(){let q=Q;
 if(q.kind==='TN')document.querySelectorAll('input[name=a]').forEach(function(el){el.addEventListener('change',syncReady)});
 else if(q.kind==='DS')document.querySelectorAll('.tf input[type=radio]').forEach(function(el){el.addEventListener('change',syncReady)});
@@ -5171,7 +5171,7 @@ draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(paylo
   max-height:none!important;overflow:visible!important;
  }
 }
-</style><link rel="stylesheet" href="/static/practice-workspace.css?v=20261121p2"><script defer src="/static/practice-workspace.js?v=20261121p3"></script><script defer src="/static/figure-zoom.js"></script><script defer src="/static/practice-screen-ink.js"></script>"""
+</style><link rel="stylesheet" href="/static/practice-workspace.css?v=20261121tab1"><script defer src="/static/practice-workspace.js?v=20261121p3"></script><script defer src="/static/figure-zoom.js"></script><script defer src="/static/practice-screen-ink.js"></script>"""
     return page('Làm bài',body+mobile_controls+js+extra+figure_zoom_assets+"<style>.practice-mini-stats{display:flex;align-items:center;gap:8px;padding:5px 8px;font:700 12px Arial}.practice-mini-stats span,.practice-mini-stats button{background:#f0f6ff;border:1px solid #c4d9ee;border-radius:8px;padding:6px 9px;color:#204e80;font:700 12px Arial}.practice-record-dialog{border:1px solid #c2d7ee;border-radius:14px;padding:16px;max-width:92vw}.practice-record-done{margin:14px 0;padding:14px;border:1px solid #bfdbed;border-radius:12px;background:#f3faff}</style>")
 
 _RESHUFFLE_JOBS = {}
