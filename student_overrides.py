@@ -124,7 +124,7 @@ def _member_index():
         encoded = quote(path, safe='')
         can_start = bool(m and base.can_practice(m, path) and n > 0)
         if can_start:
-            action = (f"<a class='student-start' href='/member/go-kind?path={encoded}'>▶ Làm bài</a>"
+            action = (f"<a class='student-start' href='/member/game?path={encoded}'>🎮 Chọn cấp độ</a>"
                       f"<a class='student-secondary' href='/member/select?path={encoded}'>▦ Chọn dạng</a>")
         elif m:
             action = (f"<a class='student-secondary' href='/member/select?path={encoded}'>👁 Xem bài</a>"
