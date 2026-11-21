@@ -813,7 +813,7 @@ def _review_similar_html(path, qs, dang, next_url):
         focus = ['Chưa phân dạng']
     head = (
         "<div class='simrev'><b>Soát từng dạng</b> — mục tiêu 9 TN / 2 ĐS / 3 TLN / 4 TL · trần 18 / 4 / 6 / 8. "
-        "Câu gần trùng: giữ bản có lời giải. Tick nhiều câu rồi xóa một lần.</div>"
+        "Câu gần giống cần soát thủ công: khác số liệu, công thức hoặc đáp án thì giữ. Không chọn sẵn câu xóa.</div>"
     )
     body = []
     n_drop = 0
@@ -832,7 +832,7 @@ def _review_similar_html(path, qs, dang, next_url):
             body.append("<div class='gapnote'>Vượt trần — bớt câu tương tự trước khi thêm mới. " + html.escape(extra) + "</div>")
         elif miss:
             body.append("<div class='muted'>Còn thiếu: " + html.escape(miss) + "</div>")
-        groups = cluster_similar(scoped, 0.72) if len(scoped) >= 2 else []
+        groups = cluster_similar(scoped, 0.90) if len(scoped) >= 2 else []
         if not groups:
             body.append("<div class='muted'>Không thấy cặp gần trùng trong dạng này.</div>")
             continue
@@ -855,7 +855,7 @@ def _review_similar_html(path, qs, dang, next_url):
                 n_drop += 1
                 body.append(
                     "<div class='simrow'><label class='simx'><input type='checkbox' name='drop' value='"
-                    + html.escape(dk, quote=True) + "' checked> Tick xóa "
+                    + html.escape(dk, quote=True) + "'> Chọn xóa thủ công "
                     + html.escape(str(ex.get('kind') or '')) + " "
                     + html.escape(str(ex.get('id') or '—')) + "</label> — "
                     + html.escape(_q_preview(ex, 80)) + "</div>"
@@ -866,7 +866,7 @@ def _review_similar_html(path, qs, dang, next_url):
             + "<input type='hidden' name='path' value='" + html.escape(path, quote=True) + "'>"
             + "<input type='hidden' name='dang' value='" + html.escape(dang, quote=True) + "'>"
             + "<input type='hidden' name='next' value='" + html.escape(next_url, quote=True) + "'>"
-            + "<div class='simbar'><b>Xóa hàng loạt:</b> các ô đỏ mặc định đã tick. Bản GIỮ không có ô."
+            + "<div class='simbar'><b>Xóa hàng loạt:</b> câu tương tự không được tick sẵn. Đối chiếu số liệu, công thức và đáp án; bản GIỮ không có ô."
             + " <button type='button' class='btn mini' onclick=\"document.querySelectorAll('#simdel input[name=drop]').forEach(function(x){x.checked=true})\">Tick hết gợi ý</button>"
             + " <button type='button' class='btn mini' onclick=\"document.querySelectorAll('#simdel input[name=drop]').forEach(function(x){x.checked=false})\">Bỏ tick</button>"
             + " <label class='dupok'><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các câu đã tick</label>"
