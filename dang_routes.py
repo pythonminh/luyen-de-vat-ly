@@ -563,14 +563,14 @@ def member_dang():
             if cung_extra else ""
         )
         dup_form=(
-            f"<form id='dupdel' method='post' action='/admin/dups' class='dupbar' onsubmit=\"return confirm('Xóa các bản đã tick? Bản đầu mỗi nhóm (nhãn giữ) không bị xóa.')\">"
+            f"<form id='dupdel' method='post' action='/admin/dups' class='dupbar' onsubmit=\"var n=document.querySelectorAll('input[form=dupdel][name=drop]:checked').length;return n>0&&confirm('Xóa '+n+' bản thừa đã chọn khỏi TEX? Bản giữ trong mỗi nhóm không bị xóa.');\">"
             f"<input type='hidden' name='path' value='{_esc(path)}'><input type='hidden' name='next' value='{_esc(next_url)}'>"
             f"<b>Xóa trùng:</b> đảo đáp án có <b>{dao_n}</b> bản thừa, ô đã tick sẵn.{note_file} "
             f"Cùng đề khác đáp án có <b>{cung_extra}</b> bản thừa — ô để trống, bấm «Chọn hết bản cùng đề thừa» hoặc tick từng thẻ. "
             "Bản đầu mỗi nhóm được giữ. "
             + tick_cung
-            + "<label class='dupok'><input type='checkbox' name='confirm' value='yes' required> Tôi xác nhận xóa các bản đã tick</label> "
-            "<button class='btn red' type='submit'>🗑 Xóa các bản đã chọn</button></form>"
+            + "<input type='hidden' name='confirm' value='yes'> "
+            "<button class='btn red' type='submit'>🗑 Xóa ngay các bản đã chọn</button></form>"
         )
     flash=request.args.get('ok') or ''; ferr=request.args.get('err') or ''
     flash_html=(f"<div class='success'>{html.escape(flash)}</div>" if flash else "")+(f"<div class='err'>{html.escape(ferr)}</div>" if ferr else "")
