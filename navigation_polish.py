@@ -34,7 +34,8 @@ CSS = r"""
 @media(min-width:1025px){
  .top #ldvlNav > a.mobile-nav-only{display:none!important}
  .top #ldvlNav > a[href="/member/exams/saved"],
- .top #ldvlNav > a[href="/member/html-menu"]{display:none!important}
+ .top #ldvlNav > a[href="/member/html-menu"],
+ .top #ldvlNav > a.mobile-nav-only[href="/admin/members"]{display:none!important}
 }
 
 @media(max-width:950px){.top .brand{font-size:16px}.top #htmlWarehouseQuickLink{font-size:0!important;gap:0!important;min-width:36px;padding:7px!important}.top #htmlWarehouseQuickLink .ldvl-ui-icon{width:18px;height:18px}}
