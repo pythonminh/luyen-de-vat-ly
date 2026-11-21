@@ -1,0 +1,33 @@
+name: Validate bulk answer audit
+on:
+  push:
+    branches:
+      - feature/bulk-ai-missing-answers
+  pull_request:
+    paths:
+      - admin_answer_bulk.py
+      - dang_routes.py
+jobs:
+  syntax-and-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check syntax
+        run: python -m py_compile admin_answer_bulk.py dang_routes.py
+      - name: Verify audit and approval endpoints
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('admin_answer_bulk.py').read_text()
+          for item in ('_scan(path)', '/api/admin/answer-bulk-start', '/api/admin/answer-bulk-status', '/api/admin/answer-bulk-save', 'missing_answer', 'missing_solution', 'fingerprint', '_mark_answer'):
+              assert item in s, item
+          assert 'if not base.github_token()' in s
+          assert 'if digest!=job["snapshots"][src]' in s
+          page=Path('dang_routes.py').read_text()
+          assert 'AI bổ sung đáp án' in page
+          assert 'import admin_answer_bulk' in page
+          print('Audit wiring checks passed')
+          PY
