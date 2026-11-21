@@ -4679,6 +4679,21 @@ def practice():
     m=member_current();
     if not m:return redirect(login_url('/member/practice'))
     p=str(session.get('practice_path') or '');ids=list(session.get('practice_ids') or []);pos=int(session.get('practice_pos') or 0);right=int(session.get('practice_right') or 0);streak=int(session.get('practice_streak') or 0);best=int(session.get('practice_best') or 0);done=list(session.get('practice_done') or [])
+    # Question statuses are keyed by question number, never by submission order.
+    done_by_num={}
+    for item in done:
+        try:
+            number=int(item.get('question') or 0)
+        except (ValueError, TypeError, AttributeError):
+            continue
+        if 1 <= number <= len(ids):
+            done_by_num[number]=item
+    right=sum(1 for item in done_by_num.values() if item.get('ok'))
+    if int(session.get('practice_right') or 0)!=right:
+        session['practice_right']=right
+    if ids and pos>=len(ids) and len(done_by_num)<len(ids):
+        pos=next(i for i in range(len(ids)) if (i+1) not in done_by_num)
+        session['practice_pos']=pos
     ai=True
     if not p or not ids:return redirect('/member')
     if not session.get('practice_started_at'):
@@ -4749,10 +4764,14 @@ else if(storage)storage.textContent='📱 Đang lưu trên trình duyệt, chưa
         if lv!=prev_lv:
             pal_bits.append(f"<span class='plab muc-{lv}'>{muc_label(lv)}</span>")
             prev_lv=lv
-        cls='pcur' if j==pos else ('pdone' if j<len(done) and done[j].get('ok') else ('pwrong' if j<len(done) else ''))
-        pal_bits.append(f"<a class='pitem {cls} muc-{lv}' href='/practice/jump/{j}' title='{html.escape(str(qq.get('id') or ''), quote=True)}'>{j+1} · {muc_label(lv)}</a>")
+        previous=done_by_num.get(j+1)
+        cls=('pdone' if previous.get('ok') else 'pwrong') if previous else ''
+        if j==pos: cls=(cls+' pcur').strip()
+        pal_bits.append(f"<a class='pitem {cls} muc-{lv}' href='/practice/jump/{j}' title='Câu {j+1} · {html.escape(str(qq.get('id') or ''), quote=True)}'>Câu {j+1}</a>")
     palette=''.join(pal_bits)
     payload=question_payload(q)
+    saved_answer=done_by_num.get(pos+1)
+    next_open=next((i for i in range(len(ids)) if (i+1) not in done_by_num),len(ids))
     is_admin=has_full_bank_access(m) and not admin_student_preview()
     mode_tag='🤖 Có phản biện AI' if ai else 'Không phản biện'
     if is_admin: mode_tag='🔐 ADMIN · xem lời giải không cần làm bài'+((' · '+mode_tag) if ai else '')
@@ -4778,7 +4797,7 @@ else if(storage)storage.textContent='📱 Đang lưu trên trình duyệt, chưa
           f"<span class='quizstat'>✓ {right} · 🔥 {streak}</span><div class='vip-inline-nav'><details class='practice-filters'><summary>☰ Dạng / độ khó</summary><div class='vip-filter-panel'>{tabs}</div></details><details class='practice-questions'><summary>☷ Câu {pos+1}/{len(ids)}</summary><div class='palette'><div class='pdang'>{html.escape(str(q.get('dang') or session.get('practice_dang') or ''))}</div><div class='pitems'>{palette}</div></div></details></div></div><div class='body'>{admin_ai_actions}<div id='praise'></div>"
           f"<div class='practice-split' id='psplit'><div class='practice-q'><div id='q' class='qbox'></div></div><aside class='practice-ai' id='aipane' hidden></aside></div></div></div></div>")
     js=r'''<script>
-let Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;
+let Q=__DATA__;const AI=__AI__;const IS_ADMIN=__ADMIN__;let checked=false;window.practiceSavedAnswer=__SAVED__;window.practiceNextOpen=__NEXT_OPEN__;window.practiceKind=Q.kind;
 window.practicePath=__PATH__;window.practiceIds=__IDS__;window.practicePos=__QPOS__;window.__ldvlQuizPos=__QPOS__;
 function E(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function typeset(el){if(window.ldvlTypeset)return window.ldvlTypeset(el||document.getElementById('q'));el=el||document.getElementById('q');if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}MathJax.typesetPromise([el]).catch(function(){});}}
@@ -4962,10 +4981,40 @@ else if(q.kind==='DS'){ok=true;let a=[];for(let i=0;i<q.statements.length;i++){l
 else{let z=document.getElementById('ans');if(!z||!z.value.trim())return alert('Hãy nhập câu trả lời.');student=z.value.trim();ok=q.kind==='TLN'&&norm(student)===norm(q.answer);}
 let note=verdictHtml(q,student,ok);let sol=q.solution||'Chưa có lời giải trong file TEX.';document.getElementById('r').innerHTML='<div class="result '+(ok?'good':'bad')+'">'+note+'</div>'+(IS_ADMIN?'<div id="hintbox" class="adminhint" style="display:none"></div>':'')+'<div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+sol+'</div></div>';typeset(document.getElementById('q'));checked=true;lockInputs();document.getElementById('next').style.display='inline-block';window.LAST_REVIEW=Object.assign({},q,{student:student,ok:ok});
 let sb=document.getElementById('solbtn');if(sb)sb.style.display='inline-block';
-if(!window.__slotPosted){window.__slotPosted=true;fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>'})}}
+if(!window.__slotPosted){window.__slotPosted=true;fetch('/member/answer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ok:ok,student:student,text:q.text,solution:sol,kind:q.kind,dang:q.dang})}).then(r=>r.json()).then(d=>{if(d.ok){if(window.practiceMarkAnswered)window.practiceMarkAnswered(ok);if(d.praise)document.getElementById('praise').innerHTML='<div class="praise">'+E(d.praise)+'</div>';const nb=document.getElementById('next');if(nb)nb.textContent=d.complete?'🏁 Xem kết quả':'→ Câu tiếp'}else{const p=document.getElementById('praise');if(p)p.textContent=(d&&d.error)||'Chưa lưu được kết quả. Tải lại trang để kiểm tra.'}})}}
 function reviewNow(){ldvlGeminiReview(window.LAST_REVIEW,document.getElementById('aiout'))}
 function norm(s){return String(s??'').replace(/\$+/g,'').replace(/\s+/g,'').replace(/,/g,'.').toLowerCase()}
-draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__PATH__',json.dumps(p,ensure_ascii=False)).replace('__IDS__',json.dumps(ids)).replace('__QPOS__',str(int(pos))).replace('__POS__',str(pos+1)).replace('__AI__','true').replace('__ADMIN__','true' if is_admin else 'false')
+function restoreCompletedAnswer(){
+ const saved=window.practiceSavedAnswer;
+ if(!saved)return;
+ const text=String(saved.student||'').trim();
+ if(Q.kind==='TN'){
+   const pick=text.charCodeAt(0)-65;
+   const radio=document.querySelector('input[name="a"][value="'+pick+'"]');
+   if(radio)radio.checked=true;
+   (Q.options||[]).forEach((o,i)=>{const box=document.getElementById('o'+i);if(box&&o.correct)box.classList.add('correct');if(box&&i===pick&&!o.correct)box.classList.add('wrong');});
+ }else if(Q.kind==='DS'){
+   for(let i=0;i<(Q.statements||[]).length;i++){
+     const yes=text.charAt(i)==='Đ';
+     const radio=document.querySelector('input[name="t'+i+'"][value="'+(yes?'1':'0')+'"]');
+     if(radio)radio.checked=true;
+     const row=document.getElementById('t'+i);
+     if(row)row.classList.add(yes===!!Q.statements[i].correct?'correct':'wrong');
+   }
+ }else{
+   const box=document.getElementById('ans');if(box)box.value=text;
+ }
+ checked=true;lockInputs();
+ const result=document.getElementById('r');
+ if(result)result.innerHTML='<div class="result '+(saved.ok?'good':'bad')+'">Câu này đã xác nhận · '+(saved.ok?'Đúng':'Sai')+'</div><div id="solbox" class="solution" style="display:none"><b>📖 Lời giải</b><div>'+(Q.solution||'Chưa có lời giải trong file TEX.')+'</div></div>';
+ const solution=document.getElementById('solbtn');if(solution)solution.style.display='inline-flex';
+ const next=document.getElementById('next');
+ if(next){next.style.display='inline-flex';next.textContent=window.practiceNextOpen>=window.practiceIds.length?'🏁 Xem kết quả':'→ Câu chưa làm';next.onclick=function(){location.href='/practice/jump/'+window.practiceNextOpen};}
+ const actions=document.querySelector('#q .quizacts');
+ if(actions){const redo=document.createElement('a');redo.className='btn';redo.href='/practice/redo/'+window.practicePos;redo.textContent='↻ Làm lại câu';redo.title='Xóa kết quả câu này rồi làm lại';actions.appendChild(redo);}
+ window.LAST_REVIEW=Object.assign({},Q,{student:text,ok:!!saved.ok});
+}
+draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__PATH__',json.dumps(p,ensure_ascii=False)).replace('__IDS__',json.dumps(ids)).replace('__QPOS__',str(int(pos))).replace('__SAVED__',json.dumps(saved_answer,ensure_ascii=False)).replace('__NEXT_OPEN__',str(int(next_open))).replace('__POS__',str(pos+1)).replace('__AI__','true').replace('__ADMIN__','true' if is_admin else 'false')
     extra=''
     if is_admin:
         from admin_rewrite import REWRITE_CLIENT_JS
@@ -5158,7 +5207,7 @@ draw();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).r
   max-height:none!important;overflow:visible!important;
  }
 }
-</style><script defer src="/static/figure-zoom.js"></script><script defer src="/static/practice-screen-ink.js"></script>"""
+</style><link rel="stylesheet" href="/static/practice-workspace.css?v=20261121p1"><script defer src="/static/practice-workspace.js?v=20261121p1"></script><script defer src="/static/figure-zoom.js"></script><script defer src="/static/practice-screen-ink.js"></script>"""
     return page('Làm bài',body+mobile_controls+js+extra+figure_zoom_assets+"<style>.practice-mini-stats{display:flex;align-items:center;gap:8px;padding:5px 8px;font:700 12px Arial}.practice-mini-stats span,.practice-mini-stats button{background:#f0f6ff;border:1px solid #c4d9ee;border-radius:8px;padding:6px 9px;color:#204e80;font:700 12px Arial}.practice-record-dialog{border:1px solid #c2d7ee;border-radius:14px;padding:16px;max-width:92vw}.practice-record-done{margin:14px 0;padding:14px;border:1px solid #bfdbed;border-radius:12px;background:#f3faff}</style>")
 
 _RESHUFFLE_JOBS = {}
