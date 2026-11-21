@@ -4118,6 +4118,12 @@ document.addEventListener('click',function(e){
   const out=outBox(srcButton);
   loadRewrite(p.src,p.fi,out,'custom',{target_level:level,requirements:requirements});
 });
+document.addEventListener('toggle',function(e){
+  const details=e.target;
+  if(details&&details.classList&&details.classList.contains('rwnbpreview')&&details.open){
+    rwLoadNotebookPreview(details.closest('.rwnbbox'));
+  }
+},true);
 document.addEventListener('click',function(e){
   const go=e.target.closest&&e.target.closest('.rwgo');
   const sim=e.target.closest&&e.target.closest('.rwsim');
@@ -4287,6 +4293,39 @@ function ensurePhotoInput(){
   });
   return inp;
 }
+function rwChoosePrompt(box,kind){
+  if(!box||!box._nb)return;
+  const d=box._nb;
+  const values={picture:d.picture||'',comic:d.comic||'',still:d.prompt||'',canva:d.canva||'',motion:d.motion||''};
+  const labels={picture:'Ảnh bài tập – ẩn đáp án',comic:'Truyện tranh 6 khung – có đáp án và lời giải',still:'Trang vở A4',canva:'HTML luyện đổi số',motion:'Chuỗi hình chuyển động'};
+  const old=box.getAttribute('data-focus')||'still';
+  const edit=box.querySelector('.rwnbprompttext');
+  // Keep edits made to a prompt when switching tabs.
+  if(edit&&Object.prototype.hasOwnProperty.call(values,old))d[old==='still'?'prompt':old]=edit.value;
+  box.setAttribute('data-focus',kind);
+  const ta=box.querySelector('.rwnbprompttext');
+  if(ta)ta.value=(kind==='still'?d.prompt:d[kind])||'';
+  box.querySelectorAll('.rwnbtab').forEach(function(btn){btn.classList.toggle('primary',btn.getAttribute('data-kind')===kind);});
+  const caption=box.querySelector('.rwnbcaption');
+  if(caption)caption.textContent='Đang chọn: '+(labels[kind]||kind)+' · Bấm Copy prompt, hoặc mở “Xem / sửa mã prompt”.';
+}
+async function rwLoadNotebookPreview(box){
+  if(!box||!box._nb)return;
+  const look=box.querySelector('.rwnb-look');
+  if(!look||look.getAttribute('data-loaded')==='1')return;
+  look.textContent='Đang xem trước câu hỏi…';
+  try{
+    const r=await fetch('/api/admin/latex-cards',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',
+      body:JSON.stringify({latex:box._nb.latex||''})});
+    const d=await r.json();
+    if(!d.ok)throw Error(d.error||'Không xem trước được');
+    look.innerHTML=d.html||'';
+    look.setAttribute('data-loaded','1');
+    if(window.ldvlArmTikz)ldvlArmTikz(look);
+    if(window.ldvlTypeset)ldvlTypeset(look);
+    if(window.ldvlSplitPics)ldvlSplitPics(look);
+  }catch(e){look.textContent=String(e.message||e);}
+}
 async function rwLoadNotebook(box){
   box.innerHTML='<div class="muted">'+(box.getAttribute('data-focus')==='canva'?'Đang soạn prompt chương trình luyện đổi số…':'Đang soạn prompt trang vở từ đề LaTeX…')+'</div>';
   try{
@@ -4295,42 +4334,29 @@ async function rwLoadNotebook(box){
     const d=await r.json();
     if(!d.ok){box.innerHTML='<div class="err">'+esc(d.error||'Không tạo được prompt')+'</div>';return;}
     box._nb=d;
-    const focusCanva=box.getAttribute('data-focus')==='canva';
-    box.innerHTML='<div class="aiphoto-bar"><b>'+(focusCanva?'Chương trình luyện đổi số':'Xem trước như câu hỏi')+'</b> '
-      +'<button type="button" class="btn green rwnbsave">Lưu thêm vào ngân hàng</button> '
-      +(focusCanva?'':'<button type="button" class="btn primary rwnbcopy" data-which="still">Copy lệnh trang vở</button> ')
-      +'<button type="button" class="btn primary rwnbcopy" data-which="canva">Copy prompt luyện đổi số</button> '
-      +'<button type="button" class="btn primary rwnbcopy" data-which="picture">Copy prompt ảnh bài tập</button> '
-      +'<button type="button" class="btn primary rwnbcopy" data-which="comic">Copy prompt truyện tranh</button> '
-      +'<a class="btn" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">Mở Gemini</a> '
-      +'<span class="muted rwnbnote"></span></div>'
-      +'<div class="aiphoto-look rwnb-look"></div>'
+    const initial=box.getAttribute('data-focus')||'still';
+    const valid=['picture','comic','still','canva','motion'];
+    const focus=valid.includes(initial)?initial:'still';
+    box.setAttribute('data-focus',focus);
+    const tabs=[
+      ['picture','Ảnh bài tập'],['comic','Truyện tranh'],
+      ['still','Ảnh vở A4'],['canva','HTML đổi số'],['motion','Ảnh động']
+    ];
+    box.innerHTML='<div class="rwnbcompact" style="border:1px solid #cbd9ec;border-radius:10px;padding:12px;background:#f8fbff">'
+      +'<div class="rwnbactions" style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">'
+      +tabs.map(function(t){return '<button type="button" class="btn mini rwnbtab'+(t[0]===focus?' primary':'')+'" data-kind="'+t[0]+'">'+t[1]+'</button>';}).join('')
+      +'<button type="button" class="btn green rwnbcopyfocus">📋 Copy prompt</button>'
+      +'<a class="btn mini" href="'+esc(d.gemini||'https://gemini.google.com/app')+'" target="_blank" rel="noopener">Mở Gemini</a>'
+      +'<button type="button" class="btn mini rwnbsave">Lưu thêm vào ngân hàng</button>'
+      +'<span class="muted rwnbnote" aria-live="polite"></span></div>'
+      +'<p class="muted rwnbcaption" style="margin:8px 0 4px">Đã tạo mã lệnh. Chọn loại rồi bấm Copy prompt để sử dụng.</p>'
+      +'<details class="rwnbpromptfold" style="margin-top:7px"><summary style="cursor:pointer;font-weight:700">✏️ Xem / sửa mã prompt</summary>'
+      +'<textarea class="rwta rwnbprompttext" spellcheck="false" style="width:100%;min-height:165px;max-height:260px;box-sizing:border-box;margin-top:7px"></textarea></details>'
+      +'<details class="rwnbpreview" style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">👁 Xem trước câu hỏi</summary>'
+      +'<div class="aiphoto-look rwnb-look" style="margin-top:8px"></div></details>'
+      +'</div>';
+    rwChoosePrompt(box,focus);
 
-      +'<details class="rwnbpicture-fold"'+(box.getAttribute('data-focus')==='picture'?' open':'')+'><summary>Ảnh bài tập — giữ đề, ẩn đáp án</summary><textarea class="rwta rwnbpicture">'+esc(d.picture||'')+'</textarea></details>'
-      +'<details class="rwnbcomic-fold"'+(box.getAttribute('data-focus')==='comic'?' open':'')+'><summary>Truyện tranh 6 khung · có lời giải</summary><textarea class="rwta rwnbcomic">'+esc(d.comic||'')+'</textarea></details>'
-      +'<details class="rwnbcanva-fold"'+(focusCanva?' open':'')+'><summary>Prompt chương trình HTML — đổi số, kiểm tra đáp án</summary>'
-      +'<p class="muted">Dán vào Gemini. Gemini phải trả về một file HTML: nút Đổi đề bài mới, ô nhập đáp án, Kiểm tra, Xem lời giải. Không phải trang Canva.</p>'
-      +'<textarea class="rwta rwnbcanva">'+esc(d.canva||'')+'</textarea></details>'
-      +'<details'+(focusCanva?'':'')+'><summary>Lệnh Gemini — ảnh A4 (để copy, không chiếm trang)</summary>'
-      +'<textarea class="rwta rwnbstill">'+esc(d.prompt||'')+'</textarea>'
-      +'<p class="muted">Lệnh phụ — animation / chuỗi khung</p>'
-      +'<textarea class="rwta sm rwnbmotion">'+esc(d.motion||'')+'</textarea>'
-      +'<p><button type="button" class="btn rwnbcopy" data-which="motion">Copy lệnh động</button></p></details>';
-    const look=box.querySelector('.rwnb-look');
-    if(look){
-      look.innerHTML='<div class="muted">Đang xem trước…</div>';
-      try{
-        const pr=await fetch('/api/admin/latex-cards',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({latex:d.latex||''})});
-        const pv=await pr.json();
-        if(!pv.ok) look.innerHTML='<div class="err">'+esc(pv.error||'Không xem trước được')+'</div>';
-        else{
-          look.innerHTML=pv.html||'';
-          if(window.ldvlArmTikz) ldvlArmTikz(look);
-          if(window.ldvlTypeset) ldvlTypeset(look);
-          if(window.ldvlSplitPics) ldvlSplitPics(look);
-        }
-      }catch(err2){look.innerHTML='<div class="err">'+esc(err2&&err2.message||err2)+'</div>';}
-    }
   }catch(err){box.innerHTML='<div class="err">'+esc(err&&err.message||err)+'</div>';}
 }
 async function rwLoadTikz(box){
@@ -4689,6 +4715,24 @@ document.addEventListener('click',function(e){
         if(note) note.textContent='Đã thêm '+(d.n||'')+' câu vào '+(d.src||path)+'.';
       })
       .catch(function(err){nbSave.disabled=false;alert(String(err&&err.message||err));});
+    return;
+  }
+  const promptTab=e.target.closest&&e.target.closest('.rwnbtab');
+  if(promptTab){
+    e.preventDefault();
+    const box=promptTab.closest('.rwnbbox');
+    if(box)rwChoosePrompt(box,promptTab.getAttribute('data-kind')||'still');
+    return;
+  }
+  const copyFocus=e.target.closest&&e.target.closest('.rwnbcopyfocus');
+  if(copyFocus){
+    e.preventDefault();
+    const box=copyFocus.closest('.rwnbbox');
+    const ta=box&&box.querySelector('.rwnbprompttext');
+    copyText(ta?ta.value:'').then(function(){
+      copyFocus.textContent='✓ Đã copy';
+      setTimeout(function(){copyFocus.textContent='📋 Copy prompt';},1400);
+    },function(){prompt('Sao chép prompt',ta?ta.value:'');});
     return;
   }
   const nbCopy=e.target.closest&&e.target.closest('.rwnbcopy');
