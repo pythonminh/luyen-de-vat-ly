@@ -5014,7 +5014,7 @@ function restoreCompletedAnswer(){
  if(actions){const redo=document.createElement('a');redo.className='btn';redo.href='/practice/redo/'+window.practicePos;redo.textContent='↻ Làm lại câu';redo.title='Xóa kết quả câu này rồi làm lại';actions.appendChild(redo);}
  window.LAST_REVIEW=Object.assign({},Q,{student:text,ok:!!saved.ok});
 }
-draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__PATH__',json.dumps(p,ensure_ascii=False)).replace('__IDS__',json.dumps(ids)).replace('__QPOS__',str(int(pos))).replace('__SAVED__',json.dumps(saved_answer,ensure_ascii=False)).replace('__NEXT_OPEN__',str(int(next_open))).replace('__POS__',str(pos+1)).replace('__AI__','true').replace('__ADMIN__','true' if is_admin else 'false')
+draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(payload,ensure_ascii=False)).replace('__PATH__',json.dumps(p,ensure_ascii=False)).replace('__IDS__',json.dumps(ids)).replace('__QPOS__',str(int(pos))).replace('__SAVED__',json.dumps(saved_answer,ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e')).replace('__NEXT_OPEN__',str(int(next_open))).replace('__POS__',str(pos+1)).replace('__AI__','true').replace('__ADMIN__','true' if is_admin else 'false')
     extra=''
     if is_admin:
         from admin_rewrite import REWRITE_CLIENT_JS
