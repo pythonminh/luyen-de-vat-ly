@@ -16,7 +16,7 @@
         if(typeof window.ldvlInlineQuestionData==="function"){
           const selected=window.ldvlInlineQuestionData();
           if(selected?.text){
-            return String(selected.text).replace(/⟦M\\d+⟧/g,token=>{
+            return String(selected.text).replace(/⟦M\d+⟧/g,token=>{
               const node=selected.marks?.[token];
               const latex=node&&window.ldvlMathSpeech?.formulaSource?.(node);
               return latex?"\\("+latex+"\\)":" [hình minh họa] ";
