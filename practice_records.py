@@ -45,6 +45,16 @@ def _ensure(conn):
 def username(m):
     return str((m or {}).get('username') or '').strip().casefold()
 
+def record_lesson_key(sess):
+    """Keep leaderboard results separate for each game difficulty and quiz length."""
+    path=str(sess.get('practice_path') or '')
+    tier=str(sess.get('practice_game_level') or '')
+    if tier in {'easy','medium','hard'}:
+        n=len(sess.get('practice_ids') or [])
+        if n in (10,20):
+            return path+'#game='+tier+'&n='+str(n)
+    return path
+
 def _summary(conn, user, path):
     with conn.cursor() as c:
         c.execute("""SELECT COUNT(*), MAX(correct::numeric / NULLIF(total,0) * 10),
@@ -73,7 +83,7 @@ def _summary(conn, user, path):
 
 def finish_current(m, session):
     user=username(m)
-    path=str(session.get('practice_path') or '')
+    path=record_lesson_key(session)
     ids=list(session.get('practice_ids') or [])
     pos=int(session.get('practice_pos') or 0)
     done=list(session.get('practice_done') or [])
@@ -107,7 +117,7 @@ def finish_current(m, session):
 
 def lookup_current(m, session):
     user=username(m)
-    path=str(session.get('practice_path') or '')
+    path=record_lesson_key(session)
     if not user or not path:
         return None
     conn=_connect()
