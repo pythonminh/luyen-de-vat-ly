@@ -6441,9 +6441,19 @@
       "Chuong": "Chương II. Khí lí tưởng",
       "BaiHoc": "L12C2 Bài 10. Định luật Charles · Tính áp suất, thể tích trong quá trình đẳng nhiệt",
       "De": "L12C2 Bài 10. Định luật Charles · Tính áp suất, thể tích trong quá trình đẳng nhiệt",
-      "questions": 0,
-      "count": 0,
-      "dang": {}
+      "questions": 58,
+      "count": 58,
+      "dang": {
+        "Tính áp suất, thể tích trong quá trình đẳng nhiệt": 58
+      },
+      "dang_kinds": {
+        "Tính áp suất, thể tích trong quá trình đẳng nhiệt": {
+          "TN": 11,
+          "DS": 0,
+          "TLN": 35,
+          "TL": 12
+        }
+      }
     }
   ]
 }
