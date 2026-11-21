@@ -1,0 +1,28 @@
+name: Validate scene controls
+on:
+  push:
+    branches: [feature/comic-image-scene-controls]
+  pull_request:
+    paths: [admin_rewrite.py]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Compile Python and verify controls
+        run: |
+          python -m py_compile admin_rewrite.py
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('admin_rewrite.py').read_text()
+          for key in ('rwSceneContext(box)', 'rwSceneRender(box,reset)',
+                      'rwnbscene', 'rwnbcreative', 'rwnbfidelity',
+                      'rwnbsettings', 'rwnbcopyfocus',
+                      'ĐÚNG/SAI', 'TRẢ LỜI NGẮN'):
+              assert key in s, key
+          assert "if(root)root.style.display=supported?'flex':'none'" in s
+          print('Scene control checks passed')
+          PY
