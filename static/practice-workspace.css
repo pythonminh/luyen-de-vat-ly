@@ -588,3 +588,10 @@ body.practice-compact-ready .practice-game-hud .game-time-warning .game-remainin
  }
  body.practice-compact-ready .practice-game-hud .ph-meters{order:5}
 }
+
+/* Examination integrity: fixed questions during an active game. */
+body.practice-compact-ready .vip-practice-wrap[data-game-level]:not([data-game-level=""]) #reshuf,
+body.practice-compact-ready .vip-practice-wrap[data-game-level]:not([data-game-level=""]) .practice-admin-ai,
+body.practice-compact-ready .vip-practice-wrap[data-game-level]:not([data-game-level=""]) a[href^="/practice/redo/"]{
+ display:none!important;
+}
