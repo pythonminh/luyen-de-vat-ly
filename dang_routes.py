@@ -408,6 +408,8 @@ def _question_card(q, seq, total, path='', dup=None, show_solution=False, highli
             f"<button type='button' class='btn mini rwimgs' data-drop='{drop_key}'>🖼 Ảnh thư mục</button>"
             f"<button type='button' class='btn mini rwtikzbtn' data-drop='{drop_key}'>📐 Mã TikZ</button>"
             f"<button type='button' class='btn mini rwnbprompt' data-drop='{drop_key}'>✨ Prompt ảnh vở + Phiếu</button>"
+            f"<button type='button' class='btn mini rwpictureprompt' data-drop='{drop_key}'>🖼️ Prompt ảnh bài tập</button>"
+            f"<button type='button' class='btn mini rwcomicprompt' data-drop='{drop_key}'>💬 Prompt truyện tranh</button>"
             f"<button type='button' class='btn mini rwcanva' data-drop='{drop_key}'>🎲 Luyện đổi số</button>"
             f"<button form='qdel' class='btn mini red' type='submit' name='drop' value='{drop_key}' onclick=\"return confirm('Xóa vĩnh viễn câu này khỏi file TEX? Không hoàn tác trên trang này.')\">🗑 Xóa câu</button>"
             "<div class='rwout'></div></div></details>")
