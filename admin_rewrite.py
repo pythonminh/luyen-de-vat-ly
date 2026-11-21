@@ -4581,6 +4581,30 @@ document.addEventListener('click',function(e){
     rwLoadNotebook(box);
     return;
   }
+  const pictureBtn=e.target.closest&&e.target.closest('.rwpictureprompt');
+  const comicBtn=e.target.closest&&e.target.closest('.rwcomicprompt');
+  const promptBtn=pictureBtn||comicBtn;
+  if(promptBtn){
+    e.preventDefault();
+    const bar=promptBtn.closest('.rwbar');if(!bar)return;
+    const p=dropOf(promptBtn);if(!p)return;
+    const focus=pictureBtn?'picture':'comic';
+    let box=bar.querySelector('.rwnbbox');
+    if(!box){
+      box=document.createElement('div');box.className='rwnbbox';
+      const out=bar.querySelector('.rwout');
+      if(out)out.insertAdjacentElement('afterend',box);else bar.appendChild(box);
+    }
+    box.setAttribute('data-src',p.src);
+    box.setAttribute('data-fi',String(p.fi));
+    box.setAttribute('data-focus',focus);
+    if(box._nb){
+      const fold=box.querySelector(focus==='picture'?'.rwnbpicture-fold':'.rwnbcomic-fold');
+      if(fold){fold.open=true;fold.scrollIntoView({block:'nearest'});return;}
+    }
+    rwLoadNotebook(box);
+    return;
+  }
   const nbBtn=e.target.closest&&e.target.closest('.rwnbprompt');
   if(nbBtn){
     e.preventDefault();
