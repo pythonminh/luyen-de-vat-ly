@@ -5199,7 +5199,7 @@ draw();restoreCompletedAnswer();</script>'''.replace('__DATA__',json.dumps(paylo
   max-height:none!important;overflow:visible!important;
  }
 }
-</style><link rel="stylesheet" href="/static/practice-workspace.css?v=20261121gameexam1"><script defer src="/static/practice-workspace.js?v=20261121gameexam1"></script><script defer src="/static/figure-zoom.js"></script><script defer src="/static/practice-screen-ink.js"></script>"""
+</style><link rel="stylesheet" href="/static/practice-workspace.css?v=20261121gameexam2"><script defer src="/static/practice-workspace.js?v=20261121gameexam1"></script><script defer src="/static/figure-zoom.js"></script><script defer src="/static/practice-screen-ink.js"></script>"""
     game_assets=(
         "<script>window.__ldvlGameConfig="+json.dumps({
             "attempt":str(session.get("practice_attempt_id") or ""),
