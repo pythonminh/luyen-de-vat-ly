@@ -24,7 +24,7 @@ jobs:
           app=Path('admin_rewrite.py').read_text()
           bank=Path('dang_routes.py').read_text()
           for key in ['_public_exercise_latex','_exercise_image_prompt','_exercise_comic_prompt',
-                      'picture=picture','comic=comic','.rwnbpicture-fold','.rwnbcomic-fold',
+                      'picture=picture','comic=comic','rwnbcompact','rwnbtab','rwnbcopyfocus',
                       ".rwpictureprompt", ".rwcomicprompt"]:
               assert key in app, key
           for key in ['rwpictureprompt','rwcomicprompt']:
