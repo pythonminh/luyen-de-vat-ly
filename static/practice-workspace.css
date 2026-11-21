@@ -540,3 +540,17 @@ body.practice-compact-ready .vip-practice-wrap #q .ldvl-math-scroll-note{
     max-width:100%!important;object-fit:contain!important;
   }
 }
+
+
+/* Selected game tier badge: compact, but distinguishable on tablet/phone. */
+body.practice-compact-ready .practice-game-hud .ph-game-level{
+ display:inline-flex;align-items:center;justify-content:center;
+ min-height:28px;padding:4px 9px;border:1px solid #c5d8f1;
+ border-radius:999px;background:#ebf3ff;color:#1e5a9e;
+ font:800 11px/1.2 Segoe UI,Arial,sans-serif;white-space:nowrap;
+}
+@media(max-width:799px){
+ body.practice-compact-ready .practice-game-hud .ph-game-level{
+  min-height:28px;padding:4px 6px;font-size:10.5px;
+ }
+}
