@@ -121,6 +121,11 @@ function setTranslations(items,values,lang,desired){
    entry.lang=lang;
    renderWords(entry.target,translated,entry.marks);
    showEntry(entry,desired);
+   if(window.parent===window && entry.el.matches(".qstem,#question,.question-text,.question-content")){
+     window.dispatchEvent(new CustomEvent("ldvl:inline-translated",{
+       detail:{source:entry.text,english:translated}
+     }));
+   }
  });
 }
 function keySource(){try{
