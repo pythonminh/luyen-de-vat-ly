@@ -78,6 +78,25 @@ document.getElementById('hpEditCode').onclick=open;const toolbar=document.queryS
 <style>#hpCodeModal{position:fixed;inset:0;width:98vw;max-width:none;height:96dvh;max-height:none;padding:0;border:1px solid #cbd5e1;border-radius:12px;background:white;color:#1e293b}#hpCodeModal::backdrop{background:#102746aa}#hpCodeModal header{display:flex;gap:8px;align-items:center;padding:10px;background:#102746;color:white;flex-wrap:wrap}#hpCodeModal header strong{flex:1}#hpCodeModal button{padding:8px 12px;border:1px solid #b9cce0;border-radius:7px;cursor:pointer}#hpCodeModal [data-save]{background:#1761b0;color:white}#hpCodeModal [data-status]{padding:8px 12px;margin:0;font-size:13px;min-height:36px}.hp-code-panes{display:grid;grid-template-columns:1fr 1fr;height:calc(100% - 100px);min-height:0}.hp-code-panes label{display:flex;flex-direction:column;gap:5px;padding:10px;font-size:12px;min-width:0}.hp-code-panes textarea{flex:1;resize:none;min-height:0;width:100%;font:14px/1.5 ui-monospace,Consolas,monospace;white-space:pre;tab-size:2;padding:12px;background:#0f172a;color:#e2e8f0;border:0;border-radius:8px}.hp-code-panes iframe{width:100%;height:100%;border:0;border-left:1px solid #cbd5e1;background:white}@media(max-width:700px){.hp-code-panes{grid-template-columns:1fr;grid-template-rows:1fr 1fr;height:calc(100% - 130px)}#hpCodeModal header strong{flex-basis:100%}.hp-code-panes textarea{font-size:16px}}</style>'''.replace('CONFIG', config)
 
 
+
+def lesson_csrf_token():
+    """Signed, expiring token avoids conflicting session cookie writes from parallel lesson requests."""
+    from itsdangerous import URLSafeTimedSerializer
+    identity = {'role': str(session.get('role') or ''), 'username': str(session.get('username') or '')}
+    return URLSafeTimedSerializer(app.secret_key, salt='html-lesson-edit-v1').dumps(identity)
+
+
+def valid_lesson_csrf(value):
+    from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+    try:
+        data = URLSafeTimedSerializer(app.secret_key, salt='html-lesson-edit-v1').loads(str(value or ''), max_age=7200)
+        return (data.get('role') == str(session.get('role') or '') and
+                data.get('username') == str(session.get('username') or '') and
+                bool(data.get('role')))
+    except (BadSignature, SignatureExpired, ValueError, TypeError, AttributeError):
+        return False
+
+
 @app.post('/member/html-lesson-code')
 def html_lesson_code():
     """Edit an exact saved HTML file selected in the lesson viewer (ADMIN only)."""
@@ -87,9 +106,8 @@ def html_lesson_code():
     if not dr.can_manage_bank():
         return jsonify(ok=False, error='Chỉ ADMIN có quyền sửa HTML.'), 403
     data = request.get_json(silent=True) or {}
-    token = session.get('html_practice_csrf')
-    if not token or not secrets.compare_digest(str(data.get('csrf') or ''), token):
-        return jsonify(ok=False, error='Phiên thao tác hết hạn. Tải lại trang.'), 403
+    if not valid_lesson_csrf(data.get('csrf')):
+        return jsonify(ok=False, error='Phiên chỉnh sửa hết hạn. Đóng công cụ rồi tải lại trang.'), 403
     try:
         rel, local = dr._safe_repo_file(str(data.get('file') or '').strip())
         if '/html-practice/' not in rel:
