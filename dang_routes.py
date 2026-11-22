@@ -3942,6 +3942,7 @@ def member_html_lesson():
     async function open(i){
       current=i;
       const x=items[i], n=++loadNumber, frame=$('hlFrame'), status=$('hlStatus');
+      frame.dataset.file=x.file;
       $('hlTitle').textContent=x.title;
       $('hlNewTab').href=x.url;
       render();
@@ -3975,6 +3976,12 @@ def member_html_lesson():
         'MANAGER_RACE',
         '<a class="hl-race" href="' + html.escape(race_url,quote=True) + '">📺 Tạo phòng QR từ ngân hàng câu hỏi</a>' if manager else ''
     )
+    if manager:
+        import secrets
+        if 'html_practice_csrf' not in session:
+            session['html_practice_csrf'] = secrets.token_urlsafe(32)
+        from html_code_editor import lesson_editor_html
+        body += lesson_editor_html(session['html_practice_csrf'])
     return page('HTML tổng hợp · '+title,body)
 
 
