@@ -93,6 +93,33 @@ CSS = r"""
 }
 
 @media(prefers-reduced-motion:reduce){.top .nav > a,.top .nav > button{transition:none}}
+
+/* The tools dropdown must escape the horizontally scrollable header. */
+#ldvlToolsPortal {
+ position:fixed!important;display:none!important;z-index:2147483000!important;
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;
+ width:min(460px,calc(100vw - 16px))!important;max-width:calc(100vw - 16px)!important;
+ max-height:calc(100dvh - 70px)!important;overflow-y:auto!important;overscroll-behavior:contain;
+ padding:12px!important;box-sizing:border-box!important;
+ background:#fff!important;color:#153457!important;
+ border:1px solid #cfdbeb!important;border-radius:14px!important;
+ box-shadow:0 18px 44px #071f3840!important;
+}
+#ldvlToolsPortal.ldvl-tools-open{display:grid!important}
+#ldvlToolsPortal>a,#ldvlToolsPortal>button{
+ display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:9px!important;
+ min-width:0!important;min-height:46px!important;margin:0!important;
+ padding:11px 12px!important;box-sizing:border-box!important;border:1px solid #dce6f2!important;
+ border-radius:9px!important;background:#f5f8fd!important;color:#163c66!important;
+ -webkit-text-fill-color:#163c66!important;text-decoration:none!important;
+ font:700 13px/1.45 Arial,sans-serif!important;white-space:normal!important;text-align:left!important;
+ cursor:pointer!important;opacity:1!important;
+}
+#ldvlToolsPortal>a:hover,#ldvlToolsPortal>button:hover{background:#e8f2ff!important;border-color:#94b9e3!important}
+#ldvlToolsPortal .ldvl-ui-icon{width:17px;height:17px;flex:none;stroke:currentColor;stroke-width:1.9;fill:none}
+.top .top-tools>summary{cursor:pointer!important;pointer-events:auto!important}
+@media(max-width:640px){#ldvlToolsPortal{grid-template-columns:1fr!important;max-height:calc(100dvh - 60px)!important}}
+
 </style>
 """
 JS = r"""
@@ -154,6 +181,71 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>
 """
 
+TOOLS_JS = r"""
+
+<script id="ldvl-tools-dropdown-fix">
+(function(){
+ function setup(){
+  const details=document.querySelector(".top details.top-tools");
+  const summary=details?.querySelector(":scope > summary");
+  const panel=details?.querySelector(":scope > .top-tools-list");
+  if(!details||!summary||!panel||document.getElementById("ldvlToolsPortal"))return;
+  panel.id="ldvlToolsPortal";
+  panel.setAttribute("aria-label","Công cụ quản trị");
+  document.body.appendChild(panel);
+  summary.setAttribute("aria-controls",panel.id);
+  const relay=document.createElement("button");
+  relay.type="button";
+  relay.className="aiPhotoBtn";
+  relay.hidden=true;
+  relay.tabIndex=-1;
+  details.appendChild(relay);
+  function position(){
+    if(!details.open)return;
+    const box=summary.getBoundingClientRect();
+    const width=Math.min(460,window.innerWidth-16);
+    const left=Math.max(8,Math.min(window.innerWidth-width-8,box.right-width));
+    const top=Math.min(window.innerHeight-70,box.bottom+8);
+    panel.style.left=left+"px";
+    panel.style.top=Math.max(8,top)+"px";
+    panel.style.maxHeight=Math.max(170,window.innerHeight-top-10)+"px";
+  }
+  function sync(){
+    const open=details.open;
+    panel.classList.toggle("ldvl-tools-open",open);
+    summary.setAttribute("aria-expanded",String(open));
+    if(open)position();
+  }
+  details.addEventListener("toggle",sync);
+  panel.addEventListener("click",function(event){
+    if(event.target.closest(".aiPhotoBtn")){
+      event.preventDefault();
+      event.stopPropagation();
+      details.open=false;
+      relay.click();
+    }else if(event.target.closest("a"))details.open=false;
+  });
+  document.addEventListener("pointerdown",function(event){
+    if(details.open && !details.contains(event.target) && !panel.contains(event.target)){
+      details.open=false;
+      sync();
+    }
+  },true);
+  document.addEventListener("keydown",function(event){
+    if(event.key==="Escape" && details.open){
+      details.open=false;sync();summary.focus();
+    }
+  });
+  window.addEventListener("resize",position,{passive:true});
+  window.addEventListener("scroll",position,{passive:true,capture:true});
+  sync();
+ }
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup,{once:true});
+ else setup();
+})();
+</script>
+"""
+
 @app.after_request
 def polish_top_navigation(response):
     if response.status_code != 200 or response.mimetype != 'text/html' or request.path.startswith('/static/'):
@@ -166,6 +258,8 @@ def polish_top_navigation(response):
         else: src=CSS+src
         if '</body>' in src: src=src.replace('</body>',JS+'</body>',1)
         else: src+=JS
+        if '</body>' in src: src=src.replace('</body>',TOOLS_JS+'</body>',1)
+        else: src+=TOOLS_JS
         response.set_data(src)
         response.headers['Cache-Control']='no-cache'
     except Exception:
