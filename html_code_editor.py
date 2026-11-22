@@ -155,7 +155,7 @@ def html_lesson_code():
 
 def lesson_editor_html(csrf):
     """ADMIN-only editor inserted into the per-lesson HTML viewer."""
-    cfg = json.dumps({'csrf': csrf}, ensure_ascii=True).replace('<', '\\u003c')
+    cfg = json.dumps(csrf, ensure_ascii=True).replace('<', '\\u003c')
     return r'''<style>
 #hlCodeModal{position:fixed;inset:0;width:98vw;max-width:none;height:96dvh;max-height:none;padding:0;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#172c43}
 #hlCodeModal::backdrop{background:#102746b8}
