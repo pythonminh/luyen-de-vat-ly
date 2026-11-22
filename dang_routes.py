@@ -3977,11 +3977,8 @@ def member_html_lesson():
         '<a class="hl-race" href="' + html.escape(race_url,quote=True) + '">📺 Tạo phòng QR từ ngân hàng câu hỏi</a>' if manager else ''
     )
     if manager:
-        import secrets
-        if 'html_practice_csrf' not in session:
-            session['html_practice_csrf'] = secrets.token_urlsafe(32)
-        from html_code_editor import lesson_editor_html
-        body += lesson_editor_html(session['html_practice_csrf'])
+        from html_code_editor import lesson_editor_html, lesson_csrf_token
+        body += lesson_editor_html(lesson_csrf_token())
     return page('HTML tổng hợp · '+title,body)
 
 
