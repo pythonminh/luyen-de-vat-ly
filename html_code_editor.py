@@ -95,7 +95,7 @@ def html_lesson_code():
         if '/html-practice/' not in rel:
             raise ValueError('Đường dẫn HTML không hợp lệ.')
         parent, tail = rel.split('/html-practice/', 1)
-        if not re.fullmatch(r'[0-9a-f]{24}(?:/(?:pending--)?[^/]+)?\\.html', tail):
+        if not re.fullmatch(r'[0-9a-f]{24}(?:/(?:pending--)?[^/]+)?\.html', tail):
             raise ValueError('Không phải bài HTML đã lưu.')
         path = parent + '/de.tex'
         member = dr.member_current()
@@ -117,7 +117,7 @@ def html_lesson_code():
             source = str(data.get('source') or '')
             if not source.strip() or len(source.encode('utf-8')) > 2 * 1024 * 1024:
                 raise ValueError('HTML phải có nội dung và nhỏ hơn 2 MB.')
-            if not re.search(r'<html\\b', source, re.I) or not re.search(r'</html\\s*>', source, re.I):
+            if not re.search(r'<html\b', source, re.I) or not re.search(r'</html\s*>', source, re.I):
                 raise ValueError('Cần mã HTML đầy đủ gồm thẻ mở và đóng html.')
             github_put_text(rel, source, 'ADMIN sửa HTML bài học: ' + rel.rsplit('/',1)[-1][:80], sha)
             local.parent.mkdir(parents=True, exist_ok=True)
