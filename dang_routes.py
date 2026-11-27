@@ -3132,6 +3132,22 @@ def make_catalog_rows_enhanced(response):
 
 
 # Imported standalone HTML exercises retain their own JavaScript in an opaque iframe.
+def _html_math_renderer(source):
+    """Render TeX inside the existing opaque sandbox; do not change saved source."""
+    if 'id="ldvlMathRenderer"' in source:
+        return source
+    script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'math-render.js')
+    with open(script_path, encoding='utf-8') as f:
+        script = f.read()
+    # Inline the shared helper: srcdoc has an opaque origin, and no auth access.
+    tag = '<script id="ldvlMathRenderer">' + script + '</script>'
+    matches = list(re.finditer(r'</body\s*>', source, re.I))
+    if matches:
+        at = matches[-1].start()
+        return source[:at] + tag + source[at:]
+    return source + tag
+
+
 def _html_practice_location(path, dang):
     path, _ = _safe_repo_file(path)
     if not path.lower().endswith('.tex'):
@@ -3288,7 +3304,7 @@ def member_html_practice():
             source = re.sub(r'</head\s*>', lambda match: fit_style + match.group(0), source, count=1, flags=re.I)
         else:
             source = fit_style + source
-        response = jsonify(ok=True, source=source)
+        response = jsonify(ok=True, source=_html_math_renderer(source))
         response.headers['Cache-Control'] = 'no-store'
         return response
     back = dang_view_url(path, dang)
@@ -4003,7 +4019,7 @@ def member_html_saved():
     except Exception:
         return 'Không đọc được bài HTML đã lưu. Vui lòng thử lại.', 404
     if request.args.get('content') == '1':
-        response = Response(source, mimetype='text/html')
+        response = Response(_html_math_renderer(source), mimetype='text/html')
         response.headers['Content-Security-Policy'] = "sandbox allow-scripts allow-forms allow-modals allow-downloads"
         return response
     title = _html_saved_title(rel, rel.rsplit('/', 1)[-1].split('--', 1)[-1][:-5])
