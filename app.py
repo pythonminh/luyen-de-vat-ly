@@ -1070,11 +1070,6 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "f.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&rel=0';"
         "f.allow='accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen';"
         "f.allowFullscreen=true;f.setAttribute('frameborder','0');btn.parentNode.replaceChild(f,btn);};"
-        "window.ldvlTypeset=function(el){el=el||document.body;function go(n){"
-        "if(window.MathJax&&MathJax.typesetPromise){try{if(MathJax.typesetClear)MathJax.typesetClear([el]);}catch(e){}"
-        "return MathJax.typesetPromise([el]).then(function(){if(window.ldvlFitFigs)ldvlFitFigs(el);}).catch(function(){});}"
-        "if((n||0)<100)setTimeout(function(){go((n||0)+1);},40);}"
-        "go(0);};"
         "window.ldvlTickClock=function(){var el=document.getElementById('ldvlClock');if(!el)return;"
         "var n=new Date(),p=function(x){return String(x).padStart(2,'0')};"
         "var d=['CN','T2','T3','T4','T5','T6','T7'][n.getDay()];"
@@ -1272,7 +1267,7 @@ def page(title: str, body: str, cinema: bool = False) -> Response:
         "copyText(cta?cta.value:'').then(function(){cp.textContent='Đã copy';setTimeout(function(){cp.textContent=label;},1400);},function(){prompt('Copy prompt',cta?cta.value:'');});}"
         "});"
         "})();</script>" if admin_ui else "")
-        + "<script src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js' onerror=\"this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js'\"></script>"
+        + "<script data-ldvl-math-main src='/static/math-render.js?v=20261127-1'></script>"
     )
     pwa_tip = (
         "<div id='ldvlPwaTip' class='pwatip' hidden>"
